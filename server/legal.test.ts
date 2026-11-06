@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // The words the policy promises must match what the system does. These are the numbers that live in two places.
@@ -47,6 +47,15 @@ describe('the policy and the system agree', () => {
     expect(text).toMatch(/Sign-in codes \(emailed\)/);
     // "removed when you delete your account": the delete route clears every code kept under the address.
     expect(read('server/app.ts')).toMatch(/deleteVerificationByIdentifier\(`\$\{kind\}-otp-\$\{email\.toLowerCase\(\)\}`\)/);
+  });
+
+  it('names USDA and Open Food Facts and says barcode photos are read on the device', () => {
+    expect(read('server/foodSearch.ts')).toContain('https://api.nal.usda.gov/fdc/v1/foods/search');
+    expect(read('server/openFoodFacts.ts')).toContain('https://world.openfoodfacts.org/api/v2/product');
+    expect(text).toMatch(/USDA FoodData Central \(public food database\)/);
+    expect(text).toMatch(/Open Food Facts \(public food database/);
+    expect(text).toContain('A barcode photo is read on your device');
+    expect(text).toMatch(/Food search words and barcode numbers/);
   });
 
   it('says what the app really keeps about sessions and what it never does', () => {
@@ -129,6 +138,30 @@ describe('the policy and the system agree', () => {
     for (const path of ['/delete-account', '/delete-account?from=play', '/delete-account/', '/delete-account/?a=1']) expect(denied(path), path).toBe(true);
     for (const path of ['/', '/delete-accounts', '/delete-account.html', '/board']) expect(denied(path), path).toBe(false);
     expect(read('vite.config.js')).toContain('deleteAccountPage()');
+  });
+
+  it('names the AI provider the scan routes call, and says the photo is read by AI', () => {
+    // scan.ts is the only place that knows the vendor; if its address changes, the policy has to name the new one.
+    const scan = read('server/scan.ts');
+    expect(scan).toContain('https://api.anthropic.com/');
+    expect(text).toMatch(/Anthropic \(AI service that reads the photo/);
+    expect(text).toContain('artificial intelligence (AI)');
+    expect(text).toContain('Scan label');
+    expect(text).toContain('Scan receipt');
+    // "we do not keep a label photo": the scan route's own header promises the photo is never written, logged or cached.
+    expect(scan).toMatch(/never written to disk or the database, never logged, never cached/);
+    expect(text).toContain('we do not keep a label photo');
+  });
+
+  it('saved receipt photos: the policy names what is kept, and the erase and account-delete paths remove it', () => {
+    const migration = read('db/migrations/20261104000001_receipts.sql');
+    // The newest migration that defines erase_my_data() is the live one: it must still delete receipts.
+    const newestErase = readdirSync(new URL('../db/migrations', import.meta.url)).filter((f) => f.endsWith('.sql')).sort().reverse().map((f) => read(`db/migrations/${f}`)).find((m) => /create or replace function erase_my_data\(\)/.test(m)) ?? '';
+    expect(migration).toMatch(/create table receipts[\s\S]*data\s+bytea not null/);
+    expect(migration).toContain('references users (id) on delete cascade'); // deleting the account
+    expect(newestErase).toMatch(/create or replace function erase_my_data\(\)[\s\S]*delete from receipts/); // erasing everything
+    expect(text).toMatch(/Saved receipts \(photo, store, date, total, month, note\)/);
+    expect(text).toMatch(/erase your data or delete your account \(removed immediately from the live service; backups within 30 days\)/);
   });
 
   it('the pages link to each other and carry a date and version', () => {
