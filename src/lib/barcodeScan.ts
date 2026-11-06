@@ -43,14 +43,25 @@ export const BARCODE_TEXT: Record<BarcodeFailure, string> = {
   nodetector: 'This browser cannot read barcodes. Close this and type the name instead.',
   camera: 'The camera is not available. Choose a photo of the barcode instead.',
   unreadable: 'Could not read a barcode in that photo. Try a closer, steadier photo, or close this and type the name.',
-  notfound: 'That barcode is not in the food database. Close this and type the name instead.',
+  notfound: 'That barcode is not in USDA or Open Food Facts.',
   ...FOODS_FAILURE_TEXT,
 };
 
-/** The sheet's line for a failure. Where a label camera is on hand (the Ready-made form) a not-found scan also offers the label photo. */
-export function barcodeText(fail: BarcodeFailure, canLabel: boolean): string {
-  return fail === 'notfound' && canLabel ? 'That barcode is not in the food databases. Take a photo of the label instead, or close this and type the name.' : BARCODE_TEXT[fail];
-}
+/** The sheet's line for a failure. */
+export const barcodeText = (fail: BarcodeFailure): string => BARCODE_TEXT[fail];
+
+/** While the lookup runs (brief barcode-miss-ladder): the server asks USDA first and Open Food Facts only when USDA has nothing, in one request, so the line moves on after a short wait. */
+export const OFF_AFTER_MS = 1200;
+export const lookingText = (waitedMs: number): string => (waitedMs < OFF_AFTER_MS ? 'Checking USDA...' : 'Checking Open Food Facts...');
+
+/** What was tried before a miss, in the order it was tried. */
+export const MISS_STEPS = ['USDA: not found', 'Open Food Facts: not found'] as const;
+
+/** The ids of the boxes a person types a food name into; "Type the name" moves the cursor to the first one on the page. */
+export const SEARCH_BOX_IDS = ['dt-lookup-q', 'dt-find-q'] as const;
+
+/** The AI mark's line under a label read from a photo, before Use. */
+export const AI_LABEL_TEXT = 'Read from the photo. Check these numbers against the label.';
 
 /** Under a product from Open Food Facts (brief barcode-coverage): where it came from and that anyone can edit it there. USDA products show nothing. */
 export const OFF_SOURCE_TEXT = 'Data from Open Food Facts. Crowd-sourced: check the numbers against the label.';

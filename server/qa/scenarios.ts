@@ -1173,7 +1173,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
     ],
     expected: [
-      'The sheet says the barcode is not in the food databases and offers Photo the label next to Close.',
+      'The sheet lists USDA and Open Food Facts as not found, with Type the name as the main button and Photo the label second (see S-93).',
       'Photo the label closes the sheet and opens the same camera as Scan label; the photo fills the form like any label scan.',
       'Nothing is saved until Save food.',
     ],
@@ -1213,6 +1213,32 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The note says "Count changed" with "Was 1 × $4.49, now 2 × $4.49".',
       'After Apply the item shows a count of 2 at $4.49; the receipt\'s count wins over the one you ticked with.',
+    ],
+  },
+  {
+    id: 'S-93', feature: 'Barcode scan', title: 'A missed scan makes typing the name the main choice and offers the AI label photo second', persona: 'diet-fresh', brief: 'barcode-miss-ladder', device: true,
+    steps: [
+      'On a phone, as an admin, open Daily, Diet and press Scan barcode in the food search box; scan a code neither source knows. Watch the line while it looks.',
+      'Read the sheet: the steps tried, the main button, the button under it and the small note under that.',
+      'Press Type the name and see where the cursor is. Scan the code again and press Photo the label.',
+      'Photograph a nutrition label and read the result before pressing Use; then press Use.',
+    ],
+    expected: [
+      'While looking the line says Checking USDA... and then Checking Open Food Facts...',
+      'After a miss the sheet lists USDA: not found and Open Food Facts: not found, with Type the name as the main button, Photo the label second with "Uses AI" under it, and Scan again, Photo of the barcode and Close as plain links.',
+      'Type the name closes the sheet and puts the cursor in the Search your past meals and recipes box; no AI call was made.',
+      'Photo the label closes the sheet and opens the camera at once with no confirm step; the result shows an AI mark and "Read from the photo. Check these numbers against the label." before Use, and Use fills the Quick add form.',
+    ],
+  },
+  {
+    id: 'S-94', feature: 'Barcode scan', title: 'The label count shows after a read, and a used-up day switches the label button off', persona: 'diet-fresh', brief: 'barcode-miss-ladder', edge: true,
+    steps: [
+      'As an admin, miss a scan and read the note under Photo the label; read a label; then miss another scan and read the note again.',
+      'When the daily label cap is used up (a test server with SCAN_DAILY_MAX set to 1 is the quick way), miss a scan again and try the buttons.',
+    ],
+    expected: [
+      'Before any label has been read in this session the note says only "Uses AI"; after one it says how many are left today, for example "Uses AI · 29 of 30 left today". The count is shared by the whole server, not by you.',
+      'With none left, Photo the label is switched off with "Label photos are used up for today. Type the name instead."; Type the name still works.',
     ],
   },
 ];

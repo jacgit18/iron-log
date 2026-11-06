@@ -103,9 +103,11 @@ export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAIL
       return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
     }
     // A daily ceiling for the whole server, counted before the call so a loop cannot run past it (dayCap.ts: per instance, so the spend limit on the key is the real ceiling).
-    if (!daily.take('all', dailyMax).ok) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'cap' });
+    const taken = daily.take('all', dailyMax);
+    if (!taken.ok) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'cap', retryAfterSec: taken.retryAfterSec });
     try {
-      res.json({ ok: true, result: await readLabel(ask, key, model, image) });
+      const result = await readLabel(ask, key, model, image);
+      res.json({ ok: true, result, left: daily.left('all', dailyMax), max: dailyMax }); // the shared count, so the sheet can say how many are left (brief barcode-miss-ladder)
     } catch (err) {
       // Never log the photo, the key or the reply: the error name or status is enough.
       console.warn(JSON.stringify({ msg: 'label scan failed', reason: err instanceof Error ? (err.name === 'Error' ? err.message : err.name) : 'unknown' }));

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BARCODE_TEXT, barcodeText, makeReader, OFF_SOURCE_TEXT, pickGtin, readGtin, type BarcodeFailure } from './barcodeScan.js';
+import { AI_LABEL_TEXT, BARCODE_TEXT, barcodeText, lookingText, makeReader, MISS_STEPS, OFF_AFTER_MS, OFF_SOURCE_TEXT, pickGtin, readGtin, SEARCH_BOX_IDS, type BarcodeFailure } from './barcodeScan.js';
 import { lookupBarcode } from './foodsClient.js';
 
 // The phone's side of the barcode scan (brief barcode-scan): which reading counts as a product code, what the browser's reader is asked for, how the server's
@@ -68,10 +68,21 @@ describe('BARCODE_TEXT', () => {
 });
 
 describe('barcodeText', () => {
-  it('offers the label photo on a not-found scan only where a label camera exists, and leaves every other failure alone', () => {
-    expect(barcodeText('notfound', true)).toContain('Take a photo of the label');
-    expect(barcodeText('notfound', false)).toBe(BARCODE_TEXT.notfound);
-    for (const k of ['nodetector', 'camera', 'unreadable', 'offline', 'limit', 'unavailable'] as const) expect(barcodeText(k, true), k).toBe(BARCODE_TEXT[k]);
+  it('says a miss means neither database has it, and gives every other failure its own words', () => {
+    expect(barcodeText('notfound')).toBe('That barcode is not in USDA or Open Food Facts.');
+    for (const k of ['nodetector', 'camera', 'unreadable', 'offline', 'limit', 'unavailable'] as const) expect(barcodeText(k), k).toBe(BARCODE_TEXT[k]);
+  });
+
+  it('moves the looking line from USDA to Open Food Facts after a short wait', () => {
+    expect(lookingText(0)).toBe('Checking USDA...');
+    expect(lookingText(OFF_AFTER_MS - 1)).toBe('Checking USDA...');
+    expect(lookingText(OFF_AFTER_MS)).toBe('Checking Open Food Facts...');
+  });
+
+  it('lists the two free sources as tried, in order, and names the boxes Type the name can focus', () => {
+    expect(MISS_STEPS).toEqual(['USDA: not found', 'Open Food Facts: not found']);
+    expect(SEARCH_BOX_IDS).toEqual(['dt-lookup-q', 'dt-find-q']);
+    expect(AI_LABEL_TEXT).toBe('Read from the photo. Check these numbers against the label.');
   });
 
   it('names Open Food Facts and says to check the label', () => {

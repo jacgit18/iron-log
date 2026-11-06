@@ -36,7 +36,7 @@ describe('POST /api/scan/label through the whole app', () => {
     expect(body.length).toBeGreaterThan(100_000);
     const res = await post(body, 'boss');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, result: { kind: 'ok', label: { kcal: 120, p: 4 } } });
+    expect(await res.json()).toMatchObject({ ok: true, result: { kind: 'ok', label: { kcal: 120, p: 4 } } });
   });
   it('still refuses a body over its own 2 MB limit', async () => {
     expect((await post(photo(2_200_000), 'boss')).status).toBe(413);

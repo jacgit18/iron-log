@@ -47,7 +47,7 @@ test.describe('as an admin', () => {
     await openForm(page);
     await page.getByRole('button', { name: 'Scan barcode' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
-    await expect(page.getByRole('status').filter({ hasText: 'not in the food database' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByLabel('Calories per serving')).toHaveValue('');
     await page.getByLabel('Name', { exact: true }).fill('Typed instead');
@@ -76,14 +76,14 @@ test.describe('as an admin', () => {
     await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
   });
 
-  test('a code found nowhere offers Photo the label on the Ready-made form, which opens the label camera', async ({ page }) => {
+  test('a code found nowhere offers Photo the label on the Ready-made form, which opens the form’s own label camera', async ({ page }) => {
     await asAdmin(page); await withReader(page, [{ rawValue: '4006381333931', format: 'ean_13' }]); await noCamera(page);
     await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
     await page.reload();
     await openForm(page);
     await page.getByRole('button', { name: 'Scan barcode' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
-    await expect(page.getByRole('status').filter({ hasText: 'Take a photo of the label' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible();
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Photo the label' }).click();
     await chooser; // the same camera input as Scan label
