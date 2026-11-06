@@ -31,15 +31,30 @@ export type ScenarioFeature =
   | 'Whole pack'
   | 'Receipt photos'
   | 'Receipt scan'
+  | 'Receipt reconcile'
+  | 'Sharing done'
   | 'Usual amount'
   | 'Finished group'
-  | 'Weight step';
+  | 'Weight step'
+  | 'Program compare'
+  | 'Polish pass'
+  | 'Program on phones'
+  | 'Stale page guard'
+  | 'Barcode scan'
+  | 'Custom 404'
+  | 'Receipt store'
+  | 'Receipt merge'
+  | 'Bulk share'
+  | 'Link previews'
+  | 'Moved-card tag'
+  | 'Search hiding'
+  | 'Security headers';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag',
 ];
 
 export interface Scenario {
@@ -420,7 +435,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Add missing to Groceries.',
     ],
     expected: [
-      'Water shows as Have and is included in "Have x of y".',
+      'Water shows as Have with the note "Always at home" and is included in "Have x of y"; the Have, Missing and On your list marks line up in one column down the page.',
       'Add missing does not add water to the grocery list.',
     ],
   },
@@ -445,10 +460,12 @@ export const SCENARIOS: readonly Scenario[] = [
       'On an Android phone with Loadbearer installed, open a YouTube video and choose Share, then Loadbearer.',
       'In the "Save this link" sheet pick an exercise and confirm.',
       'Share a different link to the same exercise.',
+      'On a computer, open Chrome\'s developer tools on the QA site, Application, Manifest, and read the warnings.',
     ],
     expected: [
       'Loadbearer is listed in the share sheet and opens "Save this link" over the board.',
       'The link is saved as the exercise\'s video and shows on its card; a different link first asks "Replace the link on <exercise>?"',
+      'The Manifest page shows no warning about the share target\'s enctype, and sharing a link still works as above.',
     ],
   },
   {
@@ -524,6 +541,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'An unseeded account\'s Switch is disabled with "Seed it first"; pressing Seed missing accounts seeds it, fills the dot and the button goes away.',
       'The last three accounts appear under Recent, newest first.',
+      'Leave the picker page idle for several minutes, then open it and switch again: it still opens and lists accounts, with no error page or crash.',
     ],
   },
 
@@ -724,6 +742,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The sheet lists every receipt line; a discount is taken off the item above it and the old price shows crossed out; lines with no item on your list are greyed and skipped.',
       'Apply ticks the matched items as bought this month with the right quantity and price and sets the store tax; Undo puts every price, tick and the tax back as they were.',
+      'A line sold by weight (lb or oz on the paper) is converted into the item\'s own unit; Undo is held back while the app is still syncing the apply and works once it has finished.',
     ],
   },
   {
@@ -808,7 +827,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
-      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. Opening a saved receipt and closing it, or pressing Retry, before the photo has loaded never shows that photo on the wrong sheet. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
     ],
   },
   {
@@ -847,7 +866,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
     steps: [
-      'Open Program, Exercise library and press Edit on an exercise you have logged at the same weight twice in a row with every set done (the heavy logger has several).',
+      'Open Program, Exercise library and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
       'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
       'Open the exercise again and tap the lit 10 chip once more, then save.',
     ],
@@ -865,6 +884,497 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Each of 60, 0, 2.3 and abc shows "Enter a step above 0, up to 50, in 0.5 steps." and Save keeps the sheet open without saving.',
       '7.5 is accepted and shown again when the sheet is reopened.',
+    ],
+  },
+  {
+    id: 'S-66', feature: 'Program compare', title: 'Compare two programs day by day and filter the differences', persona: 'superset-builder', brief: 'program-compare',
+    steps: [
+      'Open Program, scroll to the end and tap Compare programs. Program A and Program B are chosen.',
+      'Tap Day 2, then Any difference, then Changed. Tap Phase differs, then pick a phase under Phase.',
+      'Choose a saved program (save a copy of A first if the list is empty) as the second program.',
+    ],
+    expected: [
+      'One list appears under each program\'s phase mix, with the day buttons showing how many exercises differ; each exercise is one row with both programs\' lines (side by side on a wide screen, the second under the first on a phone), tagged Same, Changed, Phase differs or Only in that program, with the editor\'s name, phase, weight and sets; where the two differ, the weight and sets are marked on both sides.',
+      'Each filter hides the other rows and the numbers on the chips stay the same; nothing on the page can be dragged or edited, and Program A and B are unchanged afterwards.',
+      'A saved copy of A against A shows no differences; choosing the same program on both sides says "Both sides are the same program."',
+    ],
+  },
+  {
+    id: 'S-67', feature: 'Program compare', title: 'An empty day, and a day that exists on one side only', persona: 'new-user', brief: 'program-compare', edge: true,
+    steps: [
+      'As a new account, create a program, open Program, Compare programs, and pick it against Program A.',
+      'Step through the day buttons.',
+    ],
+    expected: [
+      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only in that program, with "Not in this program" on the other side.',
+      'The section is closed again after you leave the Program tab and come back, and the phone view does not scroll sideways.',
+    ],
+  },
+  {
+    id: 'S-68', feature: 'Polish pass', title: 'Dark mode opens dark, with no white flash', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors', device: true,
+    steps: [
+      'On a phone, tap the Colours button until it says dark, then close the app completely.',
+      'Open the app again from the home screen or the browser, on a throttled connection if you can.',
+    ],
+    expected: [
+      'The screen is dark from the first moment: no white or light-grey flash before the app appears.',
+      'Choosing light, or match this device, and reopening shows light, or the phone\'s own setting, from the first moment as well.',
+      'The launch splash (the app icon) is on a dark background in every mode. An installed app may need to be removed and added again before it takes the new colour.',
+    ],
+  },
+  {
+    id: 'S-69', feature: 'Polish pass', title: 'Buttons and section tabs respond to a press', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors',
+    steps: [
+      'Press and hold a section tab (Daily, Progress, Program, Settings) and a plain button such as Cancel on a sheet, without letting go.',
+      'Press and hold a Board card button or a Swap day button.',
+    ],
+    expected: [
+      'The tab and the plain button sink slightly and darken while held, and return when released; with "reduce motion" on the phone, they only darken.',
+      'The Board card buttons and Swap day buttons look and behave exactly as before.',
+    ],
+  },
+  {
+    id: 'S-70', feature: 'Polish pass', title: 'A file that cannot be read gives a plain sentence', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors', edge: true,
+    steps: [
+      'In Settings, pick an export file to import that is on a cloud drive and not downloaded to the phone (or one that is revoked or corrupt).',
+    ],
+    expected: [
+      'A plain sentence appears (about downloading it first, or that the file could not be read), with no text such as "Error:", a status number or "undefined".',
+    ],
+  },
+  // ---- Recipe auto-match (On your list) ----
+  {
+    id: 'S-71', feature: 'Recipe auto-match', title: 'A missing ingredient already on the list says On your list', persona: 'recipe-collector', brief: 'feature-map',
+    steps: [
+      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, To get (add one with the ingredient\'s name if there is none).',
+      'Look at that line, then press Add missing to Groceries.',
+      'Open Groceries, To get and check how many times the item appears.',
+    ],
+    expected: [
+      'The line shows Missing with a small "On your list" mark beside it; an ingredient that is at home, skipped or "Always at home" (water) never shows it.',
+      'Add missing does not add that item a second time; it stays on the list once.',
+    ],
+  },
+  // ---- Program on phones ----
+  {
+    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map',
+    steps: [
+      'On a phone (or a 375 px wide window), open the Program tab.',
+      'Look at the row holding Create a program and the program switch.',
+    ],
+    expected: [
+      'Create a program starts at the left edge of the screen and is not pushed off to the right or cut off.',
+      'The switch shows only A and B (no other labels), and the row does not scroll sideways.',
+    ],
+  },
+  // ---- Stale page guard ----
+  {
+    id: 'S-73', feature: 'Stale page guard', title: 'Erase or delete is refused from a page for another account', persona: 'new-user', brief: 'x-expected-user-409',
+    steps: [
+      'In one browser tab sign in as New user and open Settings. Leave it open.',
+      'In a second tab of the same browser, switch to another test account (the QA picker).',
+      'Back in the first tab, open Delete my data and press Erase everything in my account, and confirm.',
+      'Repeat steps 1 to 3 from the start, pressing Delete my account instead.',
+    ],
+    expected: [
+      'The request is refused: the Delete my data panel stays with a note that this is not available right now and nothing was erased (a card saying the device holds data from another account may show for a moment first); neither account loses anything. The same happens for Delete my account.',
+      'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
+    ],
+  },
+  // ---- Barcode scan ----
+  {
+    id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
+      'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
+      'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
+    ],
+    expected: [
+      'The sheet reads the code within a few seconds, closes, and shows the product name (with brand) and its calories per 100 g; the grams start at the product\'s serving.',
+      'Use fills the name, calories and protein (carbs and fat when USDA has them) for that serving; they match the label, and nothing is saved until Save food.',
+      'The camera light goes off when the sheet closes. On the diet day the pick fills the Quick add form the same way.',
+    ],
+  },
+  {
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    steps: [
+      'As an admin, open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
+      'Sign in as a test account that is not an admin and open New ready-made food.',
+    ],
+    expected: [
+      'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
+      'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
+      'The non-admin account sees no Scan barcode button.',
+    ],
+  },
+  {
+    id: 'S-76', feature: 'Custom 404', title: 'A wrong page address shows the Page not found page', persona: 'new-user', brief: 'custom-404',
+    steps: [
+      'In a browser, signed out, open the app address followed by /zzz (for example qa.loadbearer.app/zzz).',
+      'Tap Go to Loadbearer. Then sign in and open /zzz again.',
+    ],
+    expected: [
+      'A plain Page not found page with the line "That address does not exist." appears, light or dark to match the device, and it does not repeat the address you typed.',
+      'Go to Loadbearer opens the landing page when signed out and the app when signed in. The page looks the same signed in and out.',
+    ],
+  },
+  {
+    id: 'S-77', feature: 'Custom 404', title: 'An installed app still opens, and a wrong address reaches the 404 page', persona: 'new-user', brief: 'custom-404', device: true, edge: true,
+    steps: [
+      'On a phone with the app installed and opened at least once, open the browser and type the app address followed by /zzz.',
+      'Open the installed app from the home screen, then turn on airplane mode and open it again.',
+    ],
+    expected: [
+      'The first step shows the Page not found page, not the app.',
+      'The installed app opens normally, online and offline, on its home screen address and on /plans.',
+    ],
+  },
+  {
+    id: 'S-78', feature: 'Custom 404', title: 'Real pages, files and in-app addresses are not affected', persona: 'new-user', brief: 'custom-404', edge: true,
+    steps: [
+      'Open /plans, /delete-account and /privacy.html.',
+      'Open /assets/old.js, and then the app with #/progress/zzz after the address.',
+    ],
+    expected: [
+      'The first three open as they did before. /privacy without .html shows Page not found on a first visit; in a browser where the app\'s service worker is already active the Privacy Policy may still open.',
+      '/assets/old.js shows a small plain 404 error, not the Loadbearer page. #/progress/zzz opens Progress.',
+    ],
+  },
+  // ---- Receipt store ----
+  {
+    id: 'S-79', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
+    steps: [
+      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, At home, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
+      'On To get press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
+      'In the sheet read the rows and the line under the list, then press Apply.',
+      'Open To get and At home, then press Undo on the notice.',
+    ],
+    expected: [
+      'Every ticked item that is not already at the receipt\'s store says "Bought at Costco (usually ...)" and a line says how many items will be marked bought at Costco this month; nothing is saved before Apply.',
+      'After Apply To get shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and At home still lists each item under its old store.',
+      'Undo puts every item back to its old store and unticks it.',
+    ],
+  },
+  {
+    id: 'S-80', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    steps: [
+      'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
+      'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
+      'In the sheet tick "Also make Costco the usual store for these items" and press Apply.',
+      'Look at the notice and At home, then press Undo.',
+    ],
+    expected: [
+      'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
+      'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
+    ],
+  },
+  {
+    id: 'S-81', feature: 'Receipt store', title: 'A store that is not on the list, and moving between sharing groups', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    steps: [
+      'As an admin scan a receipt from a store that is not on your list (for example Walmart).',
+      'Check the sheet: no row says Bought at, and "Store for this receipt" is set to Do not set the store or the tax. Pick Costco in it.',
+      'Close the sheet. On At home > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
+    ],
+    expected: [
+      'With no store picked nothing moves and no row says Bought at; picking Costco adds the Bought at notes and the "will be marked bought at Costco" line.',
+      'When the items\' old store has no sharing group and Costco has one, a warning says moving them changes who shares them; items with a split of their own are not counted in it.',
+    ],
+  },
+  {
+    id: 'S-82', feature: 'Receipt merge', title: 'The same item twice on a receipt is one row', persona: 'grocery-shopper', brief: 'receipt-merge-lines', device: true,
+    steps: [
+      'As an admin, on your phone, photograph and scan a Costco receipt where the same item (for example eggs) is printed on two lines with the same price.',
+      'In the sheet find that item. Tick it, pick the matching item from the list, and press Apply.',
+      'On To get look at the item, then press Undo.',
+    ],
+    expected: [
+      'The sheet shows ONE row for the two lines, with one checkbox, one item picker, a count of 2 and "$X each" under the price; the total check and the Apply count are unchanged by the merge.',
+      'After Apply the item is ticked bought with a count of 2 at that price; Undo puts it back.',
+    ],
+  },
+  {
+    id: 'S-83', feature: 'Receipt merge', title: 'Two packs at different prices stay one item with both prices', persona: 'grocery-shopper', brief: 'receipt-merge-lines', device: true, edge: true,
+    steps: [
+      'As an admin, on your phone, photograph and scan a receipt that has the same meat (for example chuck roast) on two lines at different prices, such as $14.12 and $17.86, with no match on your list.',
+      'Press Add to list once on the merged row and check the count and price in the form, then Add item and Apply.',
+      'Look at At home and at the month on To get, then press Undo.',
+    ],
+    expected: [
+      'One row with a note "2 packs, each at its own price: $14.12 + $17.86"; the form starts with Count 2 and the average price, both editable.',
+      'At home gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
+    ],
+  },
+  {
+    id: 'S-84', feature: 'Receipt merge', title: 'Show these lines separately', persona: 'grocery-shopper', brief: 'receipt-merge-lines', edge: true,
+    steps: [
+      'As an admin, scan a receipt with the same item on two lines (no match on your list).',
+      'On the merged row press "Show these lines separately".',
+      'Press Add to list on the first row and add it, then press Add to list on the second row with the same name and press Add item.',
+    ],
+    expected: [
+      'The row splits into its original rows (nothing is saved yet) and the link goes away.',
+      'The second add is refused with "That item is already in this store\u2019s list. Pick it in the list instead.", as it always was; picking the first row\u2019s new item in the second row\u2019s picker joins them.',
+    ],
+  },
+  // ---- Bulk share ----
+  {
+    id: 'S-85', feature: 'Bulk share', title: 'Select all in Costco, share with one person, and Undo', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    steps: [
+      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
+      'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
+      'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
+      'Look at the Costco rows and the notice, then press Undo.',
+    ],
+    expected: [
+      'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
+      'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select button.',
+      'Undo puts every row back to "Me +2".',
+    ],
+  },
+  {
+    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes At home, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    steps: [
+      'On To get, Select two Costco items and press Share... Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
+      'Open At home, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to To get, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'Open At home again and look at the same items\' split.',
+    ],
+    expected: [
+      'After the first Apply To get shows the new split but At home still shows the store\'s split for those items (this month only).',
+      'After the second Apply At home shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
+    ],
+  },
+  {
+    id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
+    steps: [
+      'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
+      'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
+      'Open the pack-priced item and look at both packs; press Undo on the notice.',
+      'Sign in as New user (or any account with no sharing group) and open Groceries, To get.',
+    ],
+    expected: [
+      'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
+      'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
+      'An account with no sharing group has no Select button on To get.',
+    ],
+  },
+  {
+    id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
+      'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
+      'Scan a product USDA does know (oatmeal) and read the same place.',
+    ],
+    expected: [
+      'The product is found; under it the line "Data from Open Food Facts. Crowd-sourced: check the numbers against the label." shows, and the grams start at the product\'s serving when it has one.',
+      'Use fills the form with that serving\'s numbers (editable); nothing is saved until Save food. A number that disagrees with the label is yours to correct before saving.',
+      'The USDA product shows no Open Food Facts line.',
+    ],
+  },
+  {
+    id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
+    steps: [
+      'On a phone, as an admin, open New ready-made food, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'Read the sheet, then press Photo the label.',
+      'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
+    ],
+    expected: [
+      'The sheet lists USDA and Open Food Facts as not found, with Type the name as the main button and Photo the label second (see S-93).',
+      'Photo the label closes the sheet and opens the same camera as Scan label; the photo fills the form like any label scan.',
+      'Nothing is saved until Save food.',
+    ],
+  },
+  {
+    id: 'S-90', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Groceries, To get, tick three items as if you were in the store without typing a price (or with an old one).',
+      'Later, press Scan receipt and photograph a receipt that has those three items, and read the note under each of their rows.',
+      'Press Apply and look at the three items; then press Undo.',
+    ],
+    expected: [
+      'Each ticked item\'s row says what the list had and what the receipt says ("Was no price, now 1 × $8.99"), with a label: Price added, Price changed, Count changed or Matches the list; an item you did not tick has no note.',
+      'Apply gives the three items the receipt\'s price and count, and the item that had no price now has one; Undo puts the old price, count and "no price" back.',
+    ],
+  },
+  {
+    id: 'S-91', feature: 'Receipt reconcile', title: 'A ticked item that is not on the receipt is listed, kept, or unticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    steps: [
+      'On a phone, on To get, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
+      'Find "Ticked, not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
+      'Scan again, tick Untick on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
+      'Scan a receipt that has none of your ticked items.',
+    ],
+    expected: [
+      'Milk is listed with what it holds now ("Ticked now: 1 × $3.79") and "Kept"; applying leaves Milk ticked with its price.',
+      'With Untick on, the row says "Will be unticked", the footer says "1 will be unticked.", Apply puts Milk back to get with the notice "1 item unticked.", and Undo ticks it again with its price.',
+      'When none of your ticked items are on the receipt, the list opens with "None of your ticked items are on this receipt. Is this the right one?"',
+    ],
+  },
+  {
+    id: 'S-92', feature: 'Receipt reconcile', title: 'The receipt has a different count than you ticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    steps: [
+      'On a phone, tick one item with a count of 1 and a price. Scan a receipt where that item is bought twice (a count of 2 at the same unit price).',
+      'Read the note under its row, then press Apply and open the item.',
+    ],
+    expected: [
+      'The note says "Count changed" with "Was 1 × $4.49, now 2 × $4.49".',
+      'After Apply the item shows a count of 2 at $4.49; the receipt\'s count wins over the one you ticked with.',
+    ],
+  },
+  {
+    id: 'S-93', feature: 'Barcode scan', title: 'A missed scan makes typing the name the main choice and offers the AI label photo second', persona: 'diet-fresh', brief: 'barcode-miss-ladder', device: true,
+    steps: [
+      'On a phone, as an admin, open Daily, Diet and press Scan barcode in the food search box; scan a code neither source knows. Watch the line while it looks.',
+      'Read the sheet: the steps tried, the main button, the button under it and the small note under that.',
+      'Press Type the name and see where the cursor is. Scan the code again and press Photo the label.',
+      'Photograph a nutrition label and read the result before pressing Use; then press Use.',
+    ],
+    expected: [
+      'While looking the line says Checking USDA... and then Checking Open Food Facts...',
+      'After a miss the sheet lists USDA: not found and Open Food Facts: not found, with Type the name as the main button, Photo the label second with "Uses AI" under it, and Scan again, Photo of the barcode and Close as plain links.',
+      'Type the name closes the sheet and puts the cursor in the Search your past meals and recipes box; no AI call was made.',
+      'Photo the label closes the sheet and opens the camera at once with no confirm step; the result shows an AI mark and "Read from the photo. Check these numbers against the label." before Use, and Use fills the Quick add form.',
+    ],
+  },
+  {
+    id: 'S-94', feature: 'Barcode scan', title: 'The label count shows after a read, and a used-up day switches the label button off', persona: 'diet-fresh', brief: 'barcode-miss-ladder', edge: true,
+    steps: [
+      'As an admin, miss a scan and read the note under Photo the label; read a label; then miss another scan and read the note again.',
+      'When the daily label cap is used up (a test server with SCAN_DAILY_MAX set to 1 is the quick way), miss a scan again and try the buttons.',
+    ],
+    expected: [
+      'Before any label has been read in this session the note says only "Uses AI"; after one it says how many are left today, for example "Uses AI · 29 of 30 left today". The count is shared by the whole server, not by you.',
+      'With none left, Photo the label is switched off with "Label photos are used up for today. Type the name instead."; Type the name still works.',
+    ],
+  },
+  {
+    id: 'S-95', feature: 'Sharing done', title: 'Done closes the Sharing panel and adds what you typed', persona: 'grocery-shopper', brief: 'sharing-done-button',
+    steps: [
+      'Open Daily, Groceries, At home, press Sharing and look at the bottom of the panel.',
+      'In the Home group type Jo in Add a person without pressing Add person, then press Done.',
+      'Press Sharing again and look at the Home group.',
+    ],
+    expected: [
+      'A Done button sits at the bottom of the panel. Pressing it closes the panel, a note says "Sharing saved." under the buttons, and focus is back on the Sharing button.',
+      'Jo is in the Home group, added by Done; the note is gone while the panel is open again.',
+    ],
+  },
+  {
+    id: 'S-96', feature: 'Sharing done', title: 'Text that cannot be added keeps the panel open', persona: 'grocery-shopper', brief: 'sharing-done-button', edge: true,
+    steps: [
+      'Open the Sharing panel, type Sam in Add a person in the Home group (Sam is already there) and press Done.',
+      'Clear the box and press Done.',
+    ],
+    expected: [
+      'The panel stays open and the Home group says "That person is already in this group."; no "Sharing saved." note appears.',
+      'With the box empty, Done closes the panel and says "Sharing saved.".',
+    ],
+  },
+  {
+    id: 'S-97', feature: 'Security headers', title: 'The barcode scanner\'s live camera opens on a phone', persona: 'diet-fresh', brief: 'camera-and-headers', device: true,
+    steps: [
+      'On a phone, sign in as an admin on QA, open Daily, Diet and press Scan barcode in the food search box.',
+      'When the browser asks to use the camera, allow it. Read the line under the camera view.',
+      'Scan any product barcode, then close the sheet and reopen it.',
+    ],
+    expected: [
+      'The sheet says "Starting the camera..." and then shows the live camera view with "Point the camera at the barcode."; it does not drop to the photo-of-the-barcode choice because the site blocked the camera.',
+      'A scanned code is looked up; closing the sheet switches the camera off (the browser\'s camera light goes out), and reopening starts it again.',
+    ],
+  },
+  {
+    id: 'S-98', feature: 'Security headers', title: 'Every tab and the plain pages render styled with no security errors in the console', persona: 'diet-fresh', brief: 'camera-and-headers', edge: true,
+    steps: [
+      'On a computer, open the QA site in Chrome with developer tools open on the Console tab, and sign in.',
+      'Open each tab in turn (Daily, Progress, Program, Settings) and open one sheet on each.',
+      'Open /privacy, /terms and an address that does not exist, such as /nothing-here, one after another.',
+    ],
+    expected: [
+      'Every screen is styled as normal (colours, fonts and layout, not bare text).',
+      'The Console shows no red errors that mention Content Security Policy, Permissions Policy or "Refused to".',
+      'The privacy and terms pages and the "Page not found" page are styled the same way and show no such errors.',
+    ],
+  },
+  {
+    id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
+    steps: [
+      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'Read the title, the description and the picture on the card.',
+    ],
+    expected: [
+      'The card is titled "Loadbearer: a weekly training board that remembers your lifts" with the description "A weekly workout board with A/B program rotation, phase-based targets, timers and a muscle map. Works offline."',
+      'A wide picture (the Loadbearer logo beside the title line) shows on the card. A chat app that cached the address earlier may show an old card; try a different app or add ?x=1 to the address.',
+    ],
+  },
+  {
+    id: 'S-100', feature: 'Link previews', title: 'The sitemap and icon files load, and the plain pages have their own titles', persona: 'new-user', brief: 'share-preview-sitemap',
+    steps: [
+      'In a browser, open /sitemap.xml and /favicon.ico on the QA address.',
+      'Open /privacy.html, /terms.html and /delete-account and read each browser tab\'s title.',
+      'Open the app itself and read its tab title and icon.',
+    ],
+    expected: [
+      '/sitemap.xml shows an XML list of five addresses (the home page, /plans, /privacy.html, /terms.html and /delete-account), all naming loadbearer.app, the production host; /favicon.ico loads a small picture, not a "not found" page.',
+      'The tabs are titled "Privacy Policy · Loadbearer", "Terms of Use · Loadbearer" and "Delete your account · Loadbearer".',
+      'The app tab is titled "Loadbearer" with the logo as its icon.',
+    ],
+  },
+  {
+    id: 'S-101', feature: 'Search hiding', title: 'QA asks search engines to stay out', persona: 'new-user', brief: 'qa-noindex-robots',
+    steps: [
+      'In a terminal, run curl https://qa.loadbearer.app/robots.txt (or open that address in a browser) and read the answer.',
+      'Open /sitemap.xml on QA and confirm the app itself still loads normally.',
+    ],
+    expected: [
+      'robots.txt answers exactly two lines, "User-agent: *" and "Disallow: /", with no Sitemap line.',
+      'The sitemap and the app still load; only crawlers are asked to stay away. The same holds on the Staging address if it is up.',
+    ],
+  },
+  {
+    id: 'S-102', feature: 'Search hiding', title: 'Production\'s robots.txt still allows search, once production has the new build', persona: 'new-user', brief: 'qa-noindex-robots', edge: true,
+    steps: [
+      'In a terminal, run curl https://loadbearer.app/robots.txt (or open that address in a browser) and read the answer.',
+    ],
+    expected: [
+      'Production answers "User-agent: *", "Allow: /" and a "Sitemap: https://loadbearer.app/sitemap.xml" line. It never answers Disallow: /.',
+      'Until production is deployed with PR 740, it may still answer the older file (no Sitemap line); that is expected, not a fail. A "Disallow: /" on production is a fail.',
+    ],
+  },
+  {
+    id: 'S-103', feature: 'Moved-card tag', title: 'A card moved to another day is tagged with the day it came from', persona: 'superset-builder', brief: 'moved-from-label',
+    steps: [
+      'Open the Board and open the ⋯ menu on a card that sits on Day 2.',
+      'In Move to choose Day 4. Find the card in the Day 4 column and read its tag.',
+      'Move it back to Day 2 (Day 2 shows "(planned)") and look for the tag.',
+    ],
+    expected: [
+      'On Day 4 the card carries the tag "From Day 2".',
+      'Back on its planned day the tag is gone.',
+    ],
+  },
+  {
+    id: 'S-104', feature: 'Moved-card tag', title: 'A moved card whose home day is off the board names its program day', persona: 'superset-builder', brief: 'moved-from-label', edge: true,
+    steps: [
+      'Open the ⋯ menu on a card from the Day 7 workout and move it to Day 3; its tag says "From Day 7".',
+      'Tick Rest on Day 6, so every workout from Day 6 on slips one column later and the Day 7 workout\'s home column is past the end of the board (if the page asks to confirm, read it and press OK).',
+      'Read the tag on the card you moved. Untick Rest on Day 6 and read it again.',
+    ],
+    expected: [
+      'With the rest day on, the tag reads "From Day 7’s workout, off this week" (the program day, not a column number that does not exist).',
+      'With the rest day off, the tag is back to "From Day 7".',
+    ],
+  },
+  {
+    id: 'S-105', feature: 'Program compare', title: 'On a phone the programs line up one over the other, and the filters fold behind a button', persona: 'superset-builder', brief: 'program-compare', edge: true,
+    steps: [
+      'On a phone (or a browser window 375 px wide), open Program, Compare programs. Look at the first rows.',
+      'Tap Filter, then Any difference; tap Filter again. Then open the same page in a window wider than 800 px.',
+    ],
+    expected: [
+      'Each exercise is one row: the first program\'s line with its name in front of it, the second program\'s line right under it. The Day buttons stay in one row you can swipe sideways, and the status and phase buttons are hidden behind a Filter button.',
+      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
     ],
   },
 ];

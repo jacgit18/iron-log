@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { MAX_GROUPS, MAX_PEOPLE } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -8,10 +8,22 @@ import './SharingGroups.css';
 // Groups of people you split groceries with ("Home", "Costco run"). You are always in every group, so only the others are listed.
 // A person marked "share already paid" is not asked for money in the settle-up (it is already in the account that pays the bill).
 // A store can default to one group: everything bought there is then split with that group unless an item or a pack says otherwise.
-function GroupRow({ group, stores }: { group: GroceryGroup; stores: string[] }) {
+// Every change saves as it is made; Done closes the panel and first adds a group or a person that was typed but not added yet.
+type Flushers = MutableRefObject<Map<string, () => string | null>>;
+function GroupRow({ group, stores, flushers }: { group: GroceryGroup; stores: string[]; flushers: Flushers }) {
   const s = useAppStore.getState();
   const [name, setName] = useState(group.n); const [person, setPerson] = useState(''); const [err, setErr] = useState<string | null>(null);
   const [arming, setArming] = useState<string | null>(null);
+  // Done asks each group to save its pending rename and add the person typed in its box; a message back means it could not, and the panel stays open.
+  const flush = useRef<() => string | null>(() => null);
+  // A rename that failed when the name box lost focus (a name another group has) is tried again, so Done never closes over a lost change.
+  flush.current = () => {
+    if (name.trim() && name.trim() !== group.n) { const m = s.renameGroceryGroup(group.id, name); if (m) { setErr(m); return m; } }
+    if (!person.trim()) return null;
+    const m = s.addGroceryPerson(group.id, person); setErr(m); if (!m) setPerson('');
+    return m;
+  };
+  useEffect(() => { const map = flushers.current; map.set(group.id, () => flush.current()); return () => { map.delete(group.id); }; }, [flushers, group.id]);
   return (
     <li className="gsgroup">
       <div className="gsgrouphead">
@@ -60,10 +72,16 @@ function GroupRow({ group, stores }: { group: GroceryGroup; stores: string[] }) 
   );
 }
 
-export default function SharingGroups({ g }: { g: Grocery }) {
+export default function SharingGroups({ g, onDone }: { g: Grocery; onDone: () => void }) {
   const s = useAppStore.getState();
   const [name, setName] = useState(''); const [people, setPeople] = useState(''); const [err, setErr] = useState<string | null>(null);
   const groups = (g.groups ?? []).filter(x => !x.gone);
+  const flushers: Flushers = useRef(new Map());
+  const done = () => {
+    for (const flush of flushers.current.values()) { if (flush()) return; } // the group shows its own message
+    if (name.trim() || people.trim()) { const m = s.addGroceryGroup(name, people.split(/[,\n]/)); setErr(m); if (m) return; }
+    setErr(null); onDone();
+  };
   // The panel opens from a button (or the prompt) that may disappear, so focus goes to its heading instead of being dropped on the page.
   const head = useRef<HTMLHeadingElement>(null);
   useEffect(() => { head.current?.focus(); }, []);
@@ -71,7 +89,7 @@ export default function SharingGroups({ g }: { g: Grocery }) {
     <section className="gform" aria-labelledby="groc-sharing-h">
       <h3 id="groc-sharing-h" ref={head} tabIndex={-1}>Sharing</h3>
       <p className="note">Make a group for the people you split groceries with. You are always in it.</p>
-      {groups.length > 0 && <ul className="glist">{groups.map(x => <GroupRow key={x.id} group={x} stores={g.stores} />)}</ul>}
+      {groups.length > 0 && <ul className="glist">{groups.map(x => <GroupRow key={x.id} group={x} stores={g.stores} flushers={flushers} />)}</ul>}
       <form className="warmadd gsnew" noValidate onSubmit={e => {
         e.preventDefault();
         const m = s.addGroceryGroup(name, people.split(/[,\n]/));
@@ -82,6 +100,7 @@ export default function SharingGroups({ g }: { g: Grocery }) {
         <button type="submit" className="btn sm" disabled={!name.trim() || groups.length >= MAX_GROUPS}>Add group</button>
       </form>
       {err && <p className="note gerr" role="alert">{err}</p>}
+      <div className="gsdone"><button type="button" className="btn primary" id="groc-sharing-done" onClick={done}>Done</button></div>
     </section>
   );
 }

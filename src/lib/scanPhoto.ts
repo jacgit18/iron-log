@@ -1,4 +1,5 @@
 import { signIn } from '../sync/devUser.js';
+import { markUsedUp, rememberAllowance } from './labelAllowance.js';
 import { cleanReceiptAnswer, type ItemRef, type ReceiptResult } from '../shared/receipt.js';
 import { cleanScanAnswer, type LabelResult } from '../shared/scan.js';
 
@@ -23,6 +24,7 @@ export const SCAN_TEXT = {
   unavailable: 'Scan is not available right now. You can still type the numbers.',
   photo: 'Could not open that photo. Try another one, or type the numbers.',
   unreadable: 'Could not read the numbers. Try a closer, flatter photo or type them in.',
+  cap: 'Label photos are used up for today. You can still type the numbers.',
   per100g: 'That label only shows numbers per 100 g, so nothing was filled in. Type the numbers for one serving.',
 } as const;
 
@@ -43,7 +45,10 @@ async function shrinkToJpegBase64(file: Blob, maxSide = MAX_SIDE): Promise<strin
   return btoa(bin);
 }
 
-export async function scanLabel(file: Blob, signal?: AbortSignal): Promise<{ ok: true; result: LabelResult } | ScanFailure> {
+/** A label scan can also fail because today's label cap is used up (the route answers 503 with why "cap"). */
+export type LabelFailure = ScanFailure | { ok: false; reason: 'cap' };
+
+export async function scanLabel(file: Blob, signal?: AbortSignal): Promise<{ ok: true; result: LabelResult } | LabelFailure> {
   let image: string;
   try { image = await shrinkToJpegBase64(file); } catch { return { ok: false, reason: 'photo' }; }
   let res: Response;
@@ -51,8 +56,13 @@ export async function scanLabel(file: Blob, signal?: AbortSignal): Promise<{ ok:
     res = await fetch('/api/scan/label', { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': __APP_VERSION__, ...signIn() }, body: JSON.stringify({ image }), ...(signal ? { signal } : {}) });
   } catch { return { ok: false, reason: 'offline' }; }
   if (res.status === 429) return { ok: false, reason: 'limit' };
-  if (!res.ok) { console.warn(`label scan unavailable: status ${res.status}`); return { ok: false, reason: 'unavailable' }; }
-  try { return { ok: true, result: cleanScanAnswer(await res.json()) }; } catch { return { ok: false, reason: 'unavailable' }; }
+  if (!res.ok) {
+    const why = await res.json().then((b: { why?: unknown; retryAfterSec?: unknown }) => b, () => ({} as { why?: unknown; retryAfterSec?: unknown }));
+    if (res.status === 503 && why.why === 'cap') { markUsedUp(why.retryAfterSec); return { ok: false, reason: 'cap' }; }
+    console.warn(`label scan unavailable: status ${res.status}`);
+    return { ok: false, reason: 'unavailable' };
+  }
+  try { const body: unknown = await res.json(); rememberAllowance(body); return { ok: true, result: cleanScanAnswer(body) }; } catch { return { ok: false, reason: 'unavailable' }; }
 }
 
 /** Words for the receipt sheet's failures and empty results (brief receipt-scan). */

@@ -7,7 +7,7 @@ const YT = 'https%3A%2F%2Fyoutu.be%2Fabc123';
 
 test('the manifest lists the app as a share target', async ({ page }) => {
   const m = await (await page.request.get('/manifest.webmanifest')).json();
-  expect(m.share_target).toEqual({ action: './', method: 'GET', params: { title: 'share_title', text: 'share_text', url: 'share_url' } });
+  expect(m.share_target).toEqual({ action: './', method: 'GET', enctype: 'application/x-www-form-urlencoded', params: { title: 'share_title', text: 'share_text', url: 'share_url' } });
 });
 
 test('a shared link opens the sheet, the address is cleaned, and Back closes it', async ({ page }) => {

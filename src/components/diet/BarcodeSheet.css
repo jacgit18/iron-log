@@ -1,0 +1,45 @@
+@layer base, components;
+@layer components {
+/* Scan barcode (brief barcode-scan): the camera sheet opened from the food search box. */
+.bcsheet {
+  max-width: 520px;
+}
+.bcview {
+  display: block;
+  width: 100%;
+  max-height: 50vh;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--r-lg);
+  background: var(--line);
+}
+.bcview.off {
+  display: none;
+}
+.bcsteps {
+  margin: var(--sp-8) 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.bcmiss {
+  flex-direction: column;
+  align-items: stretch;
+}
+.bclabel .btn {
+  width: 100%;
+}
+.bclabel .note {
+  margin: var(--sp-4) 0 0;
+  text-align: center;
+}
+.bclinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-8);
+}
+.bcsheet .actions .btn {
+  min-height: 44px;
+}
+}

@@ -6,8 +6,9 @@ export const MAX_QUERY = 60;
 export const MAX_RESULTS = 8;
 export const MAX_GRAMS = 5000;
 
-/** One search result: numbers per 100 g, `c` and `f` left out when the source has none. `serving` is a branded food's own serving in grams. */
-export interface FoodHit { id: number; name: string; brand?: string; kcal: number; p: number; c?: number; f?: number; serving?: number }
+/** One search result: numbers per 100 g, `c` and `f` left out when the source has none. `serving` is a branded food's own serving in grams. `source` is set only on a result from
+ *  Open Food Facts (crowd-sourced, shown with a "check the label" note); a USDA result has none. */
+export interface FoodHit { id: number; name: string; brand?: string; kcal: number; p: number; c?: number; f?: number; serving?: number; source?: 'off' }
 
 /** What the person typed, trimmed and squeezed; null when it is too short or too long to ask about. */
 export function cleanQuery(v: unknown): string | null {
@@ -75,7 +76,7 @@ export function cleanHits(json: unknown): FoodHit[] {
     const kcal = num(o.kcal), p = num(o.p);
     if (kcal === null || p === null) continue;
     const c = num(o.c), f = num(o.f), serving = num(o.serving);
-    out.push({ id: o.id, name: o.name.slice(0, 80), ...(typeof o.brand === 'string' && o.brand ? { brand: o.brand.slice(0, 60) } : {}), kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(serving !== null && serving > 0 ? { serving } : {}) });
+    out.push({ id: o.id, name: o.name.slice(0, 80), ...(typeof o.brand === 'string' && o.brand ? { brand: o.brand.slice(0, 60) } : {}), kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(serving !== null && serving > 0 ? { serving } : {}), ...(o.source === 'off' ? { source: 'off' as const } : {}) });
     if (out.length >= MAX_RESULTS) break;
   }
   return out;

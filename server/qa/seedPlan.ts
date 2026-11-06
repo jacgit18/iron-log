@@ -20,6 +20,7 @@ export interface PersonaRows {
   body: SeedBody[];
   groceryItems: SeedGrocery[];
   groceryStores: { clientId: string; position: number; data: { id: string; n: string } }[];
+  groceryGroups: { clientId: string; position: number; data: { id: string; n: string; people: { id: string; n: string }[]; stores: string[] } }[];
   programs: boolean;
   erased: boolean;
 }
@@ -73,7 +74,8 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
     for (let back = 0; back < spec.logDays; back++) if (rand() < 0.62) trainingDays.push(back);
     if (!trainingDays.length) trainingDays.push(0);
     let i = 0;
-    while (logs.length < spec.logEntries) {
+    const ready = spec.progressionReady && exerciseIds.includes(spec.progressionReady) ? spec.progressionReady : null;
+    while (logs.length < spec.logEntries - (ready ? 2 : 0)) {
       const back = trainingDays[i % trainingDays.length]!;
       const d = addDays(t, -back);
       const ex = exerciseIds[Math.floor(rand() * exerciseIds.length)]!;
@@ -82,7 +84,14 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
         exerciseId: ex, d: iso(d), wk: iso(monday(d)), phase: PHASES[Math.floor(rand() * PHASES.length)]!,
         weightLb: 10 + Math.round(rand() * 40) * 5, setsCount: 2 + Math.floor(rand() * 4), reps: 6 + Math.floor(rand() * 10),
       });
+      const last = logs[logs.length - 1]!;
+      if (last.exerciseId === ready && last.phase === 'strength') last.phase = 'hyp'; // the ready exercise keeps only the two entries below as strength
       i++;
+    }
+    // Two strength sessions in a row (3 and 1 days back) at the same weight, every set at the full 4 x 6: the app then suggests going up.
+    if (ready) for (const back of [3, 1]) {
+      const d = addDays(t, -back);
+      logs.push({ clientId: `qa-${persona.id}-${String(logs.length + 1).padStart(5, '0')}`, exerciseId: ready, d: iso(d), wk: iso(monday(d)), phase: 'strength', weightLb: 100, setsCount: 4, reps: 6 });
     }
   }
   const body: SeedBody[] = [];
@@ -91,6 +100,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
     body.push({ wk: iso(d), d: iso(d), weightLb: Math.round((180 - w * 0.05 + (rand() - 0.5) * 3) * 10) / 10 });
   }
   const groceryStores = spec.groceryItems > 0 ? STORES.map((n, position) => ({ clientId: n, position, data: { id: n, n } })) : [];
+  const groceryGroups = spec.groceryItems > 0 && spec.groceryGroup ? [{ clientId: `qa-${persona.id}-grp`, position: 0, data: { id: `qa-${persona.id}-grp`, n: 'Home', people: [{ id: `qa-${persona.id}-sam`, n: 'Sam' }, { id: `qa-${persona.id}-alex`, n: 'Alex' }], stores: [STORES[0]!] } }] : [];
   const groceryItems: SeedGrocery[] = [];
   for (let n = 0; n < spec.groceryItems; n++) {
     const id = `qa-${persona.id}-g${String(n + 1).padStart(3, '0')}`;
@@ -99,7 +109,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
   }
   const dietEntries = buildDiet(persona, t);
   const recipes = buildRecipes(persona);
-  return { logs, body, groceryItems, groceryStores, dietEntries, recipes, config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
+  return { logs, body, groceryItems, groceryStores, groceryGroups, dietEntries, recipes, config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
 }
 
 /** The diet log: `pastDays` full days, then today up to its share of the targets (the first foods in order, or every food scaled up when over). */

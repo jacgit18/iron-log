@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
-import { brandHtml, brandManifest } from './appLabel.ts';
+import { brandHtml, brandManifest, HIDE_FROM_SEARCH_ROBOTS } from './appLabel.ts';
+import { isPagePath } from './pagePaths.ts';
 import { personaByEmail } from './qa/personas.ts';
 import compression from 'compression';
 import express from 'express';
@@ -19,6 +20,7 @@ import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
+import { barcodeRoutes } from './foodBarcode.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
 import { receiptsRoutes } from './receipts.ts';
 import { scanRoutes, type ScanDeps } from './scan.ts';
@@ -157,7 +159,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   // First of all: a browser opening the old Cloud Run address goes to the custom domain (BASE_URL) before anything else runs.
   app.use(canonicalHost(canonicalOrigin));
-  app.use(securityHeaders());
+  app.use(securityHeaders(staticDir));
   // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
   app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
@@ -245,6 +247,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/billing', ...(ADMIN_ONLY ? [requireAdmin] : []), rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
+  // Barcode lookup (brief barcode-scan): admin-only, so it is mounted before the everyone prefix it sits under; same per-user limit as typed search.
+  if (db) app.use('/api/foods/barcode', requireAdmin, rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
@@ -383,12 +387,19 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     if (labelled) {
       app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(labelled.manifest));
       app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page));
+      app.get('/robots.txt', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('text').send(HIDE_FROM_SEARCH_ROBOTS));
     }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
-    // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
+    // A page route (no file extension) on the allowlist (pagePaths.ts) gets the app, which draws it; any other is a 404 page. A missing file (/assets/old.js) stays a 404, so a
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
+      // Only the app's own page addresses get the app. Any other extensionless path is a real 404 with a small static page (never an echo of the path), or plain text if the build lacks it.
+      if (!isPagePath(req.path)) {
+        res.set('Cache-Control', NO_CACHE).status(404);
+        if (!existsSync(join(root, '404.html'))) return void res.type('text').send('Not found');
+        return void res.sendFile('404.html', { root }, err => void (err && !res.headersSent && res.type('text').send('Not found')));
+      }
       if (labelled) return void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page);
       res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page
     });

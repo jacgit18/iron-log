@@ -159,7 +159,8 @@ export default defineConfig({
         scope: './',
         display: 'standalone',
         theme_color: '#1E2326',
-        background_color: '#EEF0EC',
+        // The phone's launch splash reads this one fixed value, so it matches the dark theme (the app's own first paint follows the chosen theme).
+        background_color: '#1E2326',
         categories: ['health', 'fitness', 'sports'],
         // Long-press the home-screen icon (Android). Both open the app on a tab; the store reads ?open= (lib/viewState.ts).
         shortcuts: [
@@ -167,7 +168,7 @@ export default defineConfig({
           { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
         ],
         // Android's share sheet lists the app for a shared link or text; the page opens at ./?share_url=... and the app shows a "Save this link" sheet (lib/shareTarget.ts).
-        share_target: { action: './', method: 'GET', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },
+        share_target: { action: './', method: 'GET', enctype: 'application/x-www-form-urlencoded', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -184,7 +185,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
         // The QA and Staging icons are only linked on those services (server/appLabel.ts); production never shows them.
-        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**'],
+        // og-image.png is only fetched by the sites that show a link preview.
+        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**', 'og-image.png'],
       },
     }),
   ],

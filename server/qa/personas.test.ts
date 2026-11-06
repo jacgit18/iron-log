@@ -45,6 +45,21 @@ describe('QA personas', () => {
     expect(buildPersonaRows(p, EXERCISES, TODAY)).toEqual(buildPersonaRows(p, EXERCISES, TODAY));
   });
 
+  it('gives the heavy logger one exercise the app suggests going up on, and keeps the log count', () => {
+    const p = personaById('heavy-logger')!;
+    const rows = buildPersonaRows(p, [...EXERCISES, 'cablecrunch'], TODAY);
+    expect(rows.logs).toHaveLength(p.data.logEntries);
+    expect(new Set(rows.logs.map(l => l.clientId)).size).toBe(rows.logs.length);
+    // Two full 4 x 6 strength days at one weight is what makes the app suggest going up (progressionOf: 105 at the default step, 110 with a step of 10; checked by hand, server/ may not import src/lib).
+    const strength = rows.logs.filter(l => l.exerciseId === 'cablecrunch' && l.phase === 'strength');
+    expect(strength.map(l => [l.d, l.weightLb, l.setsCount, l.reps])).toEqual([['2026-10-24', 100, 4, 6], ['2026-10-26', 100, 4, 6]]);
+  });
+
+  it('leaves the heavy logger without the extra entries when the exercise is not in the program set', () => {
+    const p = personaById('heavy-logger')!;
+    expect(buildPersonaRows(p, EXERCISES, TODAY).logs).toHaveLength(p.data.logEntries);
+  });
+
   it('keeps log rows inside the database checks and unique by client id', () => {
     const rows = buildPersonaRows(personaById('three-year-veteran')!, EXERCISES, TODAY);
     expect(new Set(rows.logs.map(l => l.clientId)).size).toBe(rows.logs.length);

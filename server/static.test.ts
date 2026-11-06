@@ -18,6 +18,7 @@ beforeAll(async () => {
   mkdirSync(join(dir, 'assets'));
   mkdirSync(join(dir, 'icons'));
   writeFileSync(join(dir, 'index.html'), '<!doctype html><title>Loadbearer</title>');
+  writeFileSync(join(dir, '404.html'), '<!doctype html><title>Page not found</title><h1>Page not found</h1>');
   writeFileSync(join(dir, 'delete-account.html'), '<!doctype html><title>Delete your account</title>');
   writeFileSync(join(dir, 'sw.js'), '// service worker');
   writeFileSync(join(dir, 'workbox-2fbc6a65.js'), '// workbox');
@@ -76,7 +77,7 @@ describe('serving the PWA', () => {
   });
 
   it('gives a page route the app, so a reload or a deep link works', async () => {
-    for (const path of ['/board', '/progress/week/2026-10-04']) {
+    for (const path of ['/', '/?open=board', '/plans', '/plans/', '/plans?x=1']) {
       const res = await get(path);
       expect(res.status, path).toBe(200);
       expect(res.headers.get('cache-control')).toBe('no-cache');
@@ -85,7 +86,40 @@ describe('serving the PWA', () => {
   });
 
   it('answers HEAD for a page', async () => {
-    expect((await get('/board', { method: 'HEAD' })).status).toBe(200);
+    expect((await get('/plans', { method: 'HEAD' })).status).toBe(200);
+  });
+
+  it('answers a path that is not a page with a 404 page, not the app (GET and HEAD)', async () => {
+    for (const path of ['/zzz', '/board', '/board/x', '/progress/week/2026-10-04', '/Plans', '/privacy', '/zzz?open=board']) {
+      const res = await get(path);
+      expect(res.status, path).toBe(404);
+      expect(res.headers.get('content-type'), path).toContain('text/html');
+      expect(res.headers.get('cache-control'), path).toBe('no-cache');
+      const body = await res.text();
+      expect(body, path).toContain('Page not found');
+      expect(body, path).not.toContain('<title>Loadbearer</title>');
+      expect((await get(path, { method: 'HEAD' })).status, path).toBe(404);
+    }
+  });
+
+  it('never repeats the address that was asked for', async () => {
+    const res = await get('/zzz%3Cscript%3Ealert(1)%3C%2Fscript%3E');
+    expect(res.status).toBe(404);
+    const body = await res.text();
+    expect(body).not.toContain('zzz');
+    expect(body).not.toContain('<script');
+  });
+
+  it('answers a plain 404 when the build has no 404 page', async () => {
+    const bareDir = mkdtempSync(join(tmpdir(), 'ironlog-no404-'));
+    writeFileSync(join(bareDir, 'index.html'), '<!doctype html><title>Loadbearer</title>');
+    const s = createApp({ staticDir: bareDir }).listen(0);
+    await new Promise(done => s.once('listening', done));
+    try {
+      const r = await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/zzz`);
+      expect(r.status).toBe(404);
+      expect(await r.text()).toBe('Not found');
+    } finally { await new Promise<void>(done => s.close(() => done())); rmSync(bareDir, { recursive: true, force: true }); }
   });
 
   it('keeps a missing file a 404 instead of answering with HTML', async () => {
@@ -133,14 +167,14 @@ describe('the public account-deletion page', () => {
     expect((await get('/delete-account', { method: 'POST' })).status).toBe(404);
   });
 
-  it('falls through to the app, not a 500, when the page file is missing from the build', async () => {
+  it('falls through to a 404, not a 500, when the page file is missing from the build', async () => {
     const empty = mkdtempSync(join(tmpdir(), 'ironlog-nodelete-'));
     writeFileSync(join(empty, 'index.html'), '<!doctype html><title>Loadbearer</title>');
     const s = createApp({ staticDir: empty }).listen(0);
     await new Promise(done => s.once('listening', done));
     try {
-      // The app answers a page route; the missing file must not turn into a 500.
-      expect((await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/delete-account`)).status).toBe(200);
+      // The path is not an app page, so it is a 404 (since the 404 page); the missing file must not turn into a 500.
+      expect((await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/delete-account`)).status).toBe(404);
     } finally {
       await new Promise<void>(done => s.close(() => done()));
       rmSync(empty, { recursive: true, force: true });
@@ -210,7 +244,7 @@ describe('APP_LABEL (appLabel.ts)', () => {
     try {
       expect(((await (await fetch(`${url}/manifest.webmanifest`)).json()) as { icons: { src: string }[] }).icons[0]!.src).toBe('icons/qa/icon-192.png');
       expect(await (await fetch(`${url}/`)).text()).toContain('<title>Loadbearer QA</title>');
-      expect(await (await fetch(`${url}/progress`)).text()).toContain('<title>Loadbearer QA</title>');
+      expect(await (await fetch(`${url}/plans`)).text()).toContain('<title>Loadbearer QA</title>');
       // The service worker precaches both files by asking the server for them with a revision query. Those copies are what it answers
       // later visits with, so they must be the branded ones too (the page, the name and the icons all come from them).
       expect(((await (await fetch(`${url}/manifest.webmanifest?__WB_REVISION__=abc`)).json()) as { icons: { src: string }[] }).icons[0]!.src).toBe('icons/qa/icon-192.png');
@@ -220,5 +254,28 @@ describe('APP_LABEL (appLabel.ts)', () => {
     } finally {
       await new Promise<void>(done => labelled.close(() => done()));
     }
+  });
+
+  it('asks search engines to stay out of QA and Staging, and leaves production\'s robots.txt alone', async () => {
+    writeFileSync(join(dir, 'manifest.webmanifest'), '{"name":"Loadbearer","icons":[]}');
+    writeFileSync(join(dir, 'robots.txt'), 'User-agent: *\nAllow: /\n\nSitemap: https://loadbearer.app/sitemap.xml\n');
+    for (const label of ['QA', 'Staging']) {
+      const labelled = createApp({ staticDir: dir, appLabel: label }).listen(0);
+      await new Promise(done => labelled.once('listening', done));
+      try {
+        const res = await fetch(`http://127.0.0.1:${(labelled.address() as AddressInfo).port}/robots.txt`);
+        expect(res.status, label).toBe(200);
+        const text = await res.text();
+        expect(text, label).toContain('Disallow: /\n');
+        expect(text, label).not.toContain('Allow: /\n');
+        expect(text, label).not.toContain('Sitemap');
+      } finally {
+        await new Promise<void>(done => labelled.close(() => done()));
+      }
+    }
+    const production = await (await get('/robots.txt')).text();
+    expect(production).toContain('Allow: /\n');
+    expect(production).toContain('Sitemap: https://loadbearer.app/sitemap.xml');
+    expect(production).not.toContain('Disallow');
   });
 });
