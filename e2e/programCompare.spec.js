@@ -181,3 +181,17 @@ test('a wide screen starts on All days; a phone starts on the editor\'s day', as
   await expect(phone.locator('.cmpdays button').first()).toHaveAttribute('aria-pressed', 'false');
   await expect(phone.locator('.cmpdayhead')).toHaveCount(0);
 });
+
+test('on a wide screen several days sit side by side as cards, and one day is a single card', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const body = await open(page);
+  const cards = body.locator('.cmpdaygrid > .cmpaligned');
+  expect(await cards.count()).toBeGreaterThan(2);
+  const [a, b] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
+  expect(Math.abs(a.y - b.y)).toBeLessThan(4); // same row of cards
+  expect(b.x).toBeGreaterThan(a.x + a.width - 1);
+  await body.locator('.cmpdays button').nth(1).click(); // Day 1 alone
+  await expect(body.locator('.cmpdaygrid > .cmpaligned')).toHaveCount(1);
+  const one = await body.locator('.cmpdaygrid > .cmpaligned').boundingBox();
+  expect(one.width).toBeLessThan(a.width * 1.05); // a single day is one card wide, not the whole panel
+});
