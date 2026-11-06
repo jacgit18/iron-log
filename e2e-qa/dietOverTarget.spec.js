@@ -25,6 +25,6 @@ test('S-02: over target on open, and the 20-entries-a-day limit replaces the add
   await expect(diet.getByRole('button', { name: 'Add', exact: true })).toHaveCount(0);
   await diet.getByRole('button', { name: 'Delete Tea' }).first().click();
   await expect(full).toBeHidden();
-  await expect(diet.getByRole('button', { name: /Add one|Add/ }).first()).toBeVisible();
+  await expect(diet.getByRole('button', { name: /^(Add one|Add)$/ }).first()).toBeVisible();
   await context.close();
 });
