@@ -112,7 +112,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-97': { auto: 'manual' },
   'S-98': { auto: 'api', specs: ['server/securityHeaders.test.ts'], partial: 'the headers; every page rendering styled with no console errors is not tested' },
   'S-99': { auto: 'manual' },
-  'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts'] },
+  'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts'], partial: 'the sitemap, robots, picture and icon files; the page titles of the privacy, terms, delete-account and app pages are not tested' },
   'S-101': { auto: 'api', specs: ['server/static.test.ts'] },
   'S-102': { auto: 'manual' },
   'S-103': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'] },
