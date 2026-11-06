@@ -913,6 +913,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The screen is dark from the first moment: no white or light-grey flash before the app appears.',
       'Choosing light, or match this device, and reopening shows light, or the phone\'s own setting, from the first moment as well.',
+      'The launch splash (the app icon) is on a dark background in every mode. An installed app may need to be removed and added again before it takes the new colour.',
     ],
   },
   {
@@ -967,10 +968,10 @@ export const SCENARIOS: readonly Scenario[] = [
       'In one browser tab sign in as New user and open Settings. Leave it open.',
       'In a second tab of the same browser, switch to another test account (the QA picker).',
       'Back in the first tab, open Delete my data and press Erase everything in my account, and confirm.',
-      'Repeat steps 1 to 3 from the start, pressing Delete my account instead (the first page no longer has the panel after a refusal).',
+      'Repeat steps 1 to 3 from the start, pressing Delete my account instead.',
     ],
     expected: [
-      'The request is refused: the Delete my data panel goes away and the other-account card takes its place; neither account loses anything. The same happens for Delete my account.',
+      'The request is refused: the Delete my data panel stays with a note that this is not available right now and nothing was erased (a card saying the device holds data from another account may show for a moment first); neither account loses anything. The same happens for Delete my account.',
       'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
     ],
   },
