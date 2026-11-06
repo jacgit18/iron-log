@@ -65,3 +65,11 @@ export function appendEntry(text: string, entry: ResultEntry, known: ReadonlySet
   const entries = [...parseResults(text, known, devices), entry];
   return `${JSON.stringify(entries, null, 2)}\n`;
 }
+
+export type DeviceState = 'not tried' | 'passed' | 'failed' | 'blocked' | 'noted by hand';
+
+/** Where a phone scenario stands: its latest recorded entry decides; with none, a Result written by hand only says it was noted. */
+export function deviceState(latest: ResultEntry | undefined, handWritten: boolean): DeviceState {
+  if (latest) return latest.outcome === 'pass' ? 'passed' : latest.outcome === 'fail' ? 'failed' : 'blocked';
+  return handWritten ? 'noted by hand' : 'not tried';
+}
