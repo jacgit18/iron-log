@@ -39,8 +39,8 @@ describe('the Chromium install for Playwright', () => {
     expect(lines[2]).not.toMatch(/timeout \d/);
   });
 
-  it('is used by the three jobs that run a browser', () => {
+  it('is used by every workflow that runs a browser', () => {
     const used = readdirSync(WORKFLOWS).filter(f => readFileSync(join(WORKFLOWS, f), 'utf8').includes('./.github/actions/install-chromium'));
-    expect(used.sort()).toEqual(['screenshots.yml', 'test.yml']);
+    expect(used.sort()).toEqual(['qa-smoke.yml', 'screenshots.yml', 'test.yml']); // qa-smoke.yml: the nightly QA scenario smoke run
   });
 });
