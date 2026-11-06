@@ -1301,7 +1301,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
     steps: [
-      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'On a phone, paste the production address (https://loadbearer.app/; the QA page points its card picture and address at production, so production is the one to try) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
       'Read the title, the description and the picture on the card.',
     ],
     expected: [
