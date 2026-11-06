@@ -88,7 +88,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
       if (last.exerciseId === ready && last.phase === 'strength') last.phase = 'hyp'; // the ready exercise keeps only the two entries below as strength
       i++;
     }
-    // Two strength days in a row at the same weight, every set at the full 4 x 6: the app then suggests going up.
+    // Two strength sessions in a row (3 and 1 days back) at the same weight, every set at the full 4 x 6: the app then suggests going up.
     if (ready) for (const back of [3, 1]) {
       const d = addDays(t, -back);
       logs.push({ clientId: `qa-${persona.id}-${String(logs.length + 1).padStart(5, '0')}`, exerciseId: ready, d: iso(d), wk: iso(monday(d)), phase: 'strength', weightLb: 100, setsCount: 4, reps: 6 });

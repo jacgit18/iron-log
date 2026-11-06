@@ -45,7 +45,7 @@ export interface PersonaData {
   planDays?: number;
   /** Recipes to create (0 to 300). */
   recipes?: number;
-  /** An exercise id logged on two days in a row of strength, 4 sets of 6 at 100 lb, so its Board card shows "suggested, from 100 lb" (the Weight step scenarios). It has no other strength entries. */
+  /** An exercise id logged in two strength sessions in a row (3 and 1 days back), 4 sets of 6 at 100 lb, so its Board card shows "suggested, from 100 lb" (the Weight step scenarios). It has no other strength entries. */
   progressionReady?: string;
 }
 
