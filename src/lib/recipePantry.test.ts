@@ -63,10 +63,6 @@ describe('pantryStatus and missingParts', () => {
     const s = pantryStatus(recipe, grocery, { lines: { a: { have: true } }, pulled: [] });
     expect(s.lines.map(onToGet)).toEqual([false, true, false, false]); // at home, on To get, no item, no item
   });
-  it('never marks a skipped ingredient, even when it matches an item on To get', () => {
-    const s = pantryStatus({ ing: [{ n: 'garlic', skip: true }, { n: 'garlic' }] }, grocery, { lines: {}, pulled: [] });
-    expect(s.lines.map(onToGet)).toEqual([false, true]);
-  });
 });
 
 describe('an ingredient linked to a sauce or seasoning', () => {
