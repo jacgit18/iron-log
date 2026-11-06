@@ -59,3 +59,15 @@ test('a store already on the list gets no box', async ({ page }) => {
   await expect(sheet.getByLabel('Add this store to your stores')).toHaveCount(0);
   await expect(sheet.getByText('2 items will be marked bought at Costco this month.')).toBeVisible();
 });
+
+test('a name that cannot be a store says so, Apply stays off and nothing is written', async ({ page }) => {
+  await seed(page); await answer(page, 'COSTCO WHOLESALE #123');
+  const sheet = await scan(page);
+  await sheet.getByLabel('Store name').fill('constructor');
+  await expect(sheet.getByRole('alert')).toContainText('can’t be used for a store');
+  await expect(sheet.getByRole('button', { name: /^Apply/ })).toBeDisabled();
+  await sheet.getByLabel('Store name').fill('Costco');
+  await expect(sheet.getByRole('button', { name: /^Apply/ })).toBeEnabled();
+  expect(await stores(page)).toEqual([]);
+  expect(await month(page)).toEqual({});
+});

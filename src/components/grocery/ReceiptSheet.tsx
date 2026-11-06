@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
-import { MAX_STORES, money, monthLabel } from '../../lib/grocery.js';
+import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel } from '../../lib/grocery.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
 import { missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
@@ -34,6 +34,7 @@ export default function ReceiptSheet() {
   const [form, setForm] = useState<{ line: number; draft: ItemDraft; error: string } | null>(null); // one form open at a time
   const seq = useRef(0);
   const [addOn, setAddOn] = useState(true); // brief receipt-add-store: ticked by default, and only offered when the receipt names a store the list does not have
+  const [storeError, setStoreError] = useState(''); // the store could not be added: Apply stops here and nothing else is written
   const [typedName, setTypedName] = useState<string | null>(null); // null: the tidied name read from the photo, untouched
   const known = receipt ? matchStore(receipt.store, g.stores) : null;
   const cleaned = cleanStoreName(receipt?.store);
@@ -44,6 +45,7 @@ export default function ReceiptSheet() {
   const taxStore = known ?? addStore ?? (pickedStore || null);
   const base = useMemo(() => (receipt ? planReceipt(receipt, choices, g.items, taxStore, staged, { at: taxStore, makeUsual: usual, g, lines: monthLines ?? {} }) : null), [receipt, choices, g, taxStore, staged, usual, monthLines]);
   const newStore = addStore && !sameName ? addStore : null; // the store Apply will create
+  const nameError = newStore ? (isReservedName(newStore) ? RESERVED_STORE : storeError) : '';
   const rec = useMemo(() => (base ? reconcile(base, choices, g.items, monthLines ?? {}, taxStore) : null), [base, choices, g.items, monthLines, taxStore]);
   const plan = useMemo(() => (base && rec ? { ...base, untick: rec.missing.filter(m => unticked.has(m.id)).map(m => m.id) } : null), [base, rec, unticked]); // an item the person re-included leaves the missing list, so its Untick no longer counts
   const rows = useMemo(() => groupLines(receipt?.lines ?? [], separate), [receipt, separate]);
@@ -69,16 +71,16 @@ export default function ReceiptSheet() {
     setChoices(cs => cs.map(c => (c.itemId === id ? { itemId: null, include: false } : c)));
   };
   const apply = () => {
-    const storeErr = newStore ? useAppStore.getState().addGroceryStore(newStore) : 'none'; // before the items, so a new item bought there finds the store
+    if (newStore) { const err = useAppStore.getState().addGroceryStore(newStore); if (err) { setStoreError(err); return; } } // before the items, so a new item bought there finds the store; a store that cannot be made stops Apply with nothing written
     const made = createStaged(plan, staged, { addGroceryItem: useAppStore.getState().addGroceryItem, items: () => useAppStore.getState().grocery.items });
     const real = remapPlan(plan, made.ids);
     const st = useAppStore.getState(); // read after the items were made
     const month = st.groceryMonths[mk];
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!));
-    if (newStore && storeErr === null) snap.addedStore = newStore;
+    if (newStore) snap.addedStore = newStore;
     const out: { refused: string[]; unticked?: number } = { refused: [] };
     const done = applyPlan(real, mk, st, out);
-    const storeText = newStore ? (storeErr === null ? ` Added the store ${newStore}.` : ` Could not add the store ${newStore}: ${storeErr}`) : '';
+    const storeText = newStore ? ` Added the store ${newStore}.` : '';
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
     if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Unticked ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
@@ -104,7 +106,8 @@ export default function ReceiptSheet() {
           </label>
           {addOn && (
             <label className="field" htmlFor="rc-add-store">Store name
-              <input id="rc-add-store" type="text" maxLength={40} value={typedName ?? cleaned ?? ''} onChange={e => setTypedName(e.target.value)} />
+              <input id="rc-add-store" type="text" maxLength={40} value={typedName ?? cleaned ?? ''} onChange={e => { setTypedName(e.target.value); setStoreError(''); }} aria-describedby={nameError ? 'rc-add-store-err' : undefined} />
+              {nameError && <small className="rcwarn" id="rc-add-store-err" role="alert">{nameError}</small>}
             </label>
           )}
         </div>
@@ -212,7 +215,7 @@ export default function ReceiptSheet() {
         <p className="note">{plan.items} {plan.items === 1 ? 'item' : 'items'}, {money(plan.itemsCents)}{plan.taxStore ? ` + ${plan.taxStore} tax ${money(plan.check.taxCents)}` : ''}{newCount > 0 ? `. ${newCount} new ${newCount === 1 ? 'item' : 'items'} will be added.` : ''}{plan.untick.length > 0 ? `. ${plan.untick.length} will be unticked.` : ''}</p>
         <div className="actions">
           <button type="button" className="btn" id="rc-cancel" onClick={closeModal}>Cancel</button>
-          <button type="button" className="btn primary" id="rc-apply" disabled={nothing} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 && !plan.taxStore ? `Untick ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'}` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
+          <button type="button" className="btn primary" id="rc-apply" disabled={nothing || !!nameError} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 && !plan.taxStore ? `Untick ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'}` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
         </div>
       </div>
     </Sheet>
