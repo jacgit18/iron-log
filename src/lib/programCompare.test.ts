@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PhaseKey, Program, ProgramDay, ProgramItem } from '../types.ts';
-import { compareDay, compareProgram, countRows, diffNote, filterRows, itemLine, phaseMix } from './programCompare.js';
+import { compareDay, compareProgram, countRows, diffParts, filterRows, itemLine, phaseMix, rowTag } from './programCompare.js';
 
 const it_ = (ex: string, w: number | null, rx: string, ph: PhaseKey | null = 'hyp'): ProgramItem => ({ ex, ph, w, rx });
 const day = (...items: ProgramItem[][]): ProgramDay => ({ title: 'D', slots: items.map((x, i) => ({ id: `s${i}`, items: x })) });
@@ -67,10 +67,21 @@ describe('text helpers', () => {
     expect(itemLine(it_('X', 85, '3×8'))).toBe('Hypertrophy · 85 lb · 3×8');
     expect(itemLine({ ex: 'X', ph: null, w: null, bw: true, rx: '3×8' })).toBe('No phase · bodyweight · 3×8');
   });
-  it('diffNote names what the second program has', () => {
-    const [r] = compareDay(one(it_('X', 80, '3×8')), one(it_('X', 85, '3×8', 'strength')));
-    expect(diffNote(r!)).toBe('85 lb · 3×8, Strength');
-    expect(diffNote({ ...r!, status: 'same' })).toBe('');
+  it('diffParts says which parts differ, so both sides can mark them', () => {
+    const [both] = compareDay(one(it_('X', 80, '3×8')), one(it_('X', 85, '3×8', 'strength')));
+    expect(diffParts(both!)).toEqual({ load: true, phase: true });
+    const [loadOnly] = compareDay(one(it_('X', 80, '3×8')), one(it_('X', 85, '3×8')));
+    expect(diffParts(loadOnly!)).toEqual({ load: true, phase: false });
+    const [phaseOnly] = compareDay(one(it_('X', 80, '3×8')), one(it_('X', 80, '3×8', 'strength')));
+    expect(diffParts(phaseOnly!)).toEqual({ load: false, phase: true });
+    const [same] = compareDay(one(it_('X', 80, '3×8')), one(it_('X', 80, '3×8')));
+    expect(diffParts(same!)).toEqual({ load: false, phase: false });
+    const [onlyHere] = compareDay(one(it_('X', 80, '3×8')), one());
+    expect(diffParts(onlyHere!)).toEqual({ load: false, phase: false });
+  });
+  it('rowTag names the status, and the program for an only-in row', () => {
+    const rows = compareDay(one(it_('Same', 1, '1×1'), it_('Chg', 1, '1×1'), it_('Ph', 1, '1×1'), it_('Away', 1, '1×1')), one(it_('Same', 1, '1×1'), it_('Chg', 2, '1×1'), it_('Ph', 1, '1×1', 'strength'), it_('Here', 1, '1×1')));
+    expect(rows.map(r => rowTag(r, 'Push', 'Pull'))).toEqual(['Same', 'Changed', 'Phase differs', 'Only in Push', 'Only in Pull']);
   });
   it('phaseMix counts exercises per phase across all days', () => {
     const p = { days: [one(it_('A', 1, '1×1'), it_('B', 1, '1×1', 'strength')), one(it_('C', 1, '1×1', null))] } as unknown as Program;

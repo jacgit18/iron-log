@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures.js';
 
 // The Program tab's Compare section (brief program-compare). The compare rules are unit tested (src/lib/programCompare.test.ts); this checks the wiring:
-// collapsed until opened, the filters, a saved program on one side, that nothing is editable, and that nothing is written.
+// collapsed until opened, the filters, a saved program on one side, that nothing is editable, that nothing is written, the columns on a wide panel and A over B
+// with the filters folded behind a button on a phone.
 test.use({ viewport: { width: 1440, height: 900 } });
 
 const open = async page => {
@@ -20,7 +21,7 @@ test('the section is collapsed until it is opened, and closes again', async ({ p
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.cmpbody')).toHaveCount(0);
   await open(page);
-  await expect(page.locator('.cmpboard')).toHaveCount(2);
+  await expect(page.locator('.cmpaligned')).toHaveCount(1);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.cmpbody')).toHaveCount(0);
@@ -31,8 +32,8 @@ test('every day lists both programs, the counts add up, and a status filter hide
   const all = await count(body, 'All');
   const [same, chg, ph, onlyA, onlyB] = await Promise.all(['Same', 'Changed', 'Phase differs', 'Only in Program A', 'Only in Program B'].map(l => count(body, l)));
   expect(same + chg + ph + onlyA + onlyB).toBe(all);
-  // a paired exercise is on both boards, an only-in exercise on one
-  await expect(body.locator('.cmprow')).toHaveCount(all + same + chg + ph);
+  // one row per exercise: a paired exercise shows both programs in its row, an only-in exercise says so on the side that lacks it
+  await expect(body.locator('.cmprow')).toHaveCount(all);
   for (const [label, tag] of [['Same', 'Same'], ['Changed', 'Changed'], ['Phase differs', 'Phase differs']]) {
     await body.getByRole('button', { name: new RegExp(`^${label} \\d+$`) }).click();
     const tags = await body.locator('.cmprow .tag').allTextContents();
@@ -70,7 +71,7 @@ test('nothing in the panel is editable and nothing is written', async ({ page })
   const body = await open(page);
   const stored = () => page.evaluate(() => JSON.stringify(Object.entries(localStorage).filter(([k]) => !k.startsWith('ironlog:hide')).sort()));
   const before = await stored();
-  await expect(body.locator('.cmpboard .draghandle, .cmpboard .edbtns, .cmpboard button')).toHaveCount(0);
+  await expect(body.locator('.cmpaligned .draghandle, .cmpaligned .edbtns, .cmpaligned button')).toHaveCount(0);
   await page.locator('.cmpdays button').nth(2).click();
   await body.getByRole('button', { name: 'Any phase' }).click();
   await body.getByLabel('First program').selectOption('B');
@@ -82,4 +83,73 @@ test('on a phone the page does not scroll sideways', async ({ page }) => {
   await page.reload();
   await open(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+test('wide: the two programs are columns; phone: the second program\'s line sits under the first', async ({ page }) => {
+  const sides = async body => {
+    const row = body.locator('.cmprow').first();
+    const [one, two] = await row.locator('.cmpside').all();
+    return [await one.boundingBox(), await two.boundingBox()];
+  };
+  let body = await open(page);
+  let [one, two] = await sides(body);
+  expect(two.x).toBeGreaterThan(one.x + one.width - 1); // beside it
+  expect(Math.abs(two.y - one.y)).toBeLessThan(4);
+  await expect(body.locator('.cmpcols')).toBeVisible();
+  // Editor.css's .edrow loads after this panel's CSS: the row must still be the grid, and the status stripe must still show (it did not before 2026-11-06)
+  const style = async (locator, prop) => locator.evaluate((el, p) => getComputedStyle(el)[p], prop);
+  expect(await style(body.locator('.cmprow').first(), 'display')).toBe('grid');
+  const stripe = row => Promise.all([style(row, 'borderLeftWidth'), style(row, 'borderLeftColor')]);
+  const [sameWidth, sameColour] = await stripe(body.locator('.cmp-same').first());
+  const [onlyWidth, onlyColour] = await stripe(body.locator('.cmp-only').first());
+  expect(sameWidth).toBe('4px');
+  expect(onlyWidth).toBe('4px');
+  expect(onlyColour).not.toBe(sameColour);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  body = await open(page);
+  [one, two] = await sides(body);
+  expect(two.y).toBeGreaterThan(one.y); // under it
+  expect(Math.abs(two.x - one.x)).toBeLessThan(4);
+  await expect(body.locator('.cmpcols')).toBeHidden();
+  await expect(body.locator('.cmprow').first().locator('.cmpwho').first()).toBeVisible(); // the program's name labels each line
+});
+
+test('on a phone the filters fold behind a Filter button; on a wide screen they stay in view', async ({ page }) => {
+  let body = await open(page);
+  await expect(body.getByRole('button', { name: /^Filter/ })).toBeHidden();
+  await expect(body.getByRole('group', { name: 'Show rows' })).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  body = await open(page);
+  const button = body.getByRole('button', { name: /^Filter/ });
+  await expect(button).toBeVisible();
+  await expect(button).toHaveAttribute('aria-expanded', 'false');
+  await expect(body.getByRole('group', { name: 'Show rows' })).toBeHidden();
+  await expect(body.getByRole('group', { name: 'Compare day' })).toBeVisible(); // the day strip stays
+  await button.click();
+  await expect(button).toHaveAttribute('aria-expanded', 'true');
+  await body.getByRole('button', { name: /^Any difference/ }).click();
+  await expect(button).toHaveText(/Filter · 1 on/);
+  await button.click();
+  await expect(body.getByRole('group', { name: 'Show rows' })).toBeHidden();
+  expect(await body.locator('.cmprow .tag').allTextContents()).not.toContain('Same'); // a folded filter still applies
+});
+
+test('a changed exercise marks the differing weight on both sides', async ({ page }) => {
+  await page.click('#tab-program');
+  await page.locator('#lib-name').fill('Compare copy');
+  await page.getByRole('button', { name: 'Save a copy' }).click();
+  await page.locator('.edpanel:not(.lib) .edrow').first().getByRole('button', { name: /^Edit / }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Weight (lb)').fill('123');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toHaveCount(0);
+  const body = await open(page);
+  await body.getByLabel('Second program').selectOption({ label: 'Compare copy' });
+  const changed = body.locator('.cmprow.cmp-chg');
+  await expect(changed).toHaveCount(1);
+  await expect(changed.locator('.cmpdiff')).toHaveCount(2); // the weight is marked on both sides
+  await expect(changed.locator('.cmpside').first().locator('.cmpdiff')).toHaveText(/123 lb/);
+  await expect(body.locator('.cmprow:not(.cmp-chg) .cmpdiff')).toHaveCount(0); // and nowhere else
 });
