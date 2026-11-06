@@ -11,7 +11,7 @@ export default function StretchFirstRun() {
       <div className="actions">
         <button type="button" className="btn primary" id="sfirstrun-add" onClick={() => openModal({ type: 'stretch' })}>Add your first stretch</button>
       </div>
-      <p className="note">You can manage the whole list later in Program, Stretch library. To try a stretch you saw online, add it under Experiments, below, with a link to the video.</p>
+      <p className="note">You can manage the whole list later in Program, Stretch library. To try a stretch you saw online, add it under Stretches to try, below, with a link to the video.</p>
     </section>
   );
 }

@@ -1126,7 +1126,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
       'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
       'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
-      'Look at the Costco rows and the notice, then press Undo.',
+      'Look at the Costco rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
     ],
     expected: [
       'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
@@ -1151,13 +1151,13 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
       'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
-      'Open the pack-priced item and look at both packs; press Undo on the notice.',
-      'Sign in as New user (or any account with no sharing group) and open Groceries, To get.',
+      'Open the pack-priced item and look at both packs; press Undo on the notice within about 10 seconds (it goes away by itself).',
+      'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, To get. New user does not prove it, because its list is empty.',
     ],
     expected: [
       'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
       'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
-      'An account with no sharing group has no Select button on To get.',
+      'An account that has items but no sharing group has no Select button on To get.',
     ],
   },
   {
@@ -1319,7 +1319,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       '/sitemap.xml shows an XML list of five addresses (the home page, /plans, /privacy.html, /terms.html and /delete-account), all naming loadbearer.app, the production host; /favicon.ico loads a small picture, not a "not found" page.',
       'The tabs are titled "Privacy Policy · Loadbearer", "Terms of Use · Loadbearer" and "Delete your account · Loadbearer".',
-      'The app tab is titled "Loadbearer" with the logo as its icon.',
+      'The app tab is titled "Loadbearer QA" on QA (plain "Loadbearer" on production) with the logo as its icon (the QA logo on QA).',
     ],
   },
   {
@@ -1358,6 +1358,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-104', feature: 'Moved-card tag', title: 'A moved card whose home day is off the board names its program day', persona: 'superset-builder', brief: 'moved-from-label', edge: true,
     steps: [
+      'Superset builder has no Day 7 workout, so make one first: in Program, open Day 6, use "Copy this day to" Day 7 and press Copy.',
       'Open the ⋯ menu on a card from the Day 7 workout and move it to Day 3; its tag says "From Day 7".',
       'Tick Rest on Day 6, so every workout from Day 6 on slips one column later and the Day 7 workout\'s home column is past the end of the board (if the page asks to confirm, read it and press OK).',
       'Read the tag on the card you moved. Untick Rest on Day 6 and read it again.',
@@ -1371,11 +1372,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-105', feature: 'Program compare', title: 'On a phone the programs line up one over the other, and the filters fold behind a button', persona: 'superset-builder', brief: 'program-compare', edge: true,
     steps: [
       'On a phone (or a browser window 375 px wide), open Program, Compare programs. Look at the first rows.',
-      'Tap Filter, then Any difference; tap Filter again. Then open the same page in a window wider than 800 px.',
+      'Tap Filter, then Any difference; tap Filter again. Then tap All days, the first of the Day buttons. Then open the same page in a window wider than 800 px.',
     ],
     expected: [
       'Each exercise is one row: the first program\'s line with its name in front of it, the second program\'s line right under it. The Day buttons stay in one row you can swipe sideways, and the status and phase buttons are hidden behind a Filter button.',
-      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
+      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. All days lists every day one after the other, each under its own Day heading, with the same filter applied to all of them. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
     ],
   },
   {

@@ -73,7 +73,7 @@ export function StretchExpSheet({ id }: { id?: string | null }) {
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   return (
     <Sheet>
-      <h2 className="cond">{cur ? 'Edit experiment' : 'Add a stretch to try'}</h2>
+      <h2 className="cond">{cur ? 'Edit idea' : 'Add a stretch to try'}</h2>
       <form id="sexp-form" noValidate onSubmit={e => { e.preventDefault(); const m = s.saveStretchExp(d); if (m) setErr(m); }}>
         {cur
           ? <label className="field">Name<input id="sexp-name" maxLength={80} value={d.n} placeholder="e.g. Cossack Squat" onChange={e => up({ n: e.target.value })} /></label>
