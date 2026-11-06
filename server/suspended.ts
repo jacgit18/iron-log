@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express';
 
 // A suspended account (brief admin-accounts-screen): an admin set users.suspended_at. After sign-in, every API call from it is refused 403
 // `account_suspended`, except the few that let the person see why and take their own data away: /api/me (says `suspended: true`, so the app
-// shows the notice), erase-data and delete, and recording the Terms acceptance (a suspended account that never accepted would otherwise sit on the accept screen with no way through and never see the suspended notice) (the privacy promise holds for a suspended person too). Sign-in itself is not blocked. Nothing is
+// shows the notice), erase-data and delete (the privacy promise holds for a suspended person too), and recording the Terms acceptance (a suspended account that never accepted would otherwise sit on the accept screen with no way through and never see the suspended notice). Sign-in itself is not blocked. Nothing is
 // deleted and no session is ended, so a restore works at once.
 
 /** The paths (under /api, any letter case, an optional trailing slash) a suspended account may still call. */

@@ -14,7 +14,7 @@ import './TermsGate.css';
 // The accept screen (brief terms-acceptance): drawn instead of the app while a signed-in account has not accepted the current Terms of Use and Privacy
 // Policy: an existing account on its next open, a new one whose box was not remembered, and everyone after a version bump. The app stays closed until
 // the box is ticked and Continue is pressed, or the person signs out. Changes made on this device are kept by the store and sent after acceptance (the
-// server does not refuse the data routes, ADR 090). A tick made on the sign-in card (sessionStorage, a few minutes old at most) is posted once here, so
+// server does not refuse the data routes, ADR 102). A tick made on the sign-in card (sessionStorage, a few minutes old at most) is posted once here, so
 // someone who just ticked it is not asked twice.
 export default function TermsGate({ owed }: { owed: TermsDecision }) {
   const client = useRef(createAccountClient({ headers: devHeaders })).current;

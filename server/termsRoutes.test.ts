@@ -5,7 +5,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { createApp } from './app.ts';
 import { createDb } from './db/connection.ts';
 import type { DB } from './db/types.ts';
-import { termsSummary } from './termsRoutes.ts';
 import { CURRENT_TERMS } from '../src/shared/termsVersion.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
@@ -80,24 +79,8 @@ describe('POST /api/terms/accept', () => {
   });
 });
 
-describe('termsSummary (what /api/me reports)', () => {
-  it('says not accepted for an account that never accepted, and accepted after', async () => {
-    const { post } = await start();
-    await post('ana', { terms: 'x' }); // 400, but the call made the row
-    const id = (await row('ana')).id;
-    expect(await termsSummary(app, id, false)).toEqual({ terms: null, privacy: null, accepted: false });
-    await post('ana', CURRENT_TERMS);
-    expect(await termsSummary(app, id, false)).toEqual({ ...CURRENT_TERMS, accepted: true });
-  });
-
-  it('asks again when a stored version is older than the current one', async () => {
-    const { post } = await start();
-    await post('ana', CURRENT_TERMS);
-    await sql`update users set privacy_version = '0.9'`.execute(db);
-    expect((await termsSummary(app, (await row('ana')).id, false)).accepted).toBe(false);
-  });
-
-  it('counts a dev header user as accepted, and /api/me carries the answer', async () => {
+describe('/api/me', () => {
+  it('carries account.terms (a dev header user counts as accepted)', async () => {
     const { me } = await start();
     expect((await me('ana')).accepted).toBe(true);
   });

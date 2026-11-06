@@ -6,19 +6,12 @@ import { CURRENT_TERMS, isVersionText } from '../src/shared/termsVersion.ts';
 
 // Recorded acceptance of the Terms of Use and the Privacy Policy (brief terms-acceptance). Mounted at /api/terms behind sign-in and a per-user limit
 // (app.ts). The account row is made by Better Auth inside the Google callback or the email-code check, before the app can say which versions were
-// ticked, so the app posts them here right after (ADR 090). Only the current versions are accepted: an old tab cannot record a stale one. Data routes
+// ticked, so the app posts them here right after (ADR 102). Only the current versions are accepted: an old tab cannot record a stale one. Data routes
 // are not blocked on the server (the person's own data stays reachable for export and delete); the gate is the app screen plus this record.
 
 export interface StoredTermsRow { terms: string | null; privacy: string | null }
 
-/** What /api/me says: the stored versions and whether they are the current ones. A dev header user or a QA persona counts as accepted (no box in tests of other features). */
-export async function termsSummary(db: Kysely<DB>, userId: string, exempt: boolean): Promise<StoredTermsRow & { accepted: boolean }> {
-  const row = await inUserTransaction(db, userId, async trx =>
-    (await sql<{ terms: string | null; privacy: string | null }>`select terms_version as terms, privacy_version as privacy from users where id = current_setting('app.user_id')::bigint`.execute(trx)).rows[0]);
-  return termsAnswer(row?.terms ?? null, row?.privacy ?? null, exempt);
-}
-
-/** The same answer from values already read (/api/me selects them with the plan, so it needs no second transaction). */
+/** What /api/me says: the stored versions and whether they are the current ones. /api/me selects the stored values with the plan, so this needs no query of its own. A dev header user or a QA persona counts as accepted (no box in tests of other features). */
 export function termsAnswer(terms: string | null, privacy: string | null, exempt: boolean): StoredTermsRow & { accepted: boolean } {
   return { terms, privacy, accepted: exempt || (terms === CURRENT_TERMS.terms && privacy === CURRENT_TERMS.privacy) };
 }

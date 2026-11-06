@@ -17,7 +17,7 @@ export default function SignInCard() {
   // messages inside one would be read out again at every step.
   return (
     <>
-      <div className="notice movewarn signin-terms"><TermsCheckbox checked={tick.ticked} onChange={tick.set} /></div>
+      <div className="notice movewarn"><TermsCheckbox checked={tick.ticked} onChange={tick.set} /></div>
       <div className="notice movewarn" role="status">
         <div><b>Sign in to sync.</b> Your changes are kept on this device and will be sent once you sign in. <LegalLinks /></div>
         <div className="actions"><button type="button" className="btn sm" disabled={busy || !tick.ticked} onClick={() => void start()}>Sign in with Google</button></div>
