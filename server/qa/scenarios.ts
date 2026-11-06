@@ -1432,9 +1432,9 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'recipe-collector', brief: 'receipt-add-store', device: true,
+    id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'grocery-shopper', brief: 'receipt-add-store', device: true,
     steps: [
-      'As an admin on a phone, open Groceries, At home, Edit and check the list has no stores (delete any stores it has; items may stay).',
+      'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, At home, Edit and check the list does not have the store on your receipt (for example Costco); other stores may stay.',
       'On To get press Scan receipt and photograph a receipt from a store (for example Costco) that has a few items from your list.',
       'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
       'Press Apply, then open To get and At home, then press Undo on the notice.',
@@ -1446,9 +1446,9 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-111', feature: 'Receipt store', title: 'Edit the new store name, or untick the box and nothing is added', persona: 'recipe-collector', brief: 'receipt-add-store', edge: true,
+    id: 'S-111', feature: 'Receipt store', title: 'Edit the new store name, or untick the box and nothing is added', persona: 'grocery-shopper', brief: 'receipt-add-store', edge: true,
     steps: [
-      'As an admin with no stores on the list, scan a receipt from a store.',
+      'On your admin account, with the receipt\'s store not on the list, scan a receipt from that store.',
       'Change the name in the box to something else, and press Apply. Press Undo.',
       'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
       'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
