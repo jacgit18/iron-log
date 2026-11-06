@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // The words the policy promises must match what the system does. These are the numbers that live in two places.
@@ -155,9 +155,11 @@ describe('the policy and the system agree', () => {
 
   it('saved receipt photos: the policy names what is kept, and the erase and account-delete paths remove it', () => {
     const migration = read('db/migrations/20261104000001_receipts.sql');
+    // The newest migration that defines erase_my_data() is the live one: it must still delete receipts.
+    const newestErase = readdirSync(new URL('../db/migrations', import.meta.url)).filter((f) => f.endsWith('.sql')).sort().reverse().map((f) => read(`db/migrations/${f}`)).find((m) => /create or replace function erase_my_data\(\)/.test(m)) ?? '';
     expect(migration).toMatch(/create table receipts[\s\S]*data\s+bytea not null/);
     expect(migration).toContain('references users (id) on delete cascade'); // deleting the account
-    expect(migration).toMatch(/create or replace function erase_my_data\(\)[\s\S]*delete from receipts/); // erasing everything
+    expect(newestErase).toMatch(/create or replace function erase_my_data\(\)[\s\S]*delete from receipts/); // erasing everything
     expect(text).toMatch(/Saved receipts \(photo, store, date, total, month, note\)/);
     expect(text).toMatch(/erase your data or delete your account \(removed immediately from the live service; backups within 30 days\)/);
   });
