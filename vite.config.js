@@ -159,7 +159,8 @@ export default defineConfig({
         scope: './',
         display: 'standalone',
         theme_color: '#1E2326',
-        background_color: '#EEF0EC',
+        // The phone's launch splash reads this one fixed value, so it matches the dark theme (the app's own first paint follows the chosen theme).
+        background_color: '#1E2326',
         categories: ['health', 'fitness', 'sports'],
         // Long-press the home-screen icon (Android). Both open the app on a tab; the store reads ?open= (lib/viewState.ts).
         shortcuts: [
