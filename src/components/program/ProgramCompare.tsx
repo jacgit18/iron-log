@@ -36,10 +36,11 @@ function Side({ who, it, markLoad, markPhase }: { who: string; it: CompareRow['l
 
 // Both programs in one list, each exercise once with the first program's line over the second's (side by side when the panel is wide). The rows are the
 // editor's own (`.edrow`) without drag handle or buttons: nothing here can be edited.
-function Aligned({ an, bn, rows }: { an: string; bn: string; rows: CompareRow[] }) {
+function Aligned({ an, bn, rows, heading }: { an: string; bn: string; rows: CompareRow[]; heading?: string }) {
   const cfg = useAppStore(st => st.cfg);
   return (
     <div className="edlist cmpaligned">
+      {heading && <h3 className="cmpdayhead">{heading}</h3>}
       <div className="cmpcols" aria-hidden="true"><span /><b>{an}</b><b>{bn}</b></div>
       {!rows.length && <p className="note">Nothing to show here for this day and filter.</p>}
       {rows.map((r, i) => {
@@ -89,8 +90,9 @@ function Panel() {
   const an = nameOf(a); const bn = nameOf(b);
   const same = a.prog === b.prog || one === two;
   const days = compareProgram(a.prog, b.prog);
-  const dayRows = days[day - 1] ?? [];
+  const dayRows = day === 0 ? days.flat() : (days[day - 1] ?? []); // day 0 is the All days view
   const counts = countRows(dayRows);
+  const counts0 = countRows(days.flat());
   const shown = filterRows(dayRows, status, phase);
   const filtersOn = (status !== 'all' ? 1 : 0) + (phase !== null ? 1 : 0);
   const phases: PhaseKey[] = PH_KEYS.filter(k => dayRows.some(r => phaseOf(r, 'left') === k || phaseOf(r, 'right') === k));
@@ -116,6 +118,7 @@ function Panel() {
         <>
           <div className="cmpmixes"><Mix name={an} p={a.prog} /><Mix name={bn} p={b.prog} /></div>
           <div className="cmpdays" role="group" aria-label="Compare day">
+            <button type="button" className="btn sm cmpday" aria-pressed={day === 0} onClick={() => { setDay(0); setPhase(null); }}>All days<small>{counts0.diff ? ` · ${counts0.diff} differ` : ''}</small></button>
             {DAYS.slice(0, days.length).map(d => {
               const n = countRows(days[d - 1] ?? []).diff;
               return <button type="button" key={d} className="btn sm cmpday" aria-pressed={d === day} onClick={() => { setDay(d); setPhase(null); }}>Day {d}<small>{n ? ` · ${n} differ` : ''}</small></button>;
@@ -134,7 +137,10 @@ function Panel() {
               {hasNone && <button type="button" className="btn sm cmpchip" aria-pressed={phase === 'none'} onClick={() => setPhase('none')}>No phase</button>}
             </div>
           </div>
-          {!dayRows.length ? <p className="note" role="status">Nothing on this day in either program.</p> : <Aligned an={an} bn={bn} rows={shown} />}
+          {!dayRows.length ? <p className="note" role="status">Nothing on this day in either program.</p> : day === 0 ? (
+            shown.length ? days.map((d, i) => { const r = filterRows(d, status, phase); return r.length ? <Aligned key={i} an={an} bn={bn} rows={r} heading={`Day ${i + 1}`} /> : null; })
+              : <p className="note">Nothing to show here for this filter.</p>
+          ) : <Aligned an={an} bn={bn} rows={shown} />}
         </>
       )}
     </div>
