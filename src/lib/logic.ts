@@ -342,7 +342,7 @@ export function normExperiments(list: unknown) {
   });
   return out;
 }
-export const extraSlots = (w: WeekIn): Slot[] => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: x.add ? 'Added' : 'Experiment', experiment: true, ...(x.add ? { added: true } : {}), items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
+export const extraSlots = (w: WeekIn): Slot[] => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: x.add ? 'Added' : 'To try', experiment: true, ...(x.add ? { added: true } : {}), items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
 // The week's cards: the program's, then the experiment cards added to this week.
 // The cards of week `key` (its Sunday, YYYY-MM-DD): a card whose `from` is later has not started yet. Without `key`, every card.
 export const weekSlots = (prog: Program, w: WeekIn, key?: string) => { const nw = normWeek(w); return [...applySplits(slotsFor(prog).filter(s => !key || !s.from || s.from <= key), nw.split), ...extraSlots(nw)]; };

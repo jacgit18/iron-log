@@ -1127,7 +1127,7 @@ describe('exercise library', () => {
     useAppStore.setState({ logs: { [id]: [{ d: '2026-10-01', w: 10, s: 1, r: 1 }] } });
     expect(st().deleteExercise(id)).toMatch(/in your logs/);
     useAppStore.setState({ logs: {}, experiments: [{ id: 'e1', ex: id, ph: null, note: '' }] });
-    expect(st().deleteExercise(id)).toMatch(/Experiment board/);
+    expect(st().deleteExercise(id)).toMatch(/Ideas to try list/);
     useAppStore.setState({ experiments: [] });
     expect(st().deleteExercise(id)).toBeNull();
     expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();
