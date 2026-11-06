@@ -75,6 +75,7 @@ test('a store that is not on the list moves nothing until one is picked', async 
   await seed(page); await answer(page, 'WALMART SUPERCENTER');
   const sheet = await scan(page);
   await expect(sheet.getByLabel('Store for this receipt', { exact: false })).toBeVisible();
+  await sheet.getByLabel('Add this store to your stores').uncheck(); // brief receipt-add-store: ticked, Walmart would become a store; this test is about no store
   await expect(sheet.locator('.rcatnote')).toHaveCount(0);
   await expect(sheet.getByLabel("Also make", { exact: false })).toHaveCount(0);
   await sheet.getByLabel('Store for this receipt', { exact: false }).selectOption('Aldi');

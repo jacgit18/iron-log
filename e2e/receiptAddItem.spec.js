@@ -30,6 +30,7 @@ test.describe('as an admin', () => {
 
   test('Add to list stages a pre-filled item, Apply creates it bought with the receipt price, and Undo removes it', async ({ page }) => {
     const sheet = page.getByRole('dialog');
+    await sheet.getByLabel('Add this store to your stores').uncheck(); // brief receipt-add-store: ticked, the item would be added to the new store; this test is about Anywhere
     await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
     await sheet.getByRole('button', { name: 'Add to list: ZEVIA SODA 12PK' }).click();
     await expect(sheet.locator('#rc-new-name')).toHaveValue('Zevia soda 12pk');
