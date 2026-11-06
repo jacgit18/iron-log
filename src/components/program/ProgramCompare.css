@@ -2,7 +2,6 @@
 @layer components {
 /* The Program tab's Compare section: two programs in one list, read-only. `.edrow.cmprow` is two classes on purpose: Editor.css loads after this file and its `.edrow` (flex, one border colour) would otherwise win over the grid and the status stripe. Rows are the editor's own (.edrow); only the status stripe, the status tag, the phase pill and the marks on what differs are new. */
 .cmppanel {
-  max-width: 760px;
   container-type: inline-size;
 }
 .cmphead {
@@ -98,6 +97,18 @@
 .cmpcols {
   display: none;
 }
+.cmpdaygrid {
+  display: grid;
+  gap: var(--sp-12);
+  align-items: start;
+}
+.cmpdaygrid > .cmpaligned {
+  min-width: 0;
+}
+.cmpdayhead {
+  margin: var(--sp-8) 0 var(--sp-4);
+  font-size: var(--fs-base);
+}
 .edrow.cmprow {
   display: grid;
   grid-template-columns: minmax(0,1fr);
@@ -168,6 +179,16 @@
   .cmpday {
     flex: none;
     white-space: nowrap;
+  }
+}
+@container (min-width: 1240px) {
+  .cmpdaygrid {
+    grid-template-columns: repeat(auto-fill,minmax(600px,1fr));
+  }
+  .cmpdaygrid > .cmpaligned {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: var(--sp-12);
   }
 }
 @container (min-width: 560px) {

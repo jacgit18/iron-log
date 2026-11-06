@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PhaseKey, Program, ProgramDay, ProgramItem } from '../types.ts';
-import { compareDay, compareProgram, countRows, diffParts, filterRows, itemLine, phaseMix, rowTag } from './programCompare.js';
+import { compareDay, compareProgram, countRows, compareSections, diffParts, filterRows, itemLine, phaseMix, rowTag } from './programCompare.js';
 
 const it_ = (ex: string, w: number | null, rx: string, ph: PhaseKey | null = 'hyp'): ProgramItem => ({ ex, ph, w, rx });
 const day = (...items: ProgramItem[][]): ProgramDay => ({ title: 'D', slots: items.map((x, i) => ({ id: `s${i}`, items: x })) });
@@ -86,5 +86,28 @@ describe('text helpers', () => {
   it('phaseMix counts exercises per phase across all days', () => {
     const p = { days: [one(it_('A', 1, '1×1'), it_('B', 1, '1×1', 'strength')), one(it_('C', 1, '1×1', null))] } as unknown as Program;
     expect(phaseMix(p)).toMatchObject({ hyp: 1, strength: 1, none: 1, iso: 0 });
+  });
+});
+
+describe('compareSections', () => {
+  const days = [
+    compareDay(one(it_('Squat', 100, '3×8'), it_('Row', 50, '3×10')), one(it_('Squat', 100, '3×8'), it_('Row', 55, '3×10'))),
+    [],
+    compareDay(one(it_('Curl', 20, '3×12')), one()),
+  ];
+  it('one day is a single section without a heading, with the filters applied', () => {
+    expect(compareSections(days, 1, 'all', null).map(s => [s.heading, s.rows.map(r => r.ex)])).toEqual([[undefined, ['Squat', 'Row']]]);
+    expect(compareSections(days, 1, 'chg', null)[0]!.rows.map(r => r.ex)).toEqual(['Row']);
+    expect(compareSections(days, 2, 'all', null)).toEqual([{ rows: [] }]);
+  });
+  it('day 0 lists each day that has rows under its heading and leaves out the empty ones', () => {
+    expect(compareSections(days, 0, 'all', null).map(s => [s.heading, s.rows.length])).toEqual([['Day 1', 2], ['Day 3', 1]]);
+  });
+  it('day 0 applies the filters to every day, so the section rows add up to the filtered total', () => {
+    const secs = compareSections(days, 0, 'diff', null);
+    expect(secs.map(s => s.heading)).toEqual(['Day 1', 'Day 3']);
+    expect(secs.flatMap(s => s.rows).length).toBe(filterRows(days.flat(), 'diff', null).length);
+    expect(compareSections(days, 0, 'same', null).map(s => s.heading)).toEqual(['Day 1']);
+    expect(compareSections(days, 0, 'ph', null)).toEqual([]);
   });
 });

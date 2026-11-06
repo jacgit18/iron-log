@@ -131,7 +131,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (!isVideoUrl(url)) return VIDEO_ERR;
     const note = (d.note || '').trim().slice(0, 200); const group = (d.group || '').trim().slice(0, 40);
     const same = (y: { n: string }) => y.n.toLowerCase() === n.toLowerCase();
-    if (get().stretchExps.some(y => same(y) && y.id !== d.id)) return 'That stretch is already on the Experiment list.';
+    if (get().stretchExps.some(y => same(y) && y.id !== d.id)) return 'That stretch is already on the Stretches to try list.';
     const prev = d.id ? get().stretchExps.find(y => y.id === d.id) : null; // an entry saved before its name was a stretch can still be edited
     if ((!prev || !same(prev)) && get().stretches.some(same)) return 'You already have that stretch. Add it to a day from the list.';
     get().mutateStretches(x => {
@@ -161,7 +161,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     let sid = '';
     if (!get().mutateStretches(x => { sid = newStretchId(x.items, e.n); x.items.push({ id: sid, n: e.n, group: e.group || DEFAULT_GROUP, tier: '', ...(e.url ? { url: e.url } : {}), ...(e.note ? { note: e.note } : {}) }); x.experiments = x.experiments.filter(y => y.id !== id); })) return false;
     flag(`${e.n} added to your stretches`);
-    get().noteRemoved('stretchexps', `${e.n} from Experiments`, () => !get().stretchExps.some(y => y.id === id) && get().mutateStretches(x => { x.items = x.items.filter(y => y.id !== sid); x.experiments.splice(Math.min(i, x.experiments.length), 0, e); }));
+    get().noteRemoved('stretchexps', `${e.n} from Stretches to try`, () => !get().stretchExps.some(y => y.id === id) && get().mutateStretches(x => { x.items = x.items.filter(y => y.id !== sid); x.experiments.splice(Math.min(i, x.experiments.length), 0, e); }));
     return true;
   },
   // Undo puts it back with its tick, in the same week (the notice belongs to that week and day).

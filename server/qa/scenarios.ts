@@ -36,6 +36,7 @@ export type ScenarioFeature =
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
+  | 'Ideas to try'
   | 'Program compare'
   | 'Polish pass'
   | 'Program on phones'
@@ -54,7 +55,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag', 'Ideas to try',
 ];
 
 export interface Scenario {
@@ -1125,7 +1126,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
       'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
       'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
-      'Look at the Costco rows and the notice, then press Undo.',
+      'Look at the Costco rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
     ],
     expected: [
       'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
@@ -1150,13 +1151,13 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
       'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
-      'Open the pack-priced item and look at both packs; press Undo on the notice.',
-      'Sign in as New user (or any account with no sharing group) and open Groceries, To get.',
+      'Open the pack-priced item and look at both packs; press Undo on the notice within about 10 seconds (it goes away by itself).',
+      'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, To get. New user does not prove it, because its list is empty.',
     ],
     expected: [
       'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
       'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
-      'An account with no sharing group has no Select button on To get.',
+      'An account that has items but no sharing group has no Select button on To get.',
     ],
   },
   {
@@ -1300,7 +1301,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
     steps: [
-      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'On a phone, paste the production address (https://loadbearer.app/; the QA page points its card picture and address at production, so production is the one to try) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
       'Read the title, the description and the picture on the card.',
     ],
     expected: [
@@ -1318,7 +1319,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       '/sitemap.xml shows an XML list of five addresses (the home page, /plans, /privacy.html, /terms.html and /delete-account), all naming loadbearer.app, the production host; /favicon.ico loads a small picture, not a "not found" page.',
       'The tabs are titled "Privacy Policy · Loadbearer", "Terms of Use · Loadbearer" and "Delete your account · Loadbearer".',
-      'The app tab is titled "Loadbearer" with the logo as its icon.',
+      'The app tab is titled "Loadbearer QA" on QA (plain "Loadbearer" on production) with the logo as its icon (the QA logo on QA).',
     ],
   },
   {
@@ -1357,6 +1358,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-104', feature: 'Moved-card tag', title: 'A moved card whose home day is off the board names its program day', persona: 'superset-builder', brief: 'moved-from-label', edge: true,
     steps: [
+      'Superset builder has no Day 7 workout, so make one first: in Program, open Day 6, use "Copy this day to" Day 7 and press Copy.',
       'Open the ⋯ menu on a card from the Day 7 workout and move it to Day 3; its tag says "From Day 7".',
       'Tick Rest on Day 6, so every workout from Day 6 on slips one column later and the Day 7 workout\'s home column is past the end of the board (if the page asks to confirm, read it and press OK).',
       'Read the tag on the card you moved. Untick Rest on Day 6 and read it again.',
@@ -1370,11 +1372,91 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-105', feature: 'Program compare', title: 'On a phone the programs line up one over the other, and the filters fold behind a button', persona: 'superset-builder', brief: 'program-compare', edge: true,
     steps: [
       'On a phone (or a browser window 375 px wide), open Program, Compare programs. Look at the first rows.',
-      'Tap Filter, then Any difference; tap Filter again. Then open the same page in a window wider than 800 px.',
+      'Tap Filter, then Any difference; tap Filter again. Then tap All days, the first of the Day buttons. Then open the same page in a window wider than 800 px.',
     ],
     expected: [
       'Each exercise is one row: the first program\'s line with its name in front of it, the second program\'s line right under it. The Day buttons stay in one row you can swipe sideways, and the status and phase buttons are hidden behind a Filter button.',
-      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
+      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. All days lists every day one after the other, each under its own Day heading, with the same filter applied to all of them. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
+    ],
+  },
+  {
+    id: 'S-106', feature: 'Program compare', title: 'All days lists every day under its own heading, and the filters apply to all of them', persona: 'superset-builder', brief: 'program-compare',
+    steps: [
+      'On a phone, open Program, Compare programs. In the Day strip the first button is "All days"; press it.',
+      'Scroll down the list. Then press Filter, choose Same, and look at the headings and at the Filter button.',
+      'Press the Day 3 button, then press All days again.',
+    ],
+    expected: [
+      'Every day that has exercises is listed one after the other under its own heading ("Day 1", "Day 2" and so on); a day with no exercises has no heading. The All days button carries a count such as "· 42 differ", the total over the days, and each exercise is still one row with Program A over Program B.',
+      'With Same chosen the headings stay and only the rows that match are left (fewer rows than before); the Filter button reads "Filter · 1 on".',
+      'Day 3 alone shows only that day\'s rows with no day heading; All days brings the whole list back.',
+    ],
+  },
+  {
+    id: 'S-107', feature: 'Program compare', title: 'On a wide screen Compare opens on All days in a wider panel; a narrower window starts on the current day', persona: 'superset-builder', brief: 'program-compare', edge: true,
+    steps: [
+      'On a computer, in a window 1000 px wide or more, open Program, then press Compare programs to open the panel. Look at which button in the Day strip is highlighted, and at how wide the panel is.',
+      'Make the window narrower than 1000 px (or open the same page on a phone), reload, and open Compare programs again.',
+    ],
+    expected: [
+      'All days is highlighted and the days are cards side by side, each with its own Day heading and three columns (name, Program A, Program B): three cards across at 1920 px, two from a window about 1360 px wide (when the panel is 1240 px or more) and one below that. The panel fills the page width, not the narrow 760 px column it used to be, and the status and phase buttons stay in view. Pressing one day shows just that day as a single card.',
+      'In the narrower window the editor\'s current day (Day 1 for a fresh account) is highlighted instead, there are no day headings, and All days is still there to press.',
+    ],
+  },
+  {
+    id: 'S-108', feature: 'Ideas to try', title: 'The Board section for exercises you saw online is called Ideas to try, and adding one works as before', persona: 'superset-builder', brief: 'ideas-to-try-rename',
+    steps: [
+      'Open the Board, Workout, and scroll under the days. Read the heading and the button next to it.',
+      'Press "+ Add idea", read the sheet\'s title, type Face Pull in Exercise, pick it from the list, add a note and press Save.',
+      'On the new idea press the pencil (Edit) and read the sheet\'s title, then Cancel. Press "+ Add idea" again and add Face Pull a second time.',
+      'On the idea press "This week only" for the day shown, and look at the card that appears on that day.',
+    ],
+    expected: [
+      'The heading reads "Ideas to try" and the button "+ Add idea"; the word "Experiments" is nowhere on the page.',
+      'The add sheet is titled "Add an exercise to try"; after Save the idea is listed under the heading with its note and "Add to" day buttons.',
+      'The edit sheet is titled "Edit idea". Adding Face Pull again is refused with "Face Pull is already on the Ideas to try list." and the sheet stays open.',
+      'The notice reads "Added Face Pull to <day>" and the card on that day is tagged "To try"; the idea stays listed.',
+    ],
+  },
+  {
+    id: 'S-109', feature: 'Ideas to try', title: 'Stretches to try and Help use the new name, and nothing else on the page still says Experiments', persona: 'superset-builder', brief: 'ideas-to-try-rename', edge: true,
+    steps: [
+      'On the Board press Stretches at the top. Look for the line about trying a stretch you saw online, and at the heading under the days.',
+      'Press "+ Add stretch" and read the sheet\'s title; Cancel.',
+      'Go back to Workout, press Help at the top and read the Board item under "Where things are" and the "Words and abbreviations" list.',
+    ],
+    expected: [
+      'The heading under the stretch days reads "Stretches to try" and its button "+ Add stretch"; the line reads "To try a stretch you saw online, add it under Stretches to try, below, with a link to the video."',
+      'The sheet is titled "Add a stretch to try".',
+      'Help says "Ideas to try sit under the days" in its Board part and has an "Ideas to try" entry among its terms; the word "Experiments" does not appear in Help. (An exported workbook still has a sheet named Experiments, on purpose, so older files import.)',
+    ],
+  },
+  {
+    id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'grocery-shopper', brief: 'receipt-add-store', device: true,
+    steps: [
+      'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, At home, Edit and check the list does not have the store on your receipt (for example Safeway, which Grocery shopper does not have); other stores may stay.',
+      'On To get press Scan receipt and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
+      'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
+      'Press Apply, then open To get and At home, then press Undo on the notice.',
+    ],
+    expected: [
+      'A ticked box says "Add this store to your stores" with a tidy name in the box (SAFEWAY #123 reads Safeway); the line under the list says how many items will be marked bought at it this month. Nothing is added before Apply.',
+      'After Apply the store exists, the notice says "Added the store Safeway.", and To get lists the matched items under Safeway, ticked and priced.',
+      'Undo removes the store again and puts the items back and unticked.',
+    ],
+  },
+  {
+    id: 'S-111', feature: 'Receipt store', title: 'Edit the new store name, or untick the box and nothing is added', persona: 'grocery-shopper', brief: 'receipt-add-store', edge: true,
+    steps: [
+      'On your admin account, with the receipt\'s store not on the list, scan a receipt from that store.',
+      'Change the name in the box to something else, and press Apply. Press Undo.',
+      'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
+      'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
+    ],
+    expected: [
+      'The store is added under the name you typed, and Undo removes it.',
+      'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
+      'When the list already has the store there is no box and the items are marked bought at it as before.',
     ],
   },
 ];

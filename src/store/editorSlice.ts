@@ -379,7 +379,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     if (exp) { // promoted from the Experiment list: it is on the program now, so it leaves the list; one Undo reverses both
       const at = get().experiments.indexOf(exp); const gone = new Set(ids);
       get().setExperiments(get().experiments.filter(x => x.id !== exp.id));
-      get().noteRemoved('experiments', `${exInfo(get().cfg, exp.ex).n} from Experiments (now on the program)`, () => {
+      get().noteRemoved('experiments', `${exInfo(get().cfg, exp.ex).n} from Ideas to try (now on the program)`, () => {
         if (get().blocked() || get().experiments.some(x => x.id === exp.id)) return false;
         const prog = structuredClone(get().programs[k]); prog.days.forEach(dd => { dd.slots = dd.slots.filter(sl => !gone.has(sl.id)); });
         get().saveProgram(k, prog);

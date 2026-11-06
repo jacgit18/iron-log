@@ -55,7 +55,7 @@ export default function FirstRun() {
         <button type="button" className="btn primary" id="firstrun-add" onClick={() => st.openAddToProgram(1)}>Build my own: add your first exercise</button>
       </div>
       <p className="note">The Program tab edits the whole week.</p>
-      <p className="note">Saw an exercise online you want to try? Keep it under Experiments, below the days, with a link to the video. Help, at the top, explains the rest.</p>
+      <p className="note">Saw an exercise online you want to try? Keep it under Ideas to try, below the days, with a link to the video. Help, at the top, explains the rest.</p>
     </section>
   );
 }
