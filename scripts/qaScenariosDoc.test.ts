@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../server/qa/scenarios.ts';
-import { buildDoc, docIssues, resultsOf } from './qa-scenarios-doc.mjs';
+import { buildDoc, docIssues, recordedResults, resultsOf } from './qa-scenarios-doc.mjs';
 
 describe('QA scenarios page', () => {
   const doc = buildDoc();
@@ -60,6 +60,35 @@ describe('QA scenarios page', () => {
       expect(doc.startsWith('---\ndg-publish: false\ntags:\n')).toBe(true);
       expect(doc).toMatch(/^Purpose: .+\nStatus: .+\n/m);
       expect(doc.split('\n').indexOf('---', 1)).toBeGreaterThan(5);
+    });
+  });
+
+  describe('automation tags and recorded results (brief: qa-scenario-automation)', () => {
+    it('builds with no vault access and shows an Automation line per scenario and a coverage line that adds up', () => {
+      expect((doc.match(/^- \*\*Automation:\*\* /gm) ?? []).length).toBe(SCENARIOS.length);
+      const m = doc.match(/Automation: (\d+) e2e, (\d+) api, (\d+) manual, (\d+) untagged\./);
+      expect(m && m.slice(1).map(Number).reduce((a, b) => a + b, 0)).toBe(SCENARIOS.filter(s => !s.retired).length);
+    });
+
+    it('fills a Result and the Summary cell from the results file, and it wins over a hand-written one', () => {
+      const recorded = recordedResults(JSON.stringify([{ id: 'S-01', outcome: 'pass', date: '2026-11-06', by: 'claude', note: 'ok' }]));
+      const handWritten = doc.replace(/^(- \*\*Result\*\* \(date, pass or fail, note\): )\\_\\_\\_$/m, '$12026-11-02 fail by hand');
+      const page = buildDoc(handWritten, recorded);
+      expect(resultsOf(page).get('S-01')?.line).toBe('2026-11-06 pass (claude): ok');
+      expect(resultsOf(page).get('S-01')?.cell).toBe('2026-11-06 pass (claude): ok');
+      expect(docIssues(page)).toEqual([]);
+    });
+
+    it('escapes a | in a recorded note so the Summary row keeps its columns', () => {
+      const page = buildDoc('', recordedResults(JSON.stringify([{ id: 'S-01', outcome: 'pass', date: '2026-11-06', by: 'owner', note: 'a | b' }])));
+      const row = page.split('\n').find(l => l.startsWith('| S-01 |')) ?? '';
+      expect(row).toContain('a \\| b');
+      expect(resultsOf(page).get('S-01')?.cell).toBe('2026-11-06 pass: a \\| b');
+    });
+
+    it('keeps a hand-written Result for a scenario with no recorded entry', () => {
+      const handWritten = doc.replace(/^(- \*\*Result\*\* \(date, pass or fail, note\): )\\_\\_\\_$/m, '$12026-11-02 fail by hand');
+      expect(resultsOf(buildDoc(handWritten, recordedResults(''))).get('S-01')?.line).toBe('2026-11-02 fail by hand');
     });
   });
 });
