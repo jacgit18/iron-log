@@ -26,7 +26,7 @@
 <main>
 <a class="back" href="./">← Back to Loadbearer</a>
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 27 October 2026 · Version 1.5</p>
+<p class="meta">Last updated: 6 November 2026 · Version 1.8</p>
 
 <p>Loadbearer is a workout log. This policy explains what personal data it collects when you use the signed-in version of the app, why, where it is kept, who can see it, how long it is kept, and the choices and rights you have. It is written to be read. If anything here is unclear, ask: the contact details are at the end.</p>
 
@@ -38,6 +38,7 @@
   <li>We collect what is needed to sign you in and to store and sync the workouts you log. Nothing else.</li>
   <li>There is <b>no advertising, no analytics and no tracking</b>. We do not sell your data and do not share it for advertising.</li>
   <li>Your data is stored with two service providers (Google Cloud and Neon), in the United States. If you sign in with an emailed code instead of Google, a third, Resend, sends you that code: it sees your email address and the code, and nothing you log.</li>
+  <li>If you search for a food or scan a barcode, our server asks two public food databases, USDA FoodData Central and Open Food Facts, for the match. It sends them only the search words or the barcode number, never your name, email or account, and we do not keep what you search for.</li>
   <li>You can <b>export</b> everything and <b>erase</b> it, or <b>delete your account</b>, yourself, at any time, in Settings. Deleted data is removed from the live service immediately and from backups within 30 days.</li>
   <li>The app is for people aged <b>18 and over</b>.</li>
 </ul>
@@ -56,6 +57,8 @@
   <li><b>Error reports:</b> when the app on your device hits an unexpected error, it may send a short report (the kind of error, a message with all numbers removed, the page, the app version and technical stack lines). Reports are scrubbed so they do not contain your workout data or email, and are not linked to your account.</li>
   <li><b>Push alerts (only if you turn them on in Settings):</b> the address your browser or phone gives us for sending it a notification, and the keys that go with it. We keep them until you turn the alerts off, sign out, erase your data or delete your account. When a rest timer or an unfinished day should send an alert, the app asks our server to send a short message (for example “Rest over. Time for your next set.” or “Day not finished: 2 exercises left.”) at a set time. If you also turn on the drink-water reminder, the app asks our server for a short message (“Time for a glass of water.”) at a set time, and our server asks for the next one after each is sent, until the end of the hours you chose. The request holds that message, the time and the number of your device entry, not your workouts (for the drink-water reminder it also holds how often it repeats and when your reminder hours end), and is removed once sent. The message is encrypted for your device, but travels through the notification service of your browser or phone maker.</li>
 </ul>
+<h3>Food searches and barcode scans</h3>
+<p>When you type in the food search box or scan a barcode, the words or the number go to our server, which asks USDA FoodData Central and, for a barcode USDA does not know, Open Food Facts, for the food and its nutrition. The request comes from our server, so those services see our server’s address and the search words or barcode number, and nothing that identifies you: no name, email, account or device. A barcode photo is read on your device by your browser’s own barcode reader and is not sent anywhere; only the number it reads is. We do not keep your searches or the numbers you scan. The food you choose is saved only as part of your own diet log. Open Food Facts asks every program that uses it to send a contact address; ours is the operator’s contact address.</p>
 <h3>On your device</h3>
 <p>The app keeps a working copy of your data in your browser’s storage so it works offline and does not lose changes. This copy stays on your device; it is not a tracking tool and is not shared with any other site.</p>
 
@@ -66,6 +69,7 @@
 <table>
   <thead><tr><th>Purpose</th><th>Data</th><th>Legal basis</th></tr></thead>
   <tbody>
+    <tr><td>Find a food or look up a barcode you scan</td><td>The search words or barcode number you give, sent to USDA and Open Food Facts without your name, email or account</td><td>Performance of the contract (providing the search you asked for)</td></tr>
     <tr><td>Create and secure your account, keep you signed in</td><td>Google profile data or the email address you give for a code, session records</td><td>Performance of the contract (providing the service you asked for); legitimate interests in security</td></tr>
     <tr><td>Store, show and sync your workouts and settings</td><td>The data you enter</td><td>Performance of the contract. For health-related data: your <b>explicit consent</b> (Art. 9(2)(a)), given when you choose to enter it and sign in to sync it. You can withdraw consent at any time by erasing your data or deleting your account.</td></tr>
     <tr><td>Send the alerts you ask for (timer ended, day not finished)</td><td>Push address and keys, the alert text and time</td><td>Performance of the contract; your consent, given when you turn the alerts on and allow notifications</td></tr>
@@ -82,6 +86,8 @@
     <tr><td>Google (Google Cloud: Cloud Run, Cloud Storage, Cloud Build, Cloud Tasks, Secret Manager, Cloud Logging; Google Sign-In)</td><td>Hosting the app and API, nightly encrypted backups, logs, signing you in, and sending the alerts you turn on at the right time</td><td>United States (us-central1)</td></tr>
     <tr><td>The notification service of your browser or phone maker (Google for Chrome and Android, Apple for iPhone and iPad, Mozilla for Firefox)</td><td>Delivering the alerts you turn on to your device. It sees the address of your device and the time, and carries the encrypted message</td><td>Wherever that provider runs it</td></tr>
     <tr><td>Neon (database hosting, on Amazon Web Services)</td><td>Storing your account and workout data</td><td>United States (us-east-2)</td></tr>
+    <tr><td>USDA FoodData Central (public food database)</td><td>Finding foods and their nutrition from the words you search or the barcode you scan. It sees those words or that number and our server’s address, not who you are</td><td>United States</td></tr>
+    <tr><td>Open Food Facts (public food database, for a barcode USDA does not know)</td><td>Finding a packaged food from the barcode number. It sees that number and our server’s address, not who you are</td><td>Run by a non-profit based in France</td></tr>
     <tr><td>Resend (email delivery, only if you sign in with an emailed code)</td><td>Sending you the sign-in code by email. It sees your email address and the text of the message. It keeps its delivery logs for up to 30 days, under a data processing agreement</td><td>United States</td></tr>
   </tbody>
 </table>
@@ -99,6 +105,7 @@
     <tr><td>Push alerts: your device’s address and keys</td><td>Until you turn the alerts off, sign out, erase your data or delete your account (removed immediately from the live service). A notification service may drop an address that stops working.</td></tr>
     <tr><td>A queued alert</td><td>Until it is sent, at most 3 hours ahead, and removed when sent. A cancelled alert is sent to nothing and removed.</td></tr>
     <tr><td>Sign-in codes (emailed)</td><td>Until used or expired, which is 5 minutes (stored as a hash only). Any left over is removed when you delete your account. Resend keeps its own record of the message for up to 30 days.</td></tr>
+    <tr><td>Food search words and barcode numbers</td><td>Not kept by us. They are used to answer the request and are not stored. USDA and Open Food Facts keep their own server logs under their own policies.</td></tr>
     <tr><td>Session records</td><td>Up to 30 days from last use (the sign-in lifetime), or until you sign out or delete your account.</td></tr>
     <tr><td>Nightly backups</td><td>30 days, then deleted automatically. Data you erase or delete is therefore gone from backups within 30 days. Sessions are not included in backups. If we restored a backup, we would first re-apply deletions you have requested.</td></tr>
     <tr><td>Platform logs</td><td>About 30 days.</td></tr>
