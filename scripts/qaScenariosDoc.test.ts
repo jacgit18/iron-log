@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../server/qa/scenarios.ts';
-import { buildDoc, docIssues, resultsOf } from './qa-scenarios-doc.mjs';
+import { buildDoc, docIssues, recordedResults, resultsOf } from './qa-scenarios-doc.mjs';
 
 describe('QA scenarios page', () => {
   const doc = buildDoc();
@@ -19,13 +19,13 @@ describe('QA scenarios page', () => {
   });
   it('reports a scenario whose steps or title changed in the list, not only its id', () => {
     expect(docIssues(doc.replace(/^  1\. .*$/m, '  1. An old first step'))).toEqual([expect.stringMatching(/^S-\d+ reads differently/)]);
-    expect(docIssues(doc.replace(/^(### S-03\. )/m, '$1Old title: '))).toEqual(['S-03 reads differently on the page than in the list (title, account, steps or expected lines changed)']);
+    expect(docIssues(doc.replace(/^(### S-03\. )/m, '$1Old title: '))).toEqual(['S-03 reads differently on the page than in the list (title, account, steps, expected or automation lines changed)']);
   });
 
   describe('regenerating over a page with Results written by hand', () => {
     const owner = doc
       .replace(/^(\| S-01 \|.*\|)  \|$/m, '$1 2026-11-02 pass; one \\| in the note |')
-      .replace(/^(\| S-44 \|.*\|)  \|$/m, '$1 not run: needs a phone |')
+      .replace(/(^## Summary$[\s\S]*?^\| S-44 \|.*\|)  \|$/m, '$1 not run: needs a phone |') // the Summary row, not the Device checklist one above it
       .replace(/^(- \*\*Result\*\* \(date, pass or fail, note\): )\\_\\_\\_$/m, '$12026-11-02 pass under the scenario')
       .replace(/^Status: .*$/m, 'Status: walked 2026-11-02')
       .replace(/^EditDate: .*$/m, 'EditDate: 2000-01-01');
@@ -60,6 +60,76 @@ describe('QA scenarios page', () => {
       expect(doc.startsWith('---\ndg-publish: false\ntags:\n')).toBe(true);
       expect(doc).toMatch(/^Purpose: .+\nStatus: .+\n/m);
       expect(doc.split('\n').indexOf('---', 1)).toBeGreaterThan(5);
+    });
+  });
+
+  describe('automation tags and recorded results (brief: qa-scenario-automation)', () => {
+    it('builds with no vault access and shows an Automation line per scenario and a coverage line that adds up', () => {
+      expect((doc.match(/^- \*\*Automation:\*\* /gm) ?? []).length).toBe(SCENARIOS.length);
+      const m = doc.match(/Automation: (\d+) e2e, (\d+) api, (\d+) manual, (\d+) untagged\./);
+      expect(m && m.slice(1).map(Number).reduce((a, b) => a + b, 0)).toBe(SCENARIOS.filter(s => !s.retired).length);
+    });
+
+    it('fills a Result and the Summary cell from the results file, and it wins over a hand-written one', () => {
+      const recorded = recordedResults(JSON.stringify([{ id: 'S-01', outcome: 'pass', date: '2026-11-06', by: 'claude', note: 'ok' }]));
+      const handWritten = doc.replace(/^(- \*\*Result\*\* \(date, pass or fail, note\): )\\_\\_\\_$/m, '$12026-11-02 fail by hand');
+      const page = buildDoc(handWritten, recorded);
+      expect(resultsOf(page).get('S-01')?.line).toBe('2026-11-06 pass (claude): ok');
+      expect(resultsOf(page).get('S-01')?.cell).toBe('2026-11-06 pass (claude): ok');
+      expect(docIssues(page)).toEqual([]);
+    });
+
+    it('escapes a | in a recorded note so the Summary row keeps its columns', () => {
+      const page = buildDoc('', recordedResults(JSON.stringify([{ id: 'S-01', outcome: 'pass', date: '2026-11-06', by: 'owner', note: 'a | b' }])));
+      const row = page.split('\n').find(l => l.startsWith('| S-01 |')) ?? '';
+      expect(row).toContain('a \\| b');
+      expect(resultsOf(page).get('S-01')?.cell).toBe('2026-11-06 pass: a \\| b');
+    });
+
+    it('keeps a hand-written Result for a scenario with no recorded entry', () => {
+      const handWritten = doc.replace(/^(- \*\*Result\*\* \(date, pass or fail, note\): )\\_\\_\\_$/m, '$12026-11-02 fail by hand');
+      expect(resultsOf(buildDoc(handWritten, recordedResults(''))).get('S-01')?.line).toBe('2026-11-02 fail by hand');
+    });
+  
+    describe('device checklist', () => {
+      const phone = SCENARIOS.filter(s => s.device && !s.retired);
+      const rows = page => page.split('## Device checklist')[1].split('## Summary')[0].split('\n').filter(l => /^\| S-\d+ \|/.test(l));
+
+      it('lists every live phone scenario once, not tried when nothing is recorded', () => {
+        const got = rows(doc);
+        expect(got.map(r => r.split(' | ')[0].replace('| ', ''))).toEqual(phone.map(s => s.id));
+        for (const r of got) expect(r).toContain('| not tried |');
+        expect(doc).toMatch(new RegExp(`${phone.length} scenarios need a real phone: ${phone.length} not tried`));
+      });
+
+      it('shows a recorded pass and fail, and a Result written by hand as noted by hand', () => {
+        const [a, b, c] = phone.map(s => s.id);
+        const recorded = recordedResults(JSON.stringify([
+          { id: a, outcome: 'pass', date: '2026-11-06', by: 'owner' },
+          { id: b, outcome: 'fail', date: '2026-11-06', by: 'owner', note: 'crashed' },
+        ]));
+        const hand = doc.replace(new RegExp(`(### ${c}\\. [\\s\\S]*?- \\*\\*Result\\*\\* \\(date, pass or fail, note\\): )\\\\_\\\\_\\\\_`), '$12026-11-02 looked fine');
+        const page = buildDoc(hand, recorded);
+        const got = rows(page);
+        expect(got.find(r => r.startsWith(`| ${a} |`))).toContain('| passed |');
+        expect(got.find(r => r.startsWith(`| ${b} |`))).toContain('| failed | 2026-11-06 fail: crashed |');
+        expect(got.find(r => r.startsWith(`| ${c} |`))).toContain('| noted by hand | 2026-11-02 looked fine |');
+      });
+
+      it('shows a hand-written Result that sits only in the Summary cell, unescaped', () => {
+        const id = phone[0].id;
+        const summaryOnly = doc.replace(new RegExp(`(^## Summary$[\\s\\S]*?^\\| ${id} \\|.*\\|)  \\|$`, 'm'), '$1 2026-11-02 pass; a \\| b |');
+        const row = rows(buildDoc(summaryOnly)).find(r => r.startsWith(`| ${id} |`)) ?? '';
+        expect(row).toContain('| noted by hand | 2026-11-02 pass; a \\| b |');
+      });
+
+      it('leaves --check and the Results a page carries unchanged', () => {
+        expect(docIssues(doc)).toEqual([]);
+        const recorded = recordedResults(JSON.stringify([{ id: phone[0].id, outcome: 'pass', date: '2026-11-06', by: 'owner' }]));
+        const page = buildDoc('', recorded);
+        expect(docIssues(page)).toEqual([]);
+        expect(resultsOf(page).get(phone[0].id)?.cell).toBe('2026-11-06 pass');
+      });
     });
   });
 });

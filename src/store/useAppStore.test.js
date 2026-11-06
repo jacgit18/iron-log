@@ -578,8 +578,8 @@ describe('experiment board', () => {
   });
   it('refuses an exercise that is already on the list, but lets an entry be edited', () => {
     const e = add('hack', 'hyp');
-    expect(st().saveExperiment({ ex: 'hack', nn: '', ph: 'strength', note: '' })).toMatch(/already on the Experiment list/);
-    expect(st().saveExperiment({ ex: '__new', nn: 'Hack Squat', ph: null, note: '' })).toMatch(/already on the Experiment list/); // a typed name an exercise has is that exercise
+    expect(st().saveExperiment({ ex: 'hack', nn: '', ph: 'strength', note: '' })).toMatch(/already on the Ideas to try list/);
+    expect(st().saveExperiment({ ex: '__new', nn: 'Hack Squat', ph: null, note: '' })).toMatch(/already on the Ideas to try list/); // a typed name an exercise has is that exercise
     expect(st().saveExperiment({ ex: '__new', nn: 'Cable Lateral Raise', ph: null, note: '' })).toBeNull(); // a name no exercise has is a new one
     expect(st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: 'x' })).toBeNull();
     expect(st().experiments.filter(x => x.ex === 'hack')).toHaveLength(1);
@@ -1127,7 +1127,7 @@ describe('exercise library', () => {
     useAppStore.setState({ logs: { [id]: [{ d: '2026-10-01', w: 10, s: 1, r: 1 }] } });
     expect(st().deleteExercise(id)).toMatch(/in your logs/);
     useAppStore.setState({ logs: {}, experiments: [{ id: 'e1', ex: id, ph: null, note: '' }] });
-    expect(st().deleteExercise(id)).toMatch(/Experiment board/);
+    expect(st().deleteExercise(id)).toMatch(/Ideas to try list/);
     useAppStore.setState({ experiments: [] });
     expect(st().deleteExercise(id)).toBeNull();
     expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();

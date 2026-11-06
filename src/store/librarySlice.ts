@@ -44,7 +44,7 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     if (d.cat) { const err = catalogPickError(get().cfg, d.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
     const chosen = d.ex === '__new' ? findExId(get().cfg, d.nn) ?? '__new' : d.ex; // a typed name an exercise already has is that exercise
     const target = d.cat ? d.cat.id : chosen;
-    if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Experiment list.`;
+    if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Ideas to try list.`;
     const ex = get().resolveExerciseChoice(d, chosen);
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
@@ -170,7 +170,7 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     if (get().blocked()) return null;
     if (!isOwnExercise(exId) && !isCatalogId(exId)) return 'Built-in exercises can’t be deleted.';
     const u = usageOf(exId, get());
-    const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Experiment board', u.logs && 'in your logs'].filter(Boolean);
+    const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Ideas to try list', u.logs && 'in your logs'].filter(Boolean);
     if (where.length) return `It is still used ${where.join(', ')}. Remove it there first.`;
     const c0 = get().cfg; const kept = { ex: c0.ex[exId], rm: c0.rm[exId], ph: c0.exPh?.[exId], tags: c0.muscleMap?.[exId] };
     if (!get().mutateCfg(c => { delete c.ex[exId]; delete c.rm[exId]; if (c.exPh) delete c.exPh[exId]; if (c.muscleMap) delete c.muscleMap[exId]; })) return null;

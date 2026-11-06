@@ -285,7 +285,7 @@ function DataPanel() {
         </div>
       </details>
       <More about="export and import">
-        <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
+        <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Ideas to try list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
       <ExportUpload />
       </details>
@@ -312,7 +312,7 @@ const ERASE = [
   ['logs', 'Logged sessions', 'every weight, set and rep, including ones logged by check-offs'],
   ['weeks', 'Weekly check-offs', 'checked, skipped and moved cards, and phase changes, for every week'],
   ['body', 'Body weight', ''],
-  ['programs', 'Edited programs, saved versions and the Experiment list', 'the Board goes back to the original programs'], // synced: a blank one (ADR 021)
+  ['programs', 'Edited programs, saved versions and the Ideas to try list', 'the Board goes back to the original programs'], // synced: a blank one (ADR 021)
   ['settings', 'Settings and 1RMs', 'program mode, rest time, phase percentages, 1RMs, phase defaults, custom exercises and muscle tags'],
 ];
 function ErasePanel() {

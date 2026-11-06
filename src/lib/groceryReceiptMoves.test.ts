@@ -116,3 +116,15 @@ describe('applyPlan with moves, and Undo', () => {
     expect(calls).toEqual(['item eggs {"qty":1,"cents":null,"store":"Aldi"}', 'restore eggs {"got":true}']); // the usual store first, so the line put back is not pinned to the receipt store
   });
 });
+
+describe('a store the receipt added (brief receipt-add-store)', () => {
+  it('Undo removes the store last and quietly, only when Apply added it', () => {
+    const calls: string[] = [];
+    const api = { restoreGroceryLine: () => { calls.push('restore'); }, removeGroceryItem: () => { calls.push('item'); }, removeGroceryStore: (n: string, o?: { quiet?: boolean }) => { calls.push(`store ${n} ${o?.quiet}`); return null; } } as unknown as GroceryApi;
+    restoreSnapshot({ month: '2026-01', lines: { a: null }, usual: {}, tax: null, created: ['n1'], addedStore: 'Costco' }, api);
+    expect(calls).toEqual(['restore', 'item', 'store Costco true']);
+    calls.length = 0;
+    restoreSnapshot({ month: '2026-01', lines: { a: null }, usual: {}, tax: null }, api);
+    expect(calls).toEqual(['restore']);
+  });
+});

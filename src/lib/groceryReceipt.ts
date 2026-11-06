@@ -161,9 +161,10 @@ export interface GroceryApi {
   updateGroceryItem(id: string, patch: Partial<{ qty: number; cents: number | null; store: string }>): string | null;
   setGroceryLineStore(month: string, id: string, store: string | null): string | null;
   makeGroceryStoreUsual(month: string, id: string): string | null;
+  removeGroceryStore?(name: string, opts?: { quiet?: boolean }): string | null;
 }
 /** `created`: ids of the items Apply made from staged ones, which Undo removes (left out when there are none). */
-export interface Snapshot { month: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; created?: string[] }
+export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; created?: string[] }
 
 /** What Apply is about to change, so Undo can put it back: each touched line as it is now (null: none), each item's usual count and price, and the store's tax. */
 export function takeSnapshot(plan: Plan, month: string, lines: Record<string, GroceryLine>, items: readonly GroceryItem[], tax: Record<string, number> | undefined, created: readonly string[] = []): Snapshot {
@@ -202,6 +203,7 @@ export function restoreSnapshot(snap: Snapshot, api: GroceryApi): void {
   for (const [id, u] of Object.entries(snap.usual)) if (u.store === undefined) api.updateGroceryItem(id, u);
   if (snap.tax) api.setGroceryTax(snap.month, snap.tax.store, snap.tax.cents);
   for (const id of snap.created ?? []) api.removeGroceryItem(id, { quiet: true }); // after its line is gone
+  if (snap.addedStore) api.removeGroceryStore?.(snap.addedStore, { quiet: true }); // last: a store the receipt added (brief receipt-add-store); refused when something else names it, so it stays
 }
 
 /* ---------- Add to list (brief receipt-add-item) ---------- */

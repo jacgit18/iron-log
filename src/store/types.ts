@@ -340,7 +340,7 @@ export interface GrocerySlice {
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | '' }>): string | null;
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   addGroceryStore(name: string): string | null;
-  removeGroceryStore(name: string): string | null;
+  removeGroceryStore(name: string, opts?: { quiet?: boolean }): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
   setGroceryGot(month: string, id: string, on: boolean): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
   restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void; // one month line back exactly as it was, for Undo after a receipt is applied

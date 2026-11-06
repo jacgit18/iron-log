@@ -21,7 +21,7 @@ test('the section is collapsed until it is opened, and closes again', async ({ p
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.cmpbody')).toHaveCount(0);
   await open(page);
-  await expect(page.locator('.cmpaligned')).toHaveCount(1);
+  expect(await page.locator('.cmpaligned').count()).toBeGreaterThan(0); // one list per day on a wide screen (All days)
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.cmpbody')).toHaveCount(0);
@@ -95,7 +95,7 @@ test('wide: the two programs are columns; phone: the second program\'s line sits
   let [one, two] = await sides(body);
   expect(two.x).toBeGreaterThan(one.x + one.width - 1); // beside it
   expect(Math.abs(two.y - one.y)).toBeLessThan(4);
-  await expect(body.locator('.cmpcols')).toBeVisible();
+  await expect(body.locator('.cmpcols').first()).toBeVisible();
   // Editor.css's .edrow loads after this panel's CSS: the row must still be the grid, and the status stripe must still show (it did not before 2026-11-06)
   const style = async (locator, prop) => locator.evaluate((el, p) => getComputedStyle(el)[p], prop);
   expect(await style(body.locator('.cmprow').first(), 'display')).toBe('grid');
@@ -111,7 +111,7 @@ test('wide: the two programs are columns; phone: the second program\'s line sits
   [one, two] = await sides(body);
   expect(two.y).toBeGreaterThan(one.y); // under it
   expect(Math.abs(two.x - one.x)).toBeLessThan(4);
-  await expect(body.locator('.cmpcols')).toBeHidden();
+  await expect(body.locator('.cmpcols').first()).toBeHidden();
   await expect(body.locator('.cmprow').first().locator('.cmpwho').first()).toBeVisible(); // the program's name labels each line
 });
 
@@ -152,4 +152,46 @@ test('a changed exercise marks the differing weight on both sides', async ({ pag
   await expect(changed.locator('.cmpdiff')).toHaveCount(2); // the weight is marked on both sides
   await expect(changed.locator('.cmpside').first().locator('.cmpdiff')).toHaveText(/123 lb/);
   await expect(body.locator('.cmprow:not(.cmp-chg) .cmpdiff')).toHaveCount(0); // and nowhere else
+});
+
+test('All days lists every day under its own heading, and a filter applies to all of them', async ({ page }) => {
+  const body = await open(page);
+  const dayButtons = body.locator('.cmpdays button');
+  await dayButtons.first().click();
+  await expect(dayButtons.first()).toHaveText(/^All days/);
+  await expect(dayButtons.first()).toHaveAttribute('aria-pressed', 'true');
+  const heads = await body.locator('.cmpdayhead').allTextContents();
+  expect(heads.length).toBeGreaterThan(1);
+  expect(heads[0]).toBe('Day 1');
+  const all = await count(body, 'All');
+  await expect(body.locator('.cmprow')).toHaveCount(all); // the chip counts are the sum over every day
+  await body.getByRole('button', { name: /^Same \d+$/ }).click();
+  expect((await body.locator('.cmprow .tag').allTextContents()).every(t => t === 'Same')).toBe(true);
+  await dayButtons.nth(1).click(); // back to one day: no day headings
+  await expect(body.locator('.cmpdayhead')).toHaveCount(0);
+});
+
+test('a wide screen starts on All days; a phone starts on the editor\'s day', async ({ page }) => {
+  const body = await open(page);
+  await expect(body.locator('.cmpdays button').first()).toHaveAttribute('aria-pressed', 'true');
+  expect(await body.locator('.cmpdayhead').count()).toBeGreaterThan(1);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  const phone = await open(page);
+  await expect(phone.locator('.cmpdays button').first()).toHaveAttribute('aria-pressed', 'false');
+  await expect(phone.locator('.cmpdayhead')).toHaveCount(0);
+});
+
+test('on a wide screen several days sit side by side as cards, and one day is a single card', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const body = await open(page);
+  const cards = body.locator('.cmpdaygrid > .cmpaligned');
+  expect(await cards.count()).toBeGreaterThan(2);
+  const [a, b] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
+  expect(Math.abs(a.y - b.y)).toBeLessThan(4); // same row of cards
+  expect(b.x).toBeGreaterThan(a.x + a.width - 1);
+  await body.locator('.cmpdays button').nth(1).click(); // Day 1 alone
+  await expect(body.locator('.cmpdaygrid > .cmpaligned')).toHaveCount(1);
+  const one = await body.locator('.cmpdaygrid > .cmpaligned').boundingBox();
+  expect(one.width).toBeLessThan(a.width * 1.05); // a single day is one card wide, not the whole panel
 });
