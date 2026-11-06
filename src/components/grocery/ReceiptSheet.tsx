@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
-import { money, monthLabel } from '../../lib/grocery.js';
+import { MAX_STORES, money, monthLabel } from '../../lib/grocery.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
 import { missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
+import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import type { Receipt } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -32,9 +33,17 @@ export default function ReceiptSheet() {
   const [staged, setStaged] = useState<Staged[]>([]);
   const [form, setForm] = useState<{ line: number; draft: ItemDraft; error: string } | null>(null); // one form open at a time
   const seq = useRef(0);
+  const [addOn, setAddOn] = useState(true); // brief receipt-add-store: ticked by default, and only offered when the receipt names a store the list does not have
+  const [typedName, setTypedName] = useState<string | null>(null); // null: the tidied name read from the photo, untouched
   const known = receipt ? matchStore(receipt.store, g.stores) : null;
-  const taxStore = known ?? (pickedStore || null);
+  const cleaned = cleanStoreName(receipt?.store);
+  const offer = !!receipt && !known && !!cleaned && receipt.lines.length > 0 && g.stores.length < MAX_STORES && !pickedStore; // picking a store in the list instead hides the box
+  const nameText = (typedName ?? cleaned ?? '').trim().replace(/\s+/g, ' ');
+  const sameName = g.stores.find(s => s.toLowerCase() === nameText.toLowerCase());
+  const addStore = offer && addOn && nameText ? (sameName ?? nameText) : null;
+  const taxStore = known ?? addStore ?? (pickedStore || null);
   const base = useMemo(() => (receipt ? planReceipt(receipt, choices, g.items, taxStore, staged, { at: taxStore, makeUsual: usual, g, lines: monthLines ?? {} }) : null), [receipt, choices, g, taxStore, staged, usual, monthLines]);
+  const newStore = addStore && !sameName ? addStore : null; // the store Apply will create
   const rec = useMemo(() => (base ? reconcile(base, choices, g.items, monthLines ?? {}, taxStore) : null), [base, choices, g.items, monthLines, taxStore]);
   const plan = useMemo(() => (base && rec ? { ...base, untick: rec.missing.filter(m => unticked.has(m.id)).map(m => m.id) } : null), [base, rec, unticked]); // an item the person re-included leaves the missing list, so its Untick no longer counts
   const rows = useMemo(() => groupLines(receipt?.lines ?? [], separate), [receipt, separate]);
@@ -60,16 +69,19 @@ export default function ReceiptSheet() {
     setChoices(cs => cs.map(c => (c.itemId === id ? { itemId: null, include: false } : c)));
   };
   const apply = () => {
+    const storeErr = newStore ? useAppStore.getState().addGroceryStore(newStore) : 'none'; // before the items, so a new item bought there finds the store
     const made = createStaged(plan, staged, { addGroceryItem: useAppStore.getState().addGroceryItem, items: () => useAppStore.getState().grocery.items });
     const real = remapPlan(plan, made.ids);
     const st = useAppStore.getState(); // read after the items were made
     const month = st.groceryMonths[mk];
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!));
+    if (newStore && storeErr === null) snap.addedStore = newStore;
     const out: { refused: string[]; unticked?: number } = { refused: [] };
     const done = applyPlan(real, mk, st, out);
+    const storeText = newStore ? (storeErr === null ? ` Added the store ${newStore}.` : ` Could not add the store ${newStore}: ${storeErr}`) : '';
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Unticked ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Unticked ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;
@@ -85,6 +97,18 @@ export default function ReceiptSheet() {
         <span>Applies to <b>{monthLabel(mk)}</b></span>
       </p>
       {dateMonth && dateMonth !== mk && <p className="note rcwarn" role="status">This receipt is dated {monthLabel(dateMonth)}, but you are on {monthLabel(mk)}. Close this sheet and change the month first if that is not what you want.</p>}
+      {offer && (
+        <div className="rcaddstore">
+          <label className="rckeep" htmlFor="rc-add-on"><input id="rc-add-on" type="checkbox" checked={addOn} onChange={e => setAddOn(e.target.checked)} />
+            <span>Add this store to your stores<small>Read from the photo as "{receipt.store}". Nothing is saved until Apply; Undo removes it again.</small></span>
+          </label>
+          {addOn && (
+            <label className="field" htmlFor="rc-add-store">Store name
+              <input id="rc-add-store" type="text" maxLength={40} value={typedName ?? cleaned ?? ''} onChange={e => setTypedName(e.target.value)} />
+            </label>
+          )}
+        </div>
+      )}
       {!known && receipt.lines.length > 0 && (
         <label className="field" htmlFor="rc-store">Store for this receipt {receipt.store ? `("${receipt.store}" is not on your list)` : ''}
           <select id="rc-store" value={pickedStore} onChange={e => setPickedStore(e.target.value)}>
