@@ -49,6 +49,15 @@ describe('the policy and the system agree', () => {
     expect(read('server/app.ts')).toMatch(/deleteVerificationByIdentifier\(`\$\{kind\}-otp-\$\{email\.toLowerCase\(\)\}`\)/);
   });
 
+  it('names USDA and Open Food Facts and says barcode photos are read on the device', () => {
+    expect(read('server/foodSearch.ts')).toContain('https://api.nal.usda.gov/fdc/v1/foods/search');
+    expect(read('server/openFoodFacts.ts')).toContain('https://world.openfoodfacts.org/api/v2/product');
+    expect(text).toMatch(/USDA FoodData Central \(public food database\)/);
+    expect(text).toMatch(/Open Food Facts \(public food database/);
+    expect(text).toContain('A barcode photo is read on your device');
+    expect(text).toMatch(/Food search words and barcode numbers/);
+  });
+
   it('says what the app really keeps about sessions and what it never does', () => {
     expect(text).toMatch(/IP address and (the )?browser or device description/);
     expect(text).toContain('no advertising, no analytics and no tracking');
