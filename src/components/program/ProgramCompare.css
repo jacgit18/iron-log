@@ -2,7 +2,7 @@
 @layer components {
 /* The Program tab's Compare section: two programs in one list, read-only. `.edrow.cmprow` is two classes on purpose: Editor.css loads after this file and its `.edrow` (flex, one border colour) would otherwise win over the grid and the status stripe. Rows are the editor's own (.edrow); only the status stripe, the status tag, the phase pill and the marks on what differs are new. */
 .cmppanel {
-  max-width: 760px;
+  max-width: 1100px;
   container-type: inline-size;
 }
 .cmphead {
