@@ -6,6 +6,7 @@ import './utilities.css';
 import './components/pressed.css';
 import App from './App.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
+import TermsGuard from './components/TermsGuard.js';
 import { Splash } from './components/Splash.js';
 import { setAdmin, setPaid } from './features.js';
 import { inAndroidApp } from './lib/androidApp.js';
@@ -33,7 +34,7 @@ const root = createRoot(document.getElementById('root')!, { onCaughtError: hande
 const show = (node: ReactNode) => root.render(<StrictMode>{node}</StrictMode>);
 // Start loading before the first render. Saved in this browser, the data is read right away, so the
 // first frame already shows it instead of a "Loading…" frame that the page then jumps away from.
-const openApp = () => { useAppStore.getState().init(); show(<ErrorBoundary where="app"><App /></ErrorBoundary>); learnAdmin(); };
+const openApp = () => { useAppStore.getState().init(); show(<ErrorBoundary where="app"><TermsGuard><App /></TermsGuard></ErrorBoundary>); learnAdmin(); };
 
 // With syncing on, ask the API whether this account is an admin (src/features.ts). Offline or unreachable keeps what the browser last knew.
 function learnAdmin() {

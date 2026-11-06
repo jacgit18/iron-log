@@ -33,6 +33,7 @@ export type ScenarioFeature =
   | 'Receipt scan'
   | 'Receipt reconcile'
   | 'Sharing done'
+  | 'Terms'
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
@@ -50,7 +51,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Terms',
 ];
 
 export interface Scenario {
@@ -1263,6 +1264,56 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The panel stays open and the Home group says "That person is already in this group."; no "Sharing saved." note appears.',
       'With the box empty, Done closes the panel and says "Sharing saved.".',
+    ],
+  },
+  {
+    id: 'S-97', feature: 'Terms', title: 'Both sign-in buttons stay off until the Terms box is ticked', persona: 'new-user', brief: 'terms-acceptance',
+    steps: [
+      'Sign out from the account menu so the sign-in page shows, and look under the headline.',
+      'Without ticking anything, try Sign in with Google and Sign in with email.',
+      'Tick "I agree to the Terms of Use ... and the Privacy Policy ...", then untick it, then tick it again.',
+      'Press the Terms of Use link and the Privacy Policy link.',
+      'Reload the page.',
+    ],
+    expected: [
+      'The box is unticked and the line "Tick the box to sign in." sits under it; both sign-in buttons are greyed out and do nothing.',
+      'Ticking turns both buttons on and removes the line; unticking turns them off again.',
+      'Each link opens its page in a new tab and the sign-in page is still there, with your tick unchanged.',
+      'After the reload the box is unticked again.',
+    ],
+  },
+  {
+    id: 'S-98', feature: 'Terms', title: 'The email-code form cannot be used with the box unticked', persona: 'new-user', brief: 'terms-acceptance', edge: true,
+    steps: [
+      'On the sign-in page tick the box, press Sign in with email and type an address.',
+      'Untick the box before pressing Send code.',
+    ],
+    expected: [
+      'Send code (and Send a new code, once a code was asked for) is greyed out while the box is unticked and works again when it is ticked.',
+    ],
+  },
+  {
+    id: 'S-99', feature: 'Terms', title: 'A first sign-in records the acceptance and opens the app', persona: 'new-user', brief: 'terms-acceptance',
+    steps: [
+      'On the sign-in page tick the box and press Sign in with Google with an account that has never used the app. (Test accounts count as accepted, so use a real sign-in.)',
+      'When Google sends you back, look at what opens.',
+    ],
+    expected: [
+      'The app opens straight away with no "Before you continue" screen: the tick made on the sign-in page was recorded on return.',
+      'Signing out and in again later does not ask again.',
+    ],
+  },
+  {
+    id: 'S-100', feature: 'Terms', title: 'A signed-in account that never accepted sees only the accept screen', persona: 'new-user', brief: 'terms-acceptance', edge: true,
+    steps: [
+      'Open the app signed in with an account that signed in before this feature existed (or one whose box was not remembered). (Test accounts count as accepted, so use a real account.)',
+      'Look at the screen, and try the Board behind it. Press Continue without ticking, then tick and turn the connection off and press Continue.',
+      'Turn the connection back on, press Continue again, then reload.',
+    ],
+    expected: [
+      'Only "Before you continue" shows, with the box, Continue and Sign out; no tabs or Board.',
+      'Continue is off until the box is ticked; offline it says "Could not save your answer. Check the connection and try again." and the app stays closed.',
+      'Online it opens the app, and a reload goes straight to the app.',
     ],
   },
 ];

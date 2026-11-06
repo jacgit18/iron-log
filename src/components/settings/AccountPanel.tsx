@@ -1,6 +1,8 @@
 import { useSharedWho } from './useWho.js';
 import EmailCodeSignIn from '../EmailCodeSignIn.js';
 import LegalLinks from '../LegalLinks.js';
+import TermsCheckbox from '../TermsCheckbox.js';
+import { useTermsTick } from '../useTermsTick.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
 import { getSyncApi } from '../../store/useAppStore.js';
 
@@ -10,6 +12,7 @@ export default function AccountPanel() {
   const api = getSyncApi();
   const { client: account, busy, start: signIn } = useGoogleSignIn();
   const { who: state, recheck } = useSharedWho(!!api, account);
+  const tick = useTermsTick();
   if (!api || state?.status === 'signed-in') return null; // never drawn for a signed-in person, so nothing under it moves when the answer comes
 
   return (
@@ -25,10 +28,11 @@ export default function AccountPanel() {
       {state?.status === 'signed-out' && (
         <>
           <p><b>Not signed in.</b> Your changes are kept on this device and will be sent once you sign in.</p>
+          <TermsCheckbox checked={tick.ticked} onChange={tick.set} />
           <div className="actions">
-            <button type="button" className="btn" disabled={busy} onClick={() => void signIn()}>Sign in with Google</button>
+            <button type="button" className="btn" disabled={busy || !tick.ticked} onClick={() => void signIn()}>Sign in with Google</button>
           </div>
-          <EmailCodeSignIn client={account} />
+          <EmailCodeSignIn client={account} blocked={!tick.ticked} />
           <p><LegalLinks /></p>
         </>
       )}

@@ -9,6 +9,8 @@ import { PLANS_PATH } from '../lib/plansPage.js';
 import './Landing.css'; // before EmailCodeSignIn, whose .emailsignin .btn rules must still win over .landing-cta .btn
 import EmailCodeSignIn from './EmailCodeSignIn.js';
 import LegalLinks from './LegalLinks.js';
+import TermsCheckbox from './TermsCheckbox.js';
+import { useTermsTick } from './useTermsTick.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
 // entirely; nothing of the app is mounted behind it. Plain words, no tracking, and a clear note that signing in creates the account.
@@ -24,6 +26,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
   const [problem, setProblem] = useState('');
   const [done] = useState(takeAfterReload); // "Your account was deleted.": the reload after deleting lands here
   const { client, busy, start } = useGoogleSignIn(setProblem);
+  const tick = useTermsTick();
   return (
     <main className="landing" aria-labelledby="landing-h">
       <header className="landing-head">
@@ -36,9 +39,10 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
         <p className="landing-lead">Plan the week on one board, log your sets in seconds, and watch the weights climb. It works offline, so it is there in the gym, and it syncs across your devices once you sign in.</p>
         {done && <p className="notice" role="status"><b>{done}</b></p>}
         {offline && <p className="notice" role="status"><b>You are offline.</b> Connect to the internet to sign in for the first time.</p>}
+        <div className="landing-terms"><TermsCheckbox checked={tick.ticked} onChange={tick.set} /></div>
         <div className="landing-cta">
-          <button type="button" className="btn primary" disabled={busy} onClick={() => void start()}>{busy ? 'Opening Google…' : 'Sign in with Google'}</button>
-          <EmailCodeSignIn client={client} />
+          <button type="button" className="btn primary" disabled={busy || !tick.ticked} onClick={() => void start()}>{busy ? 'Opening Google…' : 'Sign in with Google'}</button>
+          <EmailCodeSignIn client={client} blocked={!tick.ticked} />
         </div>
         {problem && <p className="notice" role="alert"><b>{problem}</b></p>}
         {/* Development builds only (the production build does not contain this): skip the landing page as the fake dev user. */}

@@ -1,0 +1,26 @@
+@layer base, components;
+@layer components {
+.termsgate {
+  align-items: flex-start;
+  gap: var(--sp-16);
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 40px var(--sp-16);
+}
+.termsgate h1 {
+  font-size: var(--fs-xl);
+  margin: 0;
+}
+.termsgate p {
+  margin: 0;
+}
+.termsgate .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.termsgate .btn {
+  min-height: 44px;
+  padding: 0 var(--sp-16);
+}
+}

@@ -6,10 +6,11 @@ import './EmailCodeSignIn.css';
 // Sign in with an emailed 6-digit code (ADR 042), the second way in besides Google. Closed until asked for, so the Google button stays the
 // first thing seen. Two steps in one place: the address, then the code. Every problem is a sentence under the field; nothing is lost
 // while signed out (changes stay on the device and are sent after sign-in). Offered only when the server says the code is open, or on a
-// device that revealed it (src/lib/emailSignIn.ts); the server is what keeps it owner-only.
+// device that revealed it (src/lib/emailSignIn.ts); the server is what keeps it owner-only. `blocked` is the unticked Terms box on the page around it:
+// the buttons stay off until it is ticked (brief terms-acceptance).
 const RESEND_AFTER_MS = 30_000;
 
-export default function EmailCodeSignIn({ client }: { client: AccountClient }) {
+export default function EmailCodeSignIn({ client, blocked = false }: { client: AccountClient; blocked?: boolean }) {
   const [open, setOpen] = useState(false);
   const [revealed] = useState(() => emailSignInRevealed(window.location.search));
   const [step, setStep] = useState<'closed' | 'email' | 'code'>('closed');
@@ -35,7 +36,7 @@ export default function EmailCodeSignIn({ client }: { client: AccountClient }) {
 
   if (!emailSignInOffered(open, revealed)) return null;
   if (step === 'closed') {
-    return <button type="button" className="btn emailsignin-open" onClick={() => setStep('email')}>Sign in with email</button>;
+    return <button type="button" className="btn emailsignin-open" disabled={blocked} onClick={() => setStep('email')}>Sign in with email</button>;
   }
 
   const failure = (out: EmailCodeOutcome, refused: string, unreachable: string) =>
@@ -81,8 +82,8 @@ export default function EmailCodeSignIn({ client }: { client: AccountClient }) {
       )}
       {message && <p className="note" role="status">{message}</p>}
       <div className="actions">
-        <button type="submit" className="btn primary" disabled={busy || (step === 'code' && code.length !== 6)}>{step === 'email' ? 'Send code' : 'Sign in'}</button>
-        {step === 'code' && <button type="button" className="btn" disabled={busy || !canResend} onClick={() => void send()}>Send a new code</button>}
+        <button type="submit" className="btn primary" disabled={blocked || busy || (step === 'code' && code.length !== 6)}>{step === 'email' ? 'Send code' : 'Sign in'}</button>
+        {step === 'code' && <button type="button" className="btn" disabled={blocked || busy || !canResend} onClick={() => void send()}>Send a new code</button>}
         {step === 'code' ? <button type="button" className="btn" onClick={back}>Use a different email</button> : <button type="button" className="btn" onClick={() => { setStep('closed'); setMessage(''); }}>Cancel</button>}
       </div>
     </form>

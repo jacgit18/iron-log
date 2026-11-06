@@ -23,6 +23,7 @@ import { issueRecorder } from './issues.ts';
 import { barcodeRoutes } from './foodBarcode.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
 import { receiptsRoutes } from './receipts.ts';
+import { termsAnswer, termsRoutes } from './termsRoutes.ts';
 import { scanRoutes, type ScanDeps } from './scan.ts';
 import { accountsRoutes } from './accountsRoutes.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
@@ -115,6 +116,8 @@ const LIMITS = {
   foods: { max: 20, windowMs: 60_000 } as Limit,
   // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
   scan: { max: 10, windowMs: 60_000 } as Limit,
+  // Recording the Terms and Privacy acceptance (brief terms-acceptance): once per sign-in or version bump; a loop is what this stops.
+  terms: { max: 20, windowMs: 60_000 } as Limit,
   // Saved receipt photos (brief receipt-save-photo): a person keeping a photo, reading the list, opening one; a loop is what this stops.
   receipts: { max: 30, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
@@ -255,6 +258,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
   if (db) app.use('/api/receipts', requireAdmin, rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
+  // Terms and Privacy acceptance (brief terms-acceptance, ADR 090): any signed-in account, including one that has not accepted yet; session guard only.
+  if (db) app.use('/api/terms', rateLimit(limits.terms, undefined, byUser), termsRoutes({ db }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
@@ -271,11 +276,11 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   });
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
-    const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string; plan: string | null }>`select current_setting('app.user_id') as id, (select plan from users where id = current_setting('app.user_id')::bigint) as plan`.execute(trx)).rows[0]);
+    const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string; plan: string | null; terms: string | null; privacy: string | null }>`select current_setting('app.user_id') as id, u.plan, u.terms_version as terms, u.privacy_version as privacy from (select 1) one left join users u on u.id = current_setting('app.user_id')::bigint`.execute(trx)).rows[0]);
     const account = res.locals.account as Account;
     // QA only (qaPersonas.ts): whether this session is a test account, and whether an admin may switch. Absent everywhere else, so production's answer is unchanged.
     const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true } : undefined;
-    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', suspended: res.locals.suspended === true, isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
+    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', suspended: res.locals.suspended === true, isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing), terms: termsAnswer(row?.terms ?? null, row?.privacy ?? null, account.kind === 'dev' || !!personaByEmail(account.email)) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {

@@ -1,0 +1,24 @@
+@layer base, components;
+@layer components {
+.termsbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-10);
+  max-width: 22rem;
+  text-align: left;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+.termsbox input {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+.termsbox a {
+  text-decoration: underline;
+}
+.termshint {
+  margin: var(--sp-4) 0 0;
+}
+}

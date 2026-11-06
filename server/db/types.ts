@@ -277,8 +277,11 @@ export interface Users {
   plan_source: Generated<string>;
   plan_status: string | null;
   plan_updated_at: Timestamp | null;
+  privacy_version: string | null;
   stripe_customer_id: string | null;
   suspended_at: Timestamp | null;
+  terms_accepted_at: Timestamp | null;
+  terms_version: string | null;
 }
 
 export interface Weeks {

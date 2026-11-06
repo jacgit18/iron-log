@@ -1,23 +1,28 @@
 import EmailCodeSignIn from './EmailCodeSignIn.js';
 import LegalLinks from './LegalLinks.js';
+import TermsCheckbox from './TermsCheckbox.js';
+import { useTermsTick } from './useTermsTick.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import { useAppStore } from '../store/useAppStore.js';
 
 // Shown when syncing is on but nobody is signed in (the server answered 401). Without it the app would sit on "Loading…".
-// Nothing is lost while signed out: changes are kept on this device and sent after sign-in.
+// Nothing is lost while signed out: changes are kept on this device and sent after sign-in. The "I agree" box sits in its own notice above: the card below is a
+// live region, and a box that changes inside one would be read out again. Both sign-in buttons stay off until it is ticked (brief terms-acceptance).
 export default function SignInCard() {
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const { client, busy, start } = useGoogleSignIn();
+  const tick = useTermsTick();
   if (!signedOut) return null;
   // The email form sits beside the card, not inside it: the card is a live region (role=status), and a form with inputs and its own
   // messages inside one would be read out again at every step.
   return (
     <>
+      <div className="notice movewarn signin-terms"><TermsCheckbox checked={tick.ticked} onChange={tick.set} /></div>
       <div className="notice movewarn" role="status">
         <div><b>Sign in to sync.</b> Your changes are kept on this device and will be sent once you sign in. <LegalLinks /></div>
-        <div className="actions"><button type="button" className="btn sm" disabled={busy} onClick={() => void start()}>Sign in with Google</button></div>
+        <div className="actions"><button type="button" className="btn sm" disabled={busy || !tick.ticked} onClick={() => void start()}>Sign in with Google</button></div>
       </div>
-      <EmailCodeSignIn client={client} />
+      <EmailCodeSignIn client={client} blocked={!tick.ticked} />
     </>
   );
 }
