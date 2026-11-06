@@ -5,7 +5,7 @@
 //   npx tsx scripts/qa-scenarios-doc.mjs --from "<page>"   prints the same to the screen (never redirect with > to the page itself: the shell empties it before it is read)
 //   npx tsx scripts/qa-scenarios-doc.mjs   prints a page with every Result blank
 //   npx tsx scripts/qa-scenarios-doc.mjs --check "<project docs>/ops/qa-scenarios.md"   exits 1 when the page lacks a live scenario, lists one that no longer exists, or shows a retired one as live (Results filled in by hand are not compared; a changed title, account, step or expected line is)
-//   npx tsx scripts/qa-scenarios-doc.mjs --record S-85 pass "note" [--by claude|owner] [--build <sha>] [--date YYYY-MM-DD] --results "<qa-results.json>"   appends one run to the results file (brief: qa-scenario-automation)
+//   npx tsx scripts/qa-scenarios-doc.mjs --record S-85 pass "note" --by claude|owner [--build <sha>] [--date YYYY-MM-DD] --results "<qa-results.json>"   appends one run to the results file (brief: qa-scenario-automation)
 // A page generated with --write or --from also reads `qa-results.json` beside it (or --results "<file>"): the latest entry per scenario fills its Result, and wins over a Result written by hand.
 // The Result column is blank on a new page on purpose: the owner fills it by hand (date, pass or fail, note) while walking the scenarios on QA. A
 // regenerated page carries each non-empty Result forward by scenario id (from the Summary table, and from a hand-filled line under the scenario).
@@ -131,7 +131,7 @@ export function docIssues(doc) {
   for (const s of SCENARIOS) {
     if (!onPage.has(s.id)) issues.push(`${s.id} is not on the page`);
     else if (onPage.get(s.id) !== Boolean(s.retired)) issues.push(`${s.id} is ${s.retired ? 'retired' : 'live'} in the list but ${s.retired ? 'live' : 'retired'} on the page`);
-    else if (page.get(s.id) !== fresh.get(s.id)) issues.push(`${s.id} reads differently on the page than in the list (title, account, steps or expected lines changed)`);
+    else if (page.get(s.id) !== fresh.get(s.id)) issues.push(`${s.id} reads differently on the page than in the list (title, account, steps, expected or automation lines changed)`);
   }
   for (const id of onPage.keys()) if (!SCENARIOS.some(s => s.id === id)) issues.push(`${id} is on the page but not in the list`);
   return issues;
@@ -144,12 +144,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const fail = msg => { console.error(`qa-scenarios: ${msg}`); process.exit(2); };
   const readText = path => (existsSync(path) ? readFileSync(path, 'utf8') : '');
   if (process.argv.includes('--record')) {
-    const [id, outcome, note] = process.argv.slice(process.argv.indexOf('--record') + 1);
+    // Positionals are what is left after the flags and their values, wherever the flags sit: id, outcome, optional note.
+    const flagsWithValue = new Set(['--by', '--build', '--date', '--results']);
+    const rest = process.argv.slice(process.argv.indexOf('--record') + 1);
+    const positional = rest.filter((a, i) => !a.startsWith('--') && !flagsWithValue.has(rest[i - 1]));
+    const [id, outcome, note] = positional;
     const file = arg('--results');
-    if (!file || !id || !outcome) fail('usage: --record S-nn pass|fail|blocked ["note"] [--by claude|owner] [--build <sha>] [--date YYYY-MM-DD] --results "<qa-results.json>"');
-    const entry = { id, outcome, date: arg('--date') ?? new Date().toISOString().slice(0, 10), by: arg('--by') ?? 'owner' };
+    if (positional.length > 3) fail(`unexpected extra argument ${JSON.stringify(positional[3])}: put the note in one quoted argument`);
+    if (!arg('--by')) fail('--by owner|claude is required: say who ran the scenario');
+    if (!file || !id || !outcome) fail('usage: --record S-nn pass|fail|blocked ["note"] --by claude|owner [--build <sha>] [--date YYYY-MM-DD] --results "<qa-results.json>"');
+    const entry = { id, outcome, date: arg('--date') ?? new Date().toISOString().slice(0, 10), by: arg('--by') };
     if (arg('--build')) entry.build = arg('--build');
-    if (note && !note.startsWith('--')) entry.note = note;
+    if (note) entry.note = note;
     try {
       const why = entryProblem(entry, KNOWN, DEVICES);
       if (why) throw new Error(`${id} ${why}`);
