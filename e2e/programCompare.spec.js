@@ -153,3 +153,20 @@ test('a changed exercise marks the differing weight on both sides', async ({ pag
   await expect(changed.locator('.cmpside').first().locator('.cmpdiff')).toHaveText(/123 lb/);
   await expect(body.locator('.cmprow:not(.cmp-chg) .cmpdiff')).toHaveCount(0); // and nowhere else
 });
+
+test('All days lists every day under its own heading, and a filter applies to all of them', async ({ page }) => {
+  const body = await open(page);
+  const dayButtons = body.locator('.cmpdays button');
+  await dayButtons.first().click();
+  await expect(dayButtons.first()).toHaveText(/^All days/);
+  await expect(dayButtons.first()).toHaveAttribute('aria-pressed', 'true');
+  const heads = await body.locator('.cmpdayhead').allTextContents();
+  expect(heads.length).toBeGreaterThan(1);
+  expect(heads[0]).toBe('Day 1');
+  const all = await count(body, 'All');
+  await expect(body.locator('.cmprow')).toHaveCount(all); // the chip counts are the sum over every day
+  await body.getByRole('button', { name: /^Same \d+$/ }).click();
+  expect((await body.locator('.cmprow .tag').allTextContents()).every(t => t === 'Same')).toBe(true);
+  await dayButtons.nth(1).click(); // back to one day: no day headings
+  await expect(body.locator('.cmpdayhead')).toHaveCount(0);
+});

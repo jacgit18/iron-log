@@ -98,6 +98,10 @@
 .cmpcols {
   display: none;
 }
+.cmpdayhead {
+  margin: var(--sp-8) 0 var(--sp-4);
+  font-size: var(--fs-base);
+}
 .edrow.cmprow {
   display: grid;
   grid-template-columns: minmax(0,1fr);
