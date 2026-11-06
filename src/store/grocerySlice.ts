@@ -269,7 +269,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       });
     },
 
-    removeGroceryStore(name) {
+    removeGroceryStore(name, opts) {
       pinPastParties(); // the store leaves its group below: past months keep the split they were counted with
       const i = get().grocery.stores.indexOf(name);
       const retire = i >= 0 && historyUses(name);
@@ -281,7 +281,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== name); });
         return null;
       });
-      if (!err && i >= 0) {
+      if (!err && i >= 0 && !opts?.quiet) {
         get().noteRemoved('grocerystores', name, () => mutateCatalogue(g => {
           if (g.stores.includes(name)) return 'back';
           if (g.stores.length >= MAX_STORES) return 'full';

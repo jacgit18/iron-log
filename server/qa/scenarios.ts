@@ -1301,7 +1301,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
     steps: [
-      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'On a phone, paste the production address (https://loadbearer.app/; the QA page points its card picture and address at production, so production is the one to try) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
       'Read the title, the description and the picture on the card.',
     ],
     expected: [
@@ -1429,6 +1429,34 @@ export const SCENARIOS: readonly Scenario[] = [
       'The heading under the stretch days reads "Stretches to try" and its button "+ Add stretch"; the line reads "To try a stretch you saw online, add it under Stretches to try, below, with a link to the video."',
       'The sheet is titled "Add a stretch to try".',
       'Help says "Ideas to try sit under the days" in its Board part and has an "Ideas to try" entry among its terms; the word "Experiments" does not appear in Help. (An exported workbook still has a sheet named Experiments, on purpose, so older files import.)',
+    ],
+  },
+  {
+    id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'recipe-collector', brief: 'receipt-add-store', device: true,
+    steps: [
+      'As an admin on a phone, open Groceries, At home, Edit and check the list has no stores (delete any stores it has; items may stay).',
+      'On To get press Scan receipt and photograph a receipt from a store (for example Costco) that has a few items from your list.',
+      'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
+      'Press Apply, then open To get and At home, then press Undo on the notice.',
+    ],
+    expected: [
+      'A ticked box says "Add this store to your stores" with a tidy name in the box (COSTCO WHOLESALE #123 reads Costco); the line under the list says how many items will be marked bought at it this month. Nothing is added before Apply.',
+      'After Apply the store exists, the notice says "Added the store Costco.", and To get lists the matched items under Costco, ticked and priced.',
+      'Undo removes the store again and puts the items back and unticked.',
+    ],
+  },
+  {
+    id: 'S-111', feature: 'Receipt store', title: 'Edit the new store name, or untick the box and nothing is added', persona: 'recipe-collector', brief: 'receipt-add-store', edge: true,
+    steps: [
+      'As an admin with no stores on the list, scan a receipt from a store.',
+      'Change the name in the box to something else, and press Apply. Press Undo.',
+      'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
+      'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
+    ],
+    expected: [
+      'The store is added under the name you typed, and Undo removes it.',
+      'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
+      'When the list already has the store there is no box and the items are marked bought at it as before.',
     ],
   },
 ];

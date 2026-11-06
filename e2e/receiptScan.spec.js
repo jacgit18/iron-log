@@ -39,6 +39,7 @@ test.describe('as an admin', () => {
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByRole('heading', { name: 'Receipt' })).toBeVisible();
     await expect(sheet.getByText('Total check: lines plus tax match the receipt.')).toBeVisible();
+    await sheet.getByLabel('Add this store to your stores').uncheck(); // brief receipt-add-store: this test is about the lines, not a new store
     await expect(sheet.getByLabel('Item for EGGS LRG 5 DZ')).toHaveValue(/.+/);
     await expect(sheet.getByLabel('Item for ZEVIA SODA 12PK')).toHaveValue('');
     await expect(sheet.getByLabel('Include ZEVIA SODA 12PK')).toBeDisabled();
