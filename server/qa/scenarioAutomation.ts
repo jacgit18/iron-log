@@ -91,7 +91,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'] },
   'S-76': { auto: 'e2e', specs: ['e2e/notFound.spec.js'], partial: 'the page loads and passes axe; the Go to Loadbearer link signed in versus signed out is not tested' },
   'S-77': { auto: 'manual' },
-  'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts'] },
+  'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts'], partial: 'the server answers and the address parses to Progress; the app opening Progress and /privacy under an active service worker are not tested' },
   'S-79': { auto: 'manual' },
   'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
   'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
