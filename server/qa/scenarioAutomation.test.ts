@@ -20,9 +20,9 @@ describe('QA scenario automation tags', () => {
     }
   });
 
-  it('kinds fit the file: e2e names e2e/ specs, api names server/ tests', () => {
+  it('kinds fit the file: e2e names e2e/ specs, api names server/ tests, unit names src/ tests', () => {
     for (const [id, a] of Object.entries(AUTOMATION)) {
-      for (const f of a.specs ?? []) expect(f.startsWith(a.auto === 'e2e' ? 'e2e/' : 'server/'), `${id} ${f}`).toBe(true);
+      for (const f of a.specs ?? []) expect(f.startsWith({ e2e: 'e2e/', api: 'server/', unit: 'src/', manual: '' }[a.auto]), `${id} ${f}`).toBe(true);
     }
   });
 
@@ -32,7 +32,14 @@ describe('QA scenario automation tags', () => {
 
   it('counts every scenario once, with untagged ones as their own class', () => {
     const c = coverageCounts(SCENARIOS.map(s => s.id));
-    expect(c.e2e + c.api + c.manual + c.untagged).toBe(SCENARIOS.length);
+    expect(c.e2e + c.api + c.unit + c.manual + c.untagged).toBe(SCENARIOS.length);
     expect(coverageCounts(['S-998']).untagged).toBe(1);
+  });
+
+  it('gives a partial note only to a tag that has specs', () => {
+    for (const [id, a] of Object.entries(AUTOMATION)) if (a.partial !== undefined) {
+      expect(a.auto, id).not.toBe('manual');
+      expect(a.partial.trim().length, id).toBeGreaterThan(10);
+    }
   });
 });
