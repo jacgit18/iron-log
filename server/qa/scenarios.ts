@@ -859,7 +859,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
     steps: [
-      'Open Program, Exercise library and press Edit on an exercise you have logged at the same weight twice in a row with every set done (the heavy logger has several).',
+      'Open Program, Exercise library and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
       'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
       'Open the exercise again and tap the lit 10 chip once more, then save.',
     ],
