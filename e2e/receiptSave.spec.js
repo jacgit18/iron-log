@@ -72,7 +72,7 @@ test.describe('as an admin', () => {
 
     await scan(page);
     await page.getByRole('dialog').getByLabel('Keep a copy of this photo').check();
-    await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(api.posts).toHaveLength(0);
 

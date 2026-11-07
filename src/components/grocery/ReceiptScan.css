@@ -67,7 +67,7 @@
 .rclines {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 var(--sp-16);
   display: grid;
 }
 .rcrow {
@@ -78,7 +78,8 @@
   padding: var(--sp-6) 0;
   border-bottom: 1px solid var(--line);
 }
-.rcrow.rcoff {
+/* A skipped row fades its text but not its controls: a faded select fails the colour-contrast check (brief receipt-apply-footer). */
+.rcrow.rcoff > :not(select, .rctick, .rclink) {
   opacity: .65;
 }
 .rctext {
@@ -102,6 +103,8 @@
 .rcaddbtn,
 .rcunstage {
   min-height: 44px;
+  justify-self: start;
+  text-align: left;
 }
 .rcnew {
   grid-column: 1 / -1;
@@ -163,11 +166,37 @@
   display: block;
   color: var(--muted);
 }
+/* brief receipt-apply-footer: Close sits in the header, the bar holds a summary and one wide Apply, and the list ends with space so no row sits under the bar. */
+.rctop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-10);
+}
+.rctop h2 {
+  margin: 0;
+}
+.rcclose {
+  min-height: 44px;
+}
 .rcfoot {
   position: sticky;
   bottom: 0;
-  padding-top: var(--sp-10);
+  margin-top: var(--sp-16);
+  padding: var(--sp-10) 0 max(var(--sp-10), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
   background: var(--surface);
+}
+.rcsum {
+  margin: 0 0 var(--sp-8);
+  text-align: center;
+}
+.rcsumbad {
+  color: var(--warn-ink);
+}
+.rcapply {
+  width: 100%;
+  min-height: 48px;
 }
 @container (max-width: 640px) {
   .rchead {
