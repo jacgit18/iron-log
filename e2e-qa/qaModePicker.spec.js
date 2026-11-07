@@ -19,6 +19,12 @@ test('S-36 and S-34: seed the missing accounts, switch between test accounts, an
   await seedAll.click();
   await expect(seedAll).toHaveCount(0, { timeout: 180_000 });
   await expect(dialog.getByRole('button', { name: 'Switch to New user' })).toBeEnabled();
+  // S-36, the idle step: leave the picker alone for several minutes (the page clock is moved on 10 minutes), reopen it, and it still lists the accounts.
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await page.clock.fastForward('10:00');
+  await page.locator('#account-badge').click();
+  await page.getByRole('button', { name: 'QA test accounts' }).click();
+  await expect(dialog.getByRole('button', { name: 'Switch to New user' })).toBeEnabled();
   // S-34: switch to New user, then use the banner's Switch to go to Diet, on target, then Return to admin.
   await dialog.getByRole('button', { name: 'Switch to New user' }).click();
   // There is no prompt: the app wipes this device's own data by itself after a switch (QaAccountsPanel.tsx).
