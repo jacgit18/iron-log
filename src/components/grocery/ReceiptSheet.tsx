@@ -83,7 +83,7 @@ export default function ReceiptSheet() {
     const storeText = newStore ? ` Added the store ${newStore}.` : '';
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Unticked ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to to-get for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;
@@ -180,15 +180,15 @@ export default function ReceiptSheet() {
         })}
       </ul>
       {rec.missing.length > 0 && (
-        <div className="rcmiss" role="group" aria-label="Ticked, not on this receipt">
-          <h3 className="cond">Ticked, not on this receipt</h3>
+        <div className="rcmiss" role="group" aria-label="Marked bought, but not on this receipt">
+          <h3 className="cond">Marked bought, but not on this receipt</h3>
           <p className="note">{missingIntro(rec)}</p>
           <ul>
             {rec.missing.map(m => (
               <li key={m.id}>
-                <label className="rcuntick"><input type="checkbox" checked={unticked.has(m.id)} onChange={e => setUnticked(x => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Untick ${m.name}`} /><span>Untick</span></label>
-                <span className="rcmisswhat">{m.name}<small>Ticked now: {m.held}</small></span>
-                <span className="rcmissstate">{unticked.has(m.id) ? 'Will be unticked' : 'Kept'}</span>
+                <label className="rcuntick"><input type="checkbox" checked={unticked.has(m.id)} onChange={e => setUnticked(x => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Move ${m.name} back to to-get`} /><span>Move back to to-get</span></label>
+                <span className="rcmisswhat">{m.name}<small>Marked bought: {m.held}</small></span>
+                <span className="rcmissstate">{unticked.has(m.id) ? 'Will move back to to-get' : 'Stays bought'}</span>
               </li>
             ))}
           </ul>
@@ -213,10 +213,10 @@ export default function ReceiptSheet() {
             <span>Keep a copy of this photo<small>Saved under Receipts. Only you can see it, and you can delete it any time.</small></span>
           </label>
         )}
-        <p className="note">{plan.items} {plan.items === 1 ? 'item' : 'items'}, {money(plan.itemsCents)}{plan.taxStore ? ` + ${plan.taxStore} tax ${money(plan.check.taxCents)}` : ''}{newCount > 0 ? `. ${newCount} new ${newCount === 1 ? 'item' : 'items'} will be added.` : ''}{plan.untick.length > 0 ? `. ${plan.untick.length} will be unticked.` : ''}</p>
+        <p className="note">{plan.items} {plan.items === 1 ? 'item' : 'items'}, {money(plan.itemsCents)}{plan.taxStore ? ` + ${plan.taxStore} tax ${money(plan.check.taxCents)}` : ''}{newCount > 0 ? `. ${newCount} new ${newCount === 1 ? 'item' : 'items'} will be added.` : ''}{plan.untick.length > 0 ? `. ${plan.untick.length} will move back to to-get.` : ''}</p>
         <div className="actions">
           <button type="button" className="btn" id="rc-cancel" onClick={closeModal}>Cancel</button>
-          <button type="button" className="btn primary" id="rc-apply" disabled={nothing || !!nameError} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 && !plan.taxStore ? `Untick ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'}` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
+          <button type="button" className="btn primary" id="rc-apply" disabled={nothing || !!nameError} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 && !plan.taxStore ? `Move ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'} back to to-get` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
         </div>
       </div>
     </Sheet>

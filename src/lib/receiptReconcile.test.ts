@@ -96,13 +96,13 @@ describe('reconcile: ticked items the receipt does not show', () => {
     const wrong: Receipt = { lines: [L('SOMETHING ELSE', 100, null)] };
     const out = run(wrong, items, lines);
     expect(out.missing).toHaveLength(3);
-    expect(missingIntro(out)).toMatch(/^None of your ticked items are on this receipt/);
-    expect(missingIntro(run(r, items, lines))).toMatch(/^They stay as they are/);
+    expect(missingIntro(out)).toMatch(/^None of the items you marked bought are on this receipt/);
+    expect(missingIntro(run(r, items, lines))).toMatch(/^You marked these as bought/);
   });
   it('words the unticked count for the Applied notice', () => {
     expect(untickedText(0)).toBe('');
-    expect(untickedText(1)).toBe(' 1 item unticked.');
-    expect(untickedText(2)).toBe(' 2 items unticked.');
+    expect(untickedText(1)).toBe(' 1 item moved back to to-get.');
+    expect(untickedText(2)).toBe(' 2 items moved back to to-get.');
   });
 });
 
