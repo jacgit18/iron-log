@@ -316,6 +316,7 @@
   }
   .sectabs button b {
     font-size: var(--fs-md);
+    overflow-wrap: anywhere;
   }
   .sectabs button span {
     display: none;

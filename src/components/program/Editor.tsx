@@ -284,7 +284,7 @@ function ProgramEditor() {
 
 // A desktop has room for five views; a phone keeps three (Saved programs and Compare programs stay on Programs there, brief program-tab-desktop-layout).
 const SECTIONS_WIDE = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercises', 'Every exercise you can use'], ['stretches', 'Stretches', 'Stretches you can add'], ['saved', 'Saved', 'Programs you keep'], ['compare', 'Compare', 'Two programs side by side']] as const;
-const SECTIONS_PHONE = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercise library', 'Every exercise you can use'], ['stretches', 'Stretch library', 'Stretches you can add']] as const;
+const SECTIONS_PHONE = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercises', 'Every exercise you can use'], ['stretches', 'Stretches', 'Stretches you can add']] as const;
 
 // The program a view that is not the editor still shows in its header: the one being edited, with the A | B switch and Create a program.
 function ProgramViewHeader() {

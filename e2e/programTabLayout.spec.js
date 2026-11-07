@@ -115,9 +115,9 @@ test.describe('on a computer', () => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the tabs keep their names, the stepper and dropdown stay, and Compare sits above Saved programs', async ({ page }) => {
+  test('the tabs are one word each, the stepper and dropdown stay, and Compare sits above Saved programs', async ({ page }) => {
     await open(page);
-    await expect(tabs(page).getByRole('button')).toHaveText([/^ProgramsYour/, /^Exercise libraryEvery/, /^Stretch libraryStretches/]);
+    await expect(tabs(page).getByRole('button')).toHaveText([/^ProgramsYour/, /^ExercisesEvery/, /^StretchesStretches/]);
     await expect(page.getByRole('button', { name: 'Next day' })).toBeVisible();
     await expect(page.getByLabel('Day to edit')).toBeVisible();
     await expect(page.getByRole('group', { name: 'Jump to day' })).toHaveCount(0);
