@@ -9,7 +9,7 @@ import { columnsClass } from '../../lib/groceryColumns.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { allIds, allPicked, boughtRows, storeIds, viewCounts } from '../../lib/groceryBought.js';
-import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, hasNoPrice, resolveChip, showChips } from '../../lib/groceryChips.js';
+import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, haveCount, hasNoPrice, itemsText, resolveChip, showChips } from '../../lib/groceryChips.js';
 import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import { dailyFix, pageOf } from '../../lib/route.js';
 import EmptyTiles from '../EmptyTiles.js';
@@ -22,6 +22,7 @@ import GroceryMore from './GroceryMore.js';
 import GroceryPhoneBar from './GroceryPhoneBar.js';
 import GroceryQuickAdd from './GroceryQuickAdd.js';
 import GroceryRail from './GroceryRail.js';
+import InventoryRail from './InventoryRail.js';
 import GroceryStoreChips from './GroceryStoreChips.js';
 import GroceryTotalBar from './GroceryTotalBar.js';
 import useMinWidth from './useMinWidth.js';
@@ -39,7 +40,7 @@ import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
 import SplitSection from './SplitSection.js';
 import StoreTax from './StoreTax.js';
-import { MonthMoney, StoreMoney } from './StoreMoney.js';
+import { StoreMoney } from './StoreMoney.js';
 import useDockHeight from './useDockHeight.js';
 import { useSortChoice } from '../useSortChoice.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
@@ -181,13 +182,13 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   const facts = { cents: (i: GroceryItem) => { const l = lineOf(i, month); return l.cents == null && !l.prices ? null : lineCost(l); }, ticked: (i: GroceryItem) => lineOf(i, month).got };
   const shape = (items: GroceryItem[]) => byStore(g, filterGroceryItems(items, q), split).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
   const shownTodo = shape(todo); const shownBought = shape(bought);
-  // Store chips (Shopping): All, and one per store with rows still to get. Their counts ignore the search; a chip whose store has nothing left falls back to All.
-  const todoGroups = byStore(g, todo, split);
-  const chips = chipsOf(onBought ? byStore(g, bought, split) : todoGroups);
+  // Store chips (Shopping and Bought): All, and one per store with rows to get (Shopping) or bought rows (Bought). Their counts ignore the search; a chip whose store has nothing left falls back to All.
+  const chipSource = byStore(g, onBought ? bought : todo, split);
+  const chips = chipsOf(chipSource);
   const [chipPick, setChipPick] = useState(ALL_CHIP);
-  const chip = onBought ? ALL_CHIP : resolveChip(chipPick, todoGroups);
-  const shown = onBought ? shownBought : chipGroups(shownTodo, chip);
-  const withChips = !onBought && showChips(chips);
+  const chip = resolveChip(chipPick, chipSource);
+  const shown = chipGroups(onBought ? shownBought : shownTodo, chip);
+  const withChips = showChips(chips);
   const noMatch = !!q.trim() && !shown.length;
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
   // Items bought and then removed from the list still count in their store's tally and tax (audit X-8); a store left with none of its own items shows only its tax box.
@@ -199,7 +200,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
     return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} subtotal={tally(mine, month).spent - (cents ?? 0)} />;
   };
   const listStores = new Set(list.map(i => i.store));
-  const goneOnly = onBought ? Object.keys(removed).filter(store => store && !listStores.has(store)) : [];
+  const goneOnly = onBought && chip === ALL_CHIP ? Object.keys(removed).filter(store => store && !listStores.has(store)) : [];
   // A ticked row leaves this view for the other one (Shopping to Bought and back), which would drop keyboard focus to the top. Put it on the next row here (or the
   // one before), else on the other view's tab; an Undo of a tick on Shopping lands the row back in the list, so focus follows it there.
   // The count and price panels' open state lives here, not in the row. `ToGet` is keyed by the view, so switching views remounts it and every panel starts shut:
@@ -219,8 +220,6 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
     window.setTimeout(() => { const box = document.querySelector<HTMLInputElement>(`#groc-more-${priceFor} .gprice`); box?.scrollIntoView({ block: 'center', behavior: motionOK() ? 'smooth' : 'instant' }); box?.focus({ preventScroll: true }); }, 0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [splitOpen, setSplitOpen] = useState<string | null>(null); // the month whose folded split section is open (one at a time, closed each time Shopping or Bought opens)
-  // The money line over Bought's list opens the Who owes who row, takes you there and puts focus on its header, so the next Tab is inside it; reduced motion jumps instead of gliding.
-  const openSplit = () => { setSplitOpen(mk); window.setTimeout(() => { const at = document.getElementById(`groc-split-${mk}`); at?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'instant' }); at?.querySelector<HTMLElement>('.gsplittoggle')?.focus({ preventScroll: true }); }, 0); };
   // Expand all and Collapse all on a store cover its rows to get and the ones already bought this month (a row ticked while open stays open in the fold).
   const storeRows = (grp: { store: string; items: GroceryItem[] }) => grp.items;
   const rs = useReceiptScan(g, mk);
@@ -239,7 +238,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   const tick = (id: string, on: boolean) => {
     if (!useAppStore.getState().setGroceryGot(mk, id, on)) return; // nothing changed (data still loading): no Undo notice and no focus jump for it
     if (current) {
-      const order = onBought ? allIds(shownBought) : shownTodo.flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
+      const order = onBought ? allIds(shown) : shownTodo.flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
       const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
       focusAfter.current = !on && !onBought ? `groc-${id}` : next ? `groc-${next}` : onBought ? 'groc-view-shopping' : 'groc-view-bought'; // a row that moves to the other view: focus the next row here, else the other view's tab
     }
@@ -273,7 +272,6 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
       </div>
       {!onBought && <ReceiptScan r={rs} phone={!wide} />}
       {summary}
-      {onBought && split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {current && carried > 0 && !onBought && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
       {!t.count && off === 0 && !onBought && <p className="note">Your list comes from <b>Inventory</b>. Add what you usually buy there, and tick what you already have.</p>}
       {onBought && !bought.length && !q.trim() && <p className="note" id="groc-boughtnone">Nothing bought yet this month. Tick an item on Shopping and it shows up here.</p>}
@@ -292,7 +290,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
       )}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
       {!onBought && current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought. See it under <b>Bought</b>.</p>}
-      <div className={onBought ? `gcols ${columnsClass(shown.length + goneOnly.length)}` : `gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
+      <div className={`gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
       {shown.map((grp, gi) => {
         const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
         if (gone && (onBought || !current)) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
@@ -349,7 +347,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   return (
     <div className="glayout">
       {main}
-      <GroceryRail t={t} view={mode} empty={emptyText} chips={chips} value={onBought ? undefined : chip} onChange={onBought ? undefined : setChipPick} />
+      <GroceryRail t={t} view={mode} empty={emptyText} chips={chips} value={chip} onChange={setChipPick} />
     </div>
   );
 }
@@ -521,8 +519,16 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
     focusAfter.current = next ? `groc-edit-arrow-${next}` : 'groc-edit';
   };
   const hasIt = (it: GroceryItem) => haveOf(it, month);
+  // Store chips (not while editing): All, and one per store with its item count. Counts ignore the search; a chip whose store has no items falls back to All.
+  const rail = useMinWidth(1100);
+  const homeGroups = byStore(g, g.items, true);
+  const chips = chipsOf(homeGroups);
+  const [chipPick, setChipPick] = useState(ALL_CHIP);
+  const chip = resolveChip(chipPick, homeGroups);
+  const listed = editing ? shown : chipGroups(shown, chip);
+  const withChips = !editing && showChips(chips);
   const setHave = (it: GroceryItem, on: boolean) => { focusAfter.current = `groc-have-${it.id}`; useAppStore.getState().setGroceryHave(nowKey, it.id, on); }; // a sorted row may move: keep focus on its box
-  return (
+  const page = (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead gsharehead">
         {editing && <b className="geditbadge">Editing</b>}
@@ -547,12 +553,15 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       )}
       {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
       {!editing && !!q.trim() && !shown.length && <NoMatch q={q} />}
-      <div className={`gcols ${columnsClass(shown.length)}`}>
-      {shown.map((grp, gi) => (
+      {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
+      <div className={editing ? `gcols ${columnsClass(shown.length)}` : `gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
+      {listed.map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead">
             <h3 id={`groc-home-h-${gi}`}>{grp.label}{grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3>
-            {editing && <ExpandAll label={grp.label} all={grp.items.every(i => openEdit.has(i.id))} onToggle={on => setEdits(grp.items.map(i => i.id), on)} />}
+            {editing
+              ? <ExpandAll label={grp.label} all={grp.items.every(i => openEdit.has(i.id))} onToggle={on => setEdits(grp.items.map(i => i.id), on)} />
+              : <span className="gstoremeta"><span className="note">{itemsText(grp.items.length, haveCount(grp.items, hasIt))}</span></span>}
           </div>
           {editing && hasSharing(g) && (
             <button type="button" className="btn sm ghost gadjust" aria-pressed={adjusting.has(grp.store)} onClick={() => { if (!adjusting.has(grp.store)) setEdits(grp.items.map(i => i.id), true); toggleAdjust(grp.store); }}>
@@ -565,6 +574,13 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       </div>
       {editing && <Stores g={g} />}
       {editing && <EditDock g={g} onDone={() => setEditMode(false)} />}
+    </div>
+  );
+  if (!rail) return page;
+  return ( // the wrapper stays while editing (one column, no rail), so pressing Edit does not remount the page
+    <div className={editing ? 'glayout gsolo' : 'glayout'}>
+      <div className="gmain">{page}</div>
+      {!editing && g.items.length > 0 && <InventoryRail have={haveCount(g.items, hasIt)} total={g.items.length} chips={chips} value={chip} onChange={setChipPick} />}
     </div>
   );
 }
