@@ -40,7 +40,7 @@ test('S-78: the real pages and files still open, a missing file is a plain 404, 
   await context.close();
 });
 
-test('S-78: /privacy without .html is Page not found on a first visit, and with the service worker active it may still open the Privacy Policy', async ({ browser }) => {
+test('S-78: /privacy without .html is Page not found on a first visit, and with the service worker in control it opens the Privacy Policy', async ({ browser }) => {
   const first = await browser.newContext({ serviceWorkers: 'block' });
   const fresh = await first.newPage();
   expect((await fresh.goto('/privacy')).status()).toBe(404);
@@ -49,10 +49,13 @@ test('S-78: /privacy without .html is Page not found on a first visit, and with 
   // The app registers its service worker only once it is signed in and showing (UpdateBanner), so this walk signs in with the service worker allowed.
   const { context, page } = await signInAs(browser, 'new-user', { serviceWorkers: 'allow' });
   await expect(page.locator('#account-badge')).toBeVisible({ timeout: 30_000 });
-  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  // Wait for the worker with a limit of its own, so a worker that never registers fails with a clear message and not at the whole-test timeout.
+  const ready = await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then(() => true), new Promise(r => setTimeout(() => r(false), 20_000))]));
+  expect(ready, 'the service worker became ready after sign-in').toBe(true);
   await page.goto('/privacy');
-  const heading = await page.getByRole('heading').first().innerText();
-  expect(['Page not found', 'Privacy Policy'].some(h => heading.includes(h)), heading).toBe(true); // either is allowed; an error page or a blank is not
+  expect(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the service worker controls /privacy').toBe(true); // so this is the worker's answer, not the server's 404
+  // src/sw.ts precaches the pages with clean URLs, so under the worker /privacy is served from privacy.html: the scenario says it "may still open".
+  await expect(page.getByRole('heading', { name: 'Privacy Policy' }).first()).toBeVisible();
   await context.close();
 });
 
