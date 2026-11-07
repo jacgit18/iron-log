@@ -1822,6 +1822,35 @@ export const SCENARIOS: readonly Scenario[] = [
       'A message says the item is already in this store\'s list, and nothing is added.',
     ],
   },
+  {
+    id: 'S-142', feature: 'Groceries views', title: 'Bought has one Who owes who row and no money line under the month switcher', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists',
+    steps: [
+      'Open Groceries, then Bought (This month). Look at what sits above the store sections, then press the Who owes who row.',
+    ],
+    expected: [
+      'Who owes who is the first row, closed, above the month switcher. There is no line reading Paid, Your share and Owed to you under the switcher. Opening the row shows Paid, Your share and Still owed to you.',
+    ],
+  },
+  {
+    id: 'S-143', feature: 'Groceries views', title: 'Store chips filter Bought and Inventory, one column with no empty block', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists',
+    steps: [
+      'On Bought press one store chip, then All. Press the Spending history switch and back to This month.',
+      'Open Inventory. Press a store chip, tick a Have box inside it, then press Edit.',
+    ],
+    expected: [
+      'A chip shows only that store; All shows every store in one column with no gap beside a short store. Spending history opens and This month comes back.',
+      'Each store header reads "n items · m you have" and the count goes up with the tick. Edit shows no chips and keeps its columns; Done brings the chips back.',
+    ],
+  },
+  {
+    id: 'S-144', feature: 'Groceries views', title: 'On a wide screen the right rail lists the stores and picks the chip on Bought and Inventory', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists', edge: true,
+    steps: [
+      'On a computer at 1280 px or wider open Bought, then Inventory. Press a store in the rail on each, then make the window narrower than 1100 px.',
+    ],
+    expected: [
+      'The rail lists the stores with counts; on Inventory it also says "m of n items this month". Pressing a store picks that chip. Under 1100 px there is no rail and the chips still work.',
+    ],
+  },
 ];
 
 

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// "Who owes who" is folded at the bottom of Shopping: closed each time, its header says what is outstanding, and the money line over the list opens it.
+// "Who owes who" is the first row on Bought: closed each time, its header says what is outstanding. (The money line over the list that used to open it went in brief groceries-bought-inventory-lists.)
 // The fixed date is in September 2026. $24.99 of toilet paper at BJ's, split three ways: $8.33 each; Mom is marked Share already paid.
 const CATALOGUE = {
   stores: ["BJ's"],
@@ -32,14 +32,14 @@ test('it starts closed, says what is outstanding, and opens and closes in place'
   await expect(page.locator('.gsplitcard')).toHaveCount(0);
 });
 
-test('the money line over the list opens it and brings it into view', async ({ page }) => {
+test('there is no money line over the list: the row is the way in, first on the page', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 500 });
   await seed(page);
-  await page.click('#groc-view-bought'); // a longer page, so the section starts below the first screen
-  await page.locator('#groc-money').click();
+  await expect(page.locator('#groc-money')).toHaveCount(0);
+  const top = await toggle(page).evaluate(e => Math.round(e.getBoundingClientRect().top));
+  expect(top).toBeLessThan(await page.locator('#groc-month').evaluate(e => Math.round(e.getBoundingClientRect().top))); // above the month switcher
+  await toggle(page).click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#groc-money')).not.toHaveAttribute('aria-expanded', /.*/); // it opens the section, it does not toggle
-  await expect(toggle(page)).toBeFocused(); // the next Tab goes inside the section
   await expect(page.locator('.gsplitcard')).toBeInViewport();
 });
 
