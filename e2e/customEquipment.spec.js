@@ -5,7 +5,7 @@ test('add equipment in a menu, use it on an exercise, then remove it', async ({ 
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   const lib = page.locator('.exlib');
   await lib.getByRole('button', { name: '+ New exercise' }).click();
   const dlg = page.getByRole('dialog');

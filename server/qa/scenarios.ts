@@ -575,7 +575,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-39', feature: 'Wide layouts', title: 'Exercise library in two columns', persona: 'superset-builder', brief: 'library-two-columns',
     steps: [
-      'Open Program, then Exercise library (`#/program/exercises`), at 1920 px and at 1024 px. The heading reads "Exercise library" and the search box "Search 46 exercises" (the account\'s two programs use 46; if it says 0, press Reset on the account).',
+      'Open Program, then Exercises (`#/program/exercises`), at 1920 px and at 1024 px. The heading reads "Exercises" and the search box "Search 46 exercises" (the account\'s two programs use 46; if it says 0, press Reset on the account).',
       'Use Search and an Equipment chip at 1920 px.',
     ],
     expected: [
@@ -870,7 +870,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
     steps: [
-      'Open Program, Exercise library and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
+      'Open Program, Exercises and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
       'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
       'Open the exercise again and tap the lit 10 chip once more, then save.',
     ],
@@ -882,7 +882,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-65', feature: 'Weight step', title: 'A step that is not allowed is refused', persona: 'heavy-logger', brief: 'progression-step-per-exercise', edge: true,
     steps: [
-      'In Program, Exercise library, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
+      'In Program, Exercises, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
       'Type 7.5 and save, then open it again. Press Save with the box showing 60 once more.',
     ],
     expected: [
@@ -1502,7 +1502,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Open help, close it, then press Got it and reload the page.',
     ],
     expected: [
-      'The guide has four steps; step 4 has a Send me the link button. The sections read Programs, Exercise library and Stretch library, each with a one-line description. The card says "You are editing", Program A, an "On your Board" pill and "N exercises across 7 days", with the A | B switch and Create a program.',
+      'The guide has four steps; step 4 has a Send me the link button. The sections read Programs, Exercises and Stretches, each with a one-line description. The card says "You are editing", Program A, an "On your Board" pill and "N exercises across 7 days", with the A | B switch and Create a program.',
       'Open help shows the Help sheet. Got it hides the guide, and after the reload it stays hidden.',
     ],
   },
@@ -1589,7 +1589,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Type #/program/saved at the end of the address and open it.',
     ],
     expected: [
-      'The tabs read Programs, Exercise library, Stretch library. The day control is the arrows and the "Day N of 7" dropdown, as before; there are no Day tabs and + Add exercise is full width.',
+      'The tabs read Programs, Exercises, Stretches. The A | B switch is two equal halves. The day control is the arrows and the "Day N of 7" dropdown, as before; there are no Day tabs and + Add exercise is full width.',
       'Compare programs (a collapsed strip) comes before Saved programs.',
       'The address opens Programs, since a phone has no Saved tab.',
     ],

@@ -8,14 +8,12 @@ import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
 import { canReorder, groupHeading, groupOpen, isFiltering, resultText } from '../../lib/libraryFilter.js';
 import LibraryChip from './LibraryChip.jsx';
-import { useWide } from './useWide.js';
 import './Library.css';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
 // Syncing, each stretch is badged Library (added from the catalog) or Custom (your own), with a Source filter once both kinds are listed
 // (ADR 027). Local mode has no catalog, so no badges.
 export default function StretchLibrary() {
-  const wide = useWide(); // the heading carries the name of the Program tab button: Exercises and Stretches on a computer, the longer names on a phone
   const items = useAppStore(s => s.stretches);
   const syncing = useAppStore(s => s.sync !== null);
   const { openModal, moveStretch } = useAppStore.getState();
@@ -31,7 +29,7 @@ export default function StretchLibrary() {
   return (
     <section className={`panel edpanel exlib exlibwide${reordering ? ' exreorder' : ''}`}>
       <div className="inline spread">
-        <h2 id="slib-h" tabIndex={-1}>{wide ? 'Stretches' : 'Stretch library'}</h2>
+        <h2 id="slib-h" tabIndex={-1}>Stretches</h2>
         <div className="inline">
           <button type="button" className="btn primary" id="slib-new" onClick={() => openModal({ type: 'stretch' })}>+ New stretch</button>
         </div>

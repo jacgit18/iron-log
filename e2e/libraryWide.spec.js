@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 
 // What a unit test cannot catch: the Exercise library is a CSS grid of two columns from 1280px (and one column below), so it needs a real layout.
 // The Stretch library shares the .exlib class and must stay as it is; DOM order stays the same at every width.
-const open = async (page, name = 'Exercises') => { await page.goto('/#/program'); if (page.viewportSize().width <= 700) name = { Exercises: 'Exercise library', Stretches: 'Stretch library' }[name]; await page.getByRole('button', { name, exact: true }).click(); await expect(page.locator('.exlib .exrow').first()).toBeVisible(); };
+const open = async (page, name = 'Exercises') => { await page.goto('/#/program'); await page.getByRole('button', { name, exact: true }).click(); await expect(page.locator('.exlib .exrow').first()).toBeVisible(); };
 const cols = page => page.evaluate(() => {
   const rows = [...document.querySelectorAll('.exlib .exrow')].map(r => r.getBoundingClientRect());
   const panel = document.querySelector('.exlib').getBoundingClientRect();

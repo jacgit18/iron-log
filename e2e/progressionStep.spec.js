@@ -22,7 +22,7 @@ test('a step set in the Log sheet is kept for the exercise and shows in the Exer
 
   await page.reload();
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
   const lib = page.getByRole('dialog').getByRole('group', { name: 'Weight step (lb)' });
   await expect(lib.getByRole('textbox')).toHaveValue('10');
