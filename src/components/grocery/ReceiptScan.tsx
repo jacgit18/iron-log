@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFeature } from '../../features.js';
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
+import { applySavedNames } from '../../lib/groceryReceipt.js';
 import { RECEIPT_TEXT, scanReceipt } from '../../lib/scanPhoto.js';
 import type { ItemRef } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -49,7 +50,8 @@ export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
     setBusy(false);
     if (!r.ok) { setMsg(RECEIPT_TEXT[r.reason]); return; }
     if (r.result.kind !== 'ok') { setMsg(RECEIPT_TEXT.unreadable); return; }
-    useAppStore.getState().openModal({ type: 'receipt', receipt: r.result.receipt, mk, image: keepOn ? r.image : null, onApplied: (a: Applied) => setApplied({ ...a, mk, t: Date.now() }), onKeep: (meta: KeepMeta) => void keep(r.image, meta) });
+    const { receipt, remembered } = applySavedNames(r.result.receipt, useAppStore.getState().grocery.items); // the person's saved receipt names win over the model's guess (brief receipt-rename-memory)
+    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk, image: keepOn ? r.image : null, onApplied: (a: Applied) => setApplied({ ...a, mk, t: Date.now() }), onKeep: (meta: KeepMeta) => void keep(r.image, meta) });
   };
   return (
     <div className="rcscan">

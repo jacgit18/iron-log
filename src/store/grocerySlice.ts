@@ -1,10 +1,11 @@
+import { withoutAlias } from '../lib/groceryAliases.js';
 import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
 } from '../lib/grocery.js';
-import { cleanShare } from '../shared/grocery.js';
+import { cleanAliases, cleanShare } from '../shared/grocery.js';
 import { storeStatus } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
@@ -235,6 +236,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (patch.cents !== undefined) { if (patch.cents !== null && cleanCents(patch.cents) == null) return 'That price is not valid.'; it.cents = patch.cents; }
         if (patch.note !== undefined) { const note = patch.note.trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE); if (note) it.note = note; else delete it.note; }
         if (patch.unit !== undefined) { const unit = UNITS.find(u => u === patch.unit); if (unit) it.unit = unit; else delete it.unit; }
+        if (patch.aliases !== undefined) { const a = cleanAliases(patch.aliases); if (a) it.aliases = a; else delete it.aliases; } // receipt names (brief receipt-rename-memory); an empty list clears them
         if (patch.every !== undefined) { it.every = patch.every; if (it.every) it.out = false; }
         if (g.items.some(i => i !== it && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
         return null;
@@ -257,6 +259,22 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
           g.items.splice(Math.min(i, g.items.length), 0, it); return null;
         }) === null;
       });
+    },
+
+    // Forget a receipt name (brief receipt-rename-memory): the text goes off the item and Undo puts the item's names back as they were (unless it changed meanwhile).
+    forgetGroceryAlias(id, text) {
+      const it = get().grocery.items.find(x => x.id === id);
+      const before = it?.aliases;
+      if (!it || !before) return;
+      const left = withoutAlias(before, text);
+      if (left.length === before.length || mutateCatalogue(g => { const x = g.items.find(y => y.id === id); if (!x) return 'gone'; if (left.length) x.aliases = left; else delete x.aliases; return null; }) !== null) return;
+      get().noteRemoved('grocery', `the receipt name “${text}” from ${it.n}`, () => mutateCatalogue(g => {
+        const x = g.items.find(y => y.id === id);
+        if (!x) return 'gone';
+        x.aliases = cleanAliases([...(x.aliases ?? []), text]) ?? undefined;
+        if (!x.aliases) delete x.aliases;
+        return null;
+      }) === null);
     },
 
     addGroceryStore(name) {

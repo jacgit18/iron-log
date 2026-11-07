@@ -79,7 +79,7 @@
   border-bottom: 1px solid var(--line);
 }
 /* A skipped row fades its text but not its controls: a faded select fails the colour-contrast check (brief receipt-apply-footer). */
-.rcrow.rcoff > :not(select, .rctick, .rclink) {
+.rcrow.rcoff > :not(select, .rctick, .rclink, .rcname) {
   opacity: .65;
 }
 .rctext {
