@@ -32,6 +32,7 @@ import Notice, { UNDO_MS } from '../Notice.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
+import ReceiptNames from './ReceiptNames.js';
 import ReceiptScan, { ReceiptMenu, useReceiptScan } from './ReceiptScan.js';
 import Receipts from './Receipts.js';
 import SharePicker from './SharePicker.js';
@@ -418,6 +419,7 @@ function EditRow({ item, g, have, onHave, adjust, open, onOpen, onMove, onRemove
               onCommit={t => commitPrice(t, c => setErr(s.updateGroceryItem(item.id, { cents: c })))} />
           </label>
         </div>
+        <ReceiptNames item={item} />
         {split && (adjust || !!item.share) && <SharePicker name={item.n} people={allPeople(g)} parties={partiesFor(g, item)} own={!!item.share} onChange={sh => s.setGroceryItemShare(item.id, sh)} />}
         <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => { setArming(false); onRemoved(item.id); onOpen(false); s.removeGroceryItem(item.id); }} />
         {err && <p className="note gerr" role="alert">{err}</p>}
