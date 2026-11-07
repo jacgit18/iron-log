@@ -124,7 +124,7 @@ describe('role guards: a plain signed-in account', () => {
     expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
     expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
     expect((await fetch(`${url}/api/receipts`, { headers: plain })).status).toBe(403);
-    expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).toBe(403); // admin only, though /api/foods itself is for everyone
+    expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).not.toBe(403); // released to everyone signed in (no AI)
     expect((await fetch(`${url}/api/backups`, { headers: { ...plain, 'x-client-version': 'dev' } })).status).toBe(402);
     if (ADMIN_ONLY) expect((await fetch(`${url}/api/billing/checkout`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
   });
