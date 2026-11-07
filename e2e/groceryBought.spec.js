@@ -83,3 +83,23 @@ test('four segments fit at 320 px with large text and nothing scrolls sideways',
     expect(box.x + box.width).toBeLessThanOrEqual(320);
   }
 });
+
+test('a purchase of a removed item counts as bought on Bought and not as still to get on Shopping', async ({ page }) => {
+  const catalogue = { stores: ['Aldi'], items: [
+    { id: 'milk', n: 'Milk', store: 'Aldi', qty: 1, cents: 399, every: true, out: false },
+    { id: 'bread', n: 'Bread', store: 'Aldi', qty: 1, cents: 289, every: true, out: false },
+  ] };
+  const month = { lines: { milk: { got: true }, gone: { got: true, qty: 1, cents: 300, store: 'Aldi' } }, pulled: [] }; // bread still to get; "gone" was bought at Aldi, then removed
+  await page.evaluate(({ catalogue, month }) => {
+    localStorage.setItem('ironlog:grocery/main', JSON.stringify(catalogue));
+    localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(month));
+  }, { catalogue, month });
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  const head = page.locator('.gstorehead', { hasText: 'Aldi' }).locator('.gstoremeta .note');
+  await expect(head).toContainText('1 to get'); // only bread: the removed purchase is not still to get
+  await expect(page.locator('#groc-summary')).toContainText('Bought 2 of 3');
+  await view(page, 'Bought').click();
+  await expect(head).toContainText('2 bought'); // milk and the removed item, as the summary card counts them
+  await expect(page.locator('#groc-summary')).toContainText('Bought 2 of 3');
+});

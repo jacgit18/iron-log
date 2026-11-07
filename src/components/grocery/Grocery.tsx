@@ -182,12 +182,12 @@ function ToGet({ g, months, nowKey, mode, off0, onOff }: { g: GroceryT; months: 
   };
   const listStores = new Set(list.map(i => i.store));
   const goneOnly = onBought ? Object.keys(removed).filter(store => store && !listStores.has(store)) : [];
-  // A ticked row moves to another part of the page, which would drop keyboard focus to the top. Put it on the next row to get (or the
-  // one before), else on the "Bought this month" line; a row unticked from the fold lands back in the list, so focus follows it there.
-  // The count and price panels' open state lives here, not in the row: a ticked row moves to the fold and is built again, and an open
-  // panel must stay open so a price can still be typed after the tick (which also opens the fold).
+  // A ticked row leaves this view for the other one (Shopping to Bought and back), which would drop keyboard focus to the top. Put it on the next row here (or the
+  // one before), else on the other view's tab; an Undo of a tick on Shopping lands the row back in the list, so focus follows it there.
+  // The count and price panels' open state lives here, not in the row. `ToGet` is keyed by the view, so switching views remounts it and every panel starts shut:
+  // a row ticked with its panel open is on Bought with the panel closed, and its price is finished there.
   const [openIds, setPanels, clearPanels] = useIdSet(); // Expand all / Collapse all and one row, by id
-  const [splitOpen, setSplitOpen] = useState<string | null>(null); // the month whose folded split section is open (one at a time, closed each time To get opens)
+  const [splitOpen, setSplitOpen] = useState<string | null>(null); // the month whose folded split section is open (one at a time, closed each time Shopping or Bought opens)
   // The money line over the list opens it, takes you there and puts focus on its header, so the next Tab is inside it; reduced motion jumps instead of gliding.
   const openSplit = () => { setSplitOpen(mk); window.setTimeout(() => { const at = document.getElementById(`groc-split-${mk}`); at?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'instant' }); at?.querySelector<HTMLElement>('.gsplittoggle')?.focus({ preventScroll: true }); }, 0); };
   // Expand all and Collapse all on a store cover its rows to get and the ones already bought this month (a row ticked while open stays open in the fold).
@@ -244,7 +244,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff }: { g: GroceryT; months: 
       <div className={`gcols ${columnsClass(shown.length + goneOnly.length)}`}>
       {shown.map((grp, gi) => {
         const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
-        if (gone && !onBought) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
+        if (gone && (onBought || !current)) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
         const ids = storeIds(shown, grp.store);
         return (
           <section key={grp.store || '_'} className={`gstore${!current && gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
