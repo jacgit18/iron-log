@@ -1,10 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 // Shopping is one column under store chips since brief groceries-store-chips-owes (e2e/groceryStoreChips.spec.js covers it at three widths); Bought and Inventory (not editing) followed in brief
-// groceries-bought-inventory-lists (e2e/groceryBoughtList.spec.js covers their chips and rail). The store columns stay on Inventory's Edit mode, which these tests cover; the tests below that were
-// about columns on Bought and on Inventory's list now check the one-column list instead.
+// groceries-bought-inventory-lists (e2e/groceryBoughtList.spec.js covers their chips and rail). Inventory's Edit mode followed in brief groceries-inventory-edit-list (e2e/groceryEditList.spec.js replaces the Edit-mode columns test that was here);
+// the tests below check the one-column list.
 
-// Inventory's Edit mode: one column per store on a wide screen (3 from 1700px, 2 from 1100px, 1 below, never more columns than stores).
 // The fixed date is in September 2026. Three stores of different length; Aldi has one item bought.
 const item = (id, n, store, cents, over = {}) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...over });
 const CATALOGUE = {
@@ -25,12 +24,6 @@ const seed = async (page, cat = CATALOGUE, month = MONTH) => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
 const box = async loc => (await loc.boundingBox());
-const cols = async page => page.evaluate(() => [...document.querySelectorAll('.gcols')].filter(e => e.offsetParent && !e.closest('details')).map(e => ({
-  w: Math.round(e.getBoundingClientRect().width),
-  tops: [...e.children].map(c => Math.round(c.getBoundingClientRect().top)),
-  lefts: [...e.children].map(c => Math.round(c.getBoundingClientRect().left)),
-  widths: [...e.children].map(c => Math.round(c.getBoundingClientRect().width)),
-})));
 const stack = async page => page.evaluate(() => [...document.querySelectorAll('.gshoplist')].filter(e => e.offsetParent).map(e => ({
   lefts: [...e.children].map(c => Math.round(c.getBoundingClientRect().left)),
   tops: [...e.children].map(c => Math.round(c.getBoundingClientRect().top)),
@@ -52,18 +45,6 @@ test('Inventory shows its stores in one column, and the Tab order follows the li
   const order = [];
   for (let i = 0; i < 12 && order.length < 6; i++) { const label = await page.evaluate(() => document.activeElement?.getAttribute('aria-label')); if (label?.startsWith('Have ')) order.push(label); await page.keyboard.press('Tab'); } // a bought item's Last: line is a stop of its own; only the Have boxes are compared
   expect(order).toEqual(names.map(n => `Have ${n}`));
-});
-
-test('editing Inventory keeps the columns, with Show details inside each store and the Stores panel below', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'inventory');
-  await page.click('#groc-edit');
-  const [c] = await cols(page);
-  expect(new Set(c.tops).size).toBe(1);
-  await page.getByRole('button', { name: "Show details in BJ's" }).click();
-  await expect(page.getByLabel('Note for Rice')).toBeVisible();
-  const stores = await box(page.getByRole('heading', { name: 'Stores', exact: true }));
-  expect(stores.x).toBeLessThan(c.lefts[1]);
 });
 
 test('a shared store keeps its group tag and money line inside its section on Bought', async ({ page }) => {

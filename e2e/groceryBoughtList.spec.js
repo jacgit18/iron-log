@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // Bought and Inventory read like Shopping (brief groceries-bought-inventory-lists): store chips over one single-column list, no money line under the month switcher,
-// and a rail from 1100 px. A unit test cannot catch the layout at three widths, the rail or that Edit mode kept its columns. The fixed date is in September 2026.
+// and a rail from 1100 px. A unit test cannot catch the layout at three widths, the rail or that Edit mode has no columns. The fixed date is in September 2026.
 const item = (id, n, store, cents = 300) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CATALOGUE = {
   stores: ['Costco', "Trader Joe's", 'Aldi'],
@@ -80,7 +80,7 @@ test('on Bought a chip falls back to All when its last row is put back, leaving 
   await expect(chip(page, /^All/)).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Inventory shows chips with item counts and one column with ticks, the Bought tag and "n items · m you have"; Edit keeps its columns', async ({ page }) => {
+test('Inventory shows chips with item counts and one column with ticks, the Bought tag and "n items · m you have"; Edit keeps the chips and the one column (groceryEditList.spec.js has the detail)', async ({ page }) => {
   await open(page, 'inventory');
   await expect(chip(page, /^All 7/)).toBeVisible();
   await expect(chip(page, /^Costco 4/)).toBeVisible();
@@ -104,9 +104,9 @@ test('Inventory shows chips with item counts and one column with ticks, the Boug
   await expect(page.getByLabel('Have Oil')).toBeChecked();
   await expect(page.locator('section.gstore')).toContainText('4 items · 3 you have');
   await page.click('#groc-edit');
-  await expect(page.locator('.gstorechips')).toHaveCount(0);
-  await expect(page.locator('.gcols')).toHaveCount(1);
-  await expect(page.locator('.gshoplist')).toHaveCount(0);
+  await expect(page.locator('.gstorechips')).toBeVisible();
+  await expect(page.locator('.gcols')).toHaveCount(0);
+  await expect(page.locator('.gshoplist')).toHaveCount(1);
   await expect(page.getByRole('complementary', { name: 'Inventory' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Done', exact: true }).first().click();
   await expect(page.locator('.gstorechips')).toBeVisible();
