@@ -1202,17 +1202,17 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-91', feature: 'Receipt reconcile', title: 'A ticked item that is not on the receipt is listed, kept, or unticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    id: 'S-91', feature: 'Receipt reconcile', title: 'An item marked bought that is not on the receipt is listed, stays bought, or moves back to to-get', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
     steps: [
       'On a phone, on To get, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
-      'Find "Ticked, not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
-      'Scan again, tick Untick on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
+      'Find "Marked bought, but not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
+      'Scan again, tick the "Move back to to-get" box on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
       'Scan a receipt that has none of your ticked items.',
     ],
     expected: [
-      'Milk is listed with what it holds now ("Ticked now: 1 × $3.79") and "Kept"; applying leaves Milk ticked with its price.',
-      'With Untick on, the row says "Will be unticked", the footer says "1 will be unticked.", Apply puts Milk back to get with the notice "1 item unticked.", and Undo ticks it again with its price.',
-      'When none of your ticked items are on the receipt, the list opens with "None of your ticked items are on this receipt. Is this the right one?"',
+      'Milk is listed with what it holds now ("Marked bought: 1 × $3.79") and "Stays bought"; applying leaves Milk ticked with its price.',
+      'With the box ticked, the row says "Will move back to to-get", the footer says "1 will move back to to-get.", Apply puts Milk back to get with the notice "1 item moved back to to-get.", and Undo ticks it again with its price.',
+      'When none of your marked-bought items are on the receipt, the list opens with "None of the items you marked bought are on this receipt. Is this the right one?"',
     ],
   },
   {
