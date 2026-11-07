@@ -125,6 +125,8 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-109': { auto: 'e2e', specs: ['e2e/help.spec.js'] },
   'S-110': { auto: 'manual' },
   'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js'] },
+  'S-112': { auto: 'e2e', specs: ['e2e/priceHistory.spec.js', 'src/lib/itemHistory.test.ts'] },
+  'S-113': { auto: 'unit', specs: ['src/lib/itemHistory.test.ts'], partial: 'the pack average, the no-price rows and the never-bought item are unit tested; the history sheet is not walked for them' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */
