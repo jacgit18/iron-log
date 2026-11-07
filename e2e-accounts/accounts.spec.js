@@ -46,9 +46,15 @@ const seedPrograms = async email => {
   for (const k of ['A', 'B']) { seq++; await pool.query('insert into programs (user_id, seq, key, data) values ($1, $2, $3, $4) on conflict (user_id, key) do nothing', [u.id, seq, k, JSON.stringify(BUILTIN[k])]); }
   await pool.query('update users set change_seq = greatest(change_seq, $2) where id = $1', [u.id, seq]);
 };
-const signUp = async (page, email, name, { seed = true } = {}) => {
+const termsNow = async page => {
+  const find = async f => /Version (\d+\.\d+)/.exec(await (await page.request.get(`/${f}`)).text())?.[1];
+  return { terms: await find('terms.html'), privacy: await find('privacy.html') };
+};
+// `accept` records the Terms and Privacy acceptance the way the sign-in box would, so tests of other things open straight onto the app (brief terms-acceptance).
+const signUp = async (page, email, name, { seed = true, accept = true } = {}) => {
   const res = await page.request.post('/api/auth/sign-up/email', { data: { email, password: PASSWORD, name } });
   expect(res.status()).toBe(200);
+  if (accept) expect((await page.request.post('/api/terms/accept', { data: await termsNow(page) })).status()).toBe(200);
   if (seed) await seedPrograms(email);
 };
 const rowsOf = async email => (await pool.query(
@@ -64,6 +70,7 @@ test('a stranger gets the landing page: the production build sends no dev header
   page.on('request', r => { if (r.url().includes('/api/')) requests.push(new URL(r.url()).pathname); });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check(); // both sign-in buttons stay off until the Terms box is ticked
   await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
   await expect(page.locator('#tab-board, #tab-settings, #chk-A-d1s1')).toHaveCount(0);
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
@@ -78,6 +85,7 @@ test('a browser that has been signed in, whose session has expired, gets the app
   await page.goto('/');
   const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
   await expect(card).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check(); // both sign-in buttons stay off until the Terms box is ticked
   await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
   await expect(page.locator('#tab-board')).toBeVisible();
   await expect(page.locator('#live-status')).not.toContainText('Loading…');
@@ -183,5 +191,27 @@ test('deleting the account removes the user, the data and every sign-in record, 
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await expect(page.locator('#chk-A-d1s1')).toHaveCount(0); // a new account: a blank board, none of the old cards
   expect(await rowsOf(email)).toBe(0);
+  await context.close();
+});
+
+test('a new account that has not accepted sees only the accept screen, and Continue stores the versions on its row', async ({ browser }) => {
+  const { context, page } = await phone(browser);
+  const email = emailFor('terms');
+  await signUp(page, email, 'Tess', { accept: false });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Before you continue' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#tab-board')).toHaveCount(0);
+  const stored = () => pool.query(`select u.terms_version, u.privacy_version, u.terms_accepted_at from users u join auth."user" a on a.id::text = u.auth_user_id where a.email = $1`, [email]).then(r => r.rows[0]);
+  expect((await stored()).terms_version).toBeNull();
+  await page.getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.locator('#tab-board')).toBeVisible({ timeout: 30_000 });
+  const row = await stored();
+  const now = await termsNow(page);
+  expect([row.terms_version, row.privacy_version]).toEqual([now.terms, now.privacy]);
+  expect(row.terms_accepted_at).not.toBeNull();
+  await page.reload(); // an account that accepted is not asked again
+  await expect(page.locator('#tab-board')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Before you continue' })).toHaveCount(0);
   await context.close();
 });

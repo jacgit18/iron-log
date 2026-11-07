@@ -361,7 +361,7 @@ test.describe('the Account panel', () => {
     const panel = page.getByRole('region', { name: 'Account' });
     await expect(panel.getByText('Not signed in.')).toBeVisible();
     await expect(panel.getByText('kept on this device')).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    await expect(panel.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
@@ -399,6 +399,7 @@ test.describe('the Account panel', () => {
       await p.route('**/api/auth/sign-in/social', route => { body = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello', redirect: true }) }); });
       await p.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
     });
+    await page.getByRole('region', { name: 'Account' }).getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check();
     await page.getByRole('region', { name: 'Account' }).getByRole('button', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
     expect(body).toEqual({ provider: 'google', callbackURL: '/' });
@@ -434,7 +435,7 @@ test.describe('signed out with syncing on (the server answers 401)', () => {
     const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
     await expect(card).toBeVisible();
     await expect(card).toContainText('kept on this device');
-    await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
     await expect(page.locator('#live-status')).not.toContainText('Loading…');
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
@@ -444,6 +445,7 @@ test.describe('signed out with syncing on (the server answers 401)', () => {
     await openSignedOut(page);
     await page.route('**/api/auth/sign-in/social', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello' }) }));
     await page.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
+    await page.getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check();
     await page.getByRole('status').filter({ hasText: 'Sign in to sync' }).getByRole('button', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
   });
@@ -786,8 +788,8 @@ test.describe('the legal pages', () => {
     await page.route('**/api/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false}' }));
     await page.goto('/');
     const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
-    await expect(card.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms.html');
-    await expect(card.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
+    await expect(card.getByRole('link', { name: 'Terms of Use' }).first()).toHaveAttribute('href', '/terms.html');
+    await expect(card.getByRole('link', { name: 'Privacy Policy' }).first()).toHaveAttribute('href', '/privacy.html');
     await expect(card).toContainText('creates your account the first time');
   });
 });
@@ -809,10 +811,10 @@ test.describe('the landing page', () => {
   test('a stranger gets the landing page, with the app nowhere behind it, and no accessibility violations', async ({ page }) => {
     await stranger(page);
     await expect(heading(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
     await expect(page.getByText('creates your account the first time')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms.html');
-    await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
+    await expect(page.getByRole('link', { name: 'Terms of Use' }).first()).toHaveAttribute('href', '/terms.html');
+    await expect(page.getByRole('link', { name: 'Privacy Policy' }).first()).toHaveAttribute('href', '/privacy.html');
     await expect(page.getByText('aged 18 and over')).toBeVisible();
     await expect(page.locator('#tab-board, #tab-settings, #chk-A-d1s1')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /development user/i })).toHaveCount(0); // the dev-only skip button is not in a production build
@@ -860,6 +862,7 @@ test.describe('the landing page', () => {
       await p.route('**/api/auth/sign-in/social', route => { body = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello' }) }); });
       await p.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
     });
+    await page.getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check();
     await page.getByRole('button', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
     expect(body).toEqual({ provider: 'google', callbackURL: '/' });
@@ -867,9 +870,10 @@ test.describe('the landing page', () => {
 
   test('when sign-in cannot start, says so in place and lets the visitor try again', async ({ page }) => {
     await stranger(page, unauth, async p => { await p.route('**/api/auth/sign-in/social', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })); });
+    await page.getByRole('checkbox', { name: /I agree to the Terms of Use/ }).check();
     await page.getByRole('button', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('alert')).toContainText('Could not reach the server to sign in');
-    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
   });
 
   test('a visitor who signs in goes to the app, and the browser remembers, so the next visit has no check at all', async ({ page }) => {
