@@ -1723,6 +1723,50 @@ export const SCENARIOS: readonly Scenario[] = [
       'Add price opens Bought with that item\'s price field open. A bought item with no price shows an Add price chip in place of its count and price.',
     ],
   },
+  {
+    id: 'S-138', feature: 'Groceries views', title: 'Spending history is inside Bought, and the old Spending address opens it', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    steps: [
+      'Open Groceries. Look at the three views, then open Bought.',
+      'Press Spending history, then reload the page. Then open the address ending /daily/grocery/spend.',
+    ],
+    expected: [
+      'The views read Shopping, Bought and Inventory. Bought has This month and Spending history under its title.',
+      'Spending history shows the chart, the 6 mo and 12 mo buttons and the text lines. The reload and the old address both open it.',
+    ],
+  },
+  {
+    id: 'S-139', feature: 'Groceries views', title: 'On a phone Shopping has Scan receipt, a search box and Sort, Select items, More in one row', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', device: true,
+    steps: [
+      'On a phone open Shopping.',
+      'Look at the buttons under the month row, then press More.',
+    ],
+    expected: [
+      'Scan receipt and the search box are full width. Sort, Select items and More are three equal buttons in one row.',
+      'More holds Pick from photos, Saved receipts, Show details on all rows and Skip the N left. A computer keeps its own toolbar.',
+    ],
+  },
+  {
+    id: 'S-140', feature: 'Groceries views', title: 'Quick add puts a one-time item on Shopping; Make it every month and Undo work', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    steps: [
+      'On Shopping press + Add item to a store, type a name and press Enter.',
+      'Press Make it every month in the notice. Add another item and press Undo.',
+    ],
+    expected: [
+      'The item shows under that store and in Inventory. The notice says it is a one-time item and stays in Inventory.',
+      'Make it every month changes the notice. Undo takes the second item away.',
+    ],
+  },
+  {
+    id: 'S-141', feature: 'Groceries views', title: 'Quick add refuses a name already in that store and an empty name', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', edge: true,
+    steps: [
+      'On Shopping press + Add item to a store and press Enter with nothing typed.',
+      'Type the name of an item already in that store and press Enter.',
+    ],
+    expected: [
+      'A message says to give the item a name, and the field stays open.',
+      'A message says the item is already in this store\'s list, and nothing is added.',
+    ],
+  },
 ];
 
 

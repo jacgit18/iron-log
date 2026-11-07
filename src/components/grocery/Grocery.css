@@ -33,6 +33,12 @@
   color: var(--ink);
   border-bottom-color: var(--accent);
 }
+/* Three short words with their counts fit one row down to a 320px phone (brief groceries-spending-buttons-quick-add); at the largest text sizes the row still wraps rather than scroll sideways. */
+@media (max-width:400px) {
+  .groc .gtop .seg button {
+    padding: 0 var(--sp-10);
+  }
+}
 .gmonth {
   display: flex;
   align-items: center;

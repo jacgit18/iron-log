@@ -282,8 +282,8 @@ export interface SettingsSlice {
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
 }
 
-/** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out). */
-export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string; unit?: GroceryUnit | '' }
+/** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out); `oneTime` (quick add on Shopping) makes a When-out item that is out, which is the only way `every` is read. */
+export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string; unit?: GroceryUnit | ''; oneTime?: boolean }
 
 /** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
 export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }

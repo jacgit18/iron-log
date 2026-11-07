@@ -1,0 +1,24 @@
+@layer base, components;
+@layer components {
+/* Lighter than the main view switch: plain text with a thin underline for the selected one, so the two switches do not read as one control. */
+.gbtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-16);
+  margin: 0 0 var(--sp-4);
+}
+.gbtabs button {
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.gbtabs button.on {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+}

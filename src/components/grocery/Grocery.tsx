@@ -10,13 +10,17 @@ import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/groceryS
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { allIds, allPicked, boughtRows, storeIds, viewCounts } from '../../lib/groceryBought.js';
 import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, hasNoPrice, resolveChip, showChips } from '../../lib/groceryChips.js';
+import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import { dailyFix, pageOf } from '../../lib/route.js';
 import EmptyTiles from '../EmptyTiles.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import ArmedButton from '../ArmedButton.jsx';
 import BulkShare, { SelectButton } from './BulkShare.js';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
+import GroceryBoughtTabs, { type BoughtView } from './GroceryBoughtTabs.js';
 import GroceryMore from './GroceryMore.js';
+import GroceryPhoneBar from './GroceryPhoneBar.js';
+import GroceryQuickAdd from './GroceryQuickAdd.js';
 import GroceryRail from './GroceryRail.js';
 import GroceryStoreChips from './GroceryStoreChips.js';
 import GroceryTotalBar from './GroceryTotalBar.js';
@@ -28,7 +32,7 @@ import Notice, { UNDO_MS } from '../Notice.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
-import ReceiptScan from './ReceiptScan.js';
+import ReceiptScan, { ReceiptMenu, useReceiptScan } from './ReceiptScan.js';
 import Receipts from './Receipts.js';
 import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
@@ -43,10 +47,11 @@ import './Grocery.css';
 import './GroceryLayout.css';
 import './PriceHistory.css';
 
-// Three views (ADR 038, changed by ADR 054 and 079): To get is this month's shopping list; At home is every item you buy, ticked while you have it (a new month keeps last month's ticks)
-// this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. A new month starts with last month’s ticks (ADR 079).
-type View = 'shopping' | 'bought' | 'inventory' | 'spend';
-const SUBTITLE: Record<View, string> = { shopping: 'What is left to buy this month, by store.', bought: 'Bought this month. These count as in your inventory. Tap a box to put one back on Shopping.', inventory: 'Your usual items. Tick what you already have.', spend: 'What you spent by month and store.' };
+// Three views (ADR 038, changed by ADR 054 and 079): Shopping is this month's list; Bought is what you ticked this month, with Spending history (what you spent by month and store) as its second switch;
+// Inventory is every item you buy, ticked while you have it (a new month keeps last month's ticks). A bought item counts as had. A new month starts with last month’s ticks (ADR 079).
+type View = 'shopping' | 'bought' | 'inventory';
+const VIEWS: readonly string[] = ['shopping', 'bought', 'inventory'];
+const SUBTITLE: Record<View | 'history', string> = { shopping: 'What is left to buy this month, by store.', bought: 'Bought this month. These count as in your inventory. Tap a box to put one back on Shopping.', inventory: 'Your usual items. Tick what you already have.', history: 'What you spent by month and store.' };
 const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: false, note: '', unit: '' };
 const COUNT_ERROR = 'The count must be a number from 0.01 to 999.';
 const PRICE_ERROR = 'The price must be dollars, like 3.49.';
@@ -217,7 +222,9 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   const openSplit = () => { setSplitOpen(mk); window.setTimeout(() => { const at = document.getElementById(`groc-split-${mk}`); at?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'instant' }); at?.querySelector<HTMLElement>('.gsplittoggle')?.focus({ preventScroll: true }); }, 0); };
   // Expand all and Collapse all on a store cover its rows to get and the ones already bought this month (a row ticked while open stays open in the fold).
   const storeRows = (grp: { store: string; items: GroceryItem[] }) => grp.items;
+  const rs = useReceiptScan(g, mk);
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
+  const [quick, setQuick] = useState<{ id: string; name: string; label: string; every: boolean; t: number } | null>(null); // the item just quick-added, for its notice (Make it every month, Undo)
   const [selecting, setSelecting] = useState(false); // Select mode (brief grocery-bulk-share): the rows to get carry a checkbox; nothing is written until Share… is applied
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const pickedIds = allIds(shown).filter(id => picked.has(id)); // only what is on screen: a search that hides a row leaves it out
@@ -225,7 +232,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   const setSelect = (on: boolean) => { setSelecting(on); setPicked(new Set()); };
   const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number; unpriced: boolean } | null>(null); // the item just ticked bought, for the Undo notice; `unpriced`: it has no price yet, so the notice offers Add price
   const setPanel = (id: string, on: boolean) => setOpen([id], on);
-  const setOff = (f: (o: number) => number) => { const next = f(off); setOffNow(next); onOff(next); clearToggled(); setSplitOpen(null); setQ(''); setSelect(false); }; // another month starts with every row and the split card folded
+  const setOff = (f: (o: number) => number) => { const next = f(off); setOffNow(next); onOff(next); clearToggled(); setSplitOpen(null); setQ(''); setSelect(false); setQuick(null); }; // another month starts with every row and the split card folded
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
   const tick = (id: string, on: boolean) => {
@@ -243,6 +250,18 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   const summary = rail
     ? null // from 1100 px the rail's card is the summary
     : wide ? <GrocerySummary t={t} view={mode} empty={emptyText} /> : null; // a phone has the total bar in the stack below
+  const phoneShop = !wide && !onBought; // Shopping on a phone: full-width Scan receipt, full-width search, then Sort, Select items and More in one row
+  const selectBtn = <SelectButton g={g} canSelect={shown.length > 0} selecting={selecting} onSelecting={setSelect} />;
+  const detailsBtns = (
+    <>
+      <button type="button" className="btn sm ghost" id="groc-details-all" onClick={() => { clearToggled(); setDetailsChoice(defaultOpen ? 'closed' : 'open'); }}>{defaultOpen ? 'Hide details on all rows' : 'Show details on all rows'}</button>
+      {detailsChoice !== 'auto' && <button type="button" className="btn sm ghost" id="groc-details-auto" onClick={() => { clearToggled(); setDetailsChoice('auto'); }}>Details by screen size</button>}
+    </>
+  );
+  const skipBtn = !onBought && current && todo.length > 0 && !q.trim() && ( // not while a search hides rows: it would skip items you cannot see
+    <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip the ${todo.length} left: every item still to get this month`} label={`Skip the ${todo.length} left`} armedLabel={`Tap again to skip ${todo.length}`}
+      onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
+  );
   const main = (
     <div className="gmain">
       {onBought && split && <SplitSection g={g} month={month} mk={mk} open={splitOpen === mk} onToggle={on => setSplitOpen(on ? mk : null)} />}
@@ -251,27 +270,25 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
         <b id="groc-month" role="status" aria-live="polite">{monthLabel(mk)}{off === 0 ? ' (this month)' : off > 0 ? ' (ahead)' : ''}</b>
         <button type="button" className="btn sm" id="groc-next" aria-label="Next month" disabled={off >= AHEAD} onClick={() => setOff(o => Math.min(AHEAD, o + 1))}><Icon name="chevron-right" /></button>
       </div>
-      {!onBought && <ReceiptScan g={g} mk={mk} />}
+      {!onBought && <ReceiptScan r={rs} phone={!wide} />}
       {summary}
       {onBought && split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {current && carried > 0 && !onBought && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
       {!t.count && off === 0 && !onBought && <p className="note">Your list comes from <b>Inventory</b>. Add what you usually buy there, and tick what you already have.</p>}
       {onBought && !bought.length && !q.trim() && <p className="note" id="groc-boughtnone">Nothing bought yet this month. Tick an item on Shopping and it shows up here.</p>}
-      {(onBought ? bought.length > 0 : list.length > 0) && <GroceryBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} />}
+      {phoneShop
+        ? <GroceryPhoneBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} searchOn={list.length > 0} select={selectBtn}
+          more={<GroceryMore phone><ReceiptMenu r={rs} />{detailsBtns}{skipBtn}</GroceryMore>} />
+        : (onBought ? bought.length > 0 : list.length > 0) && <GroceryBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} />}
       {noMatch && <NoMatch q={q} />}
       {!onBought && <RemovedNotice scope="groceryoff" />}
-      <div className="gtools">
-        <SelectButton g={g} canSelect={shown.length > 0} selecting={selecting} onSelecting={setSelect} />
-        {selecting && onBought && shown.length > 0 && <button type="button" className="btn sm ghost" id="groc-pickall" onClick={() => pickSome(pickAll, !allOn)}>{allOn ? 'Clear all' : `Select all ${pickAll.length}`}</button>}
-        <GroceryMore>
-          <button type="button" className="btn sm ghost" id="groc-details-all" onClick={() => { clearToggled(); setDetailsChoice(defaultOpen ? 'closed' : 'open'); }}>{defaultOpen ? 'Hide details on all rows' : 'Show details on all rows'}</button>
-          {detailsChoice !== 'auto' && <button type="button" className="btn sm ghost" id="groc-details-auto" onClick={() => { clearToggled(); setDetailsChoice('auto'); }}>Details by screen size</button>}
-          {!onBought && current && todo.length > 0 && !q.trim() && ( // not while a search hides rows: it would skip items you cannot see
-            <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip the ${todo.length} left: every item still to get this month`} label={`Skip the ${todo.length} left`} armedLabel={`Tap again to skip ${todo.length}`}
-              onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
-          )}
-        </GroceryMore>
-      </div>
+      {!phoneShop && (
+        <div className="gtools">
+          {selectBtn}
+          {selecting && onBought && shown.length > 0 && <button type="button" className="btn sm ghost" id="groc-pickall" onClick={() => pickSome(pickAll, !allOn)}>{allOn ? 'Clear all' : `Select all ${pickAll.length}`}</button>}
+          <GroceryMore>{detailsBtns}{skipBtn}</GroceryMore>
+        </div>
+      )}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
       {!onBought && current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought. See it under <b>Bought</b>.</p>}
       <div className={onBought ? `gcols ${columnsClass(shown.length + goneOnly.length)}` : `gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
@@ -292,6 +309,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
             <ul className="glist">{(onBought ? grp.items : gotLast(grp.items, month)).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={onBought ? false : off > 0} carries={off >= 0} onGot={on => tick(it.id, on)} open={isOpen(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; setChipPick(ALL_CHIP); }} pick={selecting ? { on: picked.has(it.id), set: on => pickSome([it.id], on) } : undefined} />)}</ul>
+            {!onBought && current && <GroceryQuickAdd idKey={String(gi)} label={grp.label} store={grp.store} onAdded={a => setQuick({ ...a, label: grp.label, every: false, t: Date.now() })} />}
           </section>
         );
       })}
@@ -309,6 +327,15 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
             <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: () => setTicked(null), key: ticked.t }}
               actions={[{ label: 'Undo', onClick: () => tick(ticked.id, false) }, ...(ticked.unpriced ? [{ label: 'Add price', onClick: () => { const id = ticked.id; setTicked(null); onAddPrice(id); } }] : []), { label: 'Dismiss', ghost: true, onClick: () => setTicked(null) }]}>
               <b>Bought</b> {ticked.name}.{ticked.unpriced && ' It has no price yet.'}
+            </Notice>
+          </div>
+        )}
+        {quick && (
+          <div className="gtickednote">
+            <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: () => setQuick(null), key: quick.t }}
+              actions={[...(quick.every ? [] : [{ label: 'Make it every month', onClick: () => { if (!useAppStore.getState().updateGroceryItem(quick.id, { every: true })) setQuick({ ...quick, every: true, t: Date.now() }); } }]),
+                { label: 'Undo', onClick: () => { useAppStore.getState().removeGroceryItem(quick.id, { quiet: true }); setQuick(null); } }, { label: 'Dismiss', ghost: true, onClick: () => setQuick(null) }]}>
+              {quickAddNotice(quick.name, quick.label, quick.every)}
             </Notice>
           </div>
         )}
@@ -550,11 +577,14 @@ export default function Grocery() {
   const [chosen, setChosen] = useState<View>(() => (g.items.length ? 'shopping' : 'inventory')); // nothing to get from an empty list: start where you add
   const [monthOff, setMonthOff] = useState(0); // the month Shopping and Bought are showing, kept when you switch between them
   const [priceFor, setPriceFor] = useState<string | null>(null); // the item whose price field the tick notice's Add price opens on Bought
-  const routed = pageOf(useRoutePath(), 'daily/grocery'); // #/daily/grocery/spend wins over the default
+  const routed = pageOf(useRoutePath(), 'daily/grocery'); // #/daily/grocery/bought/history wins over the default (the old #/daily/grocery/spend lands there)
+  const routedView = routed?.split('/')[0] ?? null; // `bought/history` is the Bought view's second switch
   const receiptsOn = useFeature('receipts');
   const showReceipts = routed === 'receipts' && receiptsOn; // the saved receipts page (brief receipt-save-photo): admin only, and a reload of its address falls back to the list for anyone else
-  const view = ((routed && routed !== 'receipts' ? routed : chosen)) as View;
-  const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); };
+  const view = (routedView && VIEWS.includes(routedView) ? routedView : chosen) as View;
+  const inner: BoughtView = view === 'bought' && routed === 'bought/history' ? 'history' : 'month';
+  const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); }; // leaving Bought, or pressing it, starts at This month
+  const setInner = (v: BoughtView) => navigate(v === 'history' ? 'daily/grocery/bought/history' : 'daily/grocery/bought', 'replace');
   const counts = useMemo(() => viewCounts(g, months[nowKey] || emptyMonth()), [g, months, nowKey]);
   if (showReceipts) return <section className="panel groc" aria-labelledby="rcs-h"><Receipts /></section>;
   const tab = (v: View, label: string, n?: number) => (
@@ -568,11 +598,11 @@ export default function Grocery() {
           {tab('shopping', 'Shopping', counts.shopping)}
           {tab('bought', 'Bought', counts.bought)}
           {tab('inventory', 'Inventory')}
-          {tab('spend', 'Spending')}
         </div>
       </div>
-      <p className="note gviewsub" id="groc-sub">{SUBTITLE[view]}</p>
-      {view === 'shopping' || view === 'bought' ? <ToGet key={view} g={g} months={months} nowKey={nowKey} mode={view} off0={monthOff} onOff={setMonthOff} priceFor={priceFor} onAddPrice={id => { setPriceFor(id); if (id) setView('bought'); }} /> : view === 'inventory' ? <AtHome g={g} months={months} nowKey={nowKey} /> : <GrocerySpend nowKey={nowKey} />}
+      {view === 'bought' && <GroceryBoughtTabs value={inner} onChange={setInner} />}
+      <p className="note gviewsub" id="groc-sub">{SUBTITLE[view === 'bought' && inner === 'history' ? 'history' : view]}</p>
+      {view === 'bought' && inner === 'history' ? <GrocerySpend nowKey={nowKey} /> : view === 'shopping' || view === 'bought' ? <ToGet key={view} g={g} months={months} nowKey={nowKey} mode={view} off0={monthOff} onOff={setMonthOff} priceFor={priceFor} onAddPrice={id => { setPriceFor(id); if (id) setView('bought'); }} /> : <AtHome g={g} months={months} nowKey={nowKey} />}
     </section>
   );
 }

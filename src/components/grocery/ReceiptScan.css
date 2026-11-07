@@ -10,6 +10,11 @@
 .rcscan .btn {
   min-height: 44px;
 }
+/* On a phone Scan receipt is the one full-width button of the row (brief groceries-spending-buttons-quick-add); the other receipt buttons are in More. */
+.rcphone .btn {
+  flex: 1 1 100%;
+  min-height: 48px;
+}
 .rcsheet {
   max-width: 860px;
   container-type: inline-size;

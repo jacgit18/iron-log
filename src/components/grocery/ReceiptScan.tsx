@@ -16,7 +16,7 @@ import './ReceiptScan.css';
 // Apply does the sheet hand it to `onKeep`, which uploads it here in a separate call. A failed save leaves the prices applied and a notice with Try again.
 export interface Applied { text: string; undo: () => void }
 
-export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
+export function useReceiptScan(g: Grocery, mk: string) {
   const on = useFeature('scan');
   const keepOn = useFeature('receipts');
   const camera = useRef<HTMLInputElement>(null);
@@ -28,7 +28,6 @@ export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
   const [applied, setApplied] = useState<(Applied & { mk: string; t: number }) | null>(null);
   const [kept, setKept] = useState<{ image: string; meta: KeepMeta; busy: boolean; fail: SaveFailure['reason'] | null } | null>(null);
   const canScan = on && g.items.length > 0;
-  if (!canScan && !keepOn) return null;
 
   // Uploads the photo kept in memory. On a failure the photo stays here for Try again until the notice is dismissed or the page closes.
   const keep = async (image: string, meta: KeepMeta) => {
@@ -51,13 +50,8 @@ export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
     if (r.result.kind !== 'ok') { setMsg(RECEIPT_TEXT.unreadable); return; }
     useAppStore.getState().openModal({ type: 'receipt', receipt: r.result.receipt, mk, image: keepOn ? r.image : null, onApplied: (a: Applied) => setApplied({ ...a, mk, t: Date.now() }), onKeep: (meta: KeepMeta) => void keep(r.image, meta) });
   };
-  return (
-    <div className="rcscan">
-      {canScan && <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Receipt camera" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
-      {canScan && <input ref={library} type="file" accept="image/*" hidden aria-label="Receipt photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
-      {canScan && <button type="button" className="btn sm" id="groc-scan" disabled={busy} onClick={() => camera.current?.click()}>{busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
-      {canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={busy} onClick={() => library.current?.click()}>Pick from photos</button>}
-      {keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={() => navigate('daily/grocery/receipts', 'push')}>Saved receipts</button>}
+  const notes = (
+    <>
       {msg && <p className="note" role="status">{msg}</p>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'
@@ -69,6 +63,39 @@ export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
         <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: () => setApplied(null), key: applied.t }}
           actions={[{ label: 'Undo', onClick: () => { applied.undo(); setApplied(null); } }, { label: 'Dismiss', ghost: true, onClick: () => setApplied(null) }]}>{applied.text}</Notice>
       )}
+    </>
+  );
+  const inputs = (
+    <>
+      {canScan && <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Receipt camera" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
+      {canScan && <input ref={library} type="file" accept="image/*" hidden aria-label="Receipt photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
+    </>
+  );
+  const hasNotes = !!msg || !!kept || (!!applied && applied.mk === mk);
+  return { canScan, keepOn, busy, inputs, notes, hasNotes, openCamera: () => camera.current?.click(), openLibrary: () => library.current?.click() };
+}
+export type ReceiptScanState = ReturnType<typeof useReceiptScan>;
+
+/** Pick from photos and Saved receipts as the entries of Shopping's More menu on a phone (the same buttons, ids and gates as the row's). */
+export function ReceiptMenu({ r }: { r: ReceiptScanState }) {
+  return (
+    <>
+      {r.canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={r.busy} onClick={r.openLibrary}>Pick from photos</button>}
+      {r.keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={() => navigate('daily/grocery/receipts', 'push')}>Saved receipts</button>}
+    </>
+  );
+}
+
+// `phone`: only Scan receipt shows here, full width; Pick from photos and Saved receipts are in the More menu (ReceiptMenu) and their notices still show under it.
+export default function ReceiptScan({ r, phone }: { r: ReceiptScanState; phone?: boolean }) {
+  if (!r.canScan && !r.keepOn) return null;
+  if (phone && !r.canScan && !r.hasNotes) return null;
+  return (
+    <div className={phone ? 'rcscan rcphone' : 'rcscan'}>
+      {r.inputs}
+      {r.canScan && <button type="button" className="btn sm" id="groc-scan" disabled={r.busy} onClick={r.openCamera}>{r.busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
+      {!phone && <ReceiptMenu r={r} />}
+      {r.notes}
     </div>
   );
 }
