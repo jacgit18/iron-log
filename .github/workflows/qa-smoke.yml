@@ -20,7 +20,7 @@ jobs:
   smoke:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
-    timeout-minutes: 15 # timeout-ok: not measured yet (estimate 4 to 6 min, same steps as e2e-sync); a cold apt cache on a slow mirror can double it
+    timeout-minutes: 15 # timeout-ok: measured 77 to 168 s over three runs (2026-11-06 and 07, manual); kept at 15 because a job that installs a browser gets 15 to 20 minutes (a slow apt mirror stalled installs for 6 to 12 minutes on 2026-10-26, ci-budget.md rule 1)
     services:
       postgres:
         image: postgres:17

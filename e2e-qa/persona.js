@@ -41,10 +41,10 @@ async function seed(id) {
 }
 
 /** A page signed in as the account, with the clock fixed and the usual tips hidden. */
-export async function signInAs(browser, id, { viewport = { width: 1440, height: 900 } } = {}) {
+export async function signInAs(browser, id, { viewport = { width: 1440, height: 900 }, serviceWorkers = 'block' } = {}) {
   await seed(id);
   await pace();
-  const context = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'America/New_York', viewport });
+  const context = await browser.newContext({ serviceWorkers, timezoneId: 'America/New_York', viewport });
   await context.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
