@@ -1,3 +1,26 @@
+// Loads the components' stylesheets in the order Grocery.tsx imported them before it was split, so the cascade between them is unchanged.
+import '../EmptyTiles.js';
+import './BulkShare.js';
+import './GroceryBoughtTabs.js';
+import './GroceryMore.js';
+import './GroceryPhoneBar.js';
+import './GroceryQuickAdd.js';
+import './GroceryRail.js';
+import './InventoryRail.js';
+import './GroceryStoreChips.js';
+import './GroceryTotalBar.js';
+import './GrocerySummary.js';
+import '../Notice.jsx';
+import './GrocerySpend.js';
+import './PriceChips.js';
+import './ReceiptNames.js';
+import './ReceiptScan.js';
+import './Receipts.js';
+import './SharePicker.js';
+import './SharingGroups.js';
+import './SplitSection.js';
+import './StoreTax.js';
+import './StoreMoney.js';
 import { useEffect, useMemo, useState } from 'react';
 import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
