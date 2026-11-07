@@ -53,7 +53,7 @@ test('Go to Day 3 puts focus on the moved card’s ⋯ button', async ({ page })
 
 test('a superset moves as one card', async ({ page }) => {
   await open(page, 1);
-  const row = page.locator('.edpanel:not(.lib) .edrow').filter({ hasText: 'Superset' }).first();
+  const row = page.locator('.edpanel:not(.lib) .ssgroup .edrow').first(); // a superset sits in a boxed group
   const name = await row.locator('.edmain b').textContent();
   await moveTo(page, row, 2);
   expect(await names(page)).not.toContain(name);

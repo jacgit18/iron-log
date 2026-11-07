@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// Program tab, Programs view: Create a program sits at the top beside the A | B switch, library rows say whether they are on the Board,
+// Program tab, Programs view: Create a program sits in the header card beside the A | B switch, library rows say whether they are on the Board,
 // and Copy this day to... copies the open day's cards onto another day, with Undo and Go to. A unit test cannot see where the controls sit
 // or the notice, so these check the page.
 const openPrograms = async page => {
@@ -13,10 +13,9 @@ const rows = page => page.locator('.edpanel.edprog:not(.lib) .edrow');
 test('Create a program is at the top, above the library, and still opens the sheet', async ({ page }) => {
   await openPrograms(page);
   const create = page.getByRole('button', { name: 'Create a program' });
-  const top = await create.boundingBox(); const lib = await page.getByRole('heading', { name: 'Program library' }).boundingBox();
+  const top = await create.boundingBox(); const lib = await page.getByRole('heading', { name: 'Saved programs' }).boundingBox();
   expect(top.y).toBeLessThan(lib.y);
-  // from 1280px (this run is 1440) it sits in the strip of program cards, below the switch; narrower it is in the top row (`programWide.spec.js`)
-  await expect(page.locator('.progstrip').getByRole('button', { name: 'Create a program' })).toBeVisible();
+  await expect(page.locator('.proghead').getByRole('button', { name: 'Create a program' })).toBeVisible(); // the header card (a phone has the floating pill: `programWide.spec.js`)
   await create.click();
   await expect(page.getByRole('heading', { name: 'Create a program' })).toBeVisible();
 });
@@ -54,9 +53,10 @@ test('the Copy row fits a phone at large text, with 44px controls', async ({ pag
   await page.setViewportSize({ width: 320, height: 700 });
   await page.addStyleTag({ content: 'html{font-size:200%!important}' });
   await openPrograms(page);
+  await page.getByRole('button', { name: 'Copy day…' }).click(); // a phone folds the Copy row behind this button
   const m = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, w: innerWidth }));
   expect(m.scroll).toBeLessThanOrEqual(m.w);
-  const hs = await page.locator('.copyday select, .copyday button, .edtop .createprog').evaluateAll(es => es.map(e => e.getBoundingClientRect().height));
+  const hs = await page.locator('.copyday select, .copyday button, .programfab').evaluateAll(es => es.map(e => e.getBoundingClientRect().height));
   expect(hs.length).toBe(3);
   for (const h of hs) expect(h).toBeGreaterThanOrEqual(44);
 });

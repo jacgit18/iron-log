@@ -1,6 +1,6 @@
 import { isTouchScreen } from '../../lib/revealField.js';
 import { ROW_TEXT, ROW_TITLE, showProgramRow } from '../../lib/programOnComputer.js';
-import { SendLinkButton } from '../ProgramOnComputer.js';
+import { SendLinkButton } from '../SendLinkButton.js';
 
 // Settings, App group: the always-there copy of the Program tab tip, for anyone who dismissed the card. Touch screens only.
 export default function ProgramOnComputerRow() {

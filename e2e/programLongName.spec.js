@@ -10,7 +10,7 @@ for (const [w, zoom] of [[320, true], [390, true], [320, false]]) {
     if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' });
     await page.click('#tab-program');
     await page.getByRole('button', { name: 'Programs', exact: true }).click();
-    await page.getByRole('button', { name: 'Create a program' }).click();
+    await page.getByRole('button', { name: /^(Create a program|\+ New program)$/ }).click(); // a phone has the floating pill instead of the header button
     await page.getByLabel('Name').fill(NAME);
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /^Not yet/ }).click();
@@ -42,7 +42,7 @@ for (const [w, zoom] of [[320, false], [320, true]]) {
     if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' });
     await page.click('#tab-program');
     await page.getByRole('button', { name: 'Programs', exact: true }).click();
-    await page.getByRole('button', { name: 'Create a program' }).click();
+    await page.getByRole('button', { name: /^(Create a program|\+ New program)$/ }).click(); // a phone has the floating pill instead of the header button
     await page.getByLabel('Name').fill(NAME);
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /^Not yet/ }).click();
