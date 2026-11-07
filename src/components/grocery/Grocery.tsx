@@ -428,12 +428,12 @@ function EditRow({ item, g, have, onHave, adjust, open, onOpen, onMove, onRemove
 
 // While editing, the add form floats at the bottom of the screen with Done beside it, so adding an item or finishing never means
 // scrolling the whole list. Name and Add are always there; store, count, price, unit and note open under "More".
-function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
+function EditDock({ g, onDone, onAdded }: { g: GroceryT; onDone: () => void; onAdded: () => void }) {
   const [f, setF] = useState(EMPTY_FORM); const [err, setErr] = useState<string | null>(null); const [more, setMore] = useState(false);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const m = useAppStore.getState().addGroceryItem(f);
-    setErr(m); if (!m) { setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
+    setErr(m); if (!m) { onAdded(); setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
   };
   const finish = () => { if (f.n.trim()) { setErr('Add or clear this item first.'); document.getElementById('groc-name')?.focus(); return; } onDone(); }; // typed text is kept, not dropped by Done
   const { mine, suggested } = storeChoices(g);
@@ -515,7 +515,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
   const afterRemoved = (id: string) => {
-    const order = byStore(g, g.items, true).flatMap(grp => grp.items.map(i => i.id));
+    const order = listed.filter(grp => !isCollapsed(folded, grp.store, q)).flatMap(grp => grp.items.map(i => i.id)); // only rows on screen can take focus: not another chip's, a search miss or a folded store
     const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
     focusAfter.current = next ? `groc-edit-arrow-${next}` : 'groc-edit';
   };
@@ -587,7 +587,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       ))}
       </div>
       {editing && !railOn && <Stores g={g} />}
-      {editing && <EditDock g={g} onDone={() => setEditMode(false)} />}
+      {editing && <EditDock g={g} onDone={() => setEditMode(false)} onAdded={() => { setChipPick(ALL_CHIP); setQ(''); }} />}
     </div>
   );
   if (!rail) return page;

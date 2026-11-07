@@ -60,6 +60,32 @@ test('moving a row to another store under a chip switches the chip to All and ke
   await expect(page.locator('#groc-edit-store-eggs')).toBeFocused();
 });
 
+test('removing a store\'s last row under its chip keeps focus on a row that is on screen, and adding an item shows it', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  await chip(page, /^Aldi/).click();
+  await page.locator('#groc-edit-arrow-milk').click();
+  await page.getByRole('button', { name: /^Remove/ }).first().click();
+  await page.getByRole('button', { name: 'Tap again to remove' }).click();
+  await expect(page.locator('#groc-edit-arrow-milk')).toHaveCount(0);
+  await expect(page.locator('#groc-edit-arrow-eggs, #groc-edit-arrow-chicken, #groc-edit-arrow-oil, #groc-edit-arrow-towels').first()).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Search groceries' }).fill('egg');
+  await page.locator('#groc-name').fill('Rice');
+  await page.click('#groc-add');
+  await expect(page.getByRole('searchbox', { name: 'Search groceries' })).toHaveValue('');
+  await expect(page.getByRole('button', { name: /Rice/ }).first()).toBeVisible();
+});
+
+test('adding an item under a chip switches to All so the new row shows', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  await chip(page, /^Aldi/).click();
+  await page.locator('#groc-name').fill('Rice');
+  await page.click('#groc-add');
+  await expect(chip(page, /^All/)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: /Rice/ }).first()).toBeVisible();
+});
+
 test('from 1100 px the Stores panel is in the right rail, under it below the list', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page);
