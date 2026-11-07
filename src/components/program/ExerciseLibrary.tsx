@@ -14,10 +14,12 @@ import SortControl from '../SortControl.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import LibraryChip from './LibraryChip.jsx';
 import YourEquipment from './YourEquipment.jsx';
+import { useWide } from './useWide.js';
 import './Library.css';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
+  const wide = useWide(); // the heading carries the name of the Program tab button: Exercises and Stretches on a computer, the longer names on a phone
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
@@ -32,7 +34,7 @@ export default function ExerciseLibrary() {
   return (
     <section className="panel edpanel exlib exlibwide">
       <div className="inline spread">
-        <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
+        <h2 id="exlib-h" tabIndex={-1}>{wide ? 'Exercises' : 'Exercise library'}</h2>
         <div className="inline">
           <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
         </div>

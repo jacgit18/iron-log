@@ -72,5 +72,5 @@ test('Back from the Exercise library on the Program tab still returns and the ad
   await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect(page).toHaveURL(/#\/program\/exercises$/);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Exercise library' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Exercises', exact: true })).toBeVisible();
 });
