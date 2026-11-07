@@ -51,7 +51,7 @@ test('a ticked item the receipt does not show is listed and stays bought; Move b
   await expect(miss.getByText('Milk')).toBeVisible();
   await expect(miss.getByText('Marked bought: 1 × $3.79')).toBeVisible();
   await expect(miss.getByText('Stays bought')).toBeVisible();
-  await miss.getByLabel('Move Milk back to to-get').check();
+  await miss.getByLabel('Move back to to-get: Milk').check();
   await expect(miss.getByText('Will move back to to-get')).toBeVisible();
   await expect(sheet.getByText('1 will move back to to-get.')).toBeVisible();
   await sheet.getByRole('button', { name: 'Apply 2 items' }).click();
@@ -90,7 +90,7 @@ test('with only a Move back chosen, the button says Move 1 item back to to-get a
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs')]);
   const sheet = await scan(page);
   await sheet.getByLabel('Include ORG EGGS 18CT').uncheck();
-  await sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' }).getByLabel('Move Milk back to to-get').check();
+  await sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' }).getByLabel('Move back to to-get: Milk').check();
   await sheet.getByRole('button', { name: 'Move 1 item back to to-get' }).click();
   await expect(page.getByText('Moved 1 item back to to-get for')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();

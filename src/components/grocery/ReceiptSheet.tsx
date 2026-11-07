@@ -186,7 +186,7 @@ export default function ReceiptSheet() {
           <ul>
             {rec.missing.map(m => (
               <li key={m.id}>
-                <label className="rcuntick"><input type="checkbox" checked={unticked.has(m.id)} onChange={e => setUnticked(x => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Move ${m.name} back to to-get`} /><span>Move back to to-get</span></label>
+                <label className="rcuntick"><input type="checkbox" checked={unticked.has(m.id)} onChange={e => setUnticked(x => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Move back to to-get: ${m.name}`} /><span>Move back to to-get</span></label>
                 <span className="rcmisswhat">{m.name}<small>Marked bought: {m.held}</small></span>
                 <span className="rcmissstate">{unticked.has(m.id) ? 'Will move back to to-get' : 'Stays bought'}</span>
               </li>
