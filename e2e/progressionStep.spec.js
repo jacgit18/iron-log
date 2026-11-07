@@ -34,7 +34,7 @@ test('tapping the lit chip again clears the step; a bad number is refused and no
   const name = (await page.getByRole('dialog').getByRole('heading').first().textContent()).trim();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
   const dlg = page.getByRole('dialog');
   const group = dlg.getByRole('group', { name: 'Weight step (lb)' });

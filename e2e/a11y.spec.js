@@ -23,7 +23,7 @@ for (const [name, clicks] of [
 
 test('stretch library has no accessibility violations', async ({ page }) => {
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Stretch library' }).click();
+  await page.getByRole('button', { name: 'Stretches', exact: true }).click();
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 });

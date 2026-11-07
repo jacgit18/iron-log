@@ -40,6 +40,7 @@ export type ScenarioFeature =
   | 'Program compare'
   | 'Polish pass'
   | 'Program on phones'
+  | 'Program tab clarity'
   | 'Stale page guard'
   | 'Barcode scan'
   | 'Custom 404'
@@ -50,13 +51,14 @@ export type ScenarioFeature =
   | 'Moved-card tag'
   | 'Search hiding'
   | 'Security headers'
-  | 'Price history';
+  | 'Price history'
+  | 'Program desktop layout';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout',
 ];
 
 export interface Scenario {
@@ -959,14 +961,14 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program on phones ----
   {
-    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map',
+    id: 'S-72', feature: 'Program on phones', title: 'The header card has the A and B switch and no Create button; + New program floats above the tab bar', persona: 'new-user', brief: 'program-tab-clarity',
     steps: [
       'On a phone (or a 375 px wide window), open the Program tab.',
-      'Look at the row holding Create a program and the program switch.',
+      'Look at the card under the three section buttons, and at the bottom right corner.',
     ],
     expected: [
-      'Create a program starts at the left edge of the screen and is not pushed off to the right or cut off.',
-      'The switch shows only A and B (no other labels), and the row does not scroll sideways.',
+      'The card says "You are editing" and the program name, with the switch showing only Program A and Program B (no other labels), and it does not scroll sideways.',
+      'There is no Create a program button in the card; a gold + New program pill floats at the bottom right above the tab bar.',
     ],
   },
   // ---- Stale page guard ----
@@ -1066,11 +1068,13 @@ export const SCENARIOS: readonly Scenario[] = [
       'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
       'In the sheet read the line under the Also make Costco box (it starts unticked because the items already have usual stores), then tick "Also make Costco the usual store for these items" and press Apply.',
       'Look at the notice and At home, then press Undo.',
+      'Scan a Costco receipt where every matched item is under Anywhere on At home (no usual store). Read the box and the line under it before pressing Apply.',
     ],
     expected: [
       'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
       'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
       'Before you tick the box the line reads "At home stays as it is. Tick the box to list these under Costco there."; ticked, it reads "At home will list these under Costco."',
+      'When every item that moves is under Anywhere, "Also make Costco the usual store for these items" starts ticked and the line reads "At home will list these under Costco."; when any of them already has a usual store it starts unticked.',
     ],
   },
   {
@@ -1454,11 +1458,13 @@ export const SCENARIOS: readonly Scenario[] = [
       'Change the name in the box to something else, and press Apply. Press Undo.',
       'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
       'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
+      'With the receipt\'s store still not on the list and the box ticked, scan a receipt that has a line your list does not have. On that line press Add to list, read the Store choice, add the item, then untick "Add this store to your stores" and press Apply.',
     ],
     expected: [
       'The store is added under the name you typed, and Undo removes it.',
       'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
       'When the list already has the store there is no box and the items are marked bought at it as before.',
+      'The Store choice lists the new store (for example "Safeway (new)") after Anywhere and starts on it; you can still pick Anywhere or another store. Unticking the box moves the item to Anywhere, and no store is added.',
     ],
   },
   {
@@ -1485,6 +1491,107 @@ export const SCENARIOS: readonly Scenario[] = [
       'The pack item reads "Last: $2.75 at ..." and its sheet row says "$2.50 + $3.00 (2 packs)".',
       'The item with no price reads "Last: no price at ..." and its sheet row says "No price saved" and is left out of Cheapest and the average.',
       'The item never bought has no line under it.',
+    ],
+  },
+  // ---- Program tab clarity ----
+  {
+    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the three sections', persona: 'new-user', brief: 'program-tab-clarity',
+    steps: [
+      'On a computer open the Program tab for the first time on this browser (clear the site data first if you have been here).',
+      'Read the guide card at the top, then the three section buttons and the card under them.',
+      'Press Open help, close it, then press Got it and reload the page.',
+    ],
+    expected: [
+      'The guide has four steps; step 4 has a Send me the link button. The sections read Programs, Exercise library and Stretch library, each with a one-line description. The card says "You are editing", Program A, an "On your Board" pill and "N exercises across 7 days", with the A | B switch and Create a program.',
+      'Open help shows the Help sheet. Got it hides the guide, and after the reload it stays hidden.',
+    ],
+  },
+  {
+    id: 'S-115', feature: 'Program tab clarity', title: 'Rows say what they hold; a superset sits in one box; Day at a glance folds', persona: 'superset-builder', brief: 'program-tab-clarity',
+    steps: [
+      'On a computer open Program, Day 1.',
+      'Look at a Main lift row, a superset and an either/or row, and the section labels.',
+      'Look at Day at a glance, then press See the full breakdown.',
+    ],
+    expected: [
+      'Each row shows the name, a pill (Main lift, Accessory or Optional), sets and weight and a coloured phase pill; a superset card shows a line per exercise; consecutive superset cards share one box labelled Superset. Optional, Regular and Supersets explain themselves; a section you named yourself shows as you typed it.',
+      'Day at a glance shows the exercise and set counts and one sentence; the phase, muscles and equipment breakdown appears only after the fold is opened. Edit and the more-actions button still open their sheets.',
+    ],
+  },
+  {
+    id: 'S-116', feature: 'Program tab clarity', title: 'Saved programs: save a copy, edit it, put it on the Board', persona: 'new-user', brief: 'program-tab-clarity',
+    steps: [
+      'On Program, scroll to Saved programs and read its text.',
+      'Save Program A as "Kept copy" with Save a copy, then switch the card to Program B.',
+      'Press Put on Board on Kept copy, read the button, press it again.',
+    ],
+    expected: [
+      'The panel is called Saved programs (not Program library) and says what saving and putting on the Board do.',
+      'The first press changes nothing and the button asks "Tap to replace Program B"; the second makes the card say Kept copy. Edit, Archive, Delete and Compare programs still work.',
+    ],
+  },
+  {
+    id: 'S-117', feature: 'Program tab clarity', title: 'On a phone the first exercise shows on the first screen and the compact top works', persona: 'new-user', brief: 'program-tab-clarity',
+    steps: [
+      'On a phone (or a 375 x 812 window) open Program with the guide dismissed.',
+      'Look at the top of the editor: + Add exercise and the two small buttons under it.',
+      'Press Add a day label, type a label and press Enter. Press Copy day..., choose another day and press Copy.',
+      'Press + New program.',
+    ],
+    expected: [
+      'The first exercise row is on the first screen. + Add exercise is full width, with Add a day label and Copy day... under it.',
+      'The label is saved and the field then stays; Copy shows the Copied notice. + New program opens the Create a program sheet and the pill hides while it is open.',
+    ],
+  },
+  {
+    id: 'S-118', feature: 'Program tab clarity', title: 'The pill hides while the rest timer runs; a long program name wraps', persona: 'new-user', brief: 'program-tab-clarity', edge: true,
+    steps: [
+      'On a phone start the Rest timer on the Board, then open Program.',
+      'Stop the timer.',
+      'Rename Program A to a 60 character name (Settings) and look at the header card.',
+    ],
+    expected: [
+      'While the timer bar shows, there is no + New program pill; after Stop it comes back.',
+      'The long name wraps inside the header card, the page does not scroll sideways and the A | B switch stays on screen.',
+    ],
+  },
+  {
+    id: 'S-119', feature: 'Program desktop layout', title: 'On a computer, Add exercise and Copy day sit in the day heading and the days are one row of tabs', persona: 'superset-builder', brief: 'program-tab-desktop-layout',
+    steps: [
+      'On a computer (a window at least 1280 px wide), open Program. Look at the day heading "Program A · Day 1" and the row under the header card.',
+      'Press Copy day…, pick another day and press Copy. Then press Undo on the notice.',
+      'Press a different day tab, then press + Add exercise.',
+    ],
+    expected: [
+      'One row of tabs Day 1 to Day 7 sits under the header card, each with its exercise count (or "rest"); there is no arrow or dropdown. The Day label field is under the heading, and Copy day… and + Add exercise are normal-height buttons at the right of the heading.',
+      'Copy day… opens the day picker under the Day label (the picker stays open for that day); Copy shows the Copied notice and Undo takes it back.',
+      'The day tab you pressed is highlighted and the heading names that day; + Add exercise opens the same add sheet as before.',
+    ],
+  },
+  {
+    id: 'S-120', feature: 'Program desktop layout', title: 'On a computer, Saved and Compare are their own tabs with addresses', persona: 'superset-builder', brief: 'program-tab-desktop-layout', edge: true,
+    steps: [
+      'On a computer open Program and read the tab strip. Scroll to the bottom of Programs.',
+      'Press Saved. Type a name in "Save Program A as" and press Save a copy; do it twice with different names; then type part of one name in the search box and clear it.',
+      'Press Compare, then press Back, then reload the page on the Compare tab.',
+    ],
+    expected: [
+      'The tabs read Programs, Exercises, Stretches, Saved, Compare, each with a short line under it. Programs ends after the day and its note: no Saved programs and no Compare strip below it.',
+      'Saved shows the Save a copy form on top, the search and sort, and one row per program with Put on Board, Edit, Archive and Delete; the search keeps only names that contain what you typed and says "No saved program matches" when none does. The address reads #/program/saved.',
+      'Compare opens full width with the two program pickers and no toggle, its address is #/program/compare, Back returns to Saved, and a reload stays on Compare.',
+    ],
+  },
+  {
+    id: 'S-121', feature: 'Program desktop layout', title: 'On a phone Program keeps its three tabs and day stepper, and Compare sits above Saved programs', persona: 'superset-builder', brief: 'program-tab-desktop-layout', edge: true,
+    steps: [
+      'On a phone (or a window under 700 px wide) open Program and read the tab strip and the day control.',
+      'Scroll to the end of Programs and read the order of the last two sections.',
+      'Type #/program/saved at the end of the address and open it.',
+    ],
+    expected: [
+      'The tabs read Programs, Exercise library, Stretch library. The day control is the arrows and the "Day N of 7" dropdown, as before; there are no Day tabs and + Add exercise is full width.',
+      'Compare programs (a collapsed strip) comes before Saved programs.',
+      'The address opens Programs, since a phone has no Saved tab.',
     ],
   },
 ];

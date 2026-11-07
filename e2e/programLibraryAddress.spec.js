@@ -12,6 +12,7 @@ const openPrograms = async page => {
 
 test('Edit on a library program leaves #/program/a, and picking A again brings it back', async ({ page }) => {
   await openPrograms(page);
+  await page.goto('/#/program/saved'); // Saved programs is its own tab on a computer
   await page.getByRole('textbox', { name: /^Save Program A as/ }).fill('Old block');
   await page.getByRole('button', { name: 'Save a copy' }).click();
   await page.getByRole('button', { name: 'Edit Old block' }).click();
@@ -37,6 +38,7 @@ test('Not yet on a new program opens it in the editor and leaves the A or B addr
 
 test('an edited address still opens program B while a library program is open', async ({ page }) => {
   await openPrograms(page);
+  await page.goto('/#/program/saved'); // Saved programs is its own tab on a computer
   await page.getByRole('textbox', { name: /^Save Program A as/ }).fill('Old block');
   await page.getByRole('button', { name: 'Save a copy' }).click();
   await page.getByRole('button', { name: 'Edit Old block' }).click();

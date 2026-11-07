@@ -112,5 +112,25 @@
     flex-wrap: wrap;
     gap: var(--sp-6);
   }
+  .daysum-line {
+    margin: 0;
+    color: var(--muted);
+  }
+  .daysum-fold summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .daysum-fold h3 {
+    margin-top: var(--sp-12);
+  }
+  .daysum-fold .daysum-phbar,
+  .daysum-fold .daysum-legend,
+  .daysum-fold .daysum-muscles,
+  .daysum-fold .daysum-equip {
+    margin-top: var(--sp-6);
+  }
 }
 }

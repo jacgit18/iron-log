@@ -28,13 +28,11 @@ test('phone: no count is added to the day columns, and the day tab still shows i
   await expect(page.locator('.weekbar .progress')).toHaveCount(0);
 });
 
-test('Program tab: the Day stepper shows the day’s exercise count, the Day buttons keep a 44px target and stay named Day N', async ({ page }) => {
+test('Program tab: the day tabs show each day’s exercise count, keep a 44px target and stay named Day N', async ({ page }) => {
   await page.click('#tab-program');
-  const pick = page.getByRole('combobox', { name: 'Day to edit' });
-  await expect(pick.locator('option:checked')).toHaveText('Day 1 of 7 · 12 exercises');
-  await expect(pick.locator('option').nth(6)).toHaveText('Day 7 of 7 · 0 exercises');
   const days = page.getByRole('group', { name: 'Jump to day' });
-  await expect(days.getByRole('button', { name: 'Day 7', exact: true })).not.toContainText('0');
+  await expect(days.getByRole('button', { name: /^Day 1/ })).toContainText('12 exercises');
+  await expect(days.getByRole('button', { name: /^Day 7/ })).toContainText('rest');
   for (const b of await page.locator('.edtop').first().getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
   const { violations } = await new AxeBuilder({ page }).include('.edtop').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => v.id)).toEqual([]);
@@ -42,9 +40,9 @@ test('Program tab: the Day stepper shows the day’s exercise count, the Day but
 
 test('Program tab: moving a card to another day updates both counts', async ({ page }) => {
   await page.click('#tab-program');
-  const pick = page.getByRole('combobox', { name: 'Day to edit' });
+  const days = page.getByRole('group', { name: 'Jump to day' });
   await page.locator('.edpanel:not(.lib) .edrow').first().getByRole('button', { name: /^More actions for / }).click();
   await page.getByRole('dialog').getByRole('group', { name: 'Move to day' }).getByRole('button', { name: 'Day 7', exact: true }).click();
-  await expect(pick.locator('option').nth(0)).toHaveText('Day 1 of 7 · 11 exercises');
-  await expect(pick.locator('option').nth(6)).toHaveText('Day 7 of 7 · 1 exercise');
+  await expect(days.getByRole('button', { name: /^Day 1/ })).toContainText('11 exercises');
+  await expect(days.getByRole('button', { name: /^Day 7/ })).toContainText('1 exercise');
 });
