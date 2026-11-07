@@ -40,14 +40,20 @@ test('S-78: the real pages and files still open, a missing file is a plain 404, 
   await context.close();
 });
 
-test('S-78: /privacy without .html is Page not found on a first visit', async ({ browser }) => {
-  // The other half of the scenario (an already active service worker may still open the Privacy Policy) is not walked: the service worker never became
-  // ready on this test server, so it is left to a real browser.
+test('S-78: /privacy without .html is Page not found on a first visit, and with the service worker active it may still open the Privacy Policy', async ({ browser }) => {
   const first = await browser.newContext({ serviceWorkers: 'block' });
   const fresh = await first.newPage();
   expect((await fresh.goto('/privacy')).status()).toBe(404);
   await expect(fresh.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await first.close();
+  // The app registers its service worker only once it is signed in and showing (UpdateBanner), so this walk signs in with the service worker allowed.
+  const { context, page } = await signInAs(browser, 'new-user', { serviceWorkers: 'allow' });
+  await expect(page.locator('#account-badge')).toBeVisible({ timeout: 30_000 });
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.goto('/privacy');
+  const heading = await page.getByRole('heading').first().innerText();
+  expect(['Page not found', 'Privacy Policy'].some(h => heading.includes(h)), heading).toBe(true); // either is allowed; an error page or a blank is not
+  await context.close();
 });
 
 test('S-100: the sitemap and icon load, the plain pages have their own titles, and the app tab says Loadbearer', async ({ browser }) => {
