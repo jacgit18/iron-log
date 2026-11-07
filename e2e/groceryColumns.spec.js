@@ -96,7 +96,7 @@ test('At home lays its stores out as columns too, and the Tab order follows the 
   expect(xs[3]).toBe(xs[4]); expect(xs[3]).toBeGreaterThan(xs[0]); expect(xs[5]).toBeGreaterThan(xs[3]);
   await page.getByLabel('Have Olive oil').focus();
   const order = [];
-  for (let i = 0; i < 6; i++) { order.push(await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))); await page.keyboard.press('Tab'); }
+  for (let i = 0; i < 12 && order.length < 6; i++) { const label = await page.evaluate(() => document.activeElement?.getAttribute('aria-label')); if (label?.startsWith('Have ')) order.push(label); await page.keyboard.press('Tab'); } // a bought item's Last: line is a stop of its own; only the Have boxes are compared
   expect(order).toEqual(names.map(n => `Have ${n}`));
 });
 

@@ -51,7 +51,9 @@ try {
   // Two stacks: the dev build with the dev header (playwright.sync.config.js), and the production build with real sign-in
   // (playwright.accounts.config.js). Both run even if the first fails, so one report shows everything.
   let failed = false;
-  for (const config of ['playwright.sync.config.js', 'playwright.accounts.config.js']) {
+  // E2E_CONFIGS (comma separated) picks the stacks to run: `npm run e2e:qa` runs only the QA scenario smoke run (playwright.qa.config.js).
+  const configs = process.env.E2E_CONFIGS ? process.env.E2E_CONFIGS.split(',') : ['playwright.sync.config.js', 'playwright.accounts.config.js'];
+  for (const config of configs) {
     const run = spawnSync('npx', ['playwright', 'test', '--config', config, ...process.argv.slice(2)], {
       stdio: 'inherit',
       env: { ...process.env, E2E_DATABASE_URL: scratch.href, E2E_APP_DATABASE_URL: appUrl.href },

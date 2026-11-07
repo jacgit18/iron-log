@@ -37,7 +37,11 @@ playwright-report-sync
 .neon
 dist-server
 test-results-accounts
+test-results-qa
+test-results-qamode
 playwright-report-accounts
+playwright-report-qa
+playwright-report-qamode
 backups
 
 # Written into the checkout by google-github-actions/auth in CI; must not make the tree dirty or reach the image

@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 
-// A fixed Thursday (week of Sun Sep 20 2026) and a clean, tip-free app, so every test starts from the same board.
+// A fixed Thursday (week of Sun Sep 20 2026) and a clean, tip-free app (the Program tab's first-time guide is off too; programTabClarity.spec.js turns it on), so every test starts from the same board.
 const NOW = new Date('2026-09-24T18:30:00-04:00');
 
 export const test = base.extend({
@@ -8,7 +8,7 @@ export const test = base.extend({
     // A built file the app asks for must exist: a 404 under /assets/ means a chunk or stylesheet went missing from the build.
     const missing = [];
     page.on('response', r => { if (r.status() === 404 && new URL(r.url()).pathname.includes('/assets/')) missing.push(r.url()); });
-    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:hideprogramguide', '1'); });
     await page.clock.install({ time: NOW });
     await page.goto('/');
     await page.waitForLoadState('networkidle').catch(() => {});

@@ -1,52 +1,56 @@
 // How each QA scenario is covered by automation (brief: qa-scenario-automation). A plain list keyed by scenario id, one line each, kept apart from
 // scenarios.ts so a PR that adds a scenario and a PR that tags one never edit the same file. A scenario with no line here is "untagged": nobody has
-// decided yet. `e2e` and `api` name the spec files that exercise it (checked to exist by scenarioAutomation.test.ts); `manual` has no automated cover
+// decided yet. `e2e` (e2e/), `api` (server/) and `unit` (src/) name the spec files that exercise it (checked to exist by scenarioAutomation.test.ts); `manual` has no automated cover
 // (a real phone, or a person's judgement). The tags were mapped by feature, so a spec can cover the feature without walking this exact scenario.
 
-export type Automation = 'e2e' | 'api' | 'manual';
+export type Automation = 'e2e' | 'api' | 'unit' | 'manual';
 
 export interface ScenarioAutomation {
   auto: Automation;
-  /** Paths from the repository root; required for `e2e` and `api`, absent for `manual`. */
+  /** Paths from the repository root; required for `e2e`, `api` and `unit`, absent for `manual`. */
   specs?: readonly string[];
+  /** What the specs do not cover, when they cover the scenario only in part (an audit on 2026-11-06 read every spec title against the scenario). */
+  partial?: string;
 }
 
 export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
-  'S-01': { auto: 'e2e', specs: ['e2e/diet.spec.js'] },
-  'S-02': { auto: 'e2e', specs: ['e2e/diet.spec.js'] },
+  'S-01': { auto: 'e2e', specs: ['e2e-qa/dietToday.spec.js', 'e2e/diet.spec.js'] },
+  'S-02': { auto: 'e2e', specs: ['e2e-qa/dietOverTarget.spec.js', 'src/store/dietSlice.test.ts'] },
   'S-03': { auto: 'e2e', specs: ['e2e/dietPace.spec.js'] },
   'S-04': { auto: 'e2e', specs: ['e2e/dietPace.spec.js'] },
   'S-05': { auto: 'e2e', specs: ['e2e/dietMeals.spec.js'] },
   'S-06': { auto: 'e2e', specs: ['e2e/dietMeals.spec.js'] },
   'S-07': { auto: 'e2e', specs: ['e2e/dietPlan.spec.js'] },
-  'S-08': { auto: 'e2e', specs: ['e2e/dietPlan.spec.js'] },
-  'S-09': { auto: 'e2e', specs: ['e2e/dietPlan.spec.js'] },
-  'S-10': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js'] },
+  'S-08': { auto: 'e2e', specs: ['e2e-qa/mealPlanner.spec.js', 'e2e/dietPlan.spec.js'] },
+  'S-09': { auto: 'e2e', specs: ['e2e-qa/mealPlanner.spec.js', 'e2e/dietPlan.spec.js', 'src/lib/dietPlan.test.ts'] },
+  'S-10': { auto: 'e2e', specs: ['e2e-qa/dietSuggest.spec.js', 'e2e/dietSuggest.spec.js', 'src/lib/dietSuggest.test.ts'] },
   'S-11': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js'] },
   'S-12': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'] },
-  'S-13': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'] },
+  'S-13': { auto: 'e2e', specs: ['e2e-qa/dietCaloriesFirst.spec.js', 'e2e/dietAutoMacros.spec.js'] },
   'S-14': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'] },
   'S-15': { auto: 'e2e', specs: ['e2e/recipeMacros.spec.js'] },
   'S-16': { auto: 'e2e', specs: ['e2e/recipeMacros.spec.js'] },
   'S-17': { auto: 'e2e', specs: ['e2e/dietFoodSearch.spec.js', 'e2e/dietFindFoodUsda.spec.js', 'e2e/foodSearchSort.spec.js'] },
-  'S-18': { auto: 'e2e', specs: ['e2e/dietFoodSearch.spec.js', 'e2e/dietFindFoodUsda.spec.js', 'e2e/foodSearchSort.spec.js'] },
+  'S-18': { auto: 'e2e', specs: ['e2e-qa/foodSearchOffline.spec.js', 'e2e/dietFoodSearch.spec.js', 'e2e/dietFindFoodUsda.spec.js', 'e2e/foodSearchSort.spec.js'] },
+  'S-19': { auto: 'e2e', specs: ['e2e/readyMade.spec.js'] },
+  'S-20': { auto: 'e2e', specs: ['e2e/readyMade.spec.js'] },
   'S-21': { auto: 'e2e', specs: ['e2e/recipeNutrition.spec.js'] },
   'S-22': { auto: 'e2e', specs: ['e2e/recipeNutrition.spec.js'] },
   'S-23': { auto: 'e2e', specs: ['e2e/recipeServings.spec.js'] },
-  'S-24': { auto: 'e2e', specs: ['e2e/recipeServings.spec.js'] },
-  'S-25': { auto: 'e2e', specs: ['e2e/recipeServings.spec.js'] },
+  'S-24': { auto: 'e2e', specs: ['e2e/recipeServingSize.spec.js'] },
+  'S-25': { auto: 'e2e', specs: ['e2e/recipeServingSize.spec.js'] },
   'S-26': { auto: 'e2e', specs: ['e2e/recipeVideoLink.spec.js'] },
   'S-27': { auto: 'e2e', specs: ['e2e/recipeVideoLink.spec.js'] },
   'S-28': { auto: 'e2e', specs: ['e2e/recipeAutoMatch.spec.js'] },
   'S-29': { auto: 'e2e', specs: ['e2e/recipeAutoMatch.spec.js'] },
   'S-30': { auto: 'manual' },
   'S-31': { auto: 'manual' },
-  'S-32': { auto: 'e2e', specs: ['e2e/accountMenu.spec.js'] },
+  'S-32': { auto: 'e2e', specs: ['e2e-qa/accountMenu.spec.js', 'e2e/accountMenu.spec.js'] },
   'S-33': { auto: 'e2e', specs: ['e2e/accountMenu.spec.js'] },
-  'S-34': { auto: 'e2e', specs: ['e2e/qaPicker.spec.js', 'e2e/qaSwitchWipe.spec.js'] },
-  'S-35': { auto: 'e2e', specs: ['e2e/qaPicker.spec.js', 'e2e/qaSwitchWipe.spec.js'] },
-  'S-36': { auto: 'e2e', specs: ['e2e/qaPicker.spec.js', 'e2e/qaSwitchWipe.spec.js'] },
-  'S-37': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
+  'S-34': { auto: 'e2e', specs: ['e2e-qa/qaModePicker.spec.js', 'e2e/qaPicker.spec.js', 'e2e/qaSwitchWipe.spec.js'] },
+  'S-35': { auto: 'manual' },
+  'S-36': { auto: 'e2e', specs: ['e2e-qa/qaModePicker.spec.js', 'e2e/qaPicker.spec.js'] },
+  'S-37': { auto: 'e2e', specs: ['e2e-qa/boardWide.spec.js', 'e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
   'S-38': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
   'S-39': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
   'S-40': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
@@ -54,8 +58,8 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-42': { auto: 'e2e', specs: ['e2e/adminAccounts.spec.js'] },
   'S-43': { auto: 'e2e', specs: ['e2e/adminAccounts.spec.js'] },
   'S-44': { auto: 'manual' },
-  'S-45': { auto: 'e2e', specs: ['e2e/adminAccounts.spec.js'] },
-  'S-46': { auto: 'e2e', specs: ['e2e/adminAccounts.spec.js'] },
+  'S-45': { auto: 'e2e', specs: ['e2e/adminDeleteAccount.spec.js', 'src/lib/accountsView.test.ts'] },
+  'S-46': { auto: 'e2e', specs: ['e2e/adminDeleteAccount.spec.js'] },
   'S-47': { auto: 'e2e', specs: ['e2e/kgBeside.spec.js'] },
   'S-48': { auto: 'e2e', specs: ['e2e/kgBeside.spec.js'] },
   'S-49': { auto: 'manual' },
@@ -73,21 +77,28 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-61': { auto: 'e2e', specs: ['e2e/finishedGroup.spec.js'] },
   'S-62': { auto: 'e2e', specs: ['e2e/finishedGroup.spec.js'] },
   'S-63': { auto: 'e2e', specs: ['e2e/finishedGroup.spec.js'] },
+  'S-64': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js'] },
+  'S-65': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js'] },
   'S-66': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
-  'S-67': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
+  'S-67': { auto: 'e2e', specs: ['e2e-qa/programCompare.spec.js', 'e2e/programCompare.spec.js'] },
   'S-68': { auto: 'manual' },
-  'S-71': { auto: 'e2e', specs: ['e2e/recipeAutoMatch.spec.js'] },
+  'S-69': { auto: 'manual' },
+  'S-70': { auto: 'unit', specs: ['src/lib/importFile.test.ts'] },
+  'S-71': { auto: 'manual' },
+  'S-72': { auto: 'e2e', specs: ['e2e-qa/programPhone.spec.js', 'e2e/programWide.spec.js'] },
   'S-73': { auto: 'api', specs: ['server/expectedUser.test.ts'] },
   'S-74': { auto: 'manual' },
   'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'] },
-  'S-76': { auto: 'e2e', specs: ['e2e/notFound.spec.js'] },
+  'S-76': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'e2e/notFound.spec.js'] },
   'S-77': { auto: 'manual' },
-  'S-78': { auto: 'e2e', specs: ['e2e/notFound.spec.js'] },
+  'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts', 'e2e-qa/plainPages.spec.js'] },
   'S-79': { auto: 'manual' },
+  'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
+  'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
   'S-82': { auto: 'manual' },
   'S-83': { auto: 'manual' },
   'S-84': { auto: 'e2e', specs: ['e2e/receiptMerge.spec.js'] },
-  'S-85': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
+  'S-85': { auto: 'e2e', specs: ['e2e-qa/bulkShare.spec.js', 'e2e/groceryBulkShare.spec.js'] },
   'S-86': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-87': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-88': { auto: 'manual' },
@@ -100,11 +111,22 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-95': { auto: 'e2e', specs: ['e2e/grocerySharingDone.spec.js'] },
   'S-96': { auto: 'e2e', specs: ['e2e/grocerySharingDone.spec.js'] },
   'S-97': { auto: 'manual' },
-  'S-98': { auto: 'api', specs: ['server/securityHeaders.test.ts'] },
+  'S-98': { auto: 'api', specs: ['server/securityHeaders.test.ts', 'e2e-qa/plainPages.spec.js'], partial: 'the Help sheet is the one sheet opened, on each tab and on Settings, not a different sheet on each screen' },
   'S-99': { auto: 'manual' },
+  'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts', 'src/lib/plainPageTitles.test.ts', 'src/lib/envName.test.ts', 'e2e-qa/plainPages.spec.js', 'e2e-qa/qaModePicker.spec.js', 'server/static.test.ts'], partial: 'the served QA title and icons and the hostname rule are tested; once the app loads its tab reads "<screen> · Loadbearer - QA", not the "Loadbearer QA" the scenario text names' },
+  'S-101': { auto: 'api', specs: ['server/static.test.ts'] },
+  'S-102': { auto: 'manual' },
+  'S-103': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'] },
+  'S-104': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'] },
   'S-105': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
   'S-106': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
   'S-107': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
+  'S-108': { auto: 'e2e', specs: ['e2e-qa/ideasToTry.spec.js', 'src/store/useAppStore.test.js'] },
+  'S-109': { auto: 'e2e', specs: ['e2e/help.spec.js'] },
+  'S-110': { auto: 'manual' },
+  'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js'] },
+  'S-112': { auto: 'e2e', specs: ['e2e/priceHistory.spec.js', 'src/lib/itemHistory.test.ts'] },
+  'S-113': { auto: 'unit', specs: ['src/lib/itemHistory.test.ts', 'e2e/priceHistory.spec.js'], partial: 'the pack average and the no-price rows are unit tested only; the history sheet is not walked for a pack item or an unpriced purchase (the never-bought item having no line is in priceHistory.spec.js)' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */
@@ -112,7 +134,7 @@ export const automationOf = (id: string): ScenarioAutomation | undefined => AUTO
 
 /** How many of the given scenario ids fall in each class, for the coverage line of the scenarios page. */
 export function coverageCounts(ids: readonly string[]): Record<Automation | 'untagged', number> {
-  const out = { e2e: 0, api: 0, manual: 0, untagged: 0 };
+  const out = { e2e: 0, api: 0, unit: 0, manual: 0, untagged: 0 };
   for (const id of ids) out[automationOf(id)?.auto ?? 'untagged']++;
   return out;
 }

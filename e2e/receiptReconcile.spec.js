@@ -43,19 +43,19 @@ test('a ticked item shows what the list has and what the receipt says; an untick
   expect((await month(page)).almonds).toBeUndefined();
 });
 
-test('a ticked item the receipt does not show is listed and kept; Untick unticks it on Apply and Undo ticks it back with its price', async ({ page }) => {
+test('a ticked item the receipt does not show is listed and stays bought; Move back to to-get unticks it on Apply and Undo ticks it back with its price', async ({ page }) => {
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs'), line('ROTISSERIE CHKN', 499, 'chick')]);
   const sheet = await scan(page);
-  const miss = sheet.getByRole('group', { name: 'Ticked, not on this receipt' });
+  const miss = sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' });
   await expect(miss.getByText('Milk')).toBeVisible();
-  await expect(miss.getByText('Ticked now: 1 × $3.79')).toBeVisible();
-  await expect(miss.getByText('Kept')).toBeVisible();
-  await miss.getByLabel('Untick Milk').check();
-  await expect(miss.getByText('Will be unticked')).toBeVisible();
-  await expect(sheet.getByText('1 will be unticked.')).toBeVisible();
+  await expect(miss.getByText('Marked bought: 1 × $3.79')).toBeVisible();
+  await expect(miss.getByText('Stays bought')).toBeVisible();
+  await miss.getByLabel('Move back to to-get: Milk').check();
+  await expect(miss.getByText('Will move back to to-get')).toBeVisible();
+  await expect(sheet.getByText('1 will move back to to-get.')).toBeVisible();
   await sheet.getByRole('button', { name: 'Apply 2 items' }).click();
-  await expect(page.getByText('1 item unticked.')).toBeVisible();
+  await expect(page.getByText('1 item moved back to to-get.')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();
   await page.getByRole('button', { name: 'Undo' }).click();
   expect((await month(page)).milk).toEqual({ got: true, qty: 1, cents: 379 });
@@ -65,7 +65,7 @@ test('leaving a ticked item unticked-by-choice alone writes nothing for it, and 
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs'), line('ROTISSERIE CHKN', 499, 'chick')]);
   const sheet = await scan(page);
-  const miss = sheet.getByRole('group', { name: 'Ticked, not on this receipt' });
+  const miss = sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' });
   await expect(miss.getByText('Eggs')).toHaveCount(0);
   await sheet.getByLabel('Include ORG EGGS 18CT').uncheck();
   await expect(miss.getByText('Eggs')).toBeVisible();
@@ -80,18 +80,18 @@ test('with the receipt\'s store known, a ticked item counted at another store is
   await seed(page, { eggs: { got: true, qty: 1 }, milk: { got: true, qty: 1, cents: 379 }, almonds: { got: true, qty: 1, cents: 1199 } }, list, ["BJ's", 'Aldi']);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs')], "BJ'S");
   const sheet = await scan(page);
-  const miss = sheet.getByRole('group', { name: 'Ticked, not on this receipt' });
+  const miss = sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' });
   await expect(miss.getByText('Almonds')).toBeVisible();
   await expect(miss.getByText('Milk')).toHaveCount(0);
 });
 
-test('with only an Untick chosen, the button says Untick and the notice says what was unticked', async ({ page }) => {
+test('with only a Move back chosen, the button says Move 1 item back to to-get and the notice says what was moved', async ({ page }) => {
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs')]);
   const sheet = await scan(page);
   await sheet.getByLabel('Include ORG EGGS 18CT').uncheck();
-  await sheet.getByRole('group', { name: 'Ticked, not on this receipt' }).getByLabel('Untick Milk').check();
-  await sheet.getByRole('button', { name: 'Untick 1 item' }).click();
-  await expect(page.getByText('Unticked 1 item for')).toBeVisible();
+  await sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' }).getByLabel('Move back to to-get: Milk').check();
+  await sheet.getByRole('button', { name: 'Move 1 item back to to-get' }).click();
+  await expect(page.getByText('Moved 1 item back to to-get for')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();
 });

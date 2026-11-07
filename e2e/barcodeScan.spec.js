@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
 // Scan barcode in the food search box (brief barcode-scan). The code check, the route and the client are node tests (shared/barcode.test.ts, foodBarcode.test.ts,
-// barcodeScan.test.ts); this covers the wiring a unit test cannot: the button only for an admin, the sheet, a read code becoming a pick that fills the real form,
+// barcodeScan.test.ts); this covers the wiring a unit test cannot: the button for any signed-in account, the sheet, a read code becoming a pick that fills the real form,
 // each way it can fail leaving the form usable, and the camera being let go. The browser's reader, the camera and the route are stubbed; the real camera and a
 // real product are the owner's check on a phone.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -146,7 +146,13 @@ test.describe('as an admin', () => {
   });
 });
 
-test('a signed-in account that is not an admin has no Scan barcode button', async ({ page }) => {
+test('a signed-in account that is not an admin can scan a barcode, and its miss does not offer the AI label photo', async ({ page }) => {
+  await withReader(page, [{ rawValue: '4006381333931', format: 'ean_13' }]); await noCamera(page);
+  await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
+  await page.reload();
   await openForm(page);
-  await expect(page.getByRole('button', { name: 'Scan barcode' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Scan barcode' }).click();
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible(); // the lookup went through for a non-admin
+  await expect(page.locator('#bc-label')).toHaveCount(0); // Photo the label is the AI scan, still admin only
 });

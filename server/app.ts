@@ -255,8 +255,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/billing', ...(ADMIN_ONLY ? [requireAdmin] : []), rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
-  // Barcode lookup (brief barcode-scan): admin-only, so it is mounted before the everyone prefix it sits under; same per-user limit as typed search.
-  if (db) app.use('/api/foods/barcode', requireAdmin, rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
+  // Barcode lookup (brief barcode-scan): for everyone who is signed in (no AI, no per-use cost), mounted before the /api/foods prefix it sits under; same per-user limit as typed search.
+  if (db) app.use('/api/foods/barcode', rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));

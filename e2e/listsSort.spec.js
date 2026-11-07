@@ -29,8 +29,8 @@ test('Progress lifts: Most recent by default, Name A to Z reorders, the choice s
 });
 
 test('Program library: Newest first by default, Name A to Z reorders, and each list keeps its own choice', async ({ page }) => {
-  await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Programs', exact: true }).click();
+  await page.goto('/#/program/saved'); // the Saved tab on a computer
+  await expect(page.getByRole('heading', { name: 'Saved programs' })).toBeVisible();
   for (const n of ['Zebra block', 'Alpha block']) {
     await page.getByRole('textbox', { name: /^Save Program A as/ }).fill(n);
     await page.getByRole('button', { name: 'Save a copy' }).click();
@@ -43,8 +43,7 @@ test('Program library: Newest first by default, Name A to Z reorders, and each l
   const first = (await rows.allTextContents())[0];
   expect(first.toLowerCase()).toBe('alpha block');
   await page.reload();
-  await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Programs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Saved programs' })).toBeVisible(); // the reload kept the Saved tab
   await expect(sortOf(page.locator('.lib'))).toHaveValue('name');
   // The Exercise library's own choice is untouched.
   expect(await page.evaluate(() => localStorage.getItem('ironlog:sort:exercises'))).toBeNull();
