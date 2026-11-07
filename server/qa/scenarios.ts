@@ -989,7 +989,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press New ready-made food, then Scan barcode and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
       'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
       'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
@@ -1001,16 +1001,16 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account still sees the scan', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
     steps: [
-      'As an admin, open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
       'Sign in as a test account that is not an admin and open New ready-made food.',
     ],
     expected: [
       'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
       'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
-      'The non-admin account sees no Scan barcode button.',
+      'The non-admin account sees the Scan barcode button and it works; the Photo the label offer (the AI scan) is not shown to it.',
     ],
   },
   {
