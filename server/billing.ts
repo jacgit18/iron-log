@@ -7,9 +7,6 @@ import type { DB } from './db/types.ts';
 // Billing (ADR 065, brief billing-stripe-subscriptions). Stripe-hosted Checkout and Customer Portal; the webhook turns subscription
 // events into `users.plan` through apply_subscription_event (which owns the rules: only free and paid move, an older event never undoes a
 // newer one, a repeated event does nothing). Everything here is behind a seam (StripeApi) so tests run without Stripe.
-// While billing is in test mode it is admin-only: remove ADMIN_ONLY here and the `billing` line in src/features.ts (added with the UI in the next PR) together when the owner goes live.
-
-export const ADMIN_ONLY = true;
 
 export interface BillingConfig {
   secretKey: string;
@@ -141,12 +138,12 @@ const readBilling = (db: Kysely<DB>, userId: string) =>
     (await sql<BillingRow>`select plan, plan_source, plan_status, plan_renews_at, stripe_customer_id from users where id = current_setting('app.user_id')::bigint`.execute(trx)).rows[0],
   );
 
-/** What /api/me tells the Billing section. `available` is false when billing is off, or while it is admin-only and this is not an admin. */
-export async function billingSummary(db: Kysely<DB>, userId: string, isAdmin: boolean, on: boolean): Promise<BillingSummary> {
+/** What /api/me tells the Billing section. `available` is false when billing is off. */
+export async function billingSummary(db: Kysely<DB>, userId: string, on: boolean): Promise<BillingSummary> {
   if (!on) return { available: false, source: 'manual', status: null, renewsAt: null, hasCustomer: false }; // billing off: no second database read on every /api/me
   const row = await readBilling(db, userId);
   return {
-    available: on && (!ADMIN_ONLY || isAdmin),
+    available: true,
     source: row?.plan_source ?? 'manual',
     status: row?.plan_status ?? null,
     renewsAt: row?.plan_renews_at ? new Date(row.plan_renews_at).toISOString() : null,
@@ -183,7 +180,7 @@ export function webhookRoute(db: Kysely<DB>, api: StripeApi | undefined): Reques
   ];
 }
 
-/** POST /api/billing/checkout and /api/billing/portal, behind sign-in (and requireAdmin while ADMIN_ONLY) and a per-user limit. */
+/** POST /api/billing/checkout and /api/billing/portal, behind sign-in and a per-user limit. */
 export function billingRoutes({ db, api, config }: { db: Kysely<DB>; api: StripeApi | undefined; config: BillingConfig | undefined }): Router {
   const router = Router();
   router.use((_req, res, next) => (api && config ? next() : void res.status(503).json({ ok: false, error: 'billing is off' })));

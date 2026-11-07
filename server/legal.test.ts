@@ -26,6 +26,23 @@ describe('the policy and the system agree', () => {
     expect(text).toContain('Up to 30 days from last use');
   });
 
+  it('paid plans: the sentences about Stripe are tied to the code that does them, so the text cannot go live ahead of the code', () => {
+    // Deleting the account ends the subscription first by deleting the Stripe customer, and the customer id is stored in `users`.
+    expect(text).toContain('deleting your account also deletes your customer record at Stripe');
+    expect(read('server/commands/account.ts')).toContain('cancelBilling');
+    expect(read('server/billing.ts')).toMatch(/customers\.del\(/);
+    expect(read('db/migrations/20261022000001_billing_plan_state.sql')).toContain('stripe_customer_id');
+    // The Terms send people to Manage billing in Settings: the button must say exactly that.
+    const terms = read('public/terms.html');
+    expect(terms).toContain('(Manage billing)');
+    expect(read('src/components/settings/BillingPanel.tsx')).toContain("'Manage billing'}</button>");
+    // The refund window the Terms state.
+    expect(terms).toContain('refund within 14 days');
+    // The summary and the transfers section name Stripe, as the processor table does.
+    expect(text).toMatch(/Stripe, takes the payment/);
+    expect(text).toMatch(/including Stripe for payments/);
+  });
+
   it('names the operator and one contact, the same on both pages, and the minimum age', () => {
     const terms = read('public/terms.html');
     for (const page of [policy, terms]) {
