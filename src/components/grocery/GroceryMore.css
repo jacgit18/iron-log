@@ -51,7 +51,8 @@
   font-weight: 600;
 }
 .gphonemore {
-  position: static; /* the menu opens across the whole button row, not under its own third */
+  position: static;
+  /* the menu opens across the whole button row, not under its own third */
   margin-left: 0;
 }
 .gphonemore .gtoolmorebody {
