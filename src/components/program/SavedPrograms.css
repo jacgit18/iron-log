@@ -1,0 +1,21 @@
+@layer base, components;
+@layer components {
+/* The Saved tab on a desktop (brief program-tab-desktop-layout): the panel fills the page, the save form sits on top and a search row sits above the list. */
+.libtab {
+  width: 100%;
+  max-width: none;
+}
+.libtab .libsave {
+  margin: var(--sp-8) 0;
+}
+.libfind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-8) var(--sp-12);
+  margin: var(--sp-8) 0;
+}
+.libfind .field {
+  flex: 1 1 260px;
+}
+}

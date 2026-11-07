@@ -105,16 +105,6 @@
   text-align-last: center;
   font-weight: 600;
 }
-.edtop .seg.daybtns button {
-  min-width: 64px;
-  min-height: 44px;
-  text-align: center;
-}
-@media (max-width:700px) {
-  .edtop .seg.daybtns {
-    display: none;
-  }
-}
 .draghandle {
   flex: 0 0 auto;
   align-self: stretch;
@@ -154,10 +144,6 @@
 .edadd {
   margin: var(--sp-4) 0 var(--sp-12);
 }
-/* Below 1280px the button sits at the left, right after the A and B tabs, and drops to its own row (still at the left) when the tabs fill the row, as long program names do. */
-.edtop .createprog {
-  min-height: 44px;
-}
 .copyday {
   display: flex;
   flex-wrap: wrap;
@@ -171,12 +157,8 @@
   min-height: 44px;
 }
 /* A wide desktop: the editor panel and the Day at a glance panel sit side by side, and the library panel goes under the editor note. The DOM order stays editor, summary, note, library,
-   so keyboard and screen-reader order do not change; only the grid places them. The Create a program button moves to the strip of program cards (ProgramStrip) from here, so the top-row button hides.
-   Below 1280px .edcols is a plain block, the summary and the strip are not drawn and nothing moves. */
+   so keyboard and screen-reader order do not change; only the grid places them. Below 1280px .edcols is a plain block and the summary is not drawn. */
 @media (min-width:1280px) {
-  .edtop .createprog {
-    display: none;
-  }
   .edcols {
     display: grid;
     grid-template-columns: minmax(0,1100px) minmax(0,400px);
@@ -200,5 +182,190 @@
     grid-column: 1;
     grid-row: 3;
   }
+}
+/* The Program tab's three sections (Editor.tsx): each is a button with a one-line description; a phone drops the description. */
+.sectabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  padding-block: var(--sp-8) var(--sp-12);
+}
+.sectabs button {
+  flex: 1 1 200px;
+  max-width: 320px;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--sp-2);
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--sp-8) var(--sp-12);
+}
+.sectabs button b {
+  font-size: var(--fs-lg);
+}
+.sectabs button span {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.sectabs button.on {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-ink);
+}
+.sectabs button.on span {
+  color: var(--accent-ink);
+}
+/* An exercise row (Editor.tsx): the name, then a line of pills and facts for each exercise on the card. */
+.edrow .edmain {
+  gap: var(--sp-4);
+}
+.exfacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-8);
+}
+.exfacts .fact {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.exfacts .exitem {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.rolepill.main {
+  background: var(--iso-bg);
+  color: var(--iso);
+}
+.phpill[data-p="strength"] {
+  background: var(--str-bg);
+  color: var(--str);
+}
+.phpill[data-p="hyp"] {
+  background: var(--hyp-bg);
+  color: var(--hyp);
+}
+.phpill[data-p="iso"] {
+  background: var(--iso-bg);
+  color: var(--iso);
+}
+.phpill[data-p="exp"] {
+  background: var(--exp-bg);
+  color: var(--exp);
+}
+.sect .sectnote {
+  margin-left: var(--sp-8);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+/* Consecutive superset cards share one box with a "Superset" label. */
+.ssgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--sunk);
+  padding: var(--sp-8);
+}
+.ssgh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-8);
+}
+.ssbadge {
+  background: var(--exp-bg);
+  color: var(--exp);
+}
+/* A phone: + Add exercise fills the row, and Add a day label and Copy day… are two small buttons under it. */
+.edadd.compact {
+  flex-direction: column;
+  align-items: stretch;
+}
+.edadd.compact .addfull {
+  min-height: 44px;
+}
+.edsmall {
+  display: flex;
+  gap: var(--sp-8);
+}
+.edsmall .btn {
+  flex: 1 1 0;
+  min-height: 44px;
+}
+@media (max-width:700px) {
+  .sectabs {
+    flex-wrap: nowrap;
+    gap: var(--sp-6);
+  }
+  .sectabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    max-width: none;
+    padding-inline: var(--sp-8);
+  }
+  .sectabs button b {
+    font-size: var(--fs-md);
+  }
+  .sectabs button span {
+    display: none;
+  }
+}
+/* Desktop: one row of day tabs with each day's exercise count replaces the stepper and the Day buttons; a phone keeps the stepper (brief program-tab-desktop-layout). */
+.dtabs {
+  display: flex;
+  flex: 1 0 100%;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+}
+.dtabs button {
+  flex: 0 0 auto;
+  min-width: 92px;
+  min-height: 44px;
+  margin-bottom: -1px;
+  padding: var(--sp-6) var(--sp-16);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.dtabs button small {
+  display: block;
+  font-size: var(--fs-xs);
+}
+.dtabs button.on {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.dtabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* The day heading carries Copy day and Add exercise at normal height instead of a stretched button under the label. */
+.edheadrow {
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+}
+.edtools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.edadd.wideadd:empty {
+  display: none;
 }
 }

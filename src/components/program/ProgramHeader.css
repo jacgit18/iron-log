@@ -1,0 +1,62 @@
+@layer base, components;
+@layer components {
+/* The Programs view's header card (ProgramHeader.tsx). Three columns (what you are editing, the A | B switch, Create) from 701px; one stacked column on a phone,
+   where Create is the floating pill instead. The name is user data (up to 60 characters), so it wraps inside the card. */
+.proghead {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-12) var(--sp-16);
+  margin-bottom: var(--sp-12);
+  max-width: none;
+}
+.proghead .seg {
+  margin-left: 0;
+}
+.proghead .seg button {
+  min-height: 44px;
+}
+.ph-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ph-eyebrow {
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+.ph-name {
+  font-size: var(--fs-5xl);
+  font-weight: 700;
+  line-height: 1.1;
+}
+.ph-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6) var(--sp-10);
+}
+.ph-pill.onboard {
+  background: var(--iso-bg);
+  color: var(--iso);
+}
+.proghead .createprog {
+  min-height: 44px;
+}
+@media (max-width:700px) {
+  .proghead {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .proghead .createprog {
+    display: none;
+  }
+  .ph-name {
+    font-size: var(--fs-4xl);
+  }
+}
+}

@@ -6,7 +6,7 @@ import { test, expect } from './fixtures.js';
 const openCreate = async page => {
   await page.click('#tab-program');
   await page.getByRole('button', { name: 'Programs', exact: true }).click();
-  await page.getByRole('button', { name: 'Create a program' }).click();
+  await page.getByRole('button', { name: /^(Create a program|\+ New program)$/ }).click(); // a phone has the floating pill instead of the header button
   await expect(page.getByRole('heading', { name: 'Create a program' })).toBeVisible();
 };
 const name = page => page.getByLabel('Name');
@@ -46,6 +46,7 @@ test('Not yet keeps a starter in the library and opens it with its cards, leavin
   await expect(page.locator('.edrow').first()).toBeVisible(); // Day 1 has the starter's cards
   await expect(page.getByRole('group', { name: 'Program to edit' }).getByRole('button')).toHaveCount(2); // a saved program never adds a third tab: only A and B
   await page.getByRole('group', { name: 'Program to edit' }).getByRole('button', { name: 'Program A' }).click();
+  await page.getByRole('group', { name: 'Program tab view' }).getByRole('button', { name: 'Saved', exact: true }).click(); // Saved programs is its own tab on a computer
   await expect(page.locator('.lib .edrow', { hasText: 'Push / Pull / Legs · 3 days' })).toBeVisible();
 });
 

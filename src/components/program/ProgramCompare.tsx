@@ -148,9 +148,18 @@ function Panel() {
 }
 
 // The Program tab's last section: two programs compared day by day, one row per exercise. Read-only; it never touches the store's programs or the editor's day.
-export default function ProgramCompare() {
+export default function ProgramCompare({ page = false }: { page?: boolean }) {
   const [open, setOpen] = useState(false);
   const id = useId();
+  if (page) {
+    // The Compare view on a desktop (brief program-tab-desktop-layout): always open, no toggle.
+    return (
+      <section className="panel cmppanel cmppage">
+        <h2 className="cmphead">Compare programs</h2>
+        <Panel />
+      </section>
+    );
+  }
   return (
     <section className="panel cmppanel">
       <h2 className="cmphead">
