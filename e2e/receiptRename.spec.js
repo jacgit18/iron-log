@@ -75,6 +75,8 @@ test.describe('as an admin', () => {
     await sheet.getByRole('button', { name: /^Apply/ }).click();
     await expect(page.getByText('Remembered')).toHaveCount(0);
     sheet = await scan(page);
+    await sheet.getByLabel('Item for EGGS LRG 5 DZ').selectOption({ label: 'Not on your list' });
+    await expect(sheet.getByLabel('Remember this name for EGGS LRG 5 DZ')).toHaveCount(0); // no item, nothing to remember
     await sheet.getByLabel('Item for EGGS LRG 5 DZ').selectOption({ label: 'Large eggs' });
     await expect(sheet.getByText('Matched your earlier rename')).toHaveCount(0);
     await sheet.getByLabel('Item for EGGS LRG 5 DZ').selectOption({ label: 'Rice' });

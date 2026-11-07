@@ -182,7 +182,7 @@ export default function ReceiptSheet() {
               {!c.itemId && priced && form?.line !== i && <button type="button" className="rclink rcaddbtn" aria-label={`Add to list: ${l.text}`} onClick={() => openForm(i)}>Add to list</button>}
               <span className="rcqty">{l.qty}{unitOf(l.lines[0]!)}</span>
               <span className="rcnet">{l.discountCents > 0 && <s>{money(l.grossCents)}</s>}{money(l.netCents)}</span>
-              <ReceiptLineName text={l.text} name={[...listed, ...staged].find(x => x.id === c.itemId)?.n ?? ''} disabled={!priced} touched={touched.has(l.key)} remember={!noRemember.has(l.key)}
+              <ReceiptLineName text={l.text} name={[...listed, ...staged].find(x => x.id === c.itemId)?.n ?? ''} disabled={!priced} hasItem={!!c.itemId && c.include} touched={touched.has(l.key)} remember={!noRemember.has(l.key)}
                 onRemember={on => setNoRemember(x => { const n = new Set(x); if (on) n.delete(l.key); else n.add(l.key); return n; })}
                 matched={l.lines.some(j => remembered[j] !== undefined && choices[j]!.itemId === remembered[j])} movedFrom={c.itemId ? movedFrom(g.items, l.text, c.itemId)?.n : undefined} onCommit={t => commitName(i, t)} />
               {merged && (

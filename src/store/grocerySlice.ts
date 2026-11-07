@@ -1,4 +1,4 @@
-import { withoutAlias } from '../lib/groceryAliases.js';
+import { findByAlias, withoutAlias } from '../lib/groceryAliases.js';
 import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
@@ -271,8 +271,11 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       get().noteRemoved('grocery', `the receipt name “${text}” from ${it.n}`, () => mutateCatalogue(g => {
         const x = g.items.find(y => y.id === id);
         if (!x) return 'gone';
-        x.aliases = cleanAliases([...(x.aliases ?? []), text]) ?? undefined;
-        if (!x.aliases) delete x.aliases;
+        const now = x.aliases ?? [];
+        if (now.length !== left.length || now.some((a, i) => a !== left[i])) return 'changed'; // the item's names moved on: put nothing back over them
+        const other = findByAlias(g.items, text);
+        if (other && other.id !== id) return 'taken'; // another item saved this text meanwhile: one text, one item
+        x.aliases = before;
         return null;
       }) === null);
     },
