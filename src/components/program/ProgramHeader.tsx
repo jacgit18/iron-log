@@ -13,7 +13,7 @@ export default function ProgramHeader({ k, name, prog, lib }: { k: string; name:
     <section className="panel proghead" aria-label="Program you are editing">
       <div className="ph-main">
         <span className="ph-eyebrow">You are editing</span>
-        <span className="ph-name cond">{name}</span>
+        <span className="ph-name cond" role="heading" aria-level={2}>{name}</span>
         <span className="ph-sub">
           <span className={`pill ph-pill${lib ? '' : ' onboard'}`}>{lib ? 'Saved program' : 'On your Board'}</span>
           <span className="note">{lib ? 'Not on your Board until you put it there' : programHeadline(prog.days)}</span>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { GUIDE_STEPS, GUIDE_TITLE, dismissProgramGuide, programGuideDismissed } from '../../lib/programGuide.js';
-import { SendLinkButton } from '../ProgramOnComputer.js';
+import { SendLinkButton } from '../SendLinkButton.js';
 import './ProgramGuide.css';
 
 // The first-time card at the top of the Programs view. It is in the page flow from the first paint (the choice is read synchronously), so it never moves anything after load.

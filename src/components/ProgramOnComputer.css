@@ -1,7 +1,0 @@
-@layer base, components;
-@layer components {
-/* The Send me the link button's failure note (ProgramOnComputer.tsx), in the Program tab guide and in Settings. */
-.pcfail {
-  flex-basis: 100%;
-}
-}

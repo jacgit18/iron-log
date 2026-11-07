@@ -30,7 +30,7 @@ import { shiftOf, useDragReorder } from './useDragReorder.js';
 import { boardNote, onBoardKeys } from '../../lib/programDay.js';
 import { pageOf, programKey, programPath } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
-import { useWide } from '../board/useWide.js';
+import { useWide } from './useWide.js';
 import './Editor.css';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
@@ -187,8 +187,8 @@ function ProgramEditor() {
   useEffect(() => () => { const s = useAppStore.getState(); s.dismissEdMoved(); s.dismissEdCopied(); }, []);
   // A phone folds the Day label field and the Copy this day controls behind two small buttons; they open for the day and program they were opened on.
   const wide = useWide(); const dayKey = `${k}:${edDay}`;
-  const [labelOpenFor, setLabelOpenFor] = useState<string | null>(null); const [copyOpenFor, setCopyOpenFor] = useState<string | null>(null);
-  const labelOpen = labelOpenFor === dayKey; const copyOpen = copyOpenFor === dayKey;
+  const [labelOpenFor, setLabelOpenFor] = useState<string[]>([]); const [copyOpenFor, setCopyOpenFor] = useState<string | null>(null);
+  const labelOpen = labelOpenFor.includes(dayKey); const copyOpen = copyOpenFor === dayKey;
   const addBtn = <button type="button" className={`btn primary${wide ? '' : ' addfull'}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
@@ -229,7 +229,7 @@ function ProgramEditor() {
           {addBtn}
           {!wide && (
             <div className="edsmall">
-              {!(day.sub || labelOpen) && <button type="button" className="btn sm ghost" onClick={() => setLabelOpenFor(dayKey)}>Add a day label</button>}
+              {!(day.sub || labelOpen) && <button type="button" className="btn sm ghost" onClick={() => setLabelOpenFor(o => [...o, dayKey])}>Add a day label</button>}
               {day.slots.length > 0 && !copyOpen && <button type="button" className="btn sm ghost" onClick={() => setCopyOpenFor(dayKey)}>Copy day…</button>}
             </div>
           )}
@@ -277,8 +277,9 @@ function ProgramEditor() {
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
           {(() => {
             const runs = supersetRuns(day.slots); const runEnd = new Map(runs);
-            const row = (sl: ProgramSlot, i: number) => {
-              const newSec = i === 0 || sl.sec !== day.slots[i - 1].sec;
+            const secHead = (i: number) => (i === 0 || day.slots[i].sec !== day.slots[i - 1].sec ? <div className="sect" key={`sec${i}`}>{day.slots[i].sec || ''}{sectionNote(day.slots[i].sec) && <span className="sectnote">{sectionNote(day.slots[i].sec)}</span>}</div> : null);
+            const row = (sl: ProgramSlot, i: number, noSec = false) => {
+              const newSec = !noSec && (i === 0 || sl.sec !== day.slots[i - 1].sec);
               const starts = sl.from && sl.from > thisWeek ? `Starts ${fmtShort(parseDate(sl.from))}` : ''; // added to a finished day: not on the board until then
               const role = rolePill(sl); const multi = sl.items.length > 1; const note = sectionNote(sl.sec);
               return (
@@ -326,7 +327,8 @@ function ProgramEditor() {
               const end = runEnd.get(i);
               if (end === undefined) { out.push(row(day.slots[i], i)); i++; continue; }
               const inner: ReactNode[] = [];
-              for (let n = i; n <= end; n++) inner.push(row(day.slots[n], n));
+              for (let n = i; n <= end; n++) inner.push(row(day.slots[n], n, n === i)); // the run's first section label sits above the box, not in it
+              out.push(secHead(i));
               out.push(<div className="ssgroup" role="group" aria-label="Superset" key={`ss${i}`}><div className="ssgh"><span className="pill ssbadge">Superset</span><span className="note">{SUPERSET_NOTE}</span></div>{inner}</div>);
               i = end + 1;
             }

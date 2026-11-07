@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { COPIED_LABEL, COPY_FAILED, SEND_LABEL, sendLink, type SendOutcome } from '../lib/programOnComputer.js';
-import './ProgramOnComputer.css';
+import './SendLinkButton.css';
 
 // "Send me the link": the phone's share sheet with this site's address; with no sheet, the address is copied. The same button is in the
 // Program tab's guide card and in Settings, so it lives here once. The label says what happened (copied, or could not copy) in the same live region.
