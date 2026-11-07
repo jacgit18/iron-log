@@ -37,6 +37,7 @@ test('a store the list does not have is offered with a tidy name, Apply adds it 
   await page.getByRole('button', { name: 'Undo' }).click();
   expect(await stores(page)).toEqual([]);
   expect(await month(page)).toEqual({});
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items.find(i => i.id === 'eggs').store)).toBe(''); // Undo gives eggs its old usual store back (none), though the new store was made in the same Apply
 });
 
 test('the name can be edited, and unticking the box adds nothing and moves nothing', async ({ page }) => {
