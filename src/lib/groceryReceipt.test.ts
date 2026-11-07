@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
+import { addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, NEW_STORE, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];
@@ -264,5 +264,19 @@ describe('createStaged, remapPlan and Undo of what Apply made', () => {
     const calls: string[] = [];
     restoreSnapshot(snap, { restoreGroceryLine: (_m: string, id: string, l: GroceryLine | null) => { calls.push(`restore ${id} ${l}`); }, removeGroceryItem: (id: string, o?: { quiet?: boolean }) => { calls.push(`remove ${id} ${o?.quiet}`); } } as unknown as GroceryApi);
     expect(calls).toEqual(['restore made-1 null', 'remove made-1 true']);
+  });
+});
+
+describe('an item added to the store the receipt is adding', () => {
+  const x = { id: 'new:1', n: 'Soda', store: '', qty: 1, cents: 699, atNew: true as const };
+  it('takes the name of the store being added, or Anywhere when none is, and leaves other items alone', () => {
+    expect(stagedAt(x, 'Target').store).toBe('Target');
+    expect(stagedAt(x, 'Target Plus').store).toBe('Target Plus');
+    expect(stagedAt(x, null).store).toBe('');
+    const plain = { id: 'new:2', n: 'Gum', store: "Trader Joe's", qty: 1, cents: 199 };
+    expect(stagedAt(plain, 'Target')).toBe(plain);
+  });
+  it('uses a Store choice no store name can equal', () => {
+    expect(NEW_STORE).toMatch(/^\u0001/);
   });
 });
