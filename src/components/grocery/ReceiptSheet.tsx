@@ -61,8 +61,8 @@ export default function ReceiptSheet() {
   const setDraft = (patch: Partial<ItemDraft>) => setForm(f => (f ? { ...f, draft: { ...f.draft, ...patch }, error: '' } : f));
   const stage = () => {
     if (!form) return;
-    const atNew = form.draft.store === NEW_STORE;
-    const r = stageDraft(atNew ? { ...form.draft, store: addStore ?? '' } : form.draft, g.items, staged, `new:${++seq.current}`);
+    const atNew = form.draft.store === NEW_STORE && !!newStore; // only when the choice was showing it: a renamed-to-existing or unticked store left the screen on Anywhere
+    const r = stageDraft(form.draft.store === NEW_STORE ? { ...form.draft, store: atNew ? newStore : '' } : form.draft, g.items, staged, `new:${++seq.current}`);
     if (!r.ok) { setForm({ ...form, error: r.error }); return; }
     setStaged(xs => [...xs, atNew ? { ...r.item, atNew: true } : r.item]);
     setChoice(rows[form.line]!.lines, { itemId: r.item.id, include: true });
@@ -163,9 +163,9 @@ export default function ReceiptSheet() {
                 <div className="rcnew" role="group" aria-label={`Add to your list: ${l.text}`}>
                   <label className="field">Name<input id="rc-new-name" value={form.draft.n} maxLength={80} onChange={e => setDraft({ n: e.target.value })} /></label>
                   <label className="field">Store
-                    <select id="rc-new-store" value={form.draft.store === NEW_STORE && !addStore ? '' : form.draft.store} onChange={e => setDraft({ store: e.target.value })}>
+                    <select id="rc-new-store" value={form.draft.store === NEW_STORE && !newStore ? '' : form.draft.store} onChange={e => setDraft({ store: e.target.value })}>
                       <option value="">Anywhere</option>
-                      {addStore && !sameName && <option value={NEW_STORE}>{addStore} (new)</option>}
+                      {newStore && <option value={NEW_STORE}>{newStore} (new)</option>}
                       {g.stores.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </label>

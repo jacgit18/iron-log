@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, NEW_STORE, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
+import { NEW_STORE, addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];

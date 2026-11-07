@@ -8,12 +8,12 @@ const lines = [
   { text: 'EGGS LRG', qty: 1, grossCents: 500, discountCents: 0, matchId: 'eggs' },
   { text: 'ZEVIA SODA 12PK', qty: 1, grossCents: 699, discountCents: 0, matchId: null },
 ];
-const seed = async page => {
-  await page.evaluate(() => {
+const seed = async (page, stores = []) => {
+  await page.evaluate(stores => {
     localStorage.setItem('ironlog:session/admin', 'true');
-    localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: [], items: [{ id: 'eggs', n: 'Eggs', store: '', qty: 1, cents: 500, every: true, out: false }] }));
+    localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores, items: [{ id: 'eggs', n: 'Eggs', store: '', qty: 1, cents: 500, every: true, out: false }] }));
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: {}, pulled: [] }));
-  });
+  }, stores);
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
 };
@@ -64,4 +64,32 @@ test('renaming the new store before Apply carries the item to the new name, and 
   const g = await grocery(page);
   expect(g.stores).toEqual(['Target Plus']);
   expect(g.items.find(i => /zevia/i.test(i.n))?.store).toBe('Target Plus');
+});
+
+test('renaming the new store to one the list has, with the form open, leaves the Store choice on Anywhere and the item there', async ({ page }) => {
+  await seed(page, ['Aldi']); await answer(page);
+  const sheet = await scan(page);
+  const store = await stage(sheet);
+  await expect(store.locator('option:checked')).toHaveText('Target (new)');
+  await sheet.getByLabel('Store name').fill('aldi');
+  await expect(store.locator('option')).toHaveText(['Anywhere', 'Aldi']);
+  await expect(store.locator('option:checked')).toHaveText('Anywhere');
+  await sheet.getByRole('button', { name: 'Add item' }).click();
+  await sheet.getByRole('button', { name: /^Apply/ }).click();
+  const g = await grocery(page);
+  expect(g.stores).toEqual(['Aldi']);
+  expect(g.items.find(i => /zevia/i.test(i.n))?.store).toBe('');
+});
+
+test('an item added while the box is unticked stays on Anywhere when the box is ticked again', async ({ page }) => {
+  await seed(page); await answer(page);
+  const sheet = await scan(page);
+  await sheet.getByLabel('Add this store to your stores').uncheck();
+  await stage(sheet);
+  await sheet.getByRole('button', { name: 'Add item' }).click();
+  await sheet.getByLabel('Add this store to your stores').check();
+  await sheet.getByRole('button', { name: /^Apply/ }).click();
+  const g = await grocery(page);
+  expect(g.stores).toEqual(['Target']);
+  expect(g.items.find(i => /zevia/i.test(i.n))?.store).toBe('');
 });
