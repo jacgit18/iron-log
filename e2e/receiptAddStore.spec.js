@@ -31,7 +31,8 @@ test('a store the list does not have is offered with a tidy name, Apply adds it 
   expect(await stores(page)).toEqual([]); // nothing is saved before Apply
   await sheet.getByRole('button', { name: /^Apply/ }).click();
   expect(await stores(page)).toEqual(['Costco']);
-  expect((await month(page)).eggs).toMatchObject({ got: true, store: 'Costco' });
+  expect((await month(page)).eggs).toMatchObject({ got: true }); // eggs had no store, so the box starts ticked and Costco becomes its usual store: no month note needed
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items.find(i => i.id === 'eggs').store)).toBe('Costco');
   await expect(page.getByText('Added the store Costco.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   expect(await stores(page)).toEqual([]);
