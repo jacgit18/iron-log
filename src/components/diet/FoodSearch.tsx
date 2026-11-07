@@ -59,14 +59,13 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse
   const useAi = () => { if (!ai) return; onUse(ai.fill); setAi(null); setText(''); };
 
   // Scan barcode (brief barcode-scan): another way to ask the same source, by a product code instead of a name. A found product is picked like a typed result.
-  const scanOn = useFeature('barcode');
   const labelOn = useFeature('scan');
   const openLabel = onLabelPhoto ?? (() => labelCamera.current?.click());
   const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), ...(onLabelPhoto || labelOn ? { onLabel: openLabel } : {}) });
 
   return (
     <div className="dt-lookup">
-      {scanOn && <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>}
+      <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>
       {given === undefined && (
         <label className="field" htmlFor="dt-lookup-q">Look up nutrition
           <input id="dt-lookup-q" type="search" autoComplete="off" maxLength={60} value={own} onChange={e => { setText(e.target.value); setPick(null); }} />
