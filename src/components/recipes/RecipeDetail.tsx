@@ -56,7 +56,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
       <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
-      {grocery.items.length === 0 && <p className="note">Add items under Groceries, At home to see what you have.</p>}
+      {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
       {maybes > 0 && <div className="rc-actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().acceptSuggestions(recipe.id, month)}>Accept all suggestions</button></div>}
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
@@ -69,7 +69,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
             <span className="rc-pick">
             {mine && l.suggest && <button type="button" className="btn sm" aria-label={`Maybe: ${l.suggest.n} for ${ingredientName(l.ing)}`} onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
             {mine && !l.skipped && !l.always && grocery.items.length > 0 && (
-              <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
+              <select aria-label={`Inventory item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
                 <option value="">{l.item ? `Matched: ${l.item.n}` : 'No match'}</option>
                 {rankItems(l.ing, grocery.items).map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
               </select>
@@ -81,7 +81,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       </ul>
       {mine && (
         <div className="rc-actions">
-          <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to To get` : 'Add missing to To get'}</button>
+          <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to Shopping` : 'Add missing to Shopping'}</button>
         </div>
       )}
       <p className="note" role="status">{msg}</p>

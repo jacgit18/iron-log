@@ -14,7 +14,7 @@ const seed = async (page, lines, list = items, stores = ["BJ's"]) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines, pulled: [] }));
   }, { lines, items: list, stores });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
 };
 const answer = (page, lines, store) => page.route('**/api/scan/receipt', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'ok', receipt: { ...(store ? { store } : {}), date: '2026-09-10', lines } } }) }));
 const month = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09') ?? '{"lines":{}}').lines);
@@ -43,7 +43,7 @@ test('a ticked item shows what the list has and what the receipt says; an untick
   expect((await month(page)).almonds).toBeUndefined();
 });
 
-test('a ticked item the receipt does not show is listed and stays bought; Move back to to-get unticks it on Apply and Undo ticks it back with its price', async ({ page }) => {
+test('a ticked item the receipt does not show is listed and stays bought; Move back to Shopping unticks it on Apply and Undo ticks it back with its price', async ({ page }) => {
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs'), line('ROTISSERIE CHKN', 499, 'chick')]);
   const sheet = await scan(page);
@@ -51,11 +51,11 @@ test('a ticked item the receipt does not show is listed and stays bought; Move b
   await expect(miss.getByText('Milk')).toBeVisible();
   await expect(miss.getByText('Marked bought: 1 × $3.79')).toBeVisible();
   await expect(miss.getByText('Stays bought')).toBeVisible();
-  await miss.getByLabel('Move back to to-get: Milk').check();
-  await expect(miss.getByText('Will move back to to-get')).toBeVisible();
-  await expect(sheet.getByText('1 will move back to to-get.')).toBeVisible();
+  await miss.getByLabel('Move back to Shopping: Milk').check();
+  await expect(miss.getByText('Will move back to Shopping')).toBeVisible();
+  await expect(sheet.getByText('1 will move back to Shopping.')).toBeVisible();
   await sheet.getByRole('button', { name: 'Apply 2 items' }).click();
-  await expect(page.getByText('1 item moved back to to-get.')).toBeVisible();
+  await expect(page.getByText('1 item moved back to Shopping.')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();
   await page.getByRole('button', { name: 'Undo' }).click();
   expect((await month(page)).milk).toEqual({ got: true, qty: 1, cents: 379 });
@@ -85,13 +85,13 @@ test('with the receipt\'s store known, a ticked item counted at another store is
   await expect(miss.getByText('Milk')).toHaveCount(0);
 });
 
-test('with only a Move back chosen, the button says Move 1 item back to to-get and the notice says what was moved', async ({ page }) => {
+test('with only a Move back chosen, the button says Move 1 item back to Shopping and the notice says what was moved', async ({ page }) => {
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs')]);
   const sheet = await scan(page);
   await sheet.getByLabel('Include ORG EGGS 18CT').uncheck();
-  await sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' }).getByLabel('Move back to to-get: Milk').check();
-  await sheet.getByRole('button', { name: 'Move 1 item back to to-get' }).click();
-  await expect(page.getByText('Moved 1 item back to to-get for')).toBeVisible();
+  await sheet.getByRole('group', { name: 'Marked bought, but not on this receipt' }).getByLabel('Move back to Shopping: Milk').check();
+  await sheet.getByRole('button', { name: 'Move 1 item back to Shopping' }).click();
+  await expect(page.getByText('Moved 1 item back to Shopping for')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();
 });

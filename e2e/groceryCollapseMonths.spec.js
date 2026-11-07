@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 
 test.use({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true });
 
-// To get, any month: the arrow on an open row closes it again, whatever the row's split. The fixed date is in September 2026.
+// Shopping, any month: the arrow on an open row closes it again, whatever the row's split. The fixed date is in September 2026.
 const CATALOGUE = {
   stores: ["BJ's", 'Aldi'],
   items: [
@@ -39,18 +39,18 @@ test('every row\'s arrow closes it again: this month, next month and two months 
   }
 });
 
-test('Expand all then Collapse all closes every row of each store (0, 1 and 2 months ahead)', async ({ page }) => {
+test('Show details then Hide details closes every row of each store (0, 1 and 2 months ahead)', async ({ page }) => {
   for (const nexts of [0, 1, 2]) {
     await seedCatalogue(page);
     for (let i = 0; i < nexts; i++) await page.tap('#groc-next');
-    const buttons = page.getByRole('button', { name: /^(Expand|Collapse) all in / });
+    const buttons = page.getByRole('button', { name: /^(Show|Hide) details in / });
     const n = await buttons.count();
     expect(n, `${nexts} months ahead has stores`).toBeGreaterThan(0);
-    for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Expand all in / }).first().click();
+    for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Show details in / }).first().click();
     await expect(page.locator('.gqty[aria-expanded="false"]')).toHaveCount(0);
-    for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Collapse all in / }).first().click();
+    for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Hide details in / }).first().click();
     await expect(page.locator('.gqty[aria-expanded="true"]'), `${nexts} months ahead: every row closed again`).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^Collapse all in / })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Hide details in / })).toHaveCount(0);
   }
 });
 

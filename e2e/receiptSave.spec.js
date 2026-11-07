@@ -12,7 +12,7 @@ const setup = async page => {
   await page.click('#groc-edit');
   await add(page, 'Eggs'); await add(page, 'Rice');
   await page.click('#groc-done');
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-shopping');
 };
 const scanAnswer = page => page.route('**/api/scan/receipt', async route => {
   const { items } = route.request().postDataJSON();
@@ -99,7 +99,7 @@ test.describe('as an admin', () => {
     await expect(page.locator('#rcs-usage')).toContainText('1 of 200 saved');
 
     await page.goBack();
-    await expect(page).toHaveURL(/#\/daily\/grocery\/get$/);
+    await expect(page).toHaveURL(/#\/daily\/grocery\/shopping$/);
     await page.goForward();
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Saved receipts' })).toBeVisible();
@@ -132,7 +132,7 @@ test.describe('as an admin', () => {
     await scan(page);
     await page.getByRole('dialog').getByLabel('Keep a copy of this photo').check();
     await page.getByRole('dialog').getByRole('button', { name: 'Apply 1 item' }).click();
-    await expect(page.locator('#groc-summary')).toContainText('Got 1 of 2');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 1 of 2');
     await expect(page.getByText('Receipt applied. The photo was not saved.')).toBeVisible();
     await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.getByText('Photo saved. Find it under Receipts.')).toBeVisible();

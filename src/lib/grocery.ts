@@ -44,7 +44,7 @@ export function newShareId(): string {
 }
 
 /** Ids the page already uses for its own elements (`groc-prev`, `groc-store-<id>`, `groc-more-<id>`, ...): an item id that starts with one would clash with them (audit U-9). */
-const RESERVED_ID = /^(prev|next|month|summary|bought|skipall|alldone|money|h|edit|sharing|add|name|note|qty|price|unit|store|stores|more|done|spend|split|have|view|dock|home)(-|$)/;
+const RESERVED_ID = /^(prev|next|month|summary|bought|skipall|alldone|money|h|edit|sharing|add|name|note|qty|price|unit|store|stores|more|done|spend|split|have|view|dock|home|toolmore|sub|pickall|boughtnone)(-|$)/;
 
 /** An id for a new item: its name as a slug. A name whose slug is taken (here, or by a month line of a removed item) gets a short random suffix instead of -2, -3, so two
  *  devices that each add "Milk" for another store offline do not make the same id (audit G-5). Old ids stay valid as they are. */

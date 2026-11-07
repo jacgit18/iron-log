@@ -56,8 +56,8 @@ export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
       {canScan && <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Receipt camera" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
       {canScan && <input ref={library} type="file" accept="image/*" hidden aria-label="Receipt photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
       {canScan && <button type="button" className="btn sm" id="groc-scan" disabled={busy} onClick={() => camera.current?.click()}>{busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
-      {canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={busy} onClick={() => library.current?.click()}>Choose photo</button>}
-      {keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={() => navigate('daily/grocery/receipts', 'push')}>Receipts</button>}
+      {canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={busy} onClick={() => library.current?.click()}>Pick from photos</button>}
+      {keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={() => navigate('daily/grocery/receipts', 'push')}>Saved receipts</button>}
       {msg && <p className="note" role="status">{msg}</p>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'

@@ -334,7 +334,10 @@
 .ghomebtns {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--sp-8);
+  max-width: 100%;
 }
 .gshareprompt {
   display: flex;

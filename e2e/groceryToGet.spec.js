@@ -1,8 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// To get: the count and price pill carries an arrow, the name and the pill and the arrow all open the panel, only the checkbox ticks, and
-// Expand all / Collapse all on a store's heading opens or closes that store's rows. The fixed date is in September 2026.
+// Shopping: the count and price pill carries an arrow, the name and the pill and the arrow all open the panel, only the checkbox ticks, and
+// Show details / Hide details on a store's heading opens or closes that store's rows. The fixed date is in September 2026.
 const item = (id, n, store, cents, over = {}) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...over });
 const CATALOGUE = {
   stores: ["BJ's", 'Aldi'],
@@ -16,7 +16,7 @@ const seed = async page => {
   }, { CATALOGUE, MONTH });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-shopping');
 };
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); };
 const add = async (page, n, price) => {
@@ -38,28 +38,26 @@ test('the pill has an arrow, and the arrow, the pill and the name all open and c
   await expect(page.locator('#groc-rice')).not.toBeChecked();
 });
 
-test('Expand all and Collapse all work on one store, and the Bought fold has neither', async ({ page }) => {
+test('Show details and Hide details work on one store', async ({ page }) => {
   await seed(page);
-  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
+  await page.getByRole('button', { name: "Show details in BJ's" }).click();
   await expect(page.getByLabel('Count of Toilet paper')).toBeVisible();
   await expect(page.getByLabel('Count of Rice')).toBeVisible();
   await expect(page.getByLabel('Count of Milk')).toHaveCount(0); // Aldi is its own store
-  await expect(page.getByRole('button', { name: "Collapse all in BJ's" })).toHaveText('Collapse all');
-  await page.getByRole('button', { name: 'Expand all in Aldi' }).click();
+  await expect(page.getByRole('button', { name: "Hide details in BJ's" })).toHaveText('Hide details');
+  await page.getByRole('button', { name: 'Show details in Aldi' }).click();
   await expect(page.getByLabel('Count of Milk')).toBeVisible();
-  await page.getByRole('button', { name: "Collapse all in BJ's" }).click();
+  await page.getByRole('button', { name: "Hide details in BJ's" }).click();
   await expect(page.getByLabel('Count of Rice')).toHaveCount(0);
   await expect(page.getByLabel('Count of Milk')).toBeVisible(); // Aldi still open
-  await page.click('#groc-bought summary');
-  await expect(page.locator('#groc-bought').getByRole('button', { name: /Expand all|Collapse all/ })).toHaveCount(0);
 });
 
-test('opening one row makes the store button Collapse all only once every row is open', async ({ page }) => {
+test('opening one row makes the store button Hide details only once every row is open', async ({ page }) => {
   await seed(page);
   await pill(page, 'Rice').click();
-  await expect(page.getByRole('button', { name: "Expand all in BJ's" })).toBeVisible();
+  await expect(page.getByRole('button', { name: "Show details in BJ's" })).toBeVisible();
   await pill(page, 'Toilet paper').click();
-  await expect(page.getByRole('button', { name: "Collapse all in BJ's" })).toBeVisible();
+  await expect(page.getByRole('button', { name: "Hide details in BJ's" })).toBeVisible();
 });
 
 test('a refused count or price says why, and "I have this" takes the item off the list', async ({ page }) => {
@@ -76,8 +74,8 @@ test('a refused count or price says why, and "I have this" takes the item off th
 
 test('with every row open the page has no accessibility violations in both themes, and at 320px and 200% text it does not scroll sideways', async ({ page }) => {
   await seed(page);
-  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
-  await page.getByRole('button', { name: 'Expand all in Aldi' }).click();
+  await page.getByRole('button', { name: "Show details in BJ's" }).click();
+  await page.getByRole('button', { name: 'Show details in Aldi' }).click();
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
     const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
@@ -90,18 +88,18 @@ test('with every row open the page has no accessibility violations in both theme
 
 test('a bought row offers no "I have this" (it would do nothing), and a count that rounds to nothing is refused with the message', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-bought summary');
-  await pill(page, 'Eggs').click();
-  await expect(page.getByLabel('Count of Eggs')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'I have this: Eggs' })).toHaveCount(0);
   await pill(page, 'Milk').click();
   await expect(page.getByRole('button', { name: 'I have this: Milk' })).toBeVisible(); // still to get: offered
   await page.getByLabel('Count of Milk').fill('0.001'); await page.getByLabel('Count of Milk').blur();
   await expect(page.getByRole('alert').filter({ hasText: 'The count must be a number from 0.01 to 999.' })).toBeVisible();
+  await page.click('#groc-view-bought');
+  await pill(page, 'Eggs').click();
+  await expect(page.getByLabel('Count of Eggs')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'I have this: Eggs' })).toHaveCount(0);
 });
 
-// Merged from groceryCountCarries: a count typed on To get this month becomes the item's usual count, so next month starts from it.
-test('a count changed on To get is the starting count next month', async ({ page }) => {
+// Merged from groceryCountCarries: a count typed on Shopping this month becomes the item's usual count, so next month starts from it.
+test('a count changed on Shopping is the starting count next month', async ({ page }) => {
   await seed(page);
   await page.getByRole('button', { name: /Count and price of Rice/i }).click();
   const count = page.getByLabel('Count of Rice');
@@ -113,20 +111,20 @@ test('a count changed on To get is the starting count next month', async ({ page
 });
 
 // Merged from groceryMonthBar: own setup (items added through the editor), no seed.
-test('To get shows a bar of how much is bought, and items with no price are marked and counted', async ({ page }) => {
+test('Shopping shows a bar of how much is bought, and items with no price are marked and counted', async ({ page }) => {
   await open(page);
   await page.click('#groc-edit');
   await add(page, 'Eggs', '3.50'); await add(page, 'Rice');
   await page.click('#groc-done');
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-shopping');
   const fill = page.locator('.gprog > span');
   await expect(fill).toHaveCSS('width', '0px');
   await expect(page.locator('#groc-summary .gwarn')).toHaveText('1 without a price');
   await expect(page.getByRole('button', { name: 'Count and price of Rice' }).locator('.gpill')).toHaveClass(/noprice/);
   await expect(page.getByRole('button', { name: 'Count and price of Eggs' }).locator('.gpill')).not.toHaveClass(/noprice/);
-  await page.locator('#groc-eggs').check();
+  await page.locator('#groc-eggs').click();
   await expect.poll(async () => fill.evaluate(el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width))).toBe(50);
-  await expect(page.locator('#groc-summary')).toContainText('Got 1 of 2 · Spent $3.50 · Expected $3.50 · 1 without a price');
+  await expect(page.locator('#groc-summary')).toContainText('Bought 1 of 2 · Spent $3.50 · Planned $3.50 · 1 without a price');
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
     const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

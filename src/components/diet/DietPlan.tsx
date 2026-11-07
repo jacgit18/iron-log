@@ -101,7 +101,7 @@ export default function DietPlan({ targets }: { targets: Targets }) {
         </div>
       )}
       <div className="dt-planshop">
-        <button type="button" className="btn sm" disabled={need === 0} onClick={() => setMsg(addMissingMessage(st().planToGroceries(days)))}>Add missing ingredients to To get</button>
+        <button type="button" className="btn sm" disabled={need === 0} onClick={() => setMsg(addMissingMessage(st().planToGroceries(days)))}>Add missing ingredients to Shopping</button>
       </div>
       <p className="note" role="status">{msg}</p>
     </div>

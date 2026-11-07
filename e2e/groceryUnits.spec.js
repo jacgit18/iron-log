@@ -13,10 +13,10 @@ test('an item sold by the lb reads as a weight and a price per lb, and the total
  
   await page.click('#groc-add');
   await page.click('#groc-done');
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-shopping');
   const pill = page.getByRole('button', { name: 'Weight (lb) and price of Chicken' });
   await expect(pill).toHaveText('2.4 lb × $6.25/lb');
-  await expect(page.locator('#groc-summary')).toContainText('Expected $15.00');
+  await expect(page.locator('#groc-summary')).toContainText('Planned $15.00');
   await pill.click();
   await page.getByLabel('Weight (lb) of Chicken').fill('3'); await page.getByLabel('Weight (lb) of Chicken').blur();
   await expect(page.getByLabel('Total for Chicken')).toHaveText('$18.75');

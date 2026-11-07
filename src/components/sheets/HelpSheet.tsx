@@ -47,7 +47,7 @@ const GLOSSARY = [
   ['Mode 1, 2, 3', 'How your two programs, A and B, take turns: Mode 1 · A only; Mode 2 · monthly (A and B by month); Mode 3 · 6 months each. Change it at the top of the Board or in Settings, Training.'],
   ['Goals', 'Body weight: a target on Progress, from the weight you save at the top of the Board each week. Lift weight goals: tap a lift on Progress. Exercise frequency: how many times a week you want to do an exercise, on Progress.'],
   ['Water goal', 'On Daily, Nutrition. It follows your body weight unless you set a fixed amount; Hot day and Training add to it for the day.'],
-  ['To get / At home', 'The two views of Groceries on the Daily tab. Untick an item under At home when you run out, and it shows up under To get.'],
+  ['Shopping / Bought / Inventory', 'The views of Groceries on the Daily tab. Shopping is what is left to buy this month, Bought is what you ticked, and Inventory is your usual items. Untick an item under Inventory when you run out, and it shows up under Shopping.'],
 ];
 
 export default function HelpSheet() {

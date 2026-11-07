@@ -76,7 +76,7 @@ export function reconcile(plan: Plan, choices: readonly Choice[], items: readonl
 
 /** The line above the not-on-receipt list: when every ticked item is missing the receipt is probably the wrong one. */
 export const missingIntro = (r: Pick<Reconciled, 'missing' | 'ticked'>): string =>
-  `${r.ticked > 0 && r.missing.length === r.ticked ? 'None of the items you marked bought are on this receipt. Is this the right one? ' : ''}You marked these as bought, but the receipt does not show them. Maybe you put them back, or the photo missed them (a photo cut off at the bottom can hide lines). Tick one to move it back to your to-get list. Anything you leave alone stays marked bought.`;
+  `${r.ticked > 0 && r.missing.length === r.ticked ? 'None of the items you marked bought are on this receipt. Is this the right one? ' : ''}You marked these as bought, but the receipt does not show them. Maybe you put them back, or the photo missed them (a photo cut off at the bottom can hide lines). Tick one to move it back to your Shopping list. Anything you leave alone stays marked bought.`;
 
-/** The Applied notice's words for the items that were moved back to to-get. */
-export const untickedText = (n: number): string => (n > 0 ? ` ${n} ${n === 1 ? 'item' : 'items'} moved back to to-get.` : '');
+/** The Applied notice's words for the items that were moved back to Shopping. */
+export const untickedText = (n: number): string => (n > 0 ? ` ${n} ${n === 1 ? 'item' : 'items'} moved back to Shopping.` : '');

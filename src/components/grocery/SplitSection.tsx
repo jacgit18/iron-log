@@ -17,7 +17,7 @@ export default function SplitSection({ g, month, mk, open, onToggle }: { g: Groc
   return (
     <div className="gsplitsection" id={`groc-split-${mk}`}>
       <button type="button" className="gsplittoggle" aria-expanded={open} aria-controls={bodyId} onClick={() => onToggle(!open)}>
-        <span className="gsplittitle"><b>Splitting this month</b><small className={outstanding > 0 || others > 0 ? 'gsplitowed' : 'gsplitdone'}>{outstanding > 0 ? `Outstanding ${money(outstanding)}` : others > 0 ? `Others owe each other ${money(others)}` : 'All settled ✓'}</small></span>
+        <span className="gsplittitle"><b>Who owes who</b><small className={outstanding > 0 || others > 0 ? 'gsplitowed' : 'gsplitdone'}>{outstanding > 0 ? `Outstanding ${money(outstanding)}` : others > 0 ? `Others owe each other ${money(others)}` : 'All settled ✓'}</small></span>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} />
       </button>
       <div id={bodyId} hidden={!open}>{open && <SplitSummary g={g} month={month} mk={mk} />}</div>

@@ -52,13 +52,14 @@ export type ScenarioFeature =
   | 'Search hiding'
   | 'Security headers'
   | 'Price history'
-  | 'Program desktop layout';
+  | 'Program desktop layout'
+  | 'Groceries views';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views',
 ];
 
 export interface Scenario {
@@ -195,7 +196,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-09', feature: 'Meal planner', title: 'Plan to Groceries adds each missing ingredient once', persona: 'meal-planner', brief: 'diet-meal-planner',
     steps: [
       'In the planner press the grocery button for the shown week.',
-      'Open Groceries and look at To get.',
+      'Open Groceries and look at Shopping.',
       'Return to the planner and press the grocery button again.',
     ],
     expected: [
@@ -446,14 +447,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-29', feature: 'Recipe auto-match', title: 'Maybe matches and Accept all', persona: 'recipe-collector', brief: 'recipe-auto-match', edge: true,
     steps: [
-      'Open "Chicken and rice bowl" (ingredient "Chicken breast") while At home holds a "Chicken thighs" item.',
+      'Open "Chicken and rice bowl" (ingredient "Chicken breast") while Inventory holds a "Chicken thighs" item.',
       'Choose the item from the "Maybe: <item>" dropdown, then undo the pin by hand.',
       'Open another recipe with several Maybe lines and press Accept all suggestions.',
     ],
     expected: [
       'A close but inexact name shows "Maybe: <item>" as a dropdown choice and is not counted as a match until chosen.',
       'Choosing it pins it; Accept all pins every suggestion in one action and the button disappears when none are left.',
-      'Press Reset on the account first: anything added to the grocery list since the seed changes which recipes show Maybe. The seeded names decide which recipes show Maybe; if none does, record that and add an At home item with a shared word.',
+      'Press Reset on the account first: anything added to the grocery list since the seed changes which recipes show Maybe. The seeded names decide which recipes show Maybe; if none does, record that and add an Inventory item with a shared word.',
     ],
   },
 
@@ -691,7 +692,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Choose photo and pick a saved photo of a label.',
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
@@ -739,7 +740,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-53', feature: 'Receipt scan', title: 'Scan a BJ\'s receipt and apply it', persona: 'grocery-shopper', brief: 'receipt-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account with items like the ones on your receipt. On Groceries, To get, press Scan receipt and photograph a BJ\'s receipt.',
+      'On a phone, sign in as an admin account with items like the ones on your receipt. On Groceries, Shopping, press Scan receipt and photograph a BJ\'s receipt.',
       'In the sheet, compare each line with the paper: the item it matched, the quantity and the price after the instant savings. Change one match and untick one line.',
       'Check the Total check line, pick the store for the tax if it asks, then press Apply and look at the list; then press Undo.',
     ],
@@ -791,7 +792,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On a phone as an admin, scan a BJ\'s receipt that has a line your list does not have (for example a soda).',
       'On that line press Add to list. Check the name, store, count and price the form filled in, then press Add item.',
-      'Look at the row and the footer, then press Apply and open the To get list and Bought this month. Then press Undo.',
+      'Look at the row and the footer, then press Apply and open the Shopping list and Bought this month. Then press Undo.',
     ],
     expected: [
       'The form starts with the receipt text tidied (Zevia soda 12pk), the receipt\'s store (or Anywhere), the count and the price after any savings; Add item marks the row New and the footer says 1 new item will be added, with nothing yet on the list.',
@@ -950,9 +951,9 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-71', feature: 'Recipe auto-match', title: 'A missing ingredient already on the list says On your list', persona: 'recipe-collector', brief: 'feature-map',
     steps: [
-      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, To get (add one with the ingredient\'s name if there is none).',
+      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, Shopping (add one with the ingredient\'s name if there is none).',
       'Look at that line, then press Add missing to Groceries.',
-      'Open Groceries, To get and check how many times the item appears.',
+      'Open Groceries, Shopping and check how many times the item appears.',
     ],
     expected: [
       'The line shows Missing with a small "On your list" mark beside it; an ingredient that is at home, skipped or "Always at home" (water) never shows it.',
@@ -1050,31 +1051,31 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-79', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
     steps: [
-      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, At home, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
-      'On To get press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
+      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, Inventory, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
+      'On Shopping press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
       'In the sheet read the rows and the line under the list, then press Apply.',
-      'Open To get and At home, then press Undo on the notice.',
+      'Open Shopping and Inventory, then press Undo on the notice.',
     ],
     expected: [
       'Every ticked item that is not already at the receipt\'s store says "Bought at Costco (usually ...)" and a line says how many items will be marked bought at Costco this month; nothing is saved before Apply.',
-      'After Apply To get shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and At home still lists each item under its old store.',
+      'After Apply Shopping shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and Inventory still lists each item under its old store.',
       'Undo puts every item back to its old store and unticks it.',
     ],
   },
   {
     id: 'S-80', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
     steps: [
-      'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
+      'As an admin, add an item named Oats to Costco on Inventory (Edit), and make sure another item named Oats is under Trader Joe\'s.',
       'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
       'In the sheet read the line under the Also make Costco box (it starts unticked because the items already have usual stores), then tick "Also make Costco the usual store for these items" and press Apply.',
-      'Look at the notice and At home, then press Undo.',
-      'Scan a Costco receipt where every matched item is under Anywhere on At home (no usual store). Read the box and the line under it before pressing Apply.',
+      'Look at the notice and Inventory, then press Undo.',
+      'Scan a Costco receipt where every matched item is under Anywhere on Inventory (no usual store). Read the box and the line under it before pressing Apply.',
     ],
     expected: [
-      'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
+      'The second item moves to Costco on Inventory; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
       'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
-      'Before you tick the box the line reads "At home stays as it is. Tick the box to list these under Costco there."; ticked, it reads "At home will list these under Costco."',
-      'When every item that moves is under Anywhere, "Also make Costco the usual store for these items" starts ticked and the line reads "At home will list these under Costco."; when any of them already has a usual store it starts unticked.',
+      'Before you tick the box the line reads "Inventory stays as it is. Tick the box to list these under Costco there."; ticked, it reads "Inventory will list these under Costco."',
+      'When every item that moves is under Anywhere, "Also make Costco the usual store for these items" starts ticked and the line reads "Inventory will list these under Costco."; when any of them already has a usual store it starts unticked.',
     ],
   },
   {
@@ -1082,7 +1083,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin scan a receipt from a store that is not on your list (for example Walmart).',
       'Check the sheet: no row says Bought at, and "Store for this receipt" is set to Do not set the store or the tax. Pick Costco in it.',
-      'Close the sheet. On At home > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
+      'Close the sheet. On Inventory > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
     ],
     expected: [
       'With no store picked nothing moves and no row says Bought at; picking Costco adds the Bought at notes and the "will be marked bought at Costco" line.',
@@ -1094,7 +1095,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin, on your phone, photograph and scan a Costco receipt where the same item (for example eggs) is printed on two lines with the same price.',
       'In the sheet find that item. Tick it, pick the matching item from the list, and press Apply.',
-      'On To get look at the item, then press Undo.',
+      'On Shopping look at the item, then press Undo.',
     ],
     expected: [
       'The sheet shows ONE row for the two lines, with one checkbox, one item picker, a count of 2 and "$X each" under the price; the total check and the Apply count are unchanged by the merge.',
@@ -1106,11 +1107,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin, on your phone, photograph and scan a receipt that has the same meat (for example chuck roast) on two lines at different prices, such as $14.12 and $17.86, with no match on your list.',
       'Press Add to list once on the merged row and check the count and price in the form, then Add item and Apply.',
-      'Look at At home and at the month on To get, then press Undo.',
+      'Look at Inventory and at the month on Shopping, then press Undo.',
     ],
     expected: [
       'One row with a note "2 packs, each at its own price: $14.12 + $17.86"; the form starts with Count 2 and the average price, both editable.',
-      'At home gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
+      'Inventory gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
     ],
   },
   {
@@ -1129,41 +1130,41 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-85', feature: 'Bulk share', title: 'Select all in Costco, share with one person, and Undo', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
-      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
+      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, Shopping.',
       'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
-      'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
+      'Press "Select all in Costco", then Change who shares In the sheet tick Sam only and press Apply.',
       'Look at the Costco rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
     ],
     expected: [
-      'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
+      'Nothing changes until Apply; the bar counts the Costco items and Change who shares is off while nothing is selected.',
       'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select button.',
       'Undo puts every row back to "Me +2".',
     ],
   },
   {
-    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes At home, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes Inventory, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
-      'On To get, Select two Costco items and press Share... Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
-      'Open At home, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to To get, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
-      'Open At home again and look at the same items\' split.',
+      'On Shopping, Select two Costco items and press Change who shares Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
+      'Open Inventory, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to Shopping, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'Open Inventory again and look at the same items\' split.',
     ],
     expected: [
-      'After the first Apply To get shows the new split but At home still shows the store\'s split for those items (this month only).',
-      'After the second Apply At home shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
+      'After the first Apply Shopping shows the new split but Inventory still shows the store\'s split for those items (this month only).',
+      'After the second Apply Inventory shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
     ],
   },
   {
     id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
     steps: [
-      'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
-      'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
+      'On Shopping open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
+      'Press Select, tick that item and one other, press Change who shares, and read the sheet. Tick Alex and press Apply.',
       'Open the pack-priced item and look at both packs; press Undo on the notice within about 10 seconds (it goes away by itself).',
-      'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, To get. New user does not prove it, because its list is empty.',
+      'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, Shopping. New user does not prove it, because its list is empty.',
     ],
     expected: [
       'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
       'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
-      'An account that has items but no sharing group has no Select button on To get.',
+      'An account that has items but no sharing group has no Select button on Shopping.',
     ],
   },
   {
@@ -1196,7 +1197,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-90', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Groceries, To get, tick three items as if you were in the store without typing a price (or with an old one).',
+      'On a phone, sign in as an admin account. On Groceries, Shopping, tick three items as if you were in the store without typing a price (or with an old one).',
       'Later, press Scan receipt and photograph a receipt that has those three items, and read the note under each of their rows.',
       'Press Apply and look at the three items; then press Undo.',
     ],
@@ -1208,7 +1209,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-91', feature: 'Receipt reconcile', title: 'An item marked bought that is not on the receipt is listed, stays bought, or moves back to to-get', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
     steps: [
-      'On a phone, on To get, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
+      'On a phone, on Shopping, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
       'Find "Marked bought, but not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
       'Scan again, tick the "Move back to to-get" box on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
       'Scan a receipt that has none of your ticked items.',
@@ -1259,7 +1260,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-95', feature: 'Sharing done', title: 'Done closes the Sharing panel and adds what you typed', persona: 'grocery-shopper', brief: 'sharing-done-button',
     steps: [
-      'Open Daily, Groceries, At home, press Sharing and look at the bottom of the panel.',
+      'Open Daily, Groceries, Inventory, press Sharing and look at the bottom of the panel.',
       'In the Home group type Jo in Add a person without pressing Add person, then press Done.',
       'Press Sharing again and look at the Home group.',
     ],
@@ -1440,14 +1441,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'grocery-shopper', brief: 'receipt-add-store', device: true,
     steps: [
-      'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, At home, Edit and check the list does not have the store on your receipt (for example Safeway, which Grocery shopper does not have); other stores may stay.',
-      'On To get press Scan receipt and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
+      'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, Inventory, Edit and check the list does not have the store on your receipt (for example Safeway, which Grocery shopper does not have); other stores may stay.',
+      'On Shopping press Scan receipt and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
       'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
-      'Press Apply, then open To get and At home, then press Undo on the notice.',
+      'Press Apply, then open Shopping and Inventory, then press Undo on the notice.',
     ],
     expected: [
       'A ticked box says "Add this store to your stores" with a tidy name in the box (SAFEWAY #123 reads Safeway); the line under the list says how many items will be marked bought at it this month. Nothing is added before Apply.',
-      'After Apply the store exists, the notice says "Added the store Safeway.", and To get lists the matched items under Safeway, ticked and priced.',
+      'After Apply the store exists, the notice says "Added the store Safeway.", and Shopping lists the matched items under Safeway, ticked and priced.',
       'Undo removes the store again and puts the items back and unticked.',
     ],
   },
@@ -1468,23 +1469,23 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-112', feature: 'Price history', title: 'An At home item shows its last price and store, and the line opens its history', persona: 'grocery-shopper', brief: 'grocery-price-history',
+    id: 'S-112', feature: 'Price history', title: 'An Inventory item shows its last price and store, and the line opens its history', persona: 'grocery-shopper', brief: 'grocery-price-history',
     steps: [
-      'On To get, tick an item bought (give it a price) under a store; do the same for another item. Open At home.',
+      'On Shopping, tick an item bought (give it a price) under a store; do the same for another item. Open Inventory.',
       'Find the ticked item. Under its name read the small underlined line, then tap it.',
       'In the sheet read the average, the store it is most often bought at and the list of months, then press Close.',
     ],
     expected: [
       'The line reads "Last: $X at Store, Mon" with the price you gave and this month; an item never bought has no line.',
       'The sheet lists this month with its price and store; with two or more priced months the lowest is tagged Cheapest.',
-      'Close puts you back on At home with focus on the line you tapped.',
+      'Close puts you back on Inventory with focus on the line you tapped.',
     ],
   },
   {
     id: 'S-113', feature: 'Price history', title: 'Packs at two prices, a purchase with no price, and an item never bought', persona: 'grocery-shopper', brief: 'grocery-price-history', edge: true,
     steps: [
-      'On To get, tick an item bought and give it two pack prices (Add price twice, for example $2.50 and $3.00). Tick another item bought and leave its price empty.',
-      'On At home tap the Last: line of the pack item, then of the item with no price.',
+      'On Shopping, tick an item bought and give it two pack prices (Add price twice, for example $2.50 and $3.00). Tick another item bought and leave its price empty.',
+      'On Inventory tap the Last: line of the pack item, then of the item with no price.',
       'Find an item you have never ticked bought and look under its name.',
     ],
     expected: [
@@ -1592,6 +1593,55 @@ export const SCENARIOS: readonly Scenario[] = [
       'The tabs read Programs, Exercises, Stretches. The A | B switch is two equal halves. The day control is the arrows and the "Day N of 7" dropdown, as before; there are no Day tabs and + Add exercise is full width.',
       'Compare programs (a collapsed strip) comes before Saved programs.',
       'The address opens Programs, since a phone has no Saved tab.',
+    ],
+  },
+  // ---- Groceries views ----
+  {
+    id: 'S-122', feature: 'Groceries views', title: 'A tick on Shopping moves the item to Bought, and the box on Bought puts it back', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory',
+    steps: [
+      'Sign in as Grocery shopper and open Groceries. Read the four views and the counts beside Shopping and Bought.',
+      'Tick the box of one item on Shopping. Look at the counts and the notice, then open Bought.',
+      'On Bought, tick the same item\'s box. Then reload the page.',
+    ],
+    expected: [
+      'The views read Shopping, Bought, Inventory, Spending. The address is #/daily/grocery/shopping.',
+      'The item leaves Shopping, the Shopping count goes down by one and the Bought count up by one, and a notice says "Bought <item>." with Undo. Bought lists it under its store.',
+      'The item is back on Shopping and the counts return. After the reload the same view is open (the address names it).',
+    ],
+  },
+  {
+    id: 'S-123', feature: 'Groceries views', title: 'On Bought, select all in a store, change who shares, and Undo', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory',
+    steps: [
+      'Tick two Costco items on Shopping, then open Bought.',
+      'Press Select items, then "Select all in Costco", then "Change who shares". In the sheet tick Sam only and press Apply.',
+      'Look at the two rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
+    ],
+    expected: [
+      'The bar says "2 selected" and nothing changes until Apply.',
+      'Both rows say "Me +1" and the notice reads "Shared 2 items: Me +1."',
+      'Undo puts both rows back to their earlier split.',
+    ],
+  },
+  {
+    id: 'S-124', feature: 'Groceries views', title: 'The old To get and At home addresses open Shopping and Inventory', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory', edge: true,
+    steps: [
+      'With Groceries open, replace the end of the address with #/daily/grocery/home and press Enter.',
+      'Replace it with #/daily/grocery/get and press Enter.',
+    ],
+    expected: [
+      'The first address opens Inventory (the list you tick Have on).',
+      'The second opens Shopping.',
+    ],
+  },
+  {
+    id: 'S-125', feature: 'Groceries views', title: 'On a phone at large text the four views wrap and nothing scrolls sideways', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory', device: true, edge: true,
+    steps: [
+      'On a phone set the text size to its largest and open Groceries.',
+      'Look at the four views, then open Inventory and look at the Sharing groups and Edit buttons.',
+    ],
+    expected: [
+      'The four views wrap onto more than one row; every one can be tapped and the page does not scroll sideways.',
+      'Sharing groups and Edit wrap under each other instead of running off the edge.',
     ],
   },
 ];

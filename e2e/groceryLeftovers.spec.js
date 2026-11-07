@@ -13,7 +13,7 @@ const seed = async (page, cat, months = {}) => {
 
 test('U-6: Done keeps text typed in Add an item and says to add or clear it', async ({ page }) => {
   await seed(page, { stores: [], items: [item('rice', 'Rice')] });
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await page.fill('#groc-name', 'Oat milk');
   await page.click('#groc-done');
   await expect(page.getByRole('region', { name: 'Add an item' })).toBeVisible(); // still editing
@@ -28,7 +28,7 @@ test('U-7: focus goes back to the name box after Add, and to the price box after
   await page.getByRole('button', { name: 'Count and price of Beef' }).click();
   await page.getByRole('button', { name: 'Remove $8.99 from Beef' }).click();
   await expect(page.getByLabel('Add a price for Beef, dollars')).toBeFocused();
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await page.fill('#groc-name', 'Kale'); await page.click('#groc-add');
   await expect(page.locator('#groc-name')).toHaveValue('');
   await expect(page.locator('#groc-name')).toBeFocused();
@@ -36,10 +36,10 @@ test('U-7: focus goes back to the name box after Add, and to the price box after
 
 test('U-9: an item named "Store milk" does not share an element id with Milk’s store select', async ({ page }) => {
   await seed(page, { stores: ['Aldi'], items: [item('milk', 'Milk', 'Aldi')] });
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await page.fill('#groc-name', 'Store milk'); await page.click('#groc-add');
   await page.fill('#groc-name', 'Prev'); await page.click('#groc-add');
-  await page.click('#groc-done'); await page.click('#groc-view-get');
+  await page.click('#groc-done'); await page.click('#groc-view-shopping');
   for (const n of ['Milk', 'Store milk', 'Prev']) await page.getByRole('button', { name: n, exact: true }).click();
   const dupes = await page.evaluate(() => { const seen = new Map(); document.querySelectorAll('[id]').forEach(e => seen.set(e.id, (seen.get(e.id) ?? 0) + 1)); return [...seen].filter(([, n]) => n > 1).map(([id]) => id); });
   expect(dupes).toEqual([]);
@@ -51,13 +51,16 @@ test('X-8: a store whose only bought item was removed still shows its tax box, a
     '2026-09': { lines: { gone, soap: { got: true } }, pulled: [] }, // Aldi has Rice on the list but gone was bought there
     '2026-08': { lines: { gone, rice: { got: true } }, pulled: [] },
   });
+  await page.click('#groc-view-bought'); // a purchase of a removed item shows on Bought
   await expect(page.getByLabel('Tax at Aldi this month')).toBeVisible(); // something was bought at Aldi, even though that item is gone
+  await page.click('#groc-view-shopping');
   await page.click('#groc-prev');
   await expect(page.locator('.gstorehead', { hasText: 'Aldi' }).locator('.gstoremeta .note')).toHaveText('2/2 · $6.00');
 });
 
 test('X-8: the tax box shows for a store that has no items left at all', async ({ page }) => {
   await seed(page, { stores: ['Aldi'], items: [item('soap', 'Soap')] }, { '2026-09': { lines: { gone: { got: true, qty: 1, cents: 300, store: 'Aldi' } }, pulled: [] } });
+  await page.click('#groc-view-bought');
   await expect(page.getByLabel('Tax at Aldi this month')).toBeVisible();
 });
 

@@ -35,6 +35,13 @@ describe('pageOf', () => {
     expect(pageOf('progress/zzz', 'progress')).toBeNull(); // not a screen
     expect(pageOf('daily/grocery/spend', 'daily/grocery')).toBe('spend');
     expect(pageOf('daily/grocery/receipts', 'daily/grocery')).toBe('receipts');
+    expect(pageOf('daily/grocery/bought', 'daily/grocery')).toBe('bought');
+    expect(pageOf('daily/grocery/shopping', 'daily/grocery')).toBe('shopping');
+    expect(pageOf('daily/grocery/inventory', 'daily/grocery')).toBe('inventory');
+  });
+  it('keeps the old Grocery addresses opening the renamed screens', () => {
+    expect(parseRoute('#/daily/grocery/get')?.path).toBe('daily/grocery/shopping');
+    expect(parseRoute('#/daily/grocery/home')?.path).toBe('daily/grocery/inventory');
   });
 });
 

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The shared-grocery money where you shop (sharing, ADR 059): one line over the To get list and a line under a shared store's heading.
+// The shared-grocery money where you shop (sharing, ADR 059): one line over the Shopping list and a line under a shared store's heading.
 // The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CATALOGUE = {
@@ -36,14 +36,14 @@ test('a shared store with things still to get shows its money under its heading,
   await seed(page);
   await expect(page.locator('.gstoremoney')).toHaveCount(1);
   await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: /BJ's/ }) }).first().locator('.gstoremoney')).toHaveText(BJS);
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought');
   await expect(page.locator('.gstoremoney')).toHaveCount(1); // the fold's BJ's heading does not repeat it
 });
 
 test('a shared store with nothing left to get shows its money in the Bought this month fold', async ({ page }) => {
   await seed(page, { soapGot: true });
   await expect(page.locator('.gstoremoney')).toBeHidden(); // inside the folded section
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought');
   await expect(page.locator('.gstoremoney')).toBeVisible();
 });
 

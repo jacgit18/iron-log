@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// "Splitting this month" is folded at the bottom of To get: closed each time, its header says what is outstanding, and the money line over the list opens it.
+// "Who owes who" is folded at the bottom of Shopping: closed each time, its header says what is outstanding, and the money line over the list opens it.
 // The fixed date is in September 2026. $24.99 of toilet paper at BJ's, split three ways: $8.33 each; Mom is marked Share already paid.
 const CATALOGUE = {
   stores: ["BJ's"],
@@ -17,7 +17,7 @@ const seed = async page => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const toggle = page => page.getByRole('button', { name: /^Splitting this month/ });
+const toggle = page => page.getByRole('button', { name: /^Who owes who/ });
 
 test('it starts closed, says what is outstanding, and opens and closes in place', async ({ page }) => {
   await seed(page);
@@ -27,7 +27,7 @@ test('it starts closed, says what is outstanding, and opens and closes in place'
   await toggle(page).click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('.gsplitcard')).toHaveCount(1);
-  await expect(page.getByRole('region', { name: 'Splitting this month' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Who owes who' })).toBeVisible();
   await toggle(page).click();
   await expect(page.locator('.gsplitcard')).toHaveCount(0);
 });
@@ -35,7 +35,7 @@ test('it starts closed, says what is outstanding, and opens and closes in place'
 test('the money line over the list opens it and brings it into view', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 500 });
   await seed(page);
-  await page.click('#groc-bought summary'); // a longer page, so the section starts below the first screen
+  await page.click('#groc-view-bought'); // a longer page, so the section starts below the first screen
   await page.locator('#groc-money').click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('#groc-money')).not.toHaveAttribute('aria-expanded', /.*/); // it opens the section, it does not toggle

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The split card sits folded at the bottom of To get; these specs read it, so each opens it first (a page with no split section has nothing to open).
+// The split card sits folded at the bottom of Shopping; these specs read it, so each opens it first (a page with no split section has nothing to open).
 const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
 
 // Sharing groceries with other people (ADR 059), from the phone's side. Open to everyone: an account that is not an admin sees the grocery
@@ -23,7 +23,7 @@ const seed = async (page, { admin = true } = {}) => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
 };
-const split = page => page.getByRole('region', { name: 'Splitting this month' });
+const split = page => page.getByRole('region', { name: 'Who owes who' });
 
 test('an admin sees who owes what, and changing who shares a pack updates it and survives a reload', async ({ page }) => {
   await seed(page);
@@ -31,7 +31,7 @@ test('an admin sees who owes what, and changing who shares a pack updates it and
   const rows = split(page).locator('.gsplitcard', { hasText: "BJ's" }).locator('.gsplitrows li');
   await expect(rows).toHaveText(['Bill$53.72', 'Your share$31.06', 'Sister owes you$11.33Mark paid', 'Mom, already paidShare already paid$11.33Not paid']); // BJ's: the toilet paper and pack 3 are split three ways, packs 1 and 2 are mine
   // Pack 2 ($9.25) is shared with the sister too: she now owes her half of it as well.
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought'); await openSplit(page); // the split card folds again when the view changes
   await page.getByRole('button', { name: 'Count and price of Chicken' }).click();
   await page.getByLabel('Shared with, for Chicken pack 2: Just me').click();
   await page.locator('details.gshare', { has: page.getByLabel(/for Chicken pack 2/) }).getByLabel('Sister').check();
@@ -65,18 +65,18 @@ test('the Spending view shows your share and says what you paid', async ({ page 
   await expect(page.locator('#groc-spend-summary')).toContainText('This month $');
 });
 
-test('groups are made from the Sharing button on At home, and a store can default to one', async ({ page }) => {
+test('groups are made from the Sharing button on Inventory, and a store can default to one', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete c.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(c)); });
   await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
   await expect(split(page)).toHaveCount(0); // no group yet: nothing is split
-  await page.click('#groc-view-home'); await page.click('#groc-sharing');
+  await page.click('#groc-view-inventory'); await page.click('#groc-sharing');
   await page.getByLabel('New group', { exact: true }).fill('Home');
   await page.getByLabel('People in the new group, separated by commas').fill('Sam, Pat');
   await page.getByRole('button', { name: 'Add group' }).click();
   await page.getByLabel('Sam’s share is already paid').check();
   await page.getByRole('group', { name: 'Stores that split with Home by default' }).getByLabel("BJ's").check();
-  await page.click('#groc-sharing'); await page.click('#groc-view-get'); await openSplit(page);
+  await page.click('#groc-sharing'); await page.click('#groc-view-shopping'); await openSplit(page);
   await expect(split(page)).toBeVisible();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).groups[0]);
   expect(saved).toMatchObject({ n: 'Home', stores: ["BJ's"], people: [{ n: 'Sam', covered: true }, { n: 'Pat' }] });
@@ -84,7 +84,7 @@ test('groups are made from the Sharing button on At home, and a store can defaul
 
 test('the split screen has no accessibility violations', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought');
   await page.getByRole('button', { name: 'Count and price of Chicken' }).click();
   await page.getByLabel(/Shared with, for Chicken pack 1/).click();
   const result = await new AxeBuilder({ page }).analyze();

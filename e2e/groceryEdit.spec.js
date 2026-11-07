@@ -1,8 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// At home, Edit mode: every item starts closed to one line with an arrow, the name or arrow opens its form (today's fields plus Count and Price),
-// and Expand all / Collapse all on a store's heading does it for that store. The fixed date is in September 2026.
+// Inventory, Edit mode: every item starts closed to one line with an arrow, the name or arrow opens its form (today's fields plus Count and Price),
+// and Show details / Hide details on a store's heading does it for that store. The fixed date is in September 2026.
 const item = (id, n, store, cents, over = {}) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...over });
 const CATALOGUE = {
   stores: ["BJ's", 'Aldi'],
@@ -21,7 +21,7 @@ const seed = async page => {
   }, { CATALOGUE });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
 };
 const arrow = (page, name) => page.getByRole('button', { name: new RegExp(`^(Expand|Collapse) ${name}$`) });
 const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items);
@@ -52,14 +52,14 @@ test('the arrow or the name opens one item and leaves the others closed; the arr
   await expect(page.getByLabel('Name of Toilet paper')).toHaveCount(0);
 });
 
-test('Expand all and Collapse all work on one store at a time, and Done then Edit starts closed again', async ({ page }) => {
+test('Show details and Hide details work on one store at a time, and Done then Edit starts closed again', async ({ page }) => {
   await seed(page);
-  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
+  await page.getByRole('button', { name: "Show details in BJ's" }).click();
   await expect(page.locator('li.gedit:not(.gedshut)')).toHaveCount(3);
   await expect(page.getByLabel('Name of Milk')).toHaveCount(0); // Aldi stays closed
-  await expect(page.getByRole('button', { name: "Collapse all in BJ's" })).toHaveText('Collapse all');
-  await expect(page.getByRole('button', { name: 'Expand all in Aldi' })).toHaveText('Expand all');
-  await page.getByRole('button', { name: "Collapse all in BJ's" }).click();
+  await expect(page.getByRole('button', { name: "Hide details in BJ's" })).toHaveText('Hide details');
+  await expect(page.getByRole('button', { name: 'Show details in Aldi' })).toHaveText('Show details');
+  await page.getByRole('button', { name: "Hide details in BJ's" }).click();
   await expect(page.locator('li.gedit.gedshut')).toHaveCount(4);
   await arrow(page, 'Milk').click();
   await page.click('#groc-done'); await page.click('#groc-edit');
@@ -107,7 +107,7 @@ test('the dock keeps its own colours, and the edit screen with rows open has no 
   const dock = await page.locator('.gdock').evaluate(e => { const c = getComputedStyle(e); return { top: c.borderTopWidth, bg: c.backgroundColor, list: getComputedStyle(document.querySelector('li.gedit')).backgroundColor }; });
   expect(dock.top).toBe('3px');
   expect(dock.bg).not.toBe(dock.list);
-  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
+  await page.getByRole('button', { name: "Show details in BJ's" }).click();
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
     const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
@@ -121,6 +121,6 @@ test('at 320px and 200% text the closed and open rows do not scroll sideways', a
   await page.addStyleTag({ content: 'html { font-size: 200% }' });
   const wide = () => page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(await wide()).toBe(false);
-  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
+  await page.getByRole('button', { name: "Show details in BJ's" }).click();
   expect(await wide()).toBe(false);
 });

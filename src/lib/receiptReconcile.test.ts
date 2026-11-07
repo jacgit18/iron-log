@@ -101,8 +101,8 @@ describe('reconcile: ticked items the receipt does not show', () => {
   });
   it('words the unticked count for the Applied notice', () => {
     expect(untickedText(0)).toBe('');
-    expect(untickedText(1)).toBe(' 1 item moved back to to-get.');
-    expect(untickedText(2)).toBe(' 2 items moved back to to-get.');
+    expect(untickedText(1)).toBe(' 1 item moved back to Shopping.');
+    expect(untickedText(2)).toBe(' 2 items moved back to Shopping.');
   });
 });
 

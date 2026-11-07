@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// Price and place history (brief grocery-price-history). The history rules are node tests (itemHistory.test.ts); this covers the wiring: the "Last:" line under an At home
+// Price and place history (brief grocery-price-history). The history rules are node tests (itemHistory.test.ts); this covers the wiring: the "Last:" line under an Inventory
 // row, the sheet it opens, Close returning focus, and an item never bought having no line. The fixed date is in September 2026.
 const CAT = { stores: ['Aldi', 'Costco'], items: [
   { id: 'eggs', n: 'Eggs', store: 'Aldi', qty: 1, cents: 300, every: true, out: false },
@@ -14,7 +14,7 @@ const seed = async page => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: {}, pulled: [] }));
   }, CAT);
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-home');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-inventory');
 };
 
 test('a bought item shows its last price and store, an item never bought shows none, and the line opens the sheet', async ({ page }) => {
