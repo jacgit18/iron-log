@@ -65,7 +65,7 @@ test.describe('as an admin', () => {
     await answer(page, id => { const r = good(id); r.receipt.date = '2026-08-30'; return r; });
     await page.getByLabel('Receipt photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'dated August 2026' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });

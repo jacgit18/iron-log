@@ -8,6 +8,7 @@ import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import type { Receipt } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
+import ReceiptApplyBar from './ReceiptApplyBar.js';
 import type { Applied } from './ReceiptScan.js';
 import './ReceiptScan.css';
 
@@ -94,7 +95,10 @@ export default function ReceiptSheet() {
   const words = movesText(plan.moves);
   return (
     <Sheet className="rcsheet">
-      <h2 className="cond">Receipt</h2>
+      <div className="rctop">
+        <h2 className="cond">Receipt</h2>
+        <button type="button" className="btn ghost rcclose" id="rc-cancel" aria-label="Close without applying" onClick={closeModal}>Close</button>
+      </div>
       <p className="rcmeta">
         {receipt.store && <span>Store <b>{receipt.store}</b></span>}
         {receipt.date && <span>Dated <b>{receipt.date}</b></span>}
@@ -146,8 +150,8 @@ export default function ReceiptSheet() {
                 {staged.map(x => <option key={x.id} value={x.id}>{x.n} (new)</option>)}
               </select>
               {isNew && <span className="rcpill">New</span>}
-              {isNew && <button type="button" className="btn sm ghost rcunstage" aria-label={`Remove new item for ${l.text}`} onClick={() => unstage(c.itemId!)}>Remove</button>}
-              {!c.itemId && priced && form?.line !== i && <button type="button" className="btn sm rcaddbtn" aria-label={`Add to list: ${l.text}`} onClick={() => openForm(i)}>Add to list</button>}
+              {isNew && <button type="button" className="rclink rcunstage" aria-label={`Remove new item for ${l.text}`} onClick={() => unstage(c.itemId!)}>Remove</button>}
+              {!c.itemId && priced && form?.line !== i && <button type="button" className="rclink rcaddbtn" aria-label={`Add to list: ${l.text}`} onClick={() => openForm(i)}>Add to list</button>}
               <span className="rcqty">{l.qty}{unitOf(l.lines[0]!)}</span>
               <span className="rcnet">{l.discountCents > 0 && <s>{money(l.grossCents)}</s>}{money(l.netCents)}</span>
               {merged && (
@@ -209,19 +213,7 @@ export default function ReceiptSheet() {
         </div>
       )}
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>
-      <div className="rcfoot">
-        {canKeep && (
-          <label className="rckeep" htmlFor="rc-keep">
-            <input id="rc-keep" type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} />
-            <span>Keep a copy of this photo<small>Saved under Receipts. Only you can see it, and you can delete it any time.</small></span>
-          </label>
-        )}
-        <p className="note">{plan.items} {plan.items === 1 ? 'item' : 'items'}, {money(plan.itemsCents)}{plan.taxStore ? ` + ${plan.taxStore} tax ${money(plan.check.taxCents)}` : ''}{newCount > 0 ? `. ${newCount} new ${newCount === 1 ? 'item' : 'items'} will be added.` : ''}{plan.untick.length > 0 ? `. ${plan.untick.length} will move back to Shopping.` : ''}</p>
-        <div className="actions">
-          <button type="button" className="btn" id="rc-cancel" onClick={closeModal}>Cancel</button>
-          <button type="button" className="btn primary" id="rc-apply" disabled={nothing || !!nameError} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 && !plan.taxStore ? `Move ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'} back to Shopping` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
-        </div>
-      </div>
+      <ReceiptApplyBar plan={plan} newCount={newCount} disabled={nothing || !!nameError} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} />
     </Sheet>
   );
 }
