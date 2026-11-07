@@ -9,7 +9,7 @@ export const PATHS: readonly string[] = [
   'daily', 'daily/grocery', 'daily/grocery/get', 'daily/grocery/home', 'daily/grocery/receipts', 'daily/grocery/spend', 'daily/medical', 'daily/recipes',
   'daily/recipes/form', 'daily/recipes/library', 'daily/nutrition', 'daily/recipes/mine', 'daily/recipes/mine/sauce',
   'plans',
-  'program', 'program/a', 'program/b', 'program/exercises', 'program/stretches',
+  'program', 'program/a', 'program/b', 'program/compare', 'program/exercises', 'program/saved', 'program/stretches',
   'progress', ...PROGRESS_PAGES.map(p => `progress/${p}`),
   'settings', 'settings/accounts',
 ];

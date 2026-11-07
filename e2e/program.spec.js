@@ -52,7 +52,7 @@ const removeFromMenu = async (page, row, name) => {
 
 test('Remove in the ⋯ menu needs a second tap, and Undo puts it back in its place', async ({ page }) => {
   await page.click('#tab-program');
-  const add = page.locator('.edpanel:not(.lib) .edadd').getByRole('button', { name: '+ Add exercise' });
+  const add = page.locator('.edpanel:not(.lib) .edtools').getByRole('button', { name: '+ Add exercise' });
   const addBox = await add.boundingBox(); const firstBox = await rows(page).first().boundingBox();
   expect(addBox.y).toBeLessThan(firstBox.y); // above the day's first exercise
   const before = await names(page);

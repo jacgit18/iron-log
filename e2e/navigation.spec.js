@@ -60,10 +60,10 @@ test('a tab switch from an open page: Back returns to that page, address include
 
 test('the Program view is in the address and swaps in place', async ({ page }) => {
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library' }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect.poll(() => hash(page)).toBe('#/program/exercises');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Exercise library' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Exercises', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Programs' }).click();
   await expect.poll(() => hash(page)).toMatch(/^#\/program\/[ab]$/); // the program shown has its own address (e2e/boardUrls.spec.js)
 });
