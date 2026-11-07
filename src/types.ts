@@ -254,7 +254,8 @@ export interface GroceryShare { with: string[]; notMine?: true }
  *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list).
  *  `note` is an optional short comment ("the green ones"), left out when empty. `unit` is set for things sold by weight (meat, produce):
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare }
+/** `aliases`: receipt texts the person renamed to this item (brief receipt-rename-memory), kept as printed (spaces collapsed); a scan line whose text matches one (`aliasKey`) is mapped to the item before any model guess. At most MAX_ALIASES of up to MAX_ALIAS characters, one per key. */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare; aliases?: string[] }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
 /** `retired`: stores that were removed while a past month still uses them (a purchase pinned to the store, its tax, who paid): hidden from every list and picker, but their name stays valid so those months read as they did; adding a store with the same name brings it back (ADR 063). */
 export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[]; retired?: string[] }
