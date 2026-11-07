@@ -22,8 +22,8 @@ test('the line over the list, the tiles, the footer and the store line agree', a
   const m = /Paid \$([\d.]+) · Your share \$([\d.]+) · Owed to you \$([\d.]+)/.exec(money);
   expect(m, money).not.toBeNull();
   const [paid, share, owed] = [m[1], m[2], m[3]].map(dollars);
-  await page.getByRole('button', { name: /^Splitting this month/ }).click();
-  const split = page.getByRole('region', { name: 'Splitting this month' });
+  await page.getByRole('button', { name: /^Who owes who/ }).click();
+  const split = page.getByRole('region', { name: 'Who owes who' });
   const tile = async name => dollars(await split.getByText(name, { exact: true }).locator('xpath=following-sibling::dd').innerText());
   expect(await tile('Paid')).toBe(paid);
   expect(await tile('Your share')).toBe(share);

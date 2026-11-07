@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Quieter share controls (grocery sharing, ADR 059). A row says how it is split on the closed To get row (the store's group split too since 2026-10-23, never plain Just me), and while editing a store's rows show their share controls only after "Adjust shares for <store>" (or when the item has its own split).
+// Quieter share controls (grocery sharing, ADR 059). A row says how it is split on the closed Shopping row (the store's group split too since 2026-10-23, never plain Just me), and while editing a store's rows show their share controls only after "Adjust shares for <store>" (or when the item has its own split).
 // The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents, share) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...(share ? { share } : {}) });
 const CATALOGUE = {
@@ -24,7 +24,7 @@ const row = (page, name) => page.locator('li.gget', { has: page.getByLabel(`Got 
 
 test('a closed row says how it is split, the store’s group split included', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought');
   await expect(row(page, 'Toilet paper').locator('.gsplittag')).toHaveText('Me +2'); // follows BJ's group, and says so without being touched (amended 2026-10-23)
   await expect(row(page, 'Rice').locator('.gsplittag')).toHaveText('Me +1'); // its own split
   await expect(row(page, 'Chicken').locator('.gsplittag')).toHaveText('Packs split');
@@ -32,7 +32,7 @@ test('a closed row says how it is split, the store’s group split included', as
 
 test('while editing, an open row shows its share control only after Adjust shares, or when the item has its own split; a closed row says its own split in a chip', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await expect(page.getByLabel(/Shared with, for/)).toHaveCount(0); // edit rows start closed
   await expect(page.locator('li.gedit', { has: page.getByLabel('Have Rice', { exact: true }) }).locator('.gsplittag')).toHaveText('Me +1'); // its own split, said on the closed row
   await page.getByRole('button', { name: 'Expand Rice' }).click();
@@ -48,10 +48,10 @@ test('while editing, an open row shows its share control only after Adjust share
 
 test('Adjust shares is offered only when a group exists, and the edit screen has no accessibility violations', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await page.getByRole('button', { name: "Adjust shares for BJ's" }).click();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete c.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(c)); });
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await expect(page.getByRole('button', { name: /Adjust shares for/ })).toHaveCount(0);
 });

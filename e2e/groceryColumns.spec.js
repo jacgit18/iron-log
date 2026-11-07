@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// To get and At home: one column per store on a wide screen (3 from 1700px, 2 from 1100px, 1 below, never more columns than stores).
+// Shopping and Inventory: one column per store on a wide screen (3 from 1700px, 2 from 1100px, 1 below, never more columns than stores).
 // The fixed date is in September 2026. Three stores of different length; Aldi has one item bought.
 const item = (id, n, store, cents, over = {}) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...over });
 const CATALOGUE = {
@@ -30,9 +30,9 @@ const cols = async page => page.evaluate(() => [...document.querySelectorAll('.g
 })));
 const go = async (page, view) => { await page.click(`#groc-view-${view}`); };
 
-test('1920 wide: To get shows one column per store, each with its heading, total and Expand all', async ({ page }) => {
+test('1920 wide: Shopping shows one column per store, each with its heading, total and Show details', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'get');
+  await seed(page); await go(page, 'shopping');
   const [c] = await cols(page);
   expect(c.lefts.length).toBe(3); // BJ's, Aldi, Costco
   const first3 = c.tops.slice(0, 3);
@@ -41,16 +41,16 @@ test('1920 wide: To get shows one column per store, each with its heading, total
   expect(c.widths[0]).toBeLessThan(700);
   const bj = page.locator('.gstore', { hasText: "BJ's" }).first();
   await expect(bj.locator('.gstoremeta .note')).toContainText('3 to get');
-  await expect(bj.getByRole('button', { name: "Expand all in BJ's" })).toBeVisible();
+  await expect(bj.getByRole('button', { name: "Show details in BJ's" })).toBeVisible();
   const head = await box(bj.locator('.gstorehead')); const col = await box(bj);
   expect(head.x).toBeGreaterThanOrEqual(col.x); expect(head.x + head.width).toBeLessThanOrEqual(col.x + col.width + 1);
 });
 
 test('the controls above the stores stay full width', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'get');
+  await seed(page); await go(page, 'shopping');
   const [c] = await cols(page);
-  const bar = await box(page.locator('.gskiprow'));
+  const bar = await box(page.locator('.gtools'));
   const top = await box(page.locator('#groc-summary'));
   expect(bar.y + bar.height).toBeLessThanOrEqual(c.tops[0] + 1);
   expect(top.y).toBeLessThan(c.tops[0]);
@@ -60,7 +60,7 @@ test('the controls above the stores stay full width', async ({ page }) => {
 
 test('1280 wide has two columns and 375 wide has one', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await seed(page); await go(page, 'get');
+  await seed(page); await go(page, 'shopping');
   let [c] = await cols(page);
   expect(c.tops[0]).toBe(c.tops[1]); expect(c.lefts[1]).toBeGreaterThan(c.lefts[0]);
   expect(c.tops[2]).toBeGreaterThan(c.tops[0]); // the third wraps
@@ -75,16 +75,16 @@ test('1280 wide has two columns and 375 wide has one', async ({ page }) => {
 test('two stores at 1920 make two columns, not three with a hole', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await seed(page, { stores: ['Aldi', 'Costco'], items: [item('milk', 'Milk', 'Aldi', 399), item('salt', 'Salt', 'Costco', 150)] }, { lines: {}, pulled: [] });
-  await go(page, 'get');
+  await go(page, 'shopping');
   const [c] = await cols(page);
   expect(c.lefts.length).toBe(2);
   expect(c.widths[0]).toBeGreaterThan(800);
   expect(c.widths[0] + c.widths[1]).toBeGreaterThan(c.w - 40);
 });
 
-test('At home lays its stores out as columns too, and the Tab order follows the columns', async ({ page }) => {
+test('Inventory lays its stores out as columns too, and the Tab order follows the columns', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'home');
+  await seed(page); await go(page, 'inventory');
   const [c] = await cols(page);
   expect(c.lefts.length).toBe(3);
   expect(new Set(c.tops).size).toBe(1);
@@ -100,13 +100,13 @@ test('At home lays its stores out as columns too, and the Tab order follows the 
   expect(order).toEqual(names.map(n => `Have ${n}`));
 });
 
-test('editing At home keeps the columns, with Expand all inside each store and the Stores panel below', async ({ page }) => {
+test('editing Inventory keeps the columns, with Show details inside each store and the Stores panel below', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'home');
+  await seed(page); await go(page, 'inventory');
   await page.click('#groc-edit');
   const [c] = await cols(page);
   expect(new Set(c.tops).size).toBe(1);
-  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
+  await page.getByRole('button', { name: "Show details in BJ's" }).click();
   await expect(page.getByLabel('Note for Rice')).toBeVisible();
   const stores = await box(page.getByRole('heading', { name: 'Stores', exact: true }));
   expect(stores.x).toBeLessThan(c.lefts[1]);
@@ -115,7 +115,7 @@ test('editing At home keeps the columns, with Expand all inside each store and t
 test('a shared store keeps its group tag and money line inside its column', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await seed(page, { ...CATALOGUE, groups: [{ id: 'g1', n: 'Run', people: [{ id: 'sis', n: 'Sister' }], stores: ["BJ's"] }] }, { lines: { tp: { got: true } }, pulled: [] });
-  await go(page, 'get');
+  await go(page, 'shopping');
   const bj = page.locator('.gcols > .gstore', { hasText: "BJ's" }).first();
   await expect(bj.locator('.gtag')).toBeVisible();
   await expect(bj.locator('.gstoremoney')).toBeVisible();
@@ -127,20 +127,19 @@ test('a shared store keeps its group tag and money line inside its column', asyn
 
 test('a store that only has a removed item\'s purchase still gets its column', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page, { stores: ['Aldi', 'Costco'], items: [item('milk', 'Milk', 'Aldi', 399)] }, { lines: { gone: { got: true, qty: 1, cents: 300, store: 'Costco' } }, pulled: [] });
-  await go(page, 'get');
+  await seed(page, { stores: ['Aldi', 'Costco'], items: [item('milk', 'Milk', 'Aldi', 399)] }, { lines: { milk: { got: true }, gone: { got: true, qty: 1, cents: 300, store: 'Costco' } }, pulled: [] });
+  await go(page, 'bought'); // the purchase of a removed item shows on Bought
   const [c] = await cols(page);
   expect(c.lefts.length).toBe(2);
   expect(c.tops[0]).toBe(c.tops[1]);
   await expect(page.locator('.gcols > .gstore', { hasText: 'Bought here, then removed' })).toHaveCount(1);
 });
 
-test('the Bought this month fold uses columns as well', async ({ page }) => {
+test('the Bought view uses columns as well', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await seed(page, CATALOGUE, { lines: { tp: { got: true }, milk: { got: true }, salt: { got: true } }, pulled: [] });
-  await go(page, 'get');
-  await page.click('#groc-bought summary');
-  const fold = await page.evaluate(() => [...document.querySelectorAll('#groc-bought .gcols > .gstore')].map(e => Math.round(e.getBoundingClientRect().left)));
+  await go(page, 'bought');
+  const fold = await page.evaluate(() => [...document.querySelectorAll('.gcols > .gstore')].map(e => Math.round(e.getBoundingClientRect().left)));
   expect(fold.length).toBe(3);
   expect(new Set(fold).size).toBe(3);
 });
@@ -148,7 +147,7 @@ test('the Bought this month fold uses columns as well', async ({ page }) => {
 test('no axe violations and 44px targets in both views at 1920', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await seed(page);
-  for (const view of ['get', 'home']) {
+  for (const view of ['shopping', 'inventory']) {
     await go(page, view);
     const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     expect(violations.map(v => v.id)).toEqual([]);

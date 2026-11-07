@@ -15,7 +15,7 @@ const seed = async (page, stores = []) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: {}, pulled: [] }));
   }, stores);
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
 };
 const answer = (page, store) => page.route('**/api/scan/receipt', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'ok', receipt: { store, date: '2026-09-10', lines } } }) }));
 const stores = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).stores);

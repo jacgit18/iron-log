@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
 // Groceries, keyboard and screen reader details: focus stays put when an edit row opens, closes, moves store or is removed; accessible names carry the
-// visible words; aria-controls points at something that exists; a retired store still shows; To get's tile counts a removed item's bought line.
+// visible words; aria-controls points at something that exists; a retired store still shows; Shopping's tile counts a removed item's bought line.
 // The fixed date is in September 2026 (month 2026-09).
 const item = (id, n, store, cents, over = {}) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...over });
 const CAT = { stores: ["BJ's", 'Aldi'], items: [item('tp', 'Toilet paper', "BJ's", 2499), item('rice', 'Rice', "BJ's", 500), item('milk', 'Milk', 'Aldi', 399)] };
@@ -12,7 +12,7 @@ const seed = async (page, { cat = CAT, month = { lines: {}, pulled: [] }, edit =
   }, { cat, month });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  if (edit) { await page.click('#groc-view-home'); await page.click('#groc-edit'); }
+  if (edit) { await page.click('#groc-view-inventory'); await page.click('#groc-edit'); }
 };
 const focusedName = page => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName);
 
@@ -84,7 +84,7 @@ test('the Spent tile, the count and the tax hint include a bought line whose ite
   const month = { lines: { gone: { got: true, qty: 2, cents: 300, store: "BJ's" }, rice: { got: true } }, tax: { "BJ's": 60 }, pulled: [] };
   await seed(page, { month });
   const summary = page.locator('#groc-summary');
-  await expect(summary).toContainText('Got 2 of 4'); // rice, and the removed item's line, of three items plus the removed one
+  await expect(summary).toContainText('Bought 2 of 4'); // rice, and the removed item's line, of three items plus the removed one
   await expect(summary).toContainText('Spent $11.60 with tax'); // 500 + 2 x 300 + 60 tax
   await page.click('#groc-view-spend');
   await expect(page.locator('.groc')).toContainText('$11.60');

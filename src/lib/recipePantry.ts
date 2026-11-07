@@ -172,8 +172,8 @@ export function missingParts(status: PantryStatus): { already: GroceryItem[]; ad
 /** What the status line says after "Add missing to To get": what was added, what was on To get already, and why an add was refused. */
 export function addMissingMessage(r: { added: number; already: number; refused: string | null }): string {
   const parts = [
-    r.added ? `Added ${r.added} to To get.` : '',
-    r.already ? `${r.already} ${r.already === 1 ? 'is' : 'are'} on To get already.` : '',
+    r.added ? `Added ${r.added} to Shopping.` : '',
+    r.already ? `${r.already} ${r.already === 1 ? 'is' : 'are'} on Shopping already.` : '',
     r.refused ?? '',
   ].filter(Boolean);
   return parts.length ? parts.join(' ') : 'Everything is at home.';

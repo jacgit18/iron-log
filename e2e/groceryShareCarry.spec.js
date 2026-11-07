@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// A share set on To get is also the item's usual from this month on (admin-only grocery sharing, ADR 059). A month already bought keeps
+// A share set on Shopping is also the item's usual from this month on (admin-only grocery sharing, ADR 059). A month already bought keeps
 // the split it had. The fixed date is in September 2026, so the current month is 2026-09.
 const CATALOGUE = {
   stores: ["BJ's"],
@@ -8,7 +8,7 @@ const CATALOGUE = {
   groups: [{ id: 'g1', n: 'Costco run', people: [{ id: 'sis', n: 'Sister' }, { id: 'mom', n: 'Mom' }], stores: ["BJ's"] }],
 };
 const AUGUST = { lines: { chicken: { got: true } }, pulled: [] };
-const SEPTEMBER = { lines: {}, pulled: [], carried: '2026-08' }; // already seeded from August and ticks cleared: Chicken is back on To get (ADR 079)
+const SEPTEMBER = { lines: {}, pulled: [], carried: '2026-08' }; // already seeded from August and ticks cleared: Chicken is back on Shopping (ADR 079)
 const stored = (page, key) => page.evaluate(k => JSON.parse(localStorage.getItem('ironlog:' + k) || 'null'), key);
 
 test('a share set this month becomes the usual, and last month keeps the split it was bought with', async ({ page }) => {

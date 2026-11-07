@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// A Done button at the bottom of the Sharing panel (At home) closes it, after adding a group or person that was typed but not added yet.
+// A Done button at the bottom of the Sharing panel (Inventory) closes it, after adding a group or person that was typed but not added yet.
 // The fixed date is in September 2026.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const ITEMS = { stores: ["BJ's"], items: [item('tp', 'Toilet paper', "BJ's", 2499)] };
@@ -13,7 +13,7 @@ const open = async page => {
     localStorage.setItem('ironlog:grocery/main', JSON.stringify({ ...ITEMS, groups: [GROUP, OTHER] }));
   }, { ITEMS, GROUP, OTHER });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-home');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-inventory');
   await page.click('#groc-sharing');
 };
 const panel = page => page.getByRole('region', { name: 'Sharing' });

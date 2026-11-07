@@ -34,7 +34,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await expect(page.getByText('Per portion: 420 kcal · 22 g protein · 48 g carbs · 15 g fat')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /missing to To get/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /missing to Shopping/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' }).click();
   await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toBeVisible();

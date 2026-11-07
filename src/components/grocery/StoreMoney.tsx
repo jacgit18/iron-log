@@ -13,7 +13,7 @@ export function MonthMoney({ g, month, onOpen }: { g: Grocery; month: GroceryMon
   // Owed to you is said even at $0.00, except when you owe someone and nobody owes you; You owe is added only when another store's payer is someone else.
   const text = <>Paid {money(paid)} · Your share {money(yours)}{youOwe > 0 && owed === 0 ? '' : ` · Owed to you ${money(owed)}`}{youOwe > 0 ? ` · You owe ${money(youOwe)}` : ''}</>;
   // With a way to open the split section, the line is a button that opens it and scrolls there; without, plain text as before.
-  return onOpen ? <button type="button" className="gmoney gmoneybtn" id="groc-money" onClick={onOpen}>{text}<span className="vh"> Go to Splitting this month</span><Icon name="chevron-down" /></button> : <p className="note gmoney" id="groc-money">{text}</p>;
+  return onOpen ? <button type="button" className="gmoney gmoneybtn" id="groc-money" onClick={onOpen}>{text}<span className="vh"> Go to Who owes who</span><Icon name="chevron-down" /></button> : <p className="note gmoney" id="groc-money">{text}</p>;
 }
 
 export function StoreMoney({ g, month, store }: { g: Grocery; month: GroceryMonth; store: string }) {

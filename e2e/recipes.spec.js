@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Recipes on the Daily tab (ADR 084): yours, saved with the rest of your data, and checked against Groceries, At home. The Library needs an
+// Recipes on the Daily tab (ADR 084): yours, saved with the rest of your data, and checked against Groceries, Inventory. The Library needs an
 // account (it is searched on the server), so here it only asks you to sign in; the search is covered by server/catalog.test.ts.
 const recipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const noViolations = async page => {
@@ -51,9 +51,9 @@ test('a recipe needs a name and an ingredient', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveText('Add at least one ingredient.');
 });
 
-test('ingredients are checked against At home, and Add missing puts the rest on To get', async ({ page }) => {
+test('ingredients are checked against Inventory, and Add missing puts the rest on Shopping', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await page.fill('#groc-name', 'Garlic'); await page.click('#groc-add');
   await expect(page.locator('#groc-name')).toHaveValue('');
   await page.click('#groc-edit');
@@ -64,19 +64,19 @@ test('ingredients are checked against At home, and Add missing puts the rest on 
   await expect(page.locator('.rc-ing', { has: page.getByText('2 cloves garlic') }).locator('.rc-state')).toHaveText('Have');
   await expect(page.locator('.rc-ing', { has: page.getByText('fresh parsley') }).locator('.rc-state')).toHaveText('Missing');
   await noViolations(page);
-  await page.getByRole('button', { name: 'Add 1 missing to To get' }).click();
-  await expect(page.getByText('Added 1 to To get.')).toBeVisible();
-  await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.getByRole('button', { name: 'Add 1 missing to Shopping' }).click();
+  await expect(page.getByText('Added 1 to Shopping.')).toBeVisible();
+  await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
   await expect(page.getByText('fresh parsley')).toBeVisible();
 });
 
-test('with nothing in Groceries yet, every ingredient is missing and Add missing still puts them on To get', async ({ page }) => {
+test('with nothing in Groceries yet, every ingredient is missing and Add missing still puts them on Shopping', async ({ page }) => {
   await recipes(page);
   await write(page, 'Plain rice', ['rice', 'salt']);
-  await expect(page.getByText('Add items under Groceries, At home to see what you have.')).toBeVisible();
-  await page.getByRole('button', { name: 'Add 2 missing to To get' }).click();
-  await expect(page.getByText('Added 2 to To get.')).toBeVisible();
-  await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await expect(page.getByText('Add items under Groceries, Inventory to see what you have.')).toBeVisible();
+  await page.getByRole('button', { name: 'Add 2 missing to Shopping' }).click();
+  await expect(page.getByText('Added 2 to Shopping.')).toBeVisible();
+  await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
   await expect(page.getByText('rice', { exact: true })).toBeVisible();
 });
 

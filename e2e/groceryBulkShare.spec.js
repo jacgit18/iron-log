@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// Select mode on To get (brief grocery-bulk-share): pick many items, set who shares them once, Undo. The fixed date is in September 2026.
+// Select mode on Shopping (brief grocery-bulk-share): pick many items, set who shares them once, Undo. The fixed date is in September 2026.
 const CATALOGUE = {
   stores: ['Costco', "Trader Joe's"],
   items: [
@@ -50,7 +50,7 @@ test('select all in a store, share with one person, the split tags follow, and U
   expect((await stored(page, 'grocery/2026-09')).lines.beef.packShares).toEqual([{ with: ['sam'] }, null]);
 });
 
-test('the usual box changes the item’s usual split on At home, and Done selecting clears the picks', async ({ page }) => {
+test('the usual box changes the item’s usual split on Inventory, and Done clears the picks', async ({ page }) => {
   await open(page);
   await page.click('#groc-select');
   await page.getByLabel('Select Eggs').check();
@@ -62,7 +62,7 @@ test('the usual box changes the item’s usual split on At home, and Done select
   await expect.poll(() => stored(page, 'grocery/main').then(g => g.items.find(i => i.id === 'eggs').share)).toEqual({ with: ['alex'] });
   await page.click('#groc-select');
   await page.getByLabel('Select Oat milk').check();
-  await page.click('#groc-select'); // Done selecting
+  await page.click('#groc-select'); // Done
   await page.click('#groc-select');
   await expect(page.getByRole('region', { name: 'Selected items' })).toContainText('0 selected');
 });

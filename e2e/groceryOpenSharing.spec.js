@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Reaching grocery sharing (ADR 059) without Edit: a Sharing button beside Edit on At home opens the groups panel above the list, and
+// Reaching grocery sharing (ADR 059) without Edit: a Sharing button beside Edit on Inventory opens the groups panel above the list, and
 // a one-line prompt offers it until a group exists. The fixed date is in September 2026.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const ITEMS = { stores: ["BJ's"], items: [item('tp', 'Toilet paper', "BJ's", 2499)] };
@@ -13,7 +13,7 @@ const open = async (page, { admin = true, group = false } = {}) => {
     localStorage.setItem('ironlog:grocery/main', JSON.stringify(group ? { ...ITEMS, groups: [GROUP] } : ITEMS));
   }, { admin, group, ITEMS, GROUP });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-home');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-inventory');
 };
 const panel = page => page.getByRole('region', { name: 'Sharing' });
 
@@ -28,7 +28,7 @@ test('with no group, a prompt and the Sharing button open the groups panel witho
   await expect(page.locator('.gshareprompt')).toHaveCount(0);
   await page.getByLabel('New group', { exact: true }).fill('Home');
   await page.getByRole('button', { name: 'Add group' }).click();
-  await page.click('#groc-sharing'); // Close sharing
+  await page.click('#groc-sharing'); // Close sharing groups
   await expect(panel(page)).toHaveCount(0);
   await expect(page.locator('.gshareprompt')).toHaveCount(0); // a group exists
 });
