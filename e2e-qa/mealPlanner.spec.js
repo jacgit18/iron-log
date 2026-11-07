@@ -31,7 +31,7 @@ test('S-09: the plan\'s grocery button adds each missing ingredient once, and a 
   const { context, page } = await signInAs(browser, 'meal-planner');
   await open(page);
   const plan = page.getByRole('region', { name: 'Diet' }).locator('.dt-plan');
-  const button = plan.getByRole('button', { name: 'Add missing ingredients to To get' });
+  const button = plan.getByRole('button', { name: 'Add missing ingredients to Shopping' });
   const rows = async () => { await page.click('#daily-grocery'); const n = await page.locator('.gget').count(); await page.click('#daily-supplements'); return n; };
   await expect(button).toBeVisible({ timeout: 30_000 });
   const before = await rows();
@@ -41,7 +41,7 @@ test('S-09: the plan\'s grocery button adds each missing ingredient once, and a 
   expect(added).toBeGreaterThan(0);
   expect(await rows()).toBe(before + added);
   await button.click();
-  await expect(plan.getByRole('status')).toContainText(/\d+ (is|are) on To get already\./);
+  await expect(plan.getByRole('status')).toContainText(/\d+ (is|are) on Shopping already\./);
   expect(await rows()).toBe(before + added);
   await context.close();
 });
