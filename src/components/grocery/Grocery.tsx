@@ -578,7 +578,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   );
   if (!rail) return page;
   return ( // the wrapper stays while editing (one column, no rail), so pressing Edit does not remount the page
-    <div className={editing ? 'glayout gsolo' : 'glayout'}>
+    <div className={editing || !g.items.length ? 'glayout gsolo' : 'glayout'}>
       <div className="gmain">{page}</div>
       {!editing && g.items.length > 0 && <InventoryRail have={haveCount(g.items, hasIt)} total={g.items.length} chips={chips} value={chip} onChange={setChipPick} />}
     </div>
