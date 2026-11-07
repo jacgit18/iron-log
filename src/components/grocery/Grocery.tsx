@@ -5,10 +5,10 @@ import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, lineTotal, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { itemHistory, lastBoughtText } from '../../lib/itemHistory.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
-import { columnsClass } from '../../lib/groceryColumns.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { allIds, allPicked, boughtRows, storeIds, viewCounts } from '../../lib/groceryBought.js';
+import { isCollapsed, toggleFolded, unfoldGrown } from '../../lib/groceryCollapse.js';
 import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, haveCount, hasNoPrice, itemsText, resolveChip, showChips } from '../../lib/groceryChips.js';
 import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import { dailyFix, pageOf } from '../../lib/route.js';
@@ -428,12 +428,12 @@ function EditRow({ item, g, have, onHave, adjust, open, onOpen, onMove, onRemove
 
 // While editing, the add form floats at the bottom of the screen with Done beside it, so adding an item or finishing never means
 // scrolling the whole list. Name and Add are always there; store, count, price, unit and note open under "More".
-function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
+function EditDock({ g, onDone, onAdded }: { g: GroceryT; onDone: () => void; onAdded: () => void }) {
   const [f, setF] = useState(EMPTY_FORM); const [err, setErr] = useState<string | null>(null); const [more, setMore] = useState(false);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const m = useAppStore.getState().addGroceryItem(f);
-    setErr(m); if (!m) { setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
+    setErr(m); if (!m) { onAdded(); setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
   };
   const finish = () => { if (f.n.trim()) { setErr('Add or clear this item first.'); document.getElementById('groc-name')?.focus(); return; } onDone(); }; // typed text is kept, not dropped by Done
   const { mine, suggested } = storeChoices(g);
@@ -500,34 +500,44 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   const [sharingOpen, setSharingOpen] = useState(false); // the Sharing panel (groups and who is in them) above the list, reachable without Edit
   const [sharingSaved, setSharingSaved] = useState(false); // Done in the Sharing panel closed it: say so until it is opened again
   const [openEdit, setEdits, clearEdits] = useIdSet(); // items whose edit form is open; every item starts closed each time Edit is pressed
-  const setEditMode = (on: boolean) => { setEditing(on); clearEdits(); };
+  const [folded, setFolded] = useState<Set<string>>(new Set()); // stores folded to their header while editing; every store starts open each time Edit is pressed
+  const setEditMode = (on: boolean) => { setEditing(on); clearEdits(); setFolded(new Set()); };
   const [adjusting, setAdjust] = useIdSet(); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)
   const toggleAdjust = (store: string) => setAdjust([store], !adjusting.has(store));
   const month = months[nowKey] || emptyMonth();
   const [q, setQ] = useState('');
   const [sort, setSort] = useSortChoice('grocery-home', HOME_SORTS, DEFAULT_GROCERY_SORT);
-  // A row being edited keeps its place (A to Z), so it does not jump while its name, price or tick changes; the sort and the search apply when you are not editing.
+  // A row being edited keeps its place (A to Z), so it does not jump while its name, price or tick changes: the search applies while editing (a row that is open stays listed, so renaming it does not drop it), the sort does not.
   const facts = { cents: (i: GroceryItem) => (i.cents == null ? null : lineTotal(i.qty, i.cents)), ticked: (i: GroceryItem) => haveOf(i, month) };
-  const shown = editing ? byStore(g, g.items, true) : byStore(g, filterGroceryItems(g.items, q), true).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
+  const hits = new Set(filterGroceryItems(g.items, q).map(i => i.id));
+  const shown = editing ? byStore(g, g.items.filter(i => hits.has(i.id) || openEdit.has(i.id)), true) : byStore(g, filterGroceryItems(g.items, q), true).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
   // A row moved to another store, or removed, drops keyboard focus to the page: keep it on the row's store select, or after a removal on the next row's arrow
   // (else the one before, else the Edit/Done button).
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
   const afterRemoved = (id: string) => {
-    const order = byStore(g, g.items, true).flatMap(grp => grp.items.map(i => i.id));
+    const order = listed.filter(grp => !isCollapsed(folded, grp.store, q)).flatMap(grp => grp.items.map(i => i.id)); // only rows on screen can take focus: not another chip's, a search miss or a folded store
     const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
     focusAfter.current = next ? `groc-edit-arrow-${next}` : 'groc-edit';
   };
   const hasIt = (it: GroceryItem) => haveOf(it, month);
-  // Store chips (not while editing): All, and one per store with its item count. Counts ignore the search; a chip whose store has no items falls back to All.
+  // Store chips (kept across Edit and Done): All, and one per store with its item count. Counts ignore the search; a chip whose store has no items falls back to All.
   const rail = useMinWidth(1100);
   const homeGroups = byStore(g, g.items, true);
   const chips = chipsOf(homeGroups);
   const [chipPick, setChipPick] = useState(ALL_CHIP);
   const chip = resolveChip(chipPick, homeGroups);
-  const listed = editing ? shown : chipGroups(shown, chip);
-  const withChips = !editing && showChips(chips);
+  const listed = chipGroups(shown, chip);
+  const withChips = showChips(chips);
+  const counts = new Map(homeGroups.map(grp => [grp.store, grp.items.length] as const));
+  const countsKey = [...counts].join('|');
+  const prevCounts = useRef(counts);
+  useEffect(() => { // an item added to a folded store opens it, so the new row is seen
+    setFolded(f => (f.size ? unfoldGrown(f, prevCounts.current, counts) : f));
+    prevCounts.current = counts;
+  }, [countsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- `counts` is rebuilt every render; its text is the real dependency
   const setHave = (it: GroceryItem, on: boolean) => { focusAfter.current = `groc-have-${it.id}`; useAppStore.getState().setGroceryHave(nowKey, it.id, on); }; // a sorted row may move: keep focus on its box
+  const railOn = rail && g.items.length > 0;
   const page = (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead gsharehead">
@@ -551,36 +561,42 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
           { id: 'groc-tile-recipes', label: 'Browse recipes', hint: 'Add what a recipe needs to your list', onClick: () => { useAppStore.getState().setDailyView('recipes'); navigate(dailyFix('daily', 'recipes') ?? 'daily', 'replace'); } },
         ]} />
       )}
-      {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
-      {!editing && !!q.trim() && !listed.length && <NoMatch q={q} />}
+      {g.items.length > 0 && (editing ? <GroceryBar q={q} onQ={setQ} /> : <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />)}
+      {!!q.trim() && !listed.length && <NoMatch q={q} />}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
-      <div className={editing ? `gcols ${columnsClass(shown.length)}` : `gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
+      <div className={`gshoplist${chip !== ALL_CHIP && !editing ? ' gcompact' : ''}`}>
       {listed.map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead">
-            <h3 id={`groc-home-h-${gi}`}>{grp.label}{grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3>
+            <h3 id={`groc-home-h-${gi}`}>
+              {editing
+                ? <button type="button" className="gfold" id={`groc-fold-${gi}`} aria-expanded={!isCollapsed(folded, grp.store, q)} aria-label={`${grp.label}, ${grp.items.length} ${grp.items.length === 1 ? 'item' : 'items'}`} onClick={() => setFolded(f => toggleFolded(f, grp.store))}><Icon name={isCollapsed(folded, grp.store, q) ? 'chevron-down' : 'chevron-up'} />{grp.label}</button>
+                : grp.label}
+              {grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}
+            </h3>
             {editing
-              ? <ExpandAll label={grp.label} all={grp.items.every(i => openEdit.has(i.id))} onToggle={on => setEdits(grp.items.map(i => i.id), on)} />
+              ? <span className="gstoremeta"><span className="note">{grp.items.length} {grp.items.length === 1 ? 'item' : 'items'}</span>{!isCollapsed(folded, grp.store, q) && <ExpandAll label={grp.label} all={grp.items.every(i => openEdit.has(i.id))} onToggle={on => setEdits(grp.items.map(i => i.id), on)} />}</span>
               : <span className="gstoremeta"><span className="note">{itemsText(grp.items.length, haveCount(grp.items, hasIt))}</span></span>}
           </div>
-          {editing && hasSharing(g) && (
+          {editing && hasSharing(g) && !isCollapsed(folded, grp.store, q) && (
             <button type="button" className="btn sm ghost gadjust" aria-pressed={adjusting.has(grp.store)} onClick={() => { if (!adjusting.has(grp.store)) setEdits(grp.items.map(i => i.id), true); toggleAdjust(grp.store); }}>
               {adjusting.has(grp.store) ? `Done adjusting ${grp.label}` : `Adjust shares for ${grp.label}`}
             </button>
           )}
-          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} last={lastBoughtText(it, itemHistory(it, months), nowKey)} />))}</ul>
+          <ul className="glist" hidden={editing && isCollapsed(folded, grp.store, q)}>{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; setChipPick(ALL_CHIP); }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} last={lastBoughtText(it, itemHistory(it, months), nowKey)} />))}</ul>
         </section>
       ))}
       </div>
-      {editing && <Stores g={g} />}
-      {editing && <EditDock g={g} onDone={() => setEditMode(false)} />}
+      {editing && !railOn && <Stores g={g} />}
+      {editing && <EditDock g={g} onDone={() => setEditMode(false)} onAdded={() => { setChipPick(ALL_CHIP); setQ(''); }} />}
     </div>
   );
   if (!rail) return page;
-  return ( // the wrapper stays while editing (one column, no rail), so pressing Edit does not remount the page
-    <div className={editing || !g.items.length ? 'glayout gsolo' : 'glayout'}>
+  return ( // the wrapper stays while editing (the rail holds the Stores panel), so pressing Edit does not remount the page
+    <div className={railOn ? 'glayout' : 'glayout gsolo'}>
       <div className="gmain">{page}</div>
-      {!editing && g.items.length > 0 && <InventoryRail have={haveCount(g.items, hasIt)} total={g.items.length} chips={chips} value={chip} onChange={setChipPick} />}
+      {railOn && editing && <aside className="grail" aria-label="Manage stores"><Stores g={g} /></aside>}
+      {railOn && !editing && <InventoryRail have={haveCount(g.items, hasIt)} total={g.items.length} chips={chips} value={chip} onChange={setChipPick} />}
     </div>
   );
 }
