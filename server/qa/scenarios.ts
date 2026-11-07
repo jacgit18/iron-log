@@ -1063,12 +1063,13 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
       'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
-      'In the sheet tick "Also make Costco the usual store for these items" and press Apply.',
+      'In the sheet read the line under the Also make Costco box (it starts unticked because the items already have usual stores), then tick "Also make Costco the usual store for these items" and press Apply.',
       'Look at the notice and At home, then press Undo.',
     ],
     expected: [
       'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
       'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
+      'Before you tick the box the line reads "At home stays as it is. Tick the box to list these under Costco there."; ticked, it reads "At home will list these under Costco."',
     ],
   },
   {
