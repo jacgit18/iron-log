@@ -16,6 +16,7 @@ const ORIGIN = 'http://127.0.0.1:3103';
 
 export default defineConfig({
   testDir: 'e2e-qa',
+  testIgnore: '**/qaMode*.spec.js', // those run on the QA-mode server (playwright.qaMode.config.js)
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
