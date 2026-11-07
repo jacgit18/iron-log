@@ -40,14 +40,23 @@ test('S-78: the real pages and files still open, a missing file is a plain 404, 
   await context.close();
 });
 
-test('S-78: /privacy without .html is Page not found on a first visit', async ({ browser }) => {
-  // The other half of the scenario (an already active service worker may still open the Privacy Policy) is not walked: the service worker never became
-  // ready on this test server, so it is left to a real browser.
+test('S-78: /privacy without .html is Page not found on a first visit, and with the service worker in control it opens the Privacy Policy', async ({ browser }) => {
   const first = await browser.newContext({ serviceWorkers: 'block' });
   const fresh = await first.newPage();
   expect((await fresh.goto('/privacy')).status()).toBe(404);
   await expect(fresh.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await first.close();
+  // The app registers its service worker only once it is signed in and showing (UpdateBanner), so this walk signs in with the service worker allowed.
+  const { context, page } = await signInAs(browser, 'new-user', { serviceWorkers: 'allow' });
+  await expect(page.locator('#account-badge')).toBeVisible({ timeout: 30_000 });
+  // Wait for the worker with a limit of its own, so a worker that never registers fails with a clear message and not at the whole-test timeout.
+  const ready = await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then(() => true), new Promise(r => setTimeout(() => r(false), 20_000))]));
+  expect(ready, 'the service worker became ready after sign-in').toBe(true);
+  await page.goto('/privacy');
+  expect(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the service worker controls /privacy').toBe(true); // so this is the worker's answer, not the server's 404
+  // src/sw.ts precaches the pages with clean URLs, so under the worker /privacy is served from privacy.html: the scenario says it "may still open".
+  await expect(page.getByRole('heading', { name: 'Privacy Policy' }).first()).toBeVisible();
+  await context.close();
 });
 
 test('S-100: the sitemap and icon load, the plain pages have their own titles, and the app tab says Loadbearer', async ({ browser }) => {
