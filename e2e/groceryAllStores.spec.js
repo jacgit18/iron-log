@@ -20,7 +20,8 @@ const seed = async (page, allStores) => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const openSplit = page => page.getByRole('button', { name: /^Who owes who/ }).click();
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes).
+const openSplit = async page => { await page.click('#groc-view-bought'); await page.getByRole('button', { name: /^Who owes who/ }).click(); };
 const block = page => page.getByRole('region', { name: 'Across all stores' });
 
 test('with All stores on, the block nets each person over both stores and the cards stay', async ({ page }) => {

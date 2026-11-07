@@ -1644,6 +1644,52 @@ export const SCENARIOS: readonly Scenario[] = [
       'Sharing groups and Edit wrap under each other instead of running off the edge.',
     ],
   },
+  {
+    id: 'S-126', feature: 'Groceries views', title: 'Store chips filter Shopping, and All is one column with no empty blocks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
+    steps: [
+      'Sign in as Grocery shopper and open Groceries, Shopping. Read the chips above the list (All and one per store, each with a count).',
+      'Press a store chip, then look at the list. Press All.',
+      'Make the window about 1900 px wide, then about 390 px wide, and look at the list each time.',
+    ],
+    expected: [
+      'The chips read All n, then each store with how many items are still to get.',
+      'A store chip shows only that store, with taller rows and no split tags; All shows every store, one under the other.',
+      'At both widths the stores are in one column with no empty block beside a short store. At 1100 px and wider a rail on the right shows the summary and a Stores list that also picks the chip.',
+    ],
+  },
+  {
+    id: 'S-127', feature: 'Groceries views', title: 'Who owes who is the first row on Bought and is gone from Shopping', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
+    steps: [
+      'Tick two Costco items on Shopping. Look for Who owes who on Shopping.',
+      'Open Bought and look at the top of the page. Press the Who owes who row.',
+    ],
+    expected: [
+      'Shopping has no Who owes who row and no money line over the list.',
+      'Bought starts with a closed Who owes who row that says what is outstanding; pressing it opens the split card in place.',
+    ],
+  },
+  {
+    id: 'S-128', feature: 'Groceries views', title: 'Row details start open on a computer and closed on a phone, and the More menu choice sticks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', device: true, edge: true,
+    steps: [
+      'On a computer open Shopping and look at the rows. Then open the same page on a phone.',
+      'On the phone press the ... menu and choose "Show details on all rows". Reload the page.',
+    ],
+    expected: [
+      'On the computer every row shows its count, price, Move to and Shared with. On the phone every row is closed.',
+      'After the choice every row on the phone is open, and it is still open after the reload (the choice is kept on that phone only).',
+    ],
+  },
+  {
+    id: 'S-129', feature: 'Groceries views', title: 'A ticked item with no price offers Add price, and Bought shows an Add price chip', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', edge: true,
+    steps: [
+      'On Shopping tick an item that has no price (its count says "no price").',
+      'Press Add price in the notice. Then look at the item on Bought.',
+    ],
+    expected: [
+      'The notice reads "Bought <item>. It has no price yet." with Undo, Add price and Dismiss.',
+      'Add price opens Bought with that item\'s price field open. A bought item with no price shows an Add price chip in place of its count and price.',
+    ],
+  },
 ];
 
 

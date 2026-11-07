@@ -2,7 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // The split card sits folded at the bottom of Shopping; these specs read it, so each opens it first (a page with no split section has nothing to open).
-const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes), so opening it goes there first.
+const openSplit = async page => { await page.click('#groc-view-bought'); const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
 
 // A store's tax for the month, typed in dollars from the receipt (a Tax checkbox and an amount under the store's name on Shopping). It is added to what
 // you spent there, and the percent it comes to on the ticked items is shown beside it. The fixed date is in September 2026 (month 2026-09).

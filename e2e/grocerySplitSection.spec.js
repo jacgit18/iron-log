@@ -15,7 +15,7 @@ const seed = async page => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(MONTH));
   }, { CATALOGUE, MONTH });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
 };
 const toggle = page => page.getByRole('button', { name: /^Who owes who/ });
 
@@ -46,7 +46,7 @@ test('the money line over the list opens it and brings it into view', async ({ p
 test('with nothing bought there is no section, and with no group no money line either', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(({ CATALOGUE }) => { localStorage.setItem('ironlog:grocery/main', JSON.stringify(CATALOGUE)); }, { CATALOGUE });
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
   await expect(toggle(page)).toHaveCount(0);
   await expect(page.locator('#groc-money')).toHaveCount(0);
 });

@@ -2,7 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // The split card may sit folded at the bottom of Shopping (a separate change); open it when it does, so this spec reads the card either way.
-const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes), so opening it goes there first.
+const openSplit = async page => { await page.click('#groc-view-bought'); const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
 
 // The split card's settled marks (ADR 062): every owed row can be marked paid (or sent) once the money has moved outside the app; amounts never change.
 // The fixed date is in September 2026, so the month below is 2026-09. $24.99 of toilet paper at BJ's, split three ways: $8.33 each (your share is $8.33 too).

@@ -19,7 +19,7 @@ const seed = async (page, { admin = true, soapGot = false, payer = null } = {}) 
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ ...(soapGot ? { ...MONTH, lines: { ...MONTH.lines, soap: { got: true } } } : MONTH), ...(payer ? { payer } : {}) }));
   }, { admin, soapGot, payer, CATALOGUE, MONTH });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
 };
 
 test('one line over the list says what you paid, your share and what is owed to you', async ({ page }) => {
@@ -40,9 +40,10 @@ test('a shared store with things still to get shows its money under its heading,
   await expect(page.locator('.gstoremoney')).toHaveCount(1); // the fold's BJ's heading does not repeat it
 });
 
-test('a shared store with nothing left to get shows its money in the Bought this month fold', async ({ page }) => {
+test('a shared store with nothing left to get shows its money on Bought', async ({ page }) => {
   await seed(page, { soapGot: true });
-  await expect(page.locator('.gstoremoney')).toBeHidden(); // inside the folded section
+  await page.click('#groc-view-shopping');
+  await expect(page.locator('.gstoremoney')).toHaveCount(0); // that store has nothing left to get, so Shopping has no card for it
   await page.click('#groc-view-bought');
   await expect(page.locator('.gstoremoney')).toBeVisible();
 });
@@ -51,7 +52,7 @@ test('with no group there is no money line, and the page has no accessibility vi
   await seed(page);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.evaluate(() => { const g = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete g.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(g)); });
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
   await expect(page.locator('#groc-money')).toHaveCount(0);
   await expect(page.locator('.gstoremoney')).toHaveCount(0);
 });
