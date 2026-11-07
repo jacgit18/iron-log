@@ -51,13 +51,14 @@ export type ScenarioFeature =
   | 'Moved-card tag'
   | 'Search hiding'
   | 'Security headers'
-  | 'Price history';
+  | 'Price history'
+  | 'Program desktop layout';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout',
 ];
 
 export interface Scenario {
@@ -1552,6 +1553,45 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'While the timer bar shows, there is no + New program pill; after Stop it comes back.',
       'The long name wraps inside the header card, the page does not scroll sideways and the A | B switch stays on screen.',
+    ],
+  },
+  {
+    id: 'S-119', feature: 'Program desktop layout', title: 'On a computer, Add exercise and Copy day sit in the day heading and the days are one row of tabs', persona: 'superset-builder', brief: 'program-tab-desktop-layout',
+    steps: [
+      'On a computer (a window at least 1280 px wide), open Program. Look at the day heading "Program A · Day 1" and the row under the header card.',
+      'Press Copy day…, pick another day and press Copy. Then press Undo on the notice.',
+      'Press a different day tab, then press + Add exercise.',
+    ],
+    expected: [
+      'One row of tabs Day 1 to Day 7 sits under the header card, each with its exercise count (or "rest"); there is no arrow or dropdown. The Day label field is under the heading, and Copy day… and + Add exercise are normal-height buttons at the right of the heading.',
+      'Copy day… opens the day picker under the Day label and then goes away; Copy shows the Copied notice and Undo takes it back.',
+      'The day tab you pressed is highlighted and the heading names that day; + Add exercise opens the same add sheet as before.',
+    ],
+  },
+  {
+    id: 'S-120', feature: 'Program desktop layout', title: 'On a computer, Saved and Compare are their own tabs with addresses', persona: 'superset-builder', brief: 'program-tab-desktop-layout', edge: true,
+    steps: [
+      'On a computer open Program and read the tab strip. Scroll to the bottom of Programs.',
+      'Press Saved. Type a name in "Save Program A as" and press Save a copy; do it twice with different names; then type part of one name in the search box and clear it.',
+      'Press Compare, then press Back, then reload the page on the Compare tab.',
+    ],
+    expected: [
+      'The tabs read Programs, Exercises, Stretches, Saved, Compare, each with a short line under it. Programs ends after the day and its note: no Saved programs and no Compare strip below it.',
+      'Saved shows the Save a copy form on top, the search and sort, and one row per program with Put on Board, Edit, Archive and Delete; the search keeps only names that contain what you typed and says "No saved program matches" when none does. The address reads #/program/saved.',
+      'Compare opens full width with the two program pickers and no toggle, its address is #/program/compare, Back returns to Saved, and a reload stays on Compare.',
+    ],
+  },
+  {
+    id: 'S-121', feature: 'Program desktop layout', title: 'On a phone Program keeps its three tabs and day stepper, and Compare sits above Saved programs', persona: 'superset-builder', brief: 'program-tab-desktop-layout', edge: true,
+    steps: [
+      'On a phone (or a window under 700 px wide) open Program and read the tab strip and the day control.',
+      'Scroll to the end of Programs and read the order of the last two sections.',
+      'Type #/program/saved at the end of the address and open it.',
+    ],
+    expected: [
+      'The tabs read Programs, Exercise library, Stretch library. The day control is the arrows and the "Day N of 7" dropdown, as before; there are no Day tabs and + Add exercise is full width.',
+      'Compare programs (a collapsed strip) comes before Saved programs.',
+      'The address opens Programs, since a phone has no Saved tab.',
     ],
   },
 ];

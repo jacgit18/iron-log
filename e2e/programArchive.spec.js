@@ -1,10 +1,10 @@
 import { test, expect } from './fixtures.js';
 
 // Program library > Archive: a saved program can be put away and restored. A unit test cannot see the list, the collapsed section or the Move sheet.
+// Saved programs is the Saved tab on a computer (brief program-tab-desktop-layout), so these open it by its address.
 const openPrograms = async page => {
-  await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Programs', exact: true }).click();
-  await expect(page.locator('#ed-title')).toBeVisible();
+  await page.goto('/#/program/saved');
+  await expect(page.getByRole('heading', { name: 'Saved programs' })).toBeVisible();
 };
 const save = async (page, name) => {
   await page.getByRole('textbox', { name: /^Save Program A as/ }).fill(name);

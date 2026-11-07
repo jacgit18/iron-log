@@ -46,6 +46,7 @@ test('Not yet keeps a starter in the library and opens it with its cards, leavin
   await expect(page.locator('.edrow').first()).toBeVisible(); // Day 1 has the starter's cards
   await expect(page.getByRole('group', { name: 'Program to edit' }).getByRole('button')).toHaveCount(2); // a saved program never adds a third tab: only A and B
   await page.getByRole('group', { name: 'Program to edit' }).getByRole('button', { name: 'Program A' }).click();
+  await page.getByRole('group', { name: 'Program tab view' }).getByRole('button', { name: 'Saved', exact: true }).click(); // Saved programs is its own tab on a computer
   await expect(page.locator('.lib .edrow', { hasText: 'Push / Pull / Legs · 3 days' })).toBeVisible();
 });
 

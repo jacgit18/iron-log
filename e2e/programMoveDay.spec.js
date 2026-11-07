@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 const day = n => ({ name: `Day ${n}`, exact: true });
-const open = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', day(n)).click(); };
+const open = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: new RegExp(`^Day ${n}`) }).click(); };
 const names = page => page.locator('.edpanel:not(.lib) .edrow .edmain b').allTextContents();
 const firstRow = page => page.locator('.edpanel:not(.lib) .edrow').first();
 const more = row => row.getByRole('button', { name: /^More actions for / });

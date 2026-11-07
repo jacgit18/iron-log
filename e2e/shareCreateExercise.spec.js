@@ -16,7 +16,7 @@ test('Create new exercise: the title fills the name, the link is saved, and it i
   await expect(page.getByText('Saved as the video link for Cable Lateral Raise.')).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect(page.locator('.exlib .exrow .exmain b', { hasText: 'Cable Lateral Raise' })).toBeVisible();
 });
 
@@ -60,6 +60,6 @@ test('a catalog exercise found by the share sheet joins the library with the lin
   await expect(page.getByText('Saved as the video link for Cable Fly.')).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect(page.locator('.exlib .exrow .exmain b', { hasText: 'Cable Fly' })).toBeVisible();
 });

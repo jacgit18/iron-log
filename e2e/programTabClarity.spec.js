@@ -40,13 +40,15 @@ test.describe('on a computer', () => {
     await expect(page.getByRole('heading', { name: 'Create a program' })).toBeVisible();
   });
 
-  test('the three sections each say what they hold', async ({ page }) => {
+  test('the five sections each say what they hold', async ({ page }) => {
     await openPrograms(page);
     const tabs = page.getByRole('group', { name: 'Program tab view' });
     await expect(tabs.getByRole('button', { name: 'Programs', exact: true })).toHaveAccessibleDescription(/weekly program/);
-    await expect(tabs.getByRole('button', { name: 'Exercise library', exact: true })).toHaveAccessibleDescription(/Every exercise/);
-    await expect(tabs.getByRole('button', { name: 'Stretch library', exact: true })).toHaveAccessibleDescription(/Stretches/);
-    await tabs.getByRole('button', { name: 'Stretch library' }).click();
+    await expect(tabs.getByRole('button', { name: 'Exercises', exact: true })).toHaveAccessibleDescription(/Every exercise/);
+    await expect(tabs.getByRole('button', { name: 'Stretches', exact: true })).toHaveAccessibleDescription(/Stretches/);
+    await expect(tabs.getByRole('button', { name: 'Saved', exact: true })).toHaveAccessibleDescription(/Programs you keep/);
+    await expect(tabs.getByRole('button', { name: 'Compare', exact: true })).toHaveAccessibleDescription(/side by side/);
+    await tabs.getByRole('button', { name: 'Stretches', exact: true }).click();
     await expect(page).toHaveURL(/#\/program\/stretches$/);
   });
 
@@ -60,11 +62,11 @@ test.describe('on a computer', () => {
     await expect(page.locator('#ed-title')).toContainText('Program B');
   });
 
-  test('Day at a glance leads with exercises, sets and a sentence; the breakdown opens from the fold and the counts match the Day picker', async ({ page }) => {
+  test('Day at a glance leads with exercises, sets and a sentence; the breakdown opens from the fold and the counts match the day tab', async ({ page }) => {
     await openPrograms(page);
     const sum = page.locator('.daysum');
     await expect(sum.getByRole('heading', { name: 'Day 1 at a glance' })).toBeVisible();
-    const n = await page.locator('.daystep .daypick').evaluate(el => el.options[el.selectedIndex].text.match(/(\d+) exercise/)[1]);
+    const n = (await page.locator('.dtabs button.on small').innerText()).match(/(\d+) exercise/)[1];
     await expect(sum.locator('.daysum-strip div').first().locator('b')).toHaveText(n);
     await expect(sum.locator('.daysum-line')).not.toBeEmpty();
     const fold = sum.locator('.daysum-fold');
@@ -114,7 +116,7 @@ test.describe('on a computer', () => {
   });
 
   test('Saved programs: the new heading and copy, Save a copy, Edit, and Put on Board with its armed confirm', async ({ page }) => {
-    await openPrograms(page);
+    await page.goto('/#/program/saved');
     await expect(page.getByRole('heading', { name: 'Saved programs' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Program library' })).toHaveCount(0);
     await page.getByRole('textbox', { name: /^Save Program A as/ }).fill('Kept copy');
@@ -130,15 +132,11 @@ test.describe('on a computer', () => {
     await expect(page.locator('.ph-name')).toHaveText('Kept copy'); // loaded into B, which takes the program's name (ADR 021)
   });
 
-  test('the Day 1 to 7 buttons and the day stepper keep their size and style', async ({ page }) => {
+  test('the day tabs keep a 44px target', async ({ page }) => {
     await openPrograms(page);
-    const m = await page.evaluate(() => {
-      const one = el => { const r = el.getBoundingClientRect(), c = getComputedStyle(el); return { w: Math.round(r.width), h: Math.round(r.height), font: c.fontSize, weight: c.fontWeight, radius: c.borderRadius, pad: c.padding, bg: c.backgroundColor }; };
-      return { btns: [...document.querySelectorAll('.daybtns button')].map(one), step: [...document.querySelectorAll('.daystep > *')].map(one) };
-    });
-    expect(m.btns).toHaveLength(7);
-    for (const b of m.btns) { expect(b.w).toBeGreaterThanOrEqual(64); expect(b.h).toBeGreaterThanOrEqual(44); }
-    expect(m.step).toHaveLength(3);
+    const m = await page.evaluate(() => [...document.querySelectorAll('.dtabs button')].map(el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; }));
+    expect(m).toHaveLength(7);
+    for (const b of m) { expect(b.w).toBeGreaterThanOrEqual(64); expect(b.h).toBeGreaterThanOrEqual(44); }
   });
 
   test('the first-time guide: four steps, no layout shift, Got it hides it for good, Open help opens Help', async ({ page }) => {

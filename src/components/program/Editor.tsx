@@ -8,109 +8,29 @@ import { progName, DAYS } from '../../lib/logic.js';
 import { exInfo } from '../../lib/data.js';
 import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
-import { archivedHeading, splitLibrary } from '../../lib/programArchive.js';
-import { DEFAULT_PROGRAM_SORT, PROGRAM_SORTS } from '../../lib/programSort.js';
-import { sameProg, libDate } from '../../lib/entryMerge.js';
 import { itemFacts, rolePill, sectionNote, supersetRuns, SUPERSET_NOTE } from '../../lib/programRowFacts.js';
-import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
+import { fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
 import DaySummary from './DaySummary.jsx';
 import Icon from '../Icon.jsx';
-import RemovedNotice from '../RemovedNotice.jsx';
-import SortControl from '../SortControl.jsx';
-import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import ProgramCompare from './ProgramCompare.jsx';
+import SavedPrograms from './SavedPrograms.jsx';
 import ProgramFab from './ProgramFab.jsx';
 import ProgramGuide from './ProgramGuide.jsx';
 import ProgramHeader from './ProgramHeader.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
-import { boardNote, onBoardKeys } from '../../lib/programDay.js';
 import { pageOf, programKey, programPath } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import { useWide } from './useWide.js';
 import './Editor.css';
 
-const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
 // Where a moved card went, for the Moved notice and its Go to button: a day title in this program, or the other program and its day.
 const movedWhere = (m: EdMoved, prog: { days: { title: string }[] }) => (m.toKey ? `${m.toLabel} · Day ${m.to}` : prog.days[m.to - 1]!.title);
 
-function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { name: string; meta: string; inUse: boolean; onLoad?: () => void; loadLabel?: string; extra?: ReactNode; removing?: boolean }) {
-  return (
-    <div className={`edrow${inUse ? ' inuse' : ''}${removing ? ' removing' : ''}`}>
-      <div className="edmain">{removing && <span className="tag rmtag">Will be deleted · tap Delete again</span>}<b>{name}</b><span className="note">{meta}</span></div>
-      <div className="edbtns">
-        {inUse ? <span className="pill">In use</span> : !onLoad ? null : <ArmedButton className="btn sm" aria-label={`Put ${name} on Board`} label="Put on Board" armedLabel={loadLabel ?? 'Tap to load'} onConfirm={onLoad} />}
-        {extra}
-      </div>
-    </div>
-  );
-}
-
-function Library({ k, custom }: { k: string; custom: boolean }) {
-  const cfg = useAppStore(s => s.cfg); const library = useAppStore(s => s.library); const programs = useAppStore(s => s.programs);
-  const st = useAppStore.getState();
-  const [name, setName] = useState('');
-  const [arming, setArming] = useState<string | null>(null); // the program whose Delete was pressed once
-  const today = useToday(s => s.today);
-  const cur = programs[k]; const pn = progName(cfg, k);
-  const [sort, setSort] = useSortChoice('programs', PROGRAM_SORTS, DEFAULT_PROGRAM_SORT);
-  const { active: items, archived } = splitLibrary(library, sort);
-  const metaOf = (it: LibraryItem) => `${boardNote(onBoardKeys(it.prog, programs as Record<'A' | 'B', Program>).map(b => progName(cfg, b)))} · ${libDate(it.at)} · ${progStats(it.prog)} · ${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`}${it.auto ? ' · auto-saved' : ''}`;
-  const deleteBtn = (it: LibraryItem) => (
-    <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
-  );
-  const saved = !custom || library.some(it => sameProg(it.prog, cur));
-  const loadLabel = `Tap to replace ${pn}`;
-  return (
-    <section className="panel edpanel edprog lib mt-16">
-      <h2>Saved programs</h2>
-      <p className="note">Keep a copy of {pn} so you can come back to it. Putting a saved program on your Board replaces {pn}, and what {pn} has now is saved here first if it isn't already.</p>
-      <RemovedNotice scope="library" />
-      {(items.length > 1 || archived.length > 1) && <div className="inline"><SortControl options={PROGRAM_SORTS} value={sort} onChange={setSort} /></div>}
-      <div className="edlist">
-        {items.map(it => (
-          <LibRow
-            key={it.id} name={it.name} removing={arming === it.id} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
-            meta={metaOf(it)}
-            extra={<>
-              <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
-              <button type="button" className="btn sm ghost" aria-label={`Archive ${it.name}`} onClick={() => st.archiveLibItem(it.id)}>Archive</button>
-              {deleteBtn(it)}
-            </>}
-          />
-        ))}
-        {!items.length && <p className="note">{archived.length ? `No active programs. ${archived.length} archived.` : 'No saved programs yet. Save a copy of a program below, or use Create a program to build your own.'}</p>}
-      </div>
-      {archived.length > 0 && (
-        <details className="libarchive">
-          <summary>{archivedHeading(archived.length)}</summary>
-          <div className="edlist">
-            {archived.map(it => (
-              <LibRow
-                key={it.id} name={it.name} removing={arming === it.id} inUse={false} meta={metaOf(it)}
-                extra={<>
-                  <button type="button" className="btn sm" aria-label={`Restore ${it.name}`} onClick={() => st.restoreLibItem(it.id)}>Restore</button>
-                  {deleteBtn(it)}
-                </>}
-              />
-            ))}
-          </div>
-        </details>
-      )}
-      <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
-        <label className="field grow">Save {pn} as
-          <input id="lib-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. ${pn} · ${MON[today.getMonth()]} ${today.getFullYear()}`} />
-        </label>
-        <button type="submit" className="btn primary">Save a copy</button>
-      </form>
-      {!saved && <p className="note">{pn} has changes that aren't in a saved copy yet.</p>}
-    </section>
-  );
-}
 
 function LibItemPanel({ it }: { it: LibraryItem }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
@@ -196,18 +116,24 @@ function ProgramEditor() {
       <ProgramGuide />
       <ProgramHeader k={k} name={edName} prog={prog} lib={lib} />
       <div className="edtop">
-        <div className="dayctl">
-          <div className="daystep" role="group" aria-label="Day stepper">
-            <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
-            <select className="btn daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
-              {DAYS.map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
-            </select>
-            <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
+        {wide ? (
+          <div className="dtabs" role="group" aria-label="Jump to day">
+            {DAYS.map(d => {
+              const n = exerciseCount(prog.days[d - 1]?.slots ?? []);
+              return <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}<small>{n ? `${n} ${n === 1 ? 'exercise' : 'exercises'}` : 'rest'}</small></button>;
+            })}
           </div>
-          <div className="seg daybtns" role="group" aria-label="Jump to day">
-            {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
+        ) : (
+          <div className="dayctl">
+            <div className="daystep" role="group" aria-label="Day stepper">
+              <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
+              <select className="btn daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
+                {DAYS.map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
+              </select>
+              <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       {lib ? (
         <>
@@ -219,21 +145,28 @@ function ProgramEditor() {
       ) : null}
       <div className="edcols">
       <section className="panel edpanel edprog">
-        <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
+        <div className="inline flexwrap edheadrow"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2>
+          {wide && (
+            <div className="edtools">
+              {day.slots.length > 0 && !copyOpen && <button type="button" className="btn" onClick={() => setCopyOpenFor(dayKey)}>Copy day…</button>}
+              {addBtn}
+            </div>
+          )}
+        </div>
         {wide || day.sub || labelOpen ? (
           <label className="field">Day label
             <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} autoFocus={!wide && labelOpen && !day.sub} />
           </label>
         ) : null}
-        <div className={`actions edadd start${wide ? '' : ' compact'}`}>
-          {addBtn}
+        <div className={`actions edadd start${wide ? ' wideadd' : ' compact'}`}>
+          {!wide && addBtn}
           {!wide && (
             <div className="edsmall">
               {!(day.sub || labelOpen) && <button type="button" className="btn sm ghost" onClick={() => setLabelOpenFor(o => [...o, dayKey])}>Add a day label</button>}
               {day.slots.length > 0 && !copyOpen && <button type="button" className="btn sm ghost" onClick={() => setCopyOpenFor(dayKey)}>Copy day…</button>}
             </div>
           )}
-          {day.slots.length > 0 && (wide || copyOpen) && (
+          {day.slots.length > 0 && copyOpen && (
             <span className="copyday">
               <label className="field">Copy this day to
                 <select className="btn" value={copyTo} onChange={e => setCopyPick(Number(e.target.value))}>
@@ -340,21 +273,42 @@ function ProgramEditor() {
       <p className="note mt-12">
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>
-      {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
+      {lib && <LibItemPanel it={item} />}
+      {!wide && <ProgramCompare />}
+      {!wide && !lib && <SavedPrograms k={k} custom={custom} />}
       </div>
-      <ProgramCompare />
       <ProgramFab />
     </>
   );
 }
 
-const SECTIONS = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercise library', 'Every exercise you can use'], ['stretches', 'Stretch library', 'Stretches you can add']] as const;
+// A desktop has room for five views; a phone keeps three (Saved programs and Compare programs stay on Programs there, brief program-tab-desktop-layout).
+const SECTIONS_WIDE = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercises', 'Every exercise you can use'], ['stretches', 'Stretches', 'Stretches you can add'], ['saved', 'Saved', 'Programs you keep'], ['compare', 'Compare', 'Two programs side by side']] as const;
+const SECTIONS_PHONE = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercise library', 'Every exercise you can use'], ['stretches', 'Stretch library', 'Stretches you can add']] as const;
+
+// The program a view that is not the editor still shows in its header: the one being edited, with the A | B switch and Create a program.
+function ProgramViewHeader() {
+  const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
+  const k = useAppStore(s => s.edKey()); const item = useAppStore(s => s.edItem());
+  const prog = item ? item.prog : programs[k];
+  return <ProgramHeader k={k} name={item ? item.name : progName(cfg, k)} prog={prog} lib={!!item} />;
+}
+
+// The Saved view: the Save a copy form, a search and the list of saved programs (desktop).
+function SavedView() {
+  const k = useAppStore(s => s.edKey()); const item = useAppStore(s => s.edItem()); const programs = useAppStore(s => s.programs);
+  const custom = !item && !useAppStore.getState().isOriginal(programs[k] as Program, k as ProgKey);
+  return <><ProgramViewHeader /><SavedPrograms k={k} custom={custom} tab /></>;
+}
 
 // The Program tab: the programs, and the exercise and stretch libraries (supplements are on Daily → Supplements, under Edit).
 export default function Editor() {
   // The view is in the address (#/program/exercises); the segmented control swaps it instead of adding a Back step.
   const page = pageOf(useRoutePath(), 'program');
-  const view = page === 'a' || page === 'b' ? 'program' : page ?? 'program';
+  const wide = useWide();
+  const SECTIONS = wide ? SECTIONS_WIDE : SECTIONS_PHONE;
+  const asked = page === 'a' || page === 'b' ? 'program' : page ?? 'program';
+  const view = SECTIONS.some(([v]) => v === asked) ? asked : 'program'; // a phone has no Saved or Compare view: those addresses show Programs
   const setView = (v: string) => navigate(v === 'program' ? 'program' : `program/${v}`, 'replace');
   return (
     <>
@@ -363,7 +317,7 @@ export default function Editor() {
           <button type="button" key={v} className={view === v ? 'on' : ''} aria-pressed={view === v} aria-describedby={`sectab-${v}`} onClick={() => setView(v)}><b>{label}</b><span id={`sectab-${v}`} aria-hidden="true">{text}</span></button>
         ))}
       </div>
-      {view === 'program' ? <ProgramEditor /> : view === 'stretches' ? <StretchLibrary /> : <ExerciseLibrary />}
+      {view === 'program' ? <ProgramEditor /> : view === 'stretches' ? <StretchLibrary /> : view === 'saved' ? <SavedView /> : view === 'compare' ? <><ProgramViewHeader /><ProgramCompare page /></> : <ExerciseLibrary />}
     </>
   );
 }

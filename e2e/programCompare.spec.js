@@ -5,26 +5,36 @@ import { test, expect } from './fixtures.js';
 // with the filters folded behind a button on a phone.
 test.use({ viewport: { width: 1440, height: 900 } });
 
+// A computer has Compare on its own tab (always open); a phone keeps the collapsible strip on Programs.
 const open = async page => {
-  await page.click('#tab-program');
+  if ((await page.evaluate(() => innerWidth)) > 700) {
+    await page.goto('/#/program/compare');
+    await expect(page.locator('.cmpbody')).toBeVisible();
+    return page.locator('.cmpbody');
+  }
+  await page.goto('/#/program');
   const toggle = page.getByRole('button', { name: 'Compare programs' });
   await toggle.scrollIntoViewIfNeeded();
-  await toggle.click();
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   return page.locator('.cmpbody');
 };
 const count = async (body, label) => Number((await body.locator('.cmpchips').first().getByRole('button', { name: new RegExp(`^${label} \\d+$`) }).innerText()).match(/(\d+)$/)[1]);
 
-test('the section is collapsed until it is opened, and closes again', async ({ page }) => {
-  await page.click('#tab-program');
+test('on a phone the section is collapsed until it is opened, and closes again; on a computer it is a tab that is always open', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/#/program');
   const toggle = page.getByRole('button', { name: 'Compare programs' });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.cmpbody')).toHaveCount(0);
   await open(page);
-  expect(await page.locator('.cmpaligned').count()).toBeGreaterThan(0); // one list per day on a wide screen (All days)
+  expect(await page.locator('.cmpaligned').count()).toBeGreaterThan(0);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.cmpbody')).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await expect(page.getByRole('button', { name: 'Compare programs' })).toHaveCount(0);
 });
 
 test('every day lists both programs, the counts add up, and a status filter hides the other rows', async ({ page }) => {
@@ -56,7 +66,7 @@ test('changing the day clears the phase filter, so a pressed chip always shows',
 });
 
 test('a saved copy on the other side compares as the same, and the same program twice says so', async ({ page }) => {
-  await page.click('#tab-program');
+  await page.goto('/#/program/saved');
   await page.locator('#lib-name').fill('Compare copy');
   await page.getByRole('button', { name: 'Save a copy' }).click();
   const body = await open(page);
@@ -137,9 +147,10 @@ test('on a phone the filters fold behind a Filter button; on a wide screen they 
 });
 
 test('a changed exercise marks the differing weight on both sides', async ({ page }) => {
-  await page.click('#tab-program');
+  await page.goto('/#/program/saved');
   await page.locator('#lib-name').fill('Compare copy');
   await page.getByRole('button', { name: 'Save a copy' }).click();
+  await page.goto('/#/program');
   await page.locator('.edpanel:not(.lib) .edrow').first().getByRole('button', { name: /^Edit / }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Weight (lb)').fill('123');
