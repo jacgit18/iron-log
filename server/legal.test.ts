@@ -51,7 +51,12 @@ describe('the policy and the system agree', () => {
 
   it('says what the app really keeps about sessions and what it never does', () => {
     expect(text).toMatch(/IP address and (the )?browser or device description/);
-    expect(text).toContain('no advertising, no analytics and no tracking');
+    expect(text).toContain('no advertising and no tracking');
+    expect(text).toContain('no analytics unless you switch on anonymous usage counts');
+    // The usage counts (brief opt-in-usage-counts): off by default, six named events, nothing about the person, 90 days.
+    expect(text).toContain('Anonymous usage counts (only if you turn them on in Settings, off by default)');
+    expect(text).toContain('not linked to your account');
+    expect(text).toMatch(/Anonymous usage counts \(only if you turned them on\)\s*Up to 90 days/);
     expect(text).toContain('do not sell');
   });
 
@@ -117,6 +122,11 @@ describe('the policy and the system agree', () => {
     expect(words).toContain('We answer within one month');
     expect(text).toContain('24 months');
     expect(text).toContain('within one month');
+  });
+
+  it('describes the usage counts as the code does: six named events, 90 days', () => {
+    expect(read('db/migrations/20261028000001_usage_days.sql')).toContain('day < today - 90');
+    expect(read('src/shared/usage.ts')).toMatch(/USAGE_EVENTS = \[('[a-z_]+',? ?){6}\]/);
   });
 
   it('serves the deletion page at /delete-account, past the service worker and the preview server', () => {

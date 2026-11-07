@@ -10,6 +10,7 @@ import {
 } from '../lib/logic.js';
 import { makeBatchWriter } from '../lib/saveBatch.js';
 import { LS, makeSaveQueue, onDamaged, removeLegacyGitHubToken } from '../lib/storage.js';
+import { quietUsage } from '../lib/usage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
 import { reportCaught } from '../sync/reportErrors.js';
 import { groceryAdopted, markGroceryAdopted, readLegacyMarker } from '../sync/legacyMarker.js';
@@ -460,10 +461,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const m: Record<string, any> = {}; s.docs.forEach((d: any) => { m[d.id] = d.data(); });
       const pick = (state: any, k: any) => (queue.pending('programs/' + k) ? state.programs[k] : loadProgram(k, m[k]));
       programDocs.clear(); Object.keys(m).forEach(k => programDocs.add(k));
-      set(state => {
+      quietUsage(() => set(state => {
         const next = { programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) };
         return { ...next, programs: settledPrograms({ ...state, ...next }) };
-      });
+      }));
       get().refreshRan(); // a program changed on another device: this week's record follows it
     }, () => flag('Couldn’t load your programs. Reload the page.'));
     db.doc('body/main').onSnapshot((s: any) => {
@@ -530,7 +531,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // device's own write is confirmed). Only an exercise this device is still writing keeps what it holds: that is newer.
     db.collection('logs').onSnapshot((s: any) => {
       const next: Logs = {}; s.docs.forEach((d: any) => { next[d.id] = normEntries((d.data() || {}).entries); });
-      set(state => {
+      quietUsage(() => set(state => {
         const logs: Logs = {};
         new Set([...Object.keys(next), ...Object.keys(state.logs)]).forEach(id => {
           const v = queue.pending('logs/' + id) ? state.logs[id] : next[id];
@@ -538,7 +539,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
         const upd = { logs, ...markReady('logs')(state) };
         return { ...upd, programs: settledPrograms({ ...state, ...upd }), stretches: settledStretches({ ...state, ...upd }) };
-      });
+      }));
     }, () => flag('Couldn’t load your log. Reload the page.'));
     subscribeWeek();
   },
@@ -554,7 +555,8 @@ onDamaged(k => {
 
 // Saved on this device: another tab (or the installed app next to a browser tab) wrote this data. Take its copy, so
 // this tab's next save of it doesn't put back what it held before.
-export function fromOtherTab(e: { key?: string | null; newValue?: string | null } | null) {
+export function fromOtherTab(e: { key?: string | null; newValue?: string | null } | null) { quietUsage(() => takeOtherTab(e)); } // not counted as usage: another tab did it
+function takeOtherTab(e: { key?: string | null; newValue?: string | null } | null) {
   if (!e || !e.key || !e.key.startsWith('ironlog:')) return;
   const path = e.key.slice(8); let v = null;
   try { v = e.newValue == null ? null : JSON.parse(e.newValue); } catch { return; }

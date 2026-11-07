@@ -26,7 +26,7 @@
 <main>
 <a class="back" href="./">← Back to Loadbearer</a>
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 27 October 2026 · Version 1.5</p>
+<p class="meta">Last updated: 28 October 2026 · Version 1.6</p>
 
 <p>Loadbearer is a workout log. This policy explains what personal data it collects when you use the signed-in version of the app, why, where it is kept, who can see it, how long it is kept, and the choices and rights you have. It is written to be read. If anything here is unclear, ask: the contact details are at the end.</p>
 
@@ -36,7 +36,7 @@
 <h2>2. The short version</h2>
 <ul>
   <li>We collect what is needed to sign you in and to store and sync the workouts you log. Nothing else.</li>
-  <li>There is <b>no advertising, no analytics and no tracking</b>. We do not sell your data and do not share it for advertising.</li>
+  <li>There is <b>no advertising and no tracking</b>, and <b>no analytics unless you switch on anonymous usage counts</b> in Settings (off by default, section 3). We do not sell your data and do not share it for advertising.</li>
   <li>Your data is stored with two service providers (Google Cloud and Neon), in the United States. If you sign in with an emailed code instead of Google, a third, Resend, sends you that code: it sees your email address and the code, and nothing you log.</li>
   <li>You can <b>export</b> everything and <b>erase</b> it, or <b>delete your account</b>, yourself, at any time, in Settings. Deleted data is removed from the live service immediately and from backups within 30 days.</li>
   <li>The app is for people aged <b>18 and over</b>.</li>
@@ -54,6 +54,7 @@
   <li><b>Session records:</b> while you are signed in, a session record with its expiry. This is used to keep you signed in. The IP address and browser or device description a session is created from are not stored.</li>
   <li><b>Server logs:</b> the technical logs of the hosting platform (request times, addresses and errors), kept by the platform for about 30 days, used to run and secure the service.</li>
   <li><b>Error reports:</b> when the app on your device hits an unexpected error, it may send a short report (the kind of error, a message with all numbers removed, the page, the app version and technical stack lines). Reports are scrubbed so they do not contain your workout data or email, and are not linked to your account.</li>
+  <li><b>Anonymous usage counts (only if you turn them on in Settings, off by default):</b> once a day, the app sends a random ID that your device made for itself, the app version, whether it runs inside the Android app, and how many times the app was opened and how many times six features were used that day: logging a workout, editing a program, exporting, turning on syncing, turning on alerts, and opening the app. It sends no name, email, account number, workout, weight, note or exercise name, and it is not linked to your account, even when you are signed in. Our server turns the random ID into a one-way code before storing it, so the stored counts cannot be matched back to your device or your account. We use the counts only to see how many installs are in use and which features get used. Switch it off and your device deletes its random ID and its unsent counts; counts already sent stay for up to 90 days and can no longer be matched to your device.</li>
   <li><b>Push alerts (only if you turn them on in Settings):</b> the address your browser or phone gives us for sending it a notification, and the keys that go with it. We keep them until you turn the alerts off, sign out, erase your data or delete your account. When a rest timer or an unfinished day should send an alert, the app asks our server to send a short message (for example “Rest over. Time for your next set.” or “Day not finished: 2 exercises left.”) at a set time. If you also turn on the drink-water reminder, the app asks our server for a short message (“Time for a glass of water.”) at a set time, and our server asks for the next one after each is sent, until the end of the hours you chose. The request holds that message, the time and the number of your device entry, not your workouts (for the drink-water reminder it also holds how often it repeats and when your reminder hours end), and is removed once sent. The message is encrypted for your device, but travels through the notification service of your browser or phone maker.</li>
 </ul>
 <h3>On your device</h3>
@@ -97,6 +98,7 @@
     <tr><td>Your workout data and settings</td><td>Until you erase it or delete your account. Erasing removes the rows from the live database immediately, including older versions of edited entries kept for recovery.</td></tr>
     <tr><td>Your account and its sign-in record (Google or email)</td><td>Until you delete your account (removed immediately from the live service).</td></tr>
     <tr><td>Push alerts: your device’s address and keys</td><td>Until you turn the alerts off, sign out, erase your data or delete your account (removed immediately from the live service). A notification service may drop an address that stops working.</td></tr>
+    <tr><td>Anonymous usage counts (only if you turned them on)</td><td>Up to 90 days, then removed automatically. Not linked to your account, so account deletion does not need to remove them.</td></tr>
     <tr><td>A queued alert</td><td>Until it is sent, at most 3 hours ahead, and removed when sent. A cancelled alert is sent to nothing and removed.</td></tr>
     <tr><td>Sign-in codes (emailed)</td><td>Until used or expired, which is 5 minutes (stored as a hash only). Any left over is removed when you delete your account. Resend keeps its own record of the message for up to 30 days.</td></tr>
     <tr><td>Session records</td><td>Up to 30 days from last use (the sign-in lifetime), or until you sign out or delete your account.</td></tr>
@@ -122,7 +124,7 @@
 <p>All traffic is encrypted in transit (HTTPS). Data is encrypted at rest by our providers, and your name, email address and profile picture address are additionally encrypted by the app itself before they are stored. Each account can reach only its own rows, enforced by the database itself (row-level security) as well as by the application, and the application connects with a restricted database role. Sign-in and other sensitive requests are rate-limited, session cookies are marked secure and HttpOnly, and Google’s tokens are stored encrypted. Backups are kept in a private, access-controlled bucket. No system is perfectly secure; if a breach affects your data in a way that creates risk to you, we will tell you and, where required, the relevant authority, without undue delay (and within 72 hours for the authority under GDPR).</p>
 
 <h2>11. Cookies and similar technologies</h2>
-<p>Loadbearer sets a secure session cookie that keeps you signed in, and a short-lived technical cookie while you complete Google sign-in. Both are strictly necessary for the signed-in service, so no consent banner is needed. It is not used for tracking or advertising. There are no analytics, advertising or social-media cookies or scripts. Your browser’s local storage holds the working copy described in section 3, and a service worker caches the app’s files so it works offline and, if you turn alerts on, shows them.</p>
+<p>Loadbearer sets a secure session cookie that keeps you signed in, and a short-lived technical cookie while you complete Google sign-in. Both are strictly necessary for the signed-in service, so no consent banner is needed. It is not used for tracking or advertising. There are no analytics, advertising or social-media cookies or scripts. If you switch on anonymous usage counts, your browser’s local storage also holds the random ID and the unsent counts, and no cookie is used for them. Your browser’s local storage holds the working copy described in section 3, and a service worker caches the app’s files so it works offline and, if you turn alerts on, shows them.</p>
 
 <h2>12. Children</h2>
 <p>Loadbearer is not intended for anyone under 18 and we do not knowingly collect data from them. If you believe a child has an account, tell us and we will delete it.</p>

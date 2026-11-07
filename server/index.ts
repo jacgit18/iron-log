@@ -14,6 +14,7 @@ import { installProcessGuards } from './processGuards.ts';
 import { cloudTasksScheduler, oidcVerifier, tasksConfigFrom } from './push/cloudTasks.ts';
 import { pushConfigFrom } from './push/config.ts';
 import { webPushSender } from './push/send.ts';
+import { usageKeyFrom } from './usage.ts';
 
 // Local development reads .env; in production the platform sets the variables and there is no file.
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -87,7 +88,7 @@ function piiCryptoFrom(raw: string | undefined) {
   return 'key' in parsed ? createPiiCrypto(parsed.key) : undefined;
 }
 
-const server = createApp({ db, staticDir, appLabel: appLabelFrom(process.env.APP_LABEL), minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing, signupCap: setup.enabled ? setup.config.signupCap : undefined, pii: piiCryptoFrom(process.env.PII_ENCRYPTION_KEY), foods: { key: process.env.USDA_API_KEY || undefined, offContact: process.env.OFF_CONTACT || undefined }, scan: { key: process.env.ANTHROPIC_API_KEY || undefined, ...(process.env.SCAN_MODEL ? { model: process.env.SCAN_MODEL } : {}), ...(Number(process.env.SCAN_DAILY_MAX) > 0 ? { dailyMax: Number(process.env.SCAN_DAILY_MAX) } : {}), ...(process.env.SCAN_RECEIPT_MODEL ? { receiptModel: process.env.SCAN_RECEIPT_MODEL } : {}), ...(Number(process.env.SCAN_RECEIPT_DAILY_MAX) > 0 ? { receiptDailyMax: Number(process.env.SCAN_RECEIPT_DAILY_MAX) } : {}) } }).listen(port, () => {
+const server = createApp({ db, staticDir, appLabel: appLabelFrom(process.env.APP_LABEL), minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing, signupCap: setup.enabled ? setup.config.signupCap : undefined, pii: piiCryptoFrom(process.env.PII_ENCRYPTION_KEY), usageKey: usageKeyFrom(process.env.BETTER_AUTH_SECRET), foods: { key: process.env.USDA_API_KEY || undefined, offContact: process.env.OFF_CONTACT || undefined }, scan: { key: process.env.ANTHROPIC_API_KEY || undefined, ...(process.env.SCAN_MODEL ? { model: process.env.SCAN_MODEL } : {}), ...(Number(process.env.SCAN_DAILY_MAX) > 0 ? { dailyMax: Number(process.env.SCAN_DAILY_MAX) } : {}), ...(process.env.SCAN_RECEIPT_MODEL ? { receiptModel: process.env.SCAN_RECEIPT_MODEL } : {}), ...(Number(process.env.SCAN_RECEIPT_DAILY_MAX) > 0 ? { receiptDailyMax: Number(process.env.SCAN_RECEIPT_DAILY_MAX) } : {}) } }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 
