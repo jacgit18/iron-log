@@ -800,13 +800,13 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-58', feature: 'Receipt scan', title: 'Cancel, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
+    id: 'S-58', feature: 'Receipt scan', title: 'Close, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
     steps: [
-      'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Cancel on the sheet.',
+      'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Close at the top of the sheet.',
       'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs), then press Add item. Empty the name and press Add item.',
     ],
     expected: [
-      'Not now, Remove and Cancel each leave the list exactly as it was.',
+      'Not now, Remove and Close each leave the list exactly as it was.',
       'A name already in that store says it is already in the list and to pick it instead; an empty name says to give the item a name; neither adds anything to the row.',
     ],
   },
@@ -1645,7 +1645,40 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-126', feature: 'Groceries views', title: 'Store chips filter Shopping, and All is one column with no empty blocks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
+    id: 'S-126', feature: 'Receipt scan', title: 'Apply the receipt with one wide button, and Close never applies', persona: 'grocery-shopper', brief: 'receipt-apply-footer', device: true,
+    steps: [
+      'On a phone as an admin, scan a BJ\'s receipt whose lines add up to its total. Read the bar at the bottom and the top corner of the sheet.',
+      'Press Close in the top corner. Scan again, scroll the sheet up and down with your thumb near the bottom edge, then press the wide Apply button once.',
+    ],
+    expected: [
+      'The top corner has Close and the bottom bar has one wide button that says what it will do, such as "Apply 5 items, $40.69", with a line above it counting the items and tax; there is no Cancel beside it.',
+      'Close changes nothing on the list; scrolling never applies anything; one tap on Apply applies, and the Undo notice stays for 10 seconds.',
+    ],
+  },
+  {
+    id: 'S-127', feature: 'Receipt scan', title: 'A receipt that does not add up needs a second tap to apply', persona: 'grocery-shopper', brief: 'receipt-apply-footer', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt with the bottom cut off so a line is missing and the Total check says the lines differ.',
+      'Press Apply anyway once, then tap somewhere else on the sheet. Press Apply anyway, then Tap again to apply anyway.',
+    ],
+    expected: [
+      'The summary line says the lines and tax do not match the receipt total, and the button reads "Apply anyway".',
+      'The first tap only changes the button to "Tap again to apply anyway" and applies nothing; tapping elsewhere puts it back; the second tap applies and Undo is offered.',
+    ],
+  },
+  {
+    id: 'S-128', feature: 'Receipt scan', title: 'The last receipt row clears the bar and the row links are easy to hit', persona: 'grocery-shopper', brief: 'receipt-apply-footer', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a long receipt with at least one line that is not on your list, and scroll to the end of the sheet.',
+      'Tap Add to list on that line, add the item, then tap Remove on its row.',
+    ],
+    expected: [
+      'The last row ends above the bottom bar with clear space, and the bar stays above the phone\'s bottom edge.',
+      'Add to list and Remove are text links with room around them; each takes one tap and neither lands on the bar.',
+    ],
+  },
+  {
+    id: 'S-129', feature: 'Groceries views', title: 'Store chips filter Shopping, and All is one column with no empty blocks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
     steps: [
       'Sign in as Grocery shopper and open Groceries, Shopping. Read the chips above the list (All and one per store, each with a count).',
       'Press a store chip, then look at the list. Press All.',
@@ -1658,7 +1691,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-127', feature: 'Groceries views', title: 'Who owes who is the first row on Bought and is gone from Shopping', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
+    id: 'S-130', feature: 'Groceries views', title: 'Who owes who is the first row on Bought and is gone from Shopping', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
     steps: [
       'Tick two Costco items on Shopping. Look for Who owes who on Shopping.',
       'Open Bought and look at the top of the page. Press the Who owes who row.',
@@ -1669,7 +1702,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-128', feature: 'Groceries views', title: 'Row details start open on a computer and closed on a phone, and the More menu choice sticks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', device: true, edge: true,
+    id: 'S-131', feature: 'Groceries views', title: 'Row details start open on a computer and closed on a phone, and the More menu choice sticks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', device: true, edge: true,
     steps: [
       'On a computer open Shopping and look at the rows. Then open the same page on a phone.',
       'On the phone press the ... menu and choose "Show details on all rows". Reload the page.',
@@ -1680,7 +1713,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-129', feature: 'Groceries views', title: 'A ticked item with no price offers Add price, and Bought shows an Add price chip', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', edge: true,
+    id: 'S-132', feature: 'Groceries views', title: 'A ticked item with no price offers Add price, and Bought shows an Add price chip', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', edge: true,
     steps: [
       'On Shopping tick an item that has no price (its count says "no price").',
       'Press Add price in the notice. Then look at the item on Bought.',
