@@ -39,7 +39,6 @@ const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
 const PlansTab = lazyTab(() => import('./components/plans/PlansTab.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
-// The Program tab's "plan on a computer" tip floats above the page and draws nothing until it is due, so its chunk is fetched with the tab.
 // The sync cards (sign in, other account, upload this device's data) only exist while syncing is on, so their code (and the sync
 // planner behind it) loads only then. They draw nothing until they are needed, so waiting for the chunk moves nothing.
 // The QA banner and the QA deep link only ever draw on a QA service (/api/me sends `qa` only there), so they are fetched only once that answer says

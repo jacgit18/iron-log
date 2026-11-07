@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { haptic } from '../../lib/haptics.js';
 
-/** Where a drag is now: the row picked up, the index it would land on, how far it has been dragged and the room it takes (px). */
-export type DragState = { from: number; to: number; dy: number; size: number };
+/** Where a drag is now: the row picked up, the index it would land on, how far it has been dragged and the room it takes (px).
+ *  `size` is how far a row slides up when the dragged row passes it going down, `sizeUp` how far one slides down going up (it defaults to `size`);
+ *  they differ when something sits between rows (a boxed superset group's header and padding). */
+export type DragState = { from: number; to: number; dy: number; size: number; sizeUp?: number };
 
 const EDGE = 80; // px from the top or bottom of the window where a drag starts scrolling the page (clears the phone tab bar)
 const SLOW = 150; // px per second at the inner edge of that zone
@@ -21,7 +23,7 @@ export function edgeSpeed(y: number, height: number): number {
 export function shiftOf(d: DragState | null, i: number): number {
   if (!d || i === d.from) return 0;
   if (d.from < i && i <= d.to) return -d.size;
-  if (d.to <= i && i < d.from) return d.size;
+  if (d.to <= i && i < d.from) return d.sizeUp ?? d.size;
   return 0;
 }
 
@@ -49,7 +51,13 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
     e.preventDefault(); // no text selection, no scroll from this touch
     const mids = rows.current.slice(0, count).map(el => { if (!el) return Infinity; const r = el.getBoundingClientRect(); return r.top + r.height / 2 + window.scrollY; });
     const el = rows.current[from];
-    const size = el ? el.offsetHeight + (parseFloat(getComputedStyle(el.parentElement ?? el).rowGap) || 0) : 0; // the row plus the list's gap
+    // The room the row takes, from where the rows really are: the distance to the next row's top going down, and the row's height plus the space above it going up.
+    // That counts a box's header and padding between rows, which the list's own gap does not.
+    const tops = rows.current.slice(0, count).map(r => r?.getBoundingClientRect());
+    const own = el ? el.offsetHeight + (parseFloat(getComputedStyle(el.parentElement ?? el).rowGap) || 0) : 0;
+    const t = tops[from]; const next = tops[from + 1]; const prev = tops[from - 1];
+    const size = t && next ? next.top - t.top : own;
+    const sizeUp = t && prev ? t.bottom - prev.bottom : own;
     const startY = e.clientY + window.scrollY;
     let y = e.clientY; let to = from; let frame = 0; let moved = false; let lastTs = 0;
 
@@ -58,7 +66,7 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
       const next = dropIndex(mids, from, mids[from] + dy);
       if (next !== to) haptic(6); // a tick each time the row passes a neighbour
       to = next;
-      setDrag({ from, to, dy, size });
+      setDrag({ from, to, dy, size, sizeUp });
     };
     // Scrolls by the time since the last frame, so the speed is the same on a 60 and a 120 Hz screen.
     const scroll = (ts: number) => {
@@ -88,7 +96,7 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
     window.addEventListener('keydown', key, true);
     stop.current = () => end(false);
     frame = requestAnimationFrame(scroll);
-    setDrag({ from, to, dy: 0, size });
+    setDrag({ from, to, dy: 0, size, sizeUp });
     haptic(12); // picked up
   };
 

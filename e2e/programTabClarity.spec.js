@@ -95,6 +95,24 @@ test.describe('on a computer', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
+  test('dragging a row into a superset box slides the row it passes into the dragged row\'s old place, past the box header', async ({ page }) => {
+    await openPrograms(page);
+    const rows = page.locator('.edpanel:not(.lib) .edrow');
+    const idx = await rows.evaluateAll(els => els.findIndex(e => e.closest('.ssgroup')));
+    expect(idx).toBeGreaterThan(0);
+    const dragged = rows.nth(idx - 1); const passed = rows.nth(idx);
+    await dragged.evaluate(e => { e.scrollIntoView({ block: 'start' }); window.scrollBy(0, -200); }); // both rows on screen, so the pointer is too
+    const d0 = await dragged.boundingBox(); const p0 = await passed.boundingBox();
+    const handle = await dragged.locator('.draghandle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + (p0.y + p0.height / 2) - (d0.y + d0.height / 2) + 8, { steps: 12 });
+    await page.waitForTimeout(400); // the slide is a .15s transition
+    const p1 = await passed.boundingBox(); // it has slid up into the dragged row's old place, not short of it
+    expect(Math.abs(p1.y - d0.y), `passed row at ${p1.y}, dragged row started at ${d0.y}`).toBeLessThanOrEqual(2);
+    await page.keyboard.press('Escape');
+  });
+
   test('Saved programs: the new heading and copy, Save a copy, Edit, and Put on Board with its armed confirm', async ({ page }) => {
     await openPrograms(page);
     await expect(page.getByRole('heading', { name: 'Saved programs' })).toBeVisible();

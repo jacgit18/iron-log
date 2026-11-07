@@ -23,7 +23,7 @@ export default function ProgramGuide() {
       </ol>
       <div className="actions start flexwrap">
         <button type="button" className="btn primary" onClick={() => { dismissProgramGuide(); setHidden(true); }}>Got it</button>
-        <button type="button" className="btn ghost" onClick={() => useAppStore.getState().openModal({ type: 'help' })}>Open help</button>
+        <button type="button" className="btn ghost" onClick={() => { const st = useAppStore.getState(); if (!st.blocked()) st.openModal({ type: 'help' }); }}>Open help</button>
       </div>
     </section>
   );
