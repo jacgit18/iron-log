@@ -27,7 +27,7 @@ export default function ReceiptSheet() {
   const [separate, setSeparate] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-merge-lines: text keys whose lines the person split back into their own rows (sheet only)
   const [choices, setChoices] = useState<Choice[]>(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId }))); // the lines of one row share a match (groupLines), so they start with one choice
   const [pickedStore, setPickedStore] = useState('');
-  const [usual, setUsual] = useState(false); // brief receipt-bought-at: off for every receipt; ticked, Apply also makes the receipt's store the items' usual store
+  const [usual, setUsual] = useState<boolean | null>(null); // null until the box is touched: then ticked only when every moved item has no usual store; ticked, Apply also makes the receipt's store the items' usual store
   const monthLines = useAppStore(s => s.groceryMonths[mk]?.lines);
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-reconcile-ticked: ticked items the receipt does not show that the person chose to untick (off for every receipt)
   const [staged, setStaged] = useState<Staged[]>([]);
@@ -199,9 +199,10 @@ export default function ReceiptSheet() {
           <p className="note" role="status">{words.summary}</p>
           {words.split && <p className="note rcwarn" role="status">{words.split}</p>}
           <label className="rckeep" htmlFor="rc-usual">
-            <input id="rc-usual" type="checkbox" checked={usual} onChange={e => setUsual(e.target.checked)} />
+            <input id="rc-usual" type="checkbox" checked={plan.makeUsual} onChange={e => setUsual(e.target.checked)} />
             <span>Also make {plan.moves[0]!.to} the usual store for these items<small>Changes where they are listed on At home. Undo puts it back.</small></span>
           </label>
+          <p className="note" role="status">{plan.makeUsual ? `At home will list these under ${plan.moves[0]!.to}.` : `At home stays as it is. Tick the box to list these under ${plan.moves[0]!.to} there.`}</p>
         </div>
       )}
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>

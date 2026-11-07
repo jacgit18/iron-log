@@ -1,0 +1,88 @@
+@layer base, components;
+@layer components {
+/* The price and place history sheet and the "Last:" line under an At home row (brief grocery-price-history). */
+.ghome:has(.ghistory) {
+  flex-wrap: wrap;
+}
+.ghistory {
+  flex-basis: 100%;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 0 0 32px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.phsum {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-8);
+  margin: 0;
+}
+.phsum div {
+  background: var(--sunk);
+  border-radius: var(--r-md);
+  padding: var(--sp-8) var(--sp-10);
+}
+.phsum dt {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.phsum dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
+}
+.phline {
+  width: 100%;
+  color: var(--accent);
+}
+.phline text {
+  fill: var(--muted);
+  font-size: var(--fs-xs);
+}
+.phlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.phrow {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  gap: var(--sp-8);
+  align-items: baseline;
+  padding: var(--sp-8) 0;
+  border-top: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.phmo {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.phwhere small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.phprice {
+  font-weight: 600;
+  text-align: right;
+}
+.phcheap {
+  margin-left: var(--sp-6);
+  padding: var(--sp-2) var(--sp-6);
+  border-radius: var(--r-sm);
+  background: var(--exp-bg);
+  color: var(--exp);
+  font-size: var(--fs-2xs);
+}
+.phsheet .btn {
+  min-height: 44px;
+}
+}
