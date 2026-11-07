@@ -62,7 +62,7 @@ test.describe('on a computer', () => {
     await expect(page.locator('#ed-title')).toContainText('Program B');
   });
 
-  test('Day at a glance leads with exercises, sets and a sentence; the breakdown opens from the fold and the counts match the day tab', async ({ page }) => {
+  test('Day at a glance leads with exercises, sets and a sentence; the breakdown is open and can be folded, and the counts match the day tab', async ({ page }) => {
     await openPrograms(page);
     const sum = page.locator('.daysum');
     await expect(sum.getByRole('heading', { name: 'Day 1 at a glance' })).toBeVisible();
@@ -70,11 +70,11 @@ test.describe('on a computer', () => {
     await expect(sum.locator('.daysum-strip div').first().locator('b')).toHaveText(n);
     await expect(sum.locator('.daysum-line')).not.toBeEmpty();
     const fold = sum.locator('.daysum-fold');
-    await expect(fold).not.toHaveAttribute('open', '');
-    await expect(sum.getByRole('heading', { name: 'Sets per phase' })).toBeHidden();
-    await fold.getByText('See the full breakdown').click();
+    await expect(fold).toHaveAttribute('open', ''); // open by default (owner, 2026-11-07)
     await expect(sum.getByRole('heading', { name: 'Sets per phase' })).toBeVisible();
     await expect(sum.getByRole('heading', { name: 'Muscles worked · planned sets' })).toBeVisible();
+    await fold.getByText('See the full breakdown').click();
+    await expect(sum.getByRole('heading', { name: 'Sets per phase' })).toBeHidden(); // it still folds away
   });
 
   test('a row shows its name, a role pill, sets and weight, and a phase pill; a superset sits in one boxed group; Edit and the ⋯ sheet still open', async ({ page }) => {

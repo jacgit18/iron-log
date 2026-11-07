@@ -21,7 +21,7 @@ export default function DaySummary({ day, dayNo }: { day: ProgramDay; dayNo: num
       </div>
       {sm.exercises > 0 && <p className="daysum-line">{summarySentence(sm)}</p>}
       {sm.exercises > 0 && (
-        <details className="daysum-fold">
+        <details className="daysum-fold" open>
           <summary>See the full breakdown</summary>
           {sm.phases.length > 0 && (
             <>
