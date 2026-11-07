@@ -50,7 +50,10 @@ jobs:
       - name: Write the run summary
         if: always()
         run: |
-          if [ -f test-results-qa/results.json ]; then node scripts/qa-smoke-summary.mjs test-results-qa/results.json "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"; else echo "No report was written: the run failed before the tests started." >> "$GITHUB_STEP_SUMMARY"; fi
+          # Two stacks run one after the other (npm run e2e:qa): the plain one and the QA-mode one. Each writes its own report.
+          for dir in test-results-qa test-results-qamode; do
+            if [ -f "$dir/results.json" ]; then node scripts/qa-smoke-summary.mjs "$dir/results.json" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"; else echo "No report in $dir: that run failed before its tests started, or did not run." >> "$GITHUB_STEP_SUMMARY"; fi
+          done
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -58,4 +61,6 @@ jobs:
           path: |
             playwright-report-qa
             test-results-qa
+            playwright-report-qamode
+            test-results-qamode
           retention-days: 7
