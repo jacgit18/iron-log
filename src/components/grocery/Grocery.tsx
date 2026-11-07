@@ -552,7 +552,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
         ]} />
       )}
       {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
-      {!editing && !!q.trim() && !shown.length && <NoMatch q={q} />}
+      {!editing && !!q.trim() && !listed.length && <NoMatch q={q} />}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
       <div className={editing ? `gcols ${columnsClass(shown.length)}` : `gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
       {listed.map((grp, gi) => (
