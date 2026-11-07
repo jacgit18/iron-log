@@ -122,5 +122,30 @@ test('a bought row with no price says Add price, and the tick notice offers it',
   await note.getByRole('button', { name: 'Add price' }).click();
   await expect(page).toHaveURL(/#\/daily\/grocery\/bought$/);
   await expect(page.getByLabel('Price each of Milk, dollars')).toBeVisible(); // its panel is open
+  await expect(page.getByLabel('Price each of Milk, dollars')).toBeFocused(); // and the price box has focus
   await expect(page.getByRole('button', { name: /^Add price/ }).first()).toBeVisible();
+});
+
+test('moving a row to another store while a chip is on switches to All and keeps focus on the store box', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  await chip(page, /^Costco/).click();
+  await page.getByLabel('Store for Chicken this month').selectOption('Aldi');
+  await expect(chip(page, /^All/)).toHaveAttribute('aria-pressed', 'true'); // the row is not lost: All shows it under Aldi
+  await expect(page.locator('#groc-store-chicken')).toBeFocused();
+  await expect(page.locator('#groc-store-chicken')).toHaveValue('Aldi');
+});
+
+test('the More menu can go back to details by screen size after a choice', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await page.click('#groc-toolmore');
+  await page.click('#groc-details-all');
+  await expect(page.getByLabel('Count of Chicken')).toBeVisible();
+  await page.click('#groc-toolmore'); // the menu closed when the row opened? press again to be sure it is open
+  if (!(await page.locator('#groc-details-auto').isVisible())) await page.click('#groc-toolmore');
+  await page.click('#groc-details-auto');
+  await expect(page.getByLabel('Count of Chicken')).toHaveCount(0); // a phone is closed again
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.getByLabel('Count of Chicken')).toBeVisible(); // and a computer is open
 });

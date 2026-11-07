@@ -207,7 +207,11 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
   const [toggled, setToggled, clearToggled] = useIdSet();
   const isOpen = (id: string) => defaultOpen !== toggled.has(id);
   const setOpen = (ids: string[], on: boolean) => setToggled(ids, on !== defaultOpen);
-  useEffect(() => { if (priceFor) { setOpen([priceFor], true); onAddPrice(null); } }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arriving from the tick notice's Add price
+  useEffect(() => { // once, on arriving from the tick notice's Add price: open the row, bring it into view and put focus on its price box
+    if (!priceFor) return;
+    setOpen([priceFor], true); onAddPrice(null);
+    window.setTimeout(() => { const box = document.querySelector<HTMLInputElement>(`#groc-more-${priceFor} .gprice`); box?.scrollIntoView({ block: 'center', behavior: motionOK() ? 'smooth' : 'instant' }); box?.focus({ preventScroll: true }); }, 0);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [splitOpen, setSplitOpen] = useState<string | null>(null); // the month whose folded split section is open (one at a time, closed each time Shopping or Bought opens)
   // The money line over Bought's list opens the Who owes who row, takes you there and puts focus on its header, so the next Tab is inside it; reduced motion jumps instead of gliding.
   const openSplit = () => { setSplitOpen(mk); window.setTimeout(() => { const at = document.getElementById(`groc-split-${mk}`); at?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'instant' }); at?.querySelector<HTMLElement>('.gsplittoggle')?.focus({ preventScroll: true }); }, 0); };
@@ -231,7 +235,8 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
       const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
       focusAfter.current = !on && !onBought ? `groc-${id}` : next ? `groc-${next}` : onBought ? 'groc-view-shopping' : 'groc-view-bought'; // a row that moves to the other view: focus the next row here, else the other view's tab
     }
-    setTicked(on && current ? { id, name: g.items.find(x => x.id === id)?.n ?? '', mk, t: Date.now(), unpriced: hasNoPrice(lineOf(g.items.find(x => x.id === id) ?? list[0]!, month)) } : null); // a tick can be taken back from the notice; any other change replaces or clears it
+    const ticked1 = g.items.find(x => x.id === id); // the item once: its name and whether it has a price come from the same row, and none found says nothing about a price
+    setTicked(on && current ? { id, name: ticked1?.n ?? '', mk, t: Date.now(), unpriced: ticked1 ? hasNoPrice(lineOf(ticked1, month)) : false } : null); // a tick can be taken back from the notice; any other change replaces or clears it
   };
   const emptyText = off > 0 ? 'Nothing planned yet. Items you add on Inventory show up here.' : 'Nothing on this month’s list.';
   const pickAll = allIds(shown); const allOn = allPicked(pickAll, picked);
@@ -260,6 +265,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
         {selecting && onBought && shown.length > 0 && <button type="button" className="btn sm ghost" id="groc-pickall" onClick={() => pickSome(pickAll, !allOn)}>{allOn ? 'Clear all' : `Select all ${pickAll.length}`}</button>}
         <GroceryMore>
           <button type="button" className="btn sm ghost" id="groc-details-all" onClick={() => { clearToggled(); setDetailsChoice(defaultOpen ? 'closed' : 'open'); }}>{defaultOpen ? 'Hide details on all rows' : 'Show details on all rows'}</button>
+          {detailsChoice !== 'auto' && <button type="button" className="btn sm ghost" id="groc-details-auto" onClick={() => { clearToggled(); setDetailsChoice('auto'); }}>Details by screen size</button>}
           {!onBought && current && todo.length > 0 && !q.trim() && ( // not while a search hides rows: it would skip items you cannot see
             <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip the ${todo.length} left: every item still to get this month`} label={`Skip the ${todo.length} left`} armedLabel={`Tap again to skip ${todo.length}`}
               onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
@@ -285,7 +291,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
-            <ul className="glist">{(onBought ? grp.items : gotLast(grp.items, month)).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={onBought ? false : off > 0} carries={off >= 0} onGot={on => tick(it.id, on)} open={isOpen(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} pick={selecting ? { on: picked.has(it.id), set: on => pickSome([it.id], on) } : undefined} />)}</ul>
+            <ul className="glist">{(onBought ? grp.items : gotLast(grp.items, month)).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={onBought ? false : off > 0} carries={off >= 0} onGot={on => tick(it.id, on)} open={isOpen(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; setChipPick(ALL_CHIP); }} pick={selecting ? { on: picked.has(it.id), set: on => pickSome([it.id], on) } : undefined} />)}</ul>
           </section>
         );
       })}
