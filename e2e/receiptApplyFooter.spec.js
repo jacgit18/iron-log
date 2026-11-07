@@ -100,10 +100,14 @@ test.describe('on a phone', () => {
     expect((await remove.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await sheet.locator('#rc-apply').scrollIntoViewIfNeeded();
     await sheet.evaluate(el => { el.scrollTop = el.scrollHeight; });
-    const gap = await sheet.evaluate(el => {
-      const rows = el.querySelectorAll('.rcrow'), bar = el.querySelector('.rcfoot');
-      return bar.getBoundingClientRect().top - rows[rows.length - 1].getBoundingClientRect().bottom;
+    // The space the change adds: the list ends with 16 px of its own and the bar starts 16 px below what precedes it, so no row sits under the bar. (A note always
+    // sits between the last row and the bar, so a bare gap check would pass without them.)
+    const space = await sheet.evaluate(el => {
+      const rows = el.querySelectorAll('.rcrow'), list = el.querySelector('.rclines'), bar = el.querySelector('.rcfoot');
+      return { listPad: parseFloat(getComputedStyle(list).paddingBottom), barGap: parseFloat(getComputedStyle(bar).marginTop), gap: bar.getBoundingClientRect().top - rows[rows.length - 1].getBoundingClientRect().bottom };
     });
-    expect(gap).toBeGreaterThanOrEqual(0);
+    expect(space.listPad).toBeGreaterThanOrEqual(16);
+    expect(space.barGap).toBeGreaterThanOrEqual(16);
+    expect(space.gap).toBeGreaterThanOrEqual(space.listPad + space.barGap);
   });
 });
