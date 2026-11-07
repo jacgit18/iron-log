@@ -3,6 +3,7 @@ import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, lineTotal, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { itemHistory, lastBoughtText } from '../../lib/itemHistory.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { columnsClass } from '../../lib/groceryColumns.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
@@ -31,6 +32,7 @@ import { useSortChoice } from '../useSortChoice.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
+import './PriceHistory.css';
 
 // Three views (ADR 038, changed by ADR 054 and 079): To get is this month's shopping list; At home is every item you buy, ticked while you have it (a new month keeps last month's ticks)
 // this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. A new month starts with last month’s ticks (ADR 079).
@@ -296,7 +298,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
 /* ---------- At home ---------- */
 // "Have" is one tick shared with To get: a When-out item has it unless it is out (ticking it bought on To get clears "out"), and an
 // Every-month item has it once it is ticked bought this month. So a tick on either list shows on the other.
-function HomeRow({ item, have, bought, onHave }: { item: GroceryItem; have: boolean; bought: boolean; onHave: (on: boolean) => void }) {
+function HomeRow({ item, have, bought, onHave, last }: { item: GroceryItem; have: boolean; bought: boolean; onHave: (on: boolean) => void; last: string }) {
   return (
     <li className="ghome">
       <label className="gtick">
@@ -304,6 +306,7 @@ function HomeRow({ item, have, bought, onHave }: { item: GroceryItem; have: bool
         <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
       </label>
       {bought && <span className="gchip">Bought</span>}
+      {last && <button type="button" className="ghistory" id={`groc-history-${item.id}`} aria-label={`${last}. Open price history for ${item.n}`} onClick={() => useAppStore.getState().openModal({ type: 'pricehistory', id: item.id })}>{last}</button>}
     </li>
   );
 }
@@ -496,7 +499,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
               {adjusting.has(grp.store) ? `Done adjusting ${grp.label}` : `Adjust shares for ${grp.label}`}
             </button>
           )}
-          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} />))}</ul>
+          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} last={lastBoughtText(it, itemHistory(it, months), nowKey)} />))}</ul>
         </section>
       ))}
       </div>

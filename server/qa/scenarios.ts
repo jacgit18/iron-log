@@ -49,13 +49,14 @@ export type ScenarioFeature =
   | 'Link previews'
   | 'Moved-card tag'
   | 'Search hiding'
-  | 'Security headers';
+  | 'Security headers'
+  | 'Price history';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag', 'Ideas to try',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try',
 ];
 
 export interface Scenario {
@@ -1458,6 +1459,32 @@ export const SCENARIOS: readonly Scenario[] = [
       'The store is added under the name you typed, and Undo removes it.',
       'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
       'When the list already has the store there is no box and the items are marked bought at it as before.',
+    ],
+  },
+  {
+    id: 'S-112', feature: 'Price history', title: 'An At home item shows its last price and store, and the line opens its history', persona: 'grocery-shopper', brief: 'grocery-price-history',
+    steps: [
+      'On To get, tick an item bought (give it a price) under a store; do the same for another item. Open At home.',
+      'Find the ticked item. Under its name read the small underlined line, then tap it.',
+      'In the sheet read the average, the store it is most often bought at and the list of months, then press Close.',
+    ],
+    expected: [
+      'The line reads "Last: $X at Store, Mon" with the price you gave and this month; an item never bought has no line.',
+      'The sheet lists this month with its price and store; with two or more priced months the lowest is tagged Cheapest.',
+      'Close puts you back on At home with focus on the line you tapped.',
+    ],
+  },
+  {
+    id: 'S-113', feature: 'Price history', title: 'Packs at two prices, a purchase with no price, and an item never bought', persona: 'grocery-shopper', brief: 'grocery-price-history', edge: true,
+    steps: [
+      'On To get, tick an item bought and give it two pack prices (Add price twice, for example $2.50 and $3.00). Tick another item bought and leave its price empty.',
+      'On At home tap the Last: line of the pack item, then of the item with no price.',
+      'Find an item you have never ticked bought and look under its name.',
+    ],
+    expected: [
+      'The pack item reads "Last: $2.75 at ..." and its sheet row says "$2.50 + $3.00 (2 packs)".',
+      'The item with no price reads "Last: no price at ..." and its sheet row says "No price saved" and is left out of Cheapest and the average.',
+      'The item never bought has no line under it.',
     ],
   },
 ];
