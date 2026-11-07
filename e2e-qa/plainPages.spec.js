@@ -40,6 +40,16 @@ test('S-78: the real pages and files still open, a missing file is a plain 404, 
   await context.close();
 });
 
+test('S-78: /privacy without .html is Page not found on a first visit', async ({ browser }) => {
+  // The other half of the scenario (an already active service worker may still open the Privacy Policy) is not walked: the service worker never became
+  // ready on this test server, so it is left to a real browser.
+  const first = await browser.newContext({ serviceWorkers: 'block' });
+  const fresh = await first.newPage();
+  expect((await fresh.goto('/privacy')).status()).toBe(404);
+  await expect(fresh.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await first.close();
+});
+
 test('S-100: the sitemap and icon load, the plain pages have their own titles, and the app tab says Loadbearer', async ({ browser }) => {
   const { context, page } = await signInAs(browser, 'new-user');
   const sitemap = await page.request.get('/sitemap.xml');
@@ -71,7 +81,20 @@ test('S-98: every tab and the plain pages render styled with no security errors 
     await page.click(`#tab-${tab}`);
     const look = await styled(page);
     expect(look.bg, tab).not.toBe('rgba(0, 0, 0, 0)');
+    await page.click('#help-btn'); // one sheet on each tab: the Help sheet is the one every tab has
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toBeVisible();
+    expect((await sheet.evaluate(el => getComputedStyle(el).backgroundColor)), `${tab} sheet`).not.toBe('rgba(0, 0, 0, 0)');
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
   }
+  await page.locator('#account-badge').click(); // Settings is reached through the account menu when signed in
+  await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
+  await expect(page.getByRole('heading', { name: /Data/ }).first()).toBeVisible(); // wait for Settings itself to draw, not only the page behind it
+  expect((await styled(page)).bg, 'settings').not.toBe('rgba(0, 0, 0, 0)');
+  await page.click('#help-btn'); // the same one sheet, opened on Settings too
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
   for (const path of ['/privacy.html', '/terms.html', '/nothing-here']) {
     await page.goto(path);
     const look = await styled(page);
