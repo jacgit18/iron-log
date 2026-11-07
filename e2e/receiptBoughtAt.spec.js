@@ -34,6 +34,7 @@ test('rows say where each item was bought, Apply marks them bought at BJ\'s for 
   await expect(sheet.locator('.rcatnote')).toHaveCount(2); // the toilet paper is at BJ's already: no note
   await expect(sheet.getByText("2 items will be marked bought at BJ's this month.")).toBeVisible();
   await expect(sheet.getByText('changes who shares them')).toBeVisible(); // Aldi and Anywhere have no group, BJ's splits with Sister
+  await expect(sheet.getByText("At home stays as it is. Tick the box to list these under BJ's there.")).toBeVisible(); // mixed usual stores: the box starts unticked
   expect(await month(page)).toEqual({}); // nothing is written before Apply
   await sheet.getByRole('button', { name: /^Apply/ }).click();
   const after = await month(page);
