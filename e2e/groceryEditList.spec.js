@@ -76,6 +76,15 @@ test('removing a store\'s last row under its chip keeps focus on a row that is o
   await expect(page.getByRole('button', { name: /Rice/ }).first()).toBeVisible();
 });
 
+test('an open row stays listed when the search no longer matches it', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  await page.getByRole('searchbox', { name: 'Search groceries' }).fill('eggs');
+  await page.locator('#groc-edit-arrow-eggs').click();
+  await page.getByRole('searchbox', { name: 'Search groceries' }).fill('zzz');
+  await expect(page.locator('#groc-edit-arrow-eggs')).toBeVisible();
+});
+
 test('adding an item under a chip switches to All so the new row shows', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page);

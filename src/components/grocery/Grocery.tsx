@@ -507,9 +507,10 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   const month = months[nowKey] || emptyMonth();
   const [q, setQ] = useState('');
   const [sort, setSort] = useSortChoice('grocery-home', HOME_SORTS, DEFAULT_GROCERY_SORT);
-  // A row being edited keeps its place (A to Z), so it does not jump while its name, price or tick changes: the search applies while editing, the sort does not.
+  // A row being edited keeps its place (A to Z), so it does not jump while its name, price or tick changes: the search applies while editing (a row that is open stays listed, so renaming it does not drop it), the sort does not.
   const facts = { cents: (i: GroceryItem) => (i.cents == null ? null : lineTotal(i.qty, i.cents)), ticked: (i: GroceryItem) => haveOf(i, month) };
-  const shown = editing ? byStore(g, filterGroceryItems(g.items, q), true) : byStore(g, filterGroceryItems(g.items, q), true).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
+  const hits = new Set(filterGroceryItems(g.items, q).map(i => i.id));
+  const shown = editing ? byStore(g, g.items.filter(i => hits.has(i.id) || openEdit.has(i.id)), true) : byStore(g, filterGroceryItems(g.items, q), true).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
   // A row moved to another store, or removed, drops keyboard focus to the page: keep it on the row's store select, or after a removal on the next row's arrow
   // (else the one before, else the Edit/Done button).
   const focusAfter = useRef<string | null>(null);
