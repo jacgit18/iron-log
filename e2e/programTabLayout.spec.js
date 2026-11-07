@@ -126,6 +126,18 @@ test.describe('on a phone', () => {
     expect(compare.y).toBeLessThan(saved.y);
   });
 
+  for (const width of [390, 320]) {
+    test(`the A | B switch is two equal halves that fill the card at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await open(page);
+      const seg = page.getByRole('group', { name: 'Program to edit' });
+      const [a, b] = await seg.getByRole('button').all();
+      const [box, ba, bb] = [await seg.boundingBox(), await a.boundingBox(), await b.boundingBox()];
+      expect(Math.abs(ba.width - bb.width)).toBeLessThan(1);
+      expect(ba.width + bb.width).toBeGreaterThan(box.width - 12); // the 3 px padding and the gap are all that is left
+    });
+  }
+
   test('a desktop-only address shows Programs on a phone', async ({ page }) => {
     await open(page, '/#/program/saved');
     await expect(page.locator('#ed-title')).toBeVisible();
