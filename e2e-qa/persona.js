@@ -53,7 +53,14 @@ export async function signInAs(browser, id, { viewport = { width: 1440, height: 
   });
   const page = await context.newPage();
   await page.clock.install({ time: NOW });
-  const res = await page.request.post('/api/auth/sign-in/email', { data: { email: personaEmail(id), password: PASSWORD } });
+  // The pacing above lives in this process, the server's limiter in the server's: after a failed test Playwright starts a new worker with an empty
+  // list while the server still counts. So a 429 is also waited out here (Retry-After, else 15 s) and tried again.
+  let res;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    res = await page.request.post('/api/auth/sign-in/email', { data: { email: personaEmail(id), password: PASSWORD } });
+    if (res.status() !== 429) break;
+    await new Promise(r => setTimeout(r, (Number(res.headers()['retry-after']) || 15) * 1000));
+  }
   if (res.status() !== 200) throw new Error(`could not sign in as ${id}: HTTP ${res.status()}`);
   await page.goto('/');
   return { context, page };

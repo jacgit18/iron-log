@@ -15,9 +15,11 @@ test('S-08: Log on today\'s planned items logs them, and a later day has no Log 
   const n = await logs.count();
   expect(n).toBeGreaterThan(0); // today has at least one planned recipe or saved meal
   const before = await diet.locator('.dt-entry').count();
-  for (let i = 0; i < n; i++) {
-    await plan.getByRole('button', { name: /^Log / }).first().click();
-    await expect(plan.getByRole('status')).toContainText(/^Logged \d+ from /);
+  for (let i = 0; i < n; i++) { // the Log buttons stay on their rows, so press each row's own button once and check its message by name
+    const btn = logs.nth(i);
+    const name = (await btn.getAttribute('aria-label')).replace(/^Log /, '');
+    await btn.click();
+    await expect(plan.getByRole('status')).toHaveText(new RegExp(`^Logged \\d+ from ${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.`));
   }
   expect(await diet.locator('.dt-entry').count()).toBeGreaterThan(before);
   await plan.getByRole('list', { name: 'Plan', exact: true }).getByRole('button').nth(1).click(); // the day after today
@@ -39,7 +41,7 @@ test('S-09: the plan\'s grocery button adds each missing ingredient once, and a 
   expect(added).toBeGreaterThan(0);
   expect(await rows()).toBe(before + added);
   await button.click();
-  await expect(plan.getByRole('status')).toContainText(/\d+ are on To get already\./);
+  await expect(plan.getByRole('status')).toContainText(/\d+ (is|are) on To get already\./);
   expect(await rows()).toBe(before + added);
   await context.close();
 });

@@ -65,6 +65,7 @@ test('S-100: the sitemap and icon load, the plain pages have their own titles, a
 test('S-98: every tab and the plain pages render styled with no security errors in the console', async ({ browser }) => {
   const { context, page } = await signInAs(browser, 'diet-fresh');
   const bad = watchConsole(page);
+  await page.reload(); // signInAs already loaded the app once: reload so its own scripts, styles and fonts are watched too
   await expect(page.locator('#account-badge')).toBeVisible({ timeout: 30_000 });
   for (const tab of ['daily', 'progress', 'program']) {
     await page.click(`#tab-${tab}`);
