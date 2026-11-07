@@ -16,11 +16,11 @@ function Tile({ label, value, hint, last }: { label: string; value: string; hint
   );
 }
 
-export default function GrocerySummary({ t, view, empty }: { t: Tally; view: 'shopping' | 'bought'; empty: string }) {
+export default function GrocerySummary({ t, view, empty, rail }: { t: Tally; view: 'shopping' | 'bought'; empty: string; rail?: boolean }) {
   const spent = money(t.spent);
   if (!t.count) return <p className="note" id="groc-summary" role="status">{empty}</p>;
   return (
-    <div className="gsum" id="groc-summary" role="status">
+    <div className={`gsum${rail ? ' gsumrail' : ''}`} id="groc-summary" role="status">
       <div className="gsumtiles">
         <Tile label="Bought" value={`${t.got} of ${t.count}`} />
         <Tile label="Spent" value={spent} hint={t.taxed ? 'with tax' : undefined} />

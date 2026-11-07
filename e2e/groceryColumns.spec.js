@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+// Shopping is one column under store chips since brief groceries-store-chips-owes (e2e/groceryStoreChips.spec.js covers it at three widths); the store columns stay on Bought and Inventory, which these tests cover.
 
 // Shopping and Inventory: one column per store on a wide screen (3 from 1700px, 2 from 1100px, 1 below, never more columns than stores).
 // The fixed date is in September 2026. Three stores of different length; Aldi has one item bought.
@@ -29,58 +30,6 @@ const cols = async page => page.evaluate(() => [...document.querySelectorAll('.g
   widths: [...e.children].map(c => Math.round(c.getBoundingClientRect().width)),
 })));
 const go = async (page, view) => { await page.click(`#groc-view-${view}`); };
-
-test('1920 wide: Shopping shows one column per store, each with its heading, total and Show details', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'shopping');
-  const [c] = await cols(page);
-  expect(c.lefts.length).toBe(3); // BJ's, Aldi, Costco
-  const first3 = c.tops.slice(0, 3);
-  expect(new Set(first3).size).toBe(1); // same row
-  expect(c.lefts[0]).toBeLessThan(c.lefts[1]); expect(c.lefts[1]).toBeLessThan(c.lefts[2]);
-  expect(c.widths[0]).toBeLessThan(700);
-  const bj = page.locator('.gstore', { hasText: "BJ's" }).first();
-  await expect(bj.locator('.gstoremeta .note')).toContainText('3 to get');
-  await expect(bj.getByRole('button', { name: "Show details in BJ's" })).toBeVisible();
-  const head = await box(bj.locator('.gstorehead')); const col = await box(bj);
-  expect(head.x).toBeGreaterThanOrEqual(col.x); expect(head.x + head.width).toBeLessThanOrEqual(col.x + col.width + 1);
-});
-
-test('the controls above the stores stay full width', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page); await go(page, 'shopping');
-  const [c] = await cols(page);
-  const bar = await box(page.locator('.gtools'));
-  const top = await box(page.locator('#groc-summary'));
-  expect(bar.y + bar.height).toBeLessThanOrEqual(c.tops[0] + 1);
-  expect(top.y).toBeLessThan(c.tops[0]);
-  const grid = await box(page.locator('.gcols').first());
-  expect(bar.x + bar.width).toBeGreaterThan(grid.x + grid.width - 4); // Skip all sits at the right edge of the whole grid, not of one column
-});
-
-test('1280 wide has two columns and 375 wide has one', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await seed(page); await go(page, 'shopping');
-  let [c] = await cols(page);
-  expect(c.tops[0]).toBe(c.tops[1]); expect(c.lefts[1]).toBeGreaterThan(c.lefts[0]);
-  expect(c.tops[2]).toBeGreaterThan(c.tops[0]); // the third wraps
-  await page.setViewportSize({ width: 375, height: 800 });
-  [c] = await cols(page);
-  expect(new Set(c.lefts).size).toBe(1); // stacked
-  await page.setViewportSize({ width: 768, height: 900 });
-  [c] = await cols(page);
-  expect(new Set(c.lefts).size).toBe(1);
-});
-
-test('two stores at 1920 make two columns, not three with a hole', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page, { stores: ['Aldi', 'Costco'], items: [item('milk', 'Milk', 'Aldi', 399), item('salt', 'Salt', 'Costco', 150)] }, { lines: {}, pulled: [] });
-  await go(page, 'shopping');
-  const [c] = await cols(page);
-  expect(c.lefts.length).toBe(2);
-  expect(c.widths[0]).toBeGreaterThan(800);
-  expect(c.widths[0] + c.widths[1]).toBeGreaterThan(c.w - 40);
-});
 
 test('Inventory lays its stores out as columns too, and the Tab order follows the columns', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -114,8 +63,8 @@ test('editing Inventory keeps the columns, with Show details inside each store a
 
 test('a shared store keeps its group tag and money line inside its column', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page, { ...CATALOGUE, groups: [{ id: 'g1', n: 'Run', people: [{ id: 'sis', n: 'Sister' }], stores: ["BJ's"] }] }, { lines: { tp: { got: true } }, pulled: [] });
-  await go(page, 'shopping');
+  await seed(page, { ...CATALOGUE, groups: [{ id: 'g1', n: 'Run', people: [{ id: 'sis', n: 'Sister' }], stores: ["BJ's"] }] }, { lines: { tp: { got: true }, milk: { got: true } }, pulled: [] }); // two stores bought, so Bought has two columns
+  await go(page, 'bought');
   const bj = page.locator('.gcols > .gstore', { hasText: "BJ's" }).first();
   await expect(bj.locator('.gtag')).toBeVisible();
   await expect(bj.locator('.gstoremoney')).toBeVisible();

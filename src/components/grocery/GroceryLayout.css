@@ -1,0 +1,40 @@
+@layer base, components;
+@layer components {
+/* Shopping and Bought (brief groceries-store-chips-owes): the main column and the desktop right rail, the single-column Shopping list, a store chip's compact rows,
+   and the sticky stack above the tab bar that holds the phone's total bar, the Undo notice and the Select bar. */
+.glayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--sp-16);
+  align-items: start;
+}
+.gmain {
+  min-width: 0;
+}
+.gshoplist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-16);
+}
+/* In one store's chip view the rows are tall enough for a hurried tap and carry only the tick, the name and the price. */
+.gcompact .ggetline {
+  min-height: 56px;
+}
+.gcompact .gsplittag {
+  display: none;
+}
+.gstack {
+  position: sticky;
+  bottom: calc(var(--tabbar, 0px) + var(--sp-8) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin-top: var(--sp-8);
+}
+.gstack .gtickednote,
+.gstack .bsdock {
+  position: static;
+  margin-top: 0;
+}
+}

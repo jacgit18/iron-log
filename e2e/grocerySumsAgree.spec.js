@@ -17,7 +17,7 @@ test('the line over the list, the tiles, the footer and the store line agree', a
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(MONTH));
   }, { CATALOGUE, MONTH });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
   const money = (await page.locator('#groc-money').innerText()).replace(/\s+/g, ' ');
   const m = /Paid \$([\d.]+) · Your share \$([\d.]+) · Owed to you \$([\d.]+)/.exec(money);
   expect(m, money).not.toBeNull();

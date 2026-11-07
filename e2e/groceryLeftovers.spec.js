@@ -68,6 +68,7 @@ test('Y-8: the split header does not say All settled while people still owe each
   const cat = { stores: ['BJs'], items: [{ ...item('tp', 'Paper', 'BJs', 2000), share: { with: ['sis', 'mom'], notMine: true } }],
     groups: [{ id: 'g1', n: 'Run', people: [{ id: 'sis', n: 'Sister' }, { id: 'mom', n: 'Mom' }], stores: ['BJs'] }] };
   await seed(page, cat, { '2026-09': { lines: { tp: { got: true } }, pulled: [], payer: { BJs: 'mom' } } });
+  await page.click('#groc-view-bought'); // Who owes who is the first row on Bought
   const head = page.locator('.gsplittoggle');
   await expect(head).toContainText('Others owe each other $10.00');
   await expect(head).not.toContainText('All settled');

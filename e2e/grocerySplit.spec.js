@@ -2,7 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // The split card sits folded at the bottom of Shopping; these specs read it, so each opens it first (a page with no split section has nothing to open).
-const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes), so opening it goes there first.
+const openSplit = async page => { await page.click('#groc-view-bought'); const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
 
 // Sharing groceries with other people (ADR 059), from the phone's side. Open to everyone: an account that is not an admin sees the grocery
 // list exactly as before. The fixed date is in September 2026, so the month below is 2026-09.
