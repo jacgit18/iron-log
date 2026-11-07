@@ -1851,6 +1851,33 @@ export const SCENARIOS: readonly Scenario[] = [
       'The rail lists the stores with counts; on Inventory it also says "m of n items this month". Pressing a store picks that chip. Under 1100 px there is no rail and the chips still work.',
     ],
   },
+  {
+    id: 'S-145', feature: 'Groceries views', title: 'Edit on Inventory shows store chips and one list; a chip shows one store; stores fold', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list',
+    steps: [
+      'Open Inventory with two or more stores and press Edit. Press a store chip, then Done, then Edit again. Press a store\'s name to fold it, then press it again.',
+    ],
+    expected: [
+      'Chips with counts show above one list of stores (no columns). A chip shows one store and stays across Done and Edit. A folded store shows only its name and count; opening it brings the rows back. There is no Sort in Edit mode.',
+    ],
+  },
+  {
+    id: 'S-146', feature: 'Groceries views', title: 'Search in Edit mode filters by name and opens folded stores', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list',
+    steps: [
+      'In Edit mode fold a store, then type part of one of its item names in the search box. Then type a name that matches nothing.',
+    ],
+    expected: [
+      'The folded store opens and shows the matching row. The second search says "No items match" and the Add item, More and Done buttons stay at the bottom.',
+    ],
+  },
+  {
+    id: 'S-147', feature: 'Groceries views', title: 'Moving an item to another store under a chip switches the chip to All', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list', edge: true,
+    steps: [
+      'In Edit mode press one store\'s chip, open an item there and change its store to another one. On a computer 1100 px or wider look at the right side.',
+    ],
+    expected: [
+      'The chip switches to All, the cursor stays on the item\'s Store box, and the item shows under its new store. On a wide screen the Stores panel sits in the right rail; on a narrower one it sits under the list.',
+    ],
+  },
 ];
 
 
