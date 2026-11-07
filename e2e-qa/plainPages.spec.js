@@ -46,7 +46,7 @@ test('S-100: the sitemap and icon load, the plain pages have their own titles, a
   expect(sitemap.status()).toBe(200);
   const locs = [...(await sitemap.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
   expect(locs).toHaveLength(5);
-  for (const l of locs) expect(l.startsWith('https://loadbearer.app'), l).toBe(true);
+  for (const l of locs) expect(new URL(l).origin, l).toBe('https://loadbearer.app'); // compare the origin, not a string prefix (a host like loadbearer.app.evil.test would pass startsWith)
   const icon = await page.request.get('/favicon.ico');
   expect(icon.status()).toBe(200);
   expect(icon.headers()['content-type'] ?? '').toContain('image');
