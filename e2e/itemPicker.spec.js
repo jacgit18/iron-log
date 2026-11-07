@@ -264,7 +264,7 @@ test('Supplement library: the search asks the server and Add keeps it Library on
 test('the Supplement library is under Edit on Daily → Supplements, not on the Program tab', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button')).toHaveText(['Programs', 'Exercise library', 'Stretch library']);
+  await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button').locator('b')).toHaveText(['Programs', 'Exercise library', 'Stretch library']);
   await page.click('#tab-daily'); await page.click('#daily-supplements');
   await expect(page.locator('#suplib-h')).toHaveCount(0);
   await page.click('#sched-edit');

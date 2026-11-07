@@ -6,7 +6,7 @@ import { test, expect } from './fixtures.js';
 const openCreate = async page => {
   await page.click('#tab-program');
   await page.getByRole('button', { name: 'Programs', exact: true }).click();
-  await page.getByRole('button', { name: 'Create a program' }).click();
+  await page.getByRole('button', { name: /^(Create a program|\+ New program)$/ }).click(); // a phone has the floating pill instead of the header button
   await expect(page.getByRole('heading', { name: 'Create a program' })).toBeVisible();
 };
 const name = page => page.getByLabel('Name');

@@ -1,16 +1,17 @@
-import type { LibraryItem, Program } from '../../types.ts';
+import type { LibraryItem, Program, ProgramSlot } from '../../types.ts';
 import type { EdMoved } from '../../store/types.ts';
 import type { ProgKey } from '../../types.ts';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
+import { exInfo } from '../../lib/data.js';
 import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
 import { archivedHeading, splitLibrary } from '../../lib/programArchive.js';
 import { DEFAULT_PROGRAM_SORT, PROGRAM_SORTS } from '../../lib/programSort.js';
 import { sameProg, libDate } from '../../lib/entryMerge.js';
+import { itemFacts, rolePill, sectionNote, supersetRuns, SUPERSET_NOTE } from '../../lib/programRowFacts.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
@@ -21,12 +22,15 @@ import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import ProgramCompare from './ProgramCompare.jsx';
-import ProgramStrip from './ProgramStrip.jsx';
+import ProgramFab from './ProgramFab.jsx';
+import ProgramGuide from './ProgramGuide.jsx';
+import ProgramHeader from './ProgramHeader.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
 import { boardNote, onBoardKeys } from '../../lib/programDay.js';
 import { pageOf, programKey, programPath } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
+import { useWide } from '../board/useWide.js';
 import './Editor.css';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
@@ -39,7 +43,7 @@ function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { nam
     <div className={`edrow${inUse ? ' inuse' : ''}${removing ? ' removing' : ''}`}>
       <div className="edmain">{removing && <span className="tag rmtag">Will be deleted · tap Delete again</span>}<b>{name}</b><span className="note">{meta}</span></div>
       <div className="edbtns">
-        {inUse ? <span className="pill">In use</span> : !onLoad ? null : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel ?? 'Tap to load'} onConfirm={onLoad} />}
+        {inUse ? <span className="pill">In use</span> : !onLoad ? null : <ArmedButton className="btn sm" aria-label={`Put ${name} on Board`} label="Put on Board" armedLabel={loadLabel ?? 'Tap to load'} onConfirm={onLoad} />}
         {extra}
       </div>
     </div>
@@ -60,11 +64,11 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
     <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
   );
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
-  const loadLabel = `Tap to load into ${pn}`;
+  const loadLabel = `Tap to replace ${pn}`;
   return (
     <section className="panel edpanel edprog lib mt-16">
-      <h2>Program library</h2>
-      <p className="note">Your saved programs. Load one into {pn} to put it on your Board; whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
+      <h2>Saved programs</h2>
+      <p className="note">Keep a copy of {pn} so you can come back to it. Putting a saved program on your Board replaces {pn}, and what {pn} has now is saved here first if it isn't already.</p>
       <RemovedNotice scope="library" />
       {(items.length > 1 || archived.length > 1) && <div className="inline"><SortControl options={PROGRAM_SORTS} value={sort} onChange={setSort} /></div>}
       <div className="edlist">
@@ -79,7 +83,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
             </>}
           />
         ))}
-        {!items.length && <p className="note">{archived.length ? `No active programs. ${archived.length} archived.` : 'No programs yet. Use Create a program, at the top, to build your own.'}</p>}
+        {!items.length && <p className="note">{archived.length ? `No active programs. ${archived.length} archived.` : 'No saved programs yet. Save a copy of a program below, or use Create a program to build your own.'}</p>}
       </div>
       {archived.length > 0 && (
         <details className="libarchive">
@@ -181,15 +185,17 @@ function ProgramEditor() {
   useEffect(() => { if (moved) movedUndoRef.current?.focus(); }, [moved]);
   useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay, k]);
   useEffect(() => () => { const s = useAppStore.getState(); s.dismissEdMoved(); s.dismissEdCopied(); }, []);
-  const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
+  // A phone folds the Day label field and the Copy this day controls behind two small buttons; they open for the day and program they were opened on.
+  const wide = useWide(); const dayKey = `${k}:${edDay}`;
+  const [labelOpenFor, setLabelOpenFor] = useState<string | null>(null); const [copyOpenFor, setCopyOpenFor] = useState<string | null>(null);
+  const labelOpen = labelOpenFor === dayKey; const copyOpen = copyOpenFor === dayKey;
+  const addBtn = <button type="button" className={`btn primary${wide ? '' : ' addfull'}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
     <>
+      <ProgramGuide />
+      <ProgramHeader k={k} name={edName} prog={prog} lib={lib} />
       <div className="edtop">
-        <div className="seg" role="group" aria-label="Program to edit">
-          {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
-        </div>
-        <button type="button" className="btn createprog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
         <div className="dayctl">
           <div className="daystep" role="group" aria-label="Day stepper">
             <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
@@ -211,16 +217,23 @@ function ProgramEditor() {
           </label>
         </>
       ) : null}
-      <ProgramStrip />
       <div className="edcols">
       <section className="panel edpanel edprog">
         <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
-        <label className="field">Day label
-          <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
-        </label>
-        <div className="actions edadd start">
+        {wide || day.sub || labelOpen ? (
+          <label className="field">Day label
+            <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} autoFocus={!wide && labelOpen && !day.sub} />
+          </label>
+        ) : null}
+        <div className={`actions edadd start${wide ? '' : ' compact'}`}>
           {addBtn}
-          {day.slots.length > 0 && (
+          {!wide && (
+            <div className="edsmall">
+              {!(day.sub || labelOpen) && <button type="button" className="btn sm ghost" onClick={() => setLabelOpenFor(dayKey)}>Add a day label</button>}
+              {day.slots.length > 0 && !copyOpen && <button type="button" className="btn sm ghost" onClick={() => setCopyOpenFor(dayKey)}>Copy day…</button>}
+            </div>
+          )}
+          {day.slots.length > 0 && (wide || copyOpen) && (
             <span className="copyday">
               <label className="field">Copy this day to
                 <select className="btn" value={copyTo} onChange={e => setCopyPick(Number(e.target.value))}>
@@ -262,32 +275,63 @@ function ProgramEditor() {
         )}
         <div className="edlist">
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
-          {day.slots.map((sl, i) => {
-            const newSec = i === 0 || sl.sec !== day.slots[i - 1].sec;
-            const starts = sl.from && sl.from > thisWeek ? `Starts ${fmtShort(parseDate(sl.from))}` : ''; // added to a finished day: not on the board until then
-            const tag = [sl.tier, sl.type === 'superset' ? 'Superset' : sl.type === 'either' ? 'Either / or' : '', starts].filter(Boolean).join(' · ');
-            return (
-              <Fragment key={sl.id || i}>
-                {newSec && <div className="sect">{sl.sec || ''}</div>}
-                <div
-                  ref={rowRef(i)}
-                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}`}
-                  style={drag ? { transform: `translateY(${drag.from === i ? drag.dy : shiftOf(drag, i)}px)` } : undefined}
-                >
-                  <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>
-                  <div className="edmain">
-                    {tag && <span className="tag">{tag}</span>}
-                    <b>{slotSummary(cfg, sl)}</b>
-                    <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'bodyweight' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
+          {(() => {
+            const runs = supersetRuns(day.slots); const runEnd = new Map(runs);
+            const row = (sl: ProgramSlot, i: number) => {
+              const newSec = i === 0 || sl.sec !== day.slots[i - 1].sec;
+              const starts = sl.from && sl.from > thisWeek ? `Starts ${fmtShort(parseDate(sl.from))}` : ''; // added to a finished day: not on the board until then
+              const role = rolePill(sl); const multi = sl.items.length > 1; const note = sectionNote(sl.sec);
+              return (
+                <Fragment key={sl.id || i}>
+                  {newSec && <div className="sect">{sl.sec || ''}{note && <span className="sectnote">{note}</span>}</div>}
+                  <div
+                    ref={rowRef(i)}
+                    className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}`}
+                    style={drag ? { transform: `translateY(${drag.from === i ? drag.dy : shiftOf(drag, i)}px)` } : undefined}
+                  >
+                    <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>
+                    <div className="edmain">
+                      <b>{slotSummary(cfg, sl)}</b>
+                      {(() => {
+                        // One exercise: its facts share the line with the pills. Two or more (a superset, an either/or): a line each, led by the exercise's name.
+                        const lines = sl.items.map((it, n) => ({ it, n, f: itemFacts(it) })).filter(x => multi || x.f.facts || x.f.phase);
+                        const tags = (role || sl.type === 'either' || starts) ? (
+                          <>
+                            {role && <span className={`pill rolepill${role === 'Main lift' ? ' main' : ''}`}>{role}</span>}
+                            {sl.type === 'either' && <span className="pill">Either / or</span>}
+                            {starts && <span className="pill">{starts}</span>}
+                          </>
+                        ) : null;
+                        const line = ({ it, f }: (typeof lines)[number]) => (
+                          <>
+                            {multi && <span className="exitem">{exInfo(cfg, it.ex).n}</span>}
+                            {f.facts && <span className="fact">{f.facts}</span>}
+                            {f.phase && <span className="pill phpill" data-p={f.phaseKey}>{f.phase}</span>}
+                          </>
+                        );
+                        if (!multi) return tags || lines.length ? <span className="exfacts">{tags}{lines[0] && line(lines[0])}</span> : null;
+                        return <>{tags && <span className="exfacts">{tags}</span>}{lines.map(x => <span className="exfacts" key={x.n}>{line(x)}</span>)}</>;
+                      })()}
+                    </div>
+                    <div className="edbtns">
+                      <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
+                      <button type="button" className="btn sm" id={`more-${sl.id}`} aria-label={`More actions for ${slotSummary(cfg, sl)}`} aria-haspopup="dialog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'rowmenu', idx: i }); }}>⋯</button>
+                    </div>
                   </div>
-                  <div className="edbtns">
-                    <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                    <button type="button" className="btn sm" id={`more-${sl.id}`} aria-label={`More actions for ${slotSummary(cfg, sl)}`} aria-haspopup="dialog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'rowmenu', idx: i }); }}>⋯</button>
-                  </div>
-                </div>
-              </Fragment>
-            );
-          })}
+                </Fragment>
+              );
+            };
+            const out: ReactNode[] = [];
+            for (let i = 0; i < day.slots.length;) {
+              const end = runEnd.get(i);
+              if (end === undefined) { out.push(row(day.slots[i], i)); i++; continue; }
+              const inner: ReactNode[] = [];
+              for (let n = i; n <= end; n++) inner.push(row(day.slots[n], n));
+              out.push(<div className="ssgroup" role="group" aria-label="Superset" key={`ss${i}`}><div className="ssgh"><span className="pill ssbadge">Superset</span><span className="note">{SUPERSET_NOTE}</span></div>{inner}</div>);
+              i = end + 1;
+            }
+            return out;
+          })()}
         </div>
       </section>
       <DaySummary day={day} dayNo={edDay} />
@@ -297,9 +341,12 @@ function ProgramEditor() {
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
       </div>
       <ProgramCompare />
+      <ProgramFab />
     </>
   );
 }
+
+const SECTIONS = [['program', 'Programs', 'Your weekly program, day by day'], ['exercises', 'Exercise library', 'Every exercise you can use'], ['stretches', 'Stretch library', 'Stretches you can add']] as const;
 
 // The Program tab: the programs, and the exercise and stretch libraries (supplements are on Daily → Supplements, under Edit).
 export default function Editor() {
@@ -309,12 +356,10 @@ export default function Editor() {
   const setView = (v: string) => navigate(v === 'program' ? 'program' : `program/${v}`, 'replace');
   return (
     <>
-      <div className="edtop">
-        <div className="seg" role="group" aria-label="Program tab view">
-          <button type="button" className={view === 'program' ? 'on' : ''} aria-pressed={view === 'program'} onClick={() => setView('program')}>Programs</button>
-          <button type="button" className={view === 'exercises' ? 'on' : ''} aria-pressed={view === 'exercises'} onClick={() => setView('exercises')}>Exercise library</button>
-          <button type="button" className={view === 'stretches' ? 'on' : ''} aria-pressed={view === 'stretches'} onClick={() => setView('stretches')}>Stretch library</button>
-        </div>
+      <div className="sectabs" role="group" aria-label="Program tab view">
+        {SECTIONS.map(([v, label, text]) => (
+          <button type="button" key={v} className={view === v ? 'on' : ''} aria-pressed={view === v} aria-describedby={`sectab-${v}`} onClick={() => setView(v)}><b>{label}</b><span id={`sectab-${v}`} aria-hidden="true">{text}</span></button>
+        ))}
       </div>
       {view === 'program' ? <ProgramEditor /> : view === 'stretches' ? <StretchLibrary /> : <ExerciseLibrary />}
     </>
