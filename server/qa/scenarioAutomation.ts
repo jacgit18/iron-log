@@ -91,7 +91,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'] },
   'S-76': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'e2e/notFound.spec.js'] },
   'S-77': { auto: 'manual' },
-  'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts', 'e2e-qa/plainPages.spec.js'], partial: '/privacy under an already active service worker is not tested (the service worker never became ready on the test server)' },
+  'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts', 'e2e-qa/plainPages.spec.js'] },
   'S-79': { auto: 'manual' },
   'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
   'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
