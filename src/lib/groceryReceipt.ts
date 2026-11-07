@@ -17,7 +17,12 @@ export type Step =
   | { kind: 'tax'; store: string; cents: number };
 
 /** An item the person added from the sheet (brief receipt-add-item): it exists only in the sheet until Apply creates it. Its id starts with `new:` so a choice can point at it like any item. */
-export interface Staged { id: string; n: string; store: string; qty: number; cents: number | null; unit?: GroceryUnit }
+/** `atNew`: the item goes to the store Apply is adding from this receipt, whatever name that store ends up with (the sheet swaps it for the name, or Anywhere when the store is not added). */
+export interface Staged { id: string; n: string; store: string; qty: number; cents: number | null; unit?: GroceryUnit; atNew?: true }
+/** The Store choice in the Add to list form that means "the store this receipt is adding" (no real store name can contain it). */
+export const NEW_STORE = '\u0001new';
+/** A staged item with its store spelled out: `atNew` items take `newStore` (null: the store is not being added, so Anywhere). */
+export const stagedAt = (x: Staged, newStore: string | null): Staged => (x.atNew ? { ...x, store: newStore ?? '' } : x);
 export const STAGED_PREFIX = 'new:';
 export const isStaged = (id: string | null | undefined): boolean => !!id && id.startsWith(STAGED_PREFIX);
 /** The form's text fields for a new item: the draft the person edits before it is staged. `store` '' is Anywhere. */

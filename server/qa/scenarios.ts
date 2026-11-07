@@ -1067,11 +1067,13 @@ export const SCENARIOS: readonly Scenario[] = [
       'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
       'In the sheet read the line under the Also make Costco box (it starts unticked because the items already have usual stores), then tick "Also make Costco the usual store for these items" and press Apply.',
       'Look at the notice and At home, then press Undo.',
+      'Scan a Costco receipt where every matched item is under Anywhere on At home (no usual store). Read the box and the line under it before pressing Apply.',
     ],
     expected: [
       'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
       'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
       'Before you tick the box the line reads "At home stays as it is. Tick the box to list these under Costco there."; ticked, it reads "At home will list these under Costco."',
+      'When every item that moves is under Anywhere, "Also make Costco the usual store for these items" starts ticked and the line reads "At home will list these under Costco."; when any of them already has a usual store it starts unticked.',
     ],
   },
   {
@@ -1455,11 +1457,13 @@ export const SCENARIOS: readonly Scenario[] = [
       'Change the name in the box to something else, and press Apply. Press Undo.',
       'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
       'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
+      'With the receipt\'s store still not on the list and the box ticked, scan a receipt that has a line your list does not have. On that line press Add to list, read the Store choice, add the item, then untick "Add this store to your stores" and press Apply.',
     ],
     expected: [
       'The store is added under the name you typed, and Undo removes it.',
       'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
       'When the list already has the store there is no box and the items are marked bought at it as before.',
+      'The Store choice lists the new store (for example "Safeway (new)") after Anywhere and starts on it; you can still pick Anywhere or another store. Unticking the box moves the item to Anywhere, and no store is added.',
     ],
   },
   {
