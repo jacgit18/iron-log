@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// The Bought view (brief groceries-shopping-bought-inventory): Shopping | Bought | Inventory | Spending, a tick moves a row to Bought, Select works there,
+// The Bought view (brief groceries-shopping-bought-inventory): Shopping | Bought | Inventory, a tick moves a row to Bought, Select works there,
 // and the old addresses still open the renamed screens. A unit test cannot catch the switch, the address or the row moving between two pages. The fixed date is in September 2026.
 const CATALOGUE = {
   stores: ['Costco', "Trader Joe's"],
@@ -22,12 +22,12 @@ const open = async (page) => {
 };
 const view = (page, name) => page.locator('.seg[aria-label="Grocery view"]').getByRole('button', { name });
 
-test('four views with counts: a tick moves a row from Shopping to Bought, and the address follows each view', async ({ page }) => {
+test('three views with counts: a tick moves a row from Shopping to Bought, and the address follows each view', async ({ page }) => {
   await open(page);
   await expect(view(page, 'Shopping')).toHaveText('Shopping 1');
   await expect(view(page, 'Bought')).toHaveText('Bought 2');
   await expect(view(page, 'Inventory')).toBeVisible();
-  await expect(view(page, 'Spending')).toBeVisible();
+  await expect(view(page, 'Spending')).toHaveCount(0); // Spending history is inside Bought
   await expect(page.getByText('Oat milk')).toBeVisible();
   await expect(page.getByText('Beef roast')).toHaveCount(0); // bought: not on Shopping
   await page.getByLabel('Got Oat milk').click();
@@ -71,13 +71,13 @@ test('the old Groceries addresses open the renamed screens', async ({ page }) =>
   await expect(view(page, 'Shopping')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('four segments fit at 320 px with large text and nothing scrolls sideways', async ({ page }) => {
+test('three segments fit at 320 px with large text and nothing scrolls sideways', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await open(page);
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(wide).toBe(false);
-  for (const name of ['Shopping', 'Bought', 'Inventory', 'Spending']) {
+  for (const name of ['Shopping', 'Bought', 'Inventory']) {
     const box = await view(page, name).boundingBox();
     expect(box.width).toBeGreaterThan(0);
     expect(box.x + box.width).toBeLessThanOrEqual(320);

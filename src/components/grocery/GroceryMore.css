@@ -46,6 +46,21 @@
 .gtoolmorebody .btn {
   min-height: 44px;
 }
+.gphonemore>summary {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.gphonemore {
+  position: static;
+  /* the menu opens across the whole button row, not under its own third */
+  margin-left: 0;
+}
+.gphonemore .gtoolmorebody {
+  position: absolute;
+  inset-inline: 0;
+  z-index: var(--z-sheet);
+  box-shadow: var(--shadow-lift);
+}
 .gviewsub {
   margin: 0 0 var(--sp-8);
 }

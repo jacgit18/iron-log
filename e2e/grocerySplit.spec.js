@@ -61,7 +61,7 @@ test('a store that holds only your own things can still be marked as paid by som
 
 test('the Spending view shows your share and says what you paid', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-view-spend');
+  await page.click('#groc-view-bought'); await page.click('#groc-bought-history');
   await expect(page.locator('#groc-spend-share')).toContainText('You paid $58.72');
   await expect(page.locator('#groc-spend-summary')).toContainText('This month $');
 });
@@ -95,6 +95,6 @@ test('the split screen has no accessibility violations', async ({ page }) => {
 test('an account that is not an admin sees the split too', async ({ page }) => {
   await seed(page, { admin: false });
   await expect(page.locator('.gsplit')).toHaveCount(1);
-  await page.click('#groc-view-spend');
+  await page.click('#groc-view-bought'); await page.click('#groc-bought-history');
   await expect(page.locator('#groc-spend-share')).toHaveCount(1);
 });
