@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
 // Quick add on Shopping (brief groceries-spending-buttons-quick-add): a `+ Add item to <store>` row creates a one-time item, with a notice to make it every month or undo it.
-// The add logic and the refusals are node tests (groceryQuickAdd.test.ts, groceryQuickAddStore.test.ts); this covers the row, the field, the notice and the item showing on Shopping, Inventory and the chips.
+// The add logic and the refusals are node tests (groceryQuickAdd.test.ts, groceryQuickAddStore.test.ts); this covers the row, the field, the notice and the item showing on Shopping, Inventory and the chips: wiring across two pages and the store that a unit test cannot reach.
 const CATALOGUE = {
   stores: ['Aldi', 'Costco'],
   items: [

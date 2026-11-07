@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useFeature } from '../../features.js';
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
@@ -80,10 +80,11 @@ export type ReceiptScanState = ReturnType<typeof useReceiptScan>;
 
 /** Pick from photos and Saved receipts as the entries of Shopping's More menu on a phone (the same buttons, ids and gates as the row's). */
 export function ReceiptMenu({ r }: { r: ReceiptScanState }) {
+  const shut = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget.closest('details')?.removeAttribute('open'); // the menu closes when one of its receipt buttons is pressed, so it cannot sit over the sheet that opens next
   return (
     <>
-      {r.canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={r.busy} onClick={r.openLibrary}>Pick from photos</button>}
-      {r.keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={() => navigate('daily/grocery/receipts', 'push')}>Saved receipts</button>}
+      {r.canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={r.busy} onClick={e => { shut(e); r.openLibrary(); }}>Pick from photos</button>}
+      {r.keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>}
     </>
   );
 }
