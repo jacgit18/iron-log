@@ -1,0 +1,92 @@
+@layer base, components;
+@layer components {
+/* brief receipt-rename-memory: the name field under each receipt row and the receipt names list in an item's edit row. */
+.rcname {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-10);
+}
+.rcnamefield {
+  flex: 1 1 14rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 600;
+}
+.rcnamefield input {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-8);
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--fs-lg);
+  font-weight: 500;
+}
+.rcmatched {
+  align-self: flex-end;
+  margin-bottom: var(--sp-10);
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-pill);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.rcremember {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.rcmoved {
+  flex: 1 1 100%;
+}
+.rcnames {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-8) 0;
+}
+.rcnameshead {
+  font-weight: 600;
+}
+.rcnameshead small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+.rcnames ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.rcnames li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-10);
+  border-top: 1px solid var(--line);
+}
+.rcnamestext {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+.rcforget {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+}

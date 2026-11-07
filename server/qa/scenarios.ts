@@ -1723,6 +1723,61 @@ export const SCENARIOS: readonly Scenario[] = [
       'Add price opens Bought with that item\'s price field open. A bought item with no price shows an Add price chip in place of its count and price.',
     ],
   },
+  {
+    id: 'S-133', feature: 'Receipt scan', title: 'Rename a matched receipt line and apply', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt. Find a line that matched an item and look at its name field and the area under it.',
+      'Type a different name in that line’s name field, leave the field, and look under it. Leave Remember this name ticked and press Apply.',
+    ],
+    expected: [
+      'Every line has a name field. A match you have not touched shows no Remember tick.',
+      'Remember this name appears once the name changed, ticked. After Apply the item has the new name and the notice says "Remembered 1 receipt name."; Undo puts the old name back.',
+    ],
+  },
+  {
+    id: 'S-134', feature: 'Receipt scan', title: 'Scan again and see the saved name matched', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt that has the same printed line text as the one you renamed.',
+      'Look at that line’s item and the chip beside its name.',
+    ],
+    expected: [
+      'The line is already set to your item, with the chip "Matched your earlier rename", whatever the scan guessed.',
+      'Changing the item on that line removes the chip.',
+    ],
+  },
+  {
+    id: 'S-135', feature: 'Receipt scan', title: 'Name a line that is not on your list', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt with a line that matched nothing. Type a name in its name field and leave the field.',
+      'Press Apply, then scan the same text again.',
+    ],
+    expected: [
+      'The line shows New with that name and a Remember tick; Apply creates the item bought with the receipt price.',
+      'The second scan sets that line to the new item with the "Matched your earlier rename" chip.',
+    ],
+  },
+  {
+    id: 'S-136', feature: 'Receipt scan', title: 'A receipt text saved for another item moves', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt, pick an item that already holds a receipt name on a line with that text, choose a different item for the line, and read under the name field.',
+      'Press Apply, then open the first item’s edit row in Inventory.',
+    ],
+    expected: [
+      'A note says the text is saved for the first item and that remembering it moves it here.',
+      'The text is now listed under the new item and no longer under the first.',
+    ],
+  },
+  {
+    id: 'S-137', feature: 'Receipt scan', title: 'Forget a receipt name from an item and Undo', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
+    steps: [
+      'On a phone, in Inventory press Edit and open an item that has receipt names. Press Forget beside one.',
+      'Press Undo in the Removed notice, then scan a receipt with that text.',
+    ],
+    expected: [
+      'The name is gone from the list and a Removed notice with Undo appears; the Forget buttons are easy to hit.',
+      'The name is back after Undo. After Forget (without Undo) a scan with that text no longer matches.',
+    ],
+  },
 ];
 
 
