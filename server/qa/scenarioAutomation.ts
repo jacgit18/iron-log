@@ -111,7 +111,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-95': { auto: 'e2e', specs: ['e2e/grocerySharingDone.spec.js'] },
   'S-96': { auto: 'e2e', specs: ['e2e/grocerySharingDone.spec.js'] },
   'S-97': { auto: 'manual' },
-  'S-98': { auto: 'api', specs: ['server/securityHeaders.test.ts', 'e2e-qa/plainPages.spec.js'], partial: 'the Help sheet is the one sheet opened on each tab, not a different sheet on each' },
+  'S-98': { auto: 'api', specs: ['server/securityHeaders.test.ts', 'e2e-qa/plainPages.spec.js'], partial: 'the Help sheet is the one sheet opened, on each tab and on Settings, not a different sheet on each screen' },
   'S-99': { auto: 'manual' },
   'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts', 'src/lib/plainPageTitles.test.ts', 'src/lib/envName.test.ts', 'e2e-qa/plainPages.spec.js', 'e2e-qa/qaModePicker.spec.js', 'server/static.test.ts'], partial: 'the served QA title and icons and the hostname rule are tested; once the app loads its tab reads "<screen> · Loadbearer - QA", not the "Loadbearer QA" the scenario text names' },
   'S-101': { auto: 'api', specs: ['server/static.test.ts'] },
