@@ -73,6 +73,35 @@ test.describe('on a computer', () => {
     await expect(page.getByText('No saved program matches')).toBeVisible();
   });
 
+  test('Saved with a saved program open in the editor still saves a copy of Program A and labels it Program A', async ({ page }) => {
+    await open(page, '/#/program/saved');
+    await page.locator('#lib-name').fill('Spring cut');
+    await page.getByRole('button', { name: 'Save a copy' }).click();
+    await page.getByRole('button', { name: 'Edit Spring cut' }).click();
+    await expect(page.locator('#ed-title')).toContainText('Spring cut');
+    await tabs(page).getByRole('button', { name: /^Saved/ }).click();
+    await expect(page.getByLabel(/^Save Program A as/)).toBeVisible();
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    await page.locator('#lib-name').fill('Second copy');
+    await page.getByRole('button', { name: 'Save a copy' }).click(); // it used to throw: Program L:... has no days
+    await page.waitForTimeout(300);
+    expect(errors).toEqual([]);
+    await expect(page.locator('.lib .edrow', { hasText: 'Spring cut' })).toBeVisible();
+    await expect(page.getByText(/Program L:/)).toHaveCount(0);
+  });
+
+  test('the search also filters the archived programs', async ({ page }) => {
+    await open(page, '/#/program/saved');
+    for (const n of ['Spring cut', 'Hotel gym']) { await page.locator('#lib-name').fill(n); await page.getByRole('button', { name: 'Save a copy' }).click(); }
+    await page.getByRole('button', { name: 'Archive Spring cut' }).click();
+    await page.getByRole('button', { name: 'Archive Hotel gym' }).click();
+    await page.getByText('Archived (2)').click();
+    await expect(page.getByRole('button', { name: 'Restore Spring cut' })).toBeVisible();
+    await page.locator('#lib-search').fill('hotel');
+    await expect(page.getByRole('button', { name: 'Restore Hotel gym' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Restore Spring cut' })).toHaveCount(0);
+  });
+
   test('Compare opens full width on its own tab', async ({ page }) => {
     await open(page, '/#/program/compare');
     const panel = page.locator('.cmppage');

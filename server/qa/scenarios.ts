@@ -1564,7 +1564,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'One row of tabs Day 1 to Day 7 sits under the header card, each with its exercise count (or "rest"); there is no arrow or dropdown. The Day label field is under the heading, and Copy day… and + Add exercise are normal-height buttons at the right of the heading.',
-      'Copy day… opens the day picker under the Day label and then goes away; Copy shows the Copied notice and Undo takes it back.',
+      'Copy day… opens the day picker under the Day label (the picker stays open for that day); Copy shows the Copied notice and Undo takes it back.',
       'The day tab you pressed is highlighted and the heading names that day; + Add exercise opens the same add sheet as before.',
     ],
   },

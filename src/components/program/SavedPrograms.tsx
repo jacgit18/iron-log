@@ -48,6 +48,7 @@ export default function SavedPrograms({ k, custom, tab = false }: { k: string; c
     <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
   );
   const shown = tab ? filterSavedPrograms(items, q) : items;
+  const shownArchived = tab ? filterSavedPrograms(archived, q) : archived;
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to replace ${pn}`;
   const saveForm = (
@@ -93,7 +94,7 @@ export default function SavedPrograms({ k, custom, tab = false }: { k: string; c
         <details className="libarchive">
           <summary>{archivedHeading(archived.length)}</summary>
           <div className="edlist">
-            {archived.map(it => (
+            {shownArchived.map(it => (
               <LibRow
                 key={it.id} name={it.name} removing={arming === it.id} inUse={false} meta={metaOf(it)}
                 extra={<>

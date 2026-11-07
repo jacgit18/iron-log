@@ -296,8 +296,10 @@ function ProgramViewHeader() {
 
 // The Saved view: the Save a copy form, a search and the list of saved programs (desktop).
 function SavedView() {
-  const k = useAppStore(s => s.edKey()); const item = useAppStore(s => s.edItem()); const programs = useAppStore(s => s.programs);
-  const custom = !item && !useAppStore.getState().isOriginal(programs[k] as Program, k as ProgKey);
+  const edKey = useAppStore(s => s.edKey()); const programs = useAppStore(s => s.programs);
+  const k = edKey === 'A' || edKey === 'B' ? edKey : 'A'; // a saved program open in the editor is not a slot: Save a copy and Put on Board work on a Board program
+  useEffect(() => { if (edKey !== 'A' && edKey !== 'B') useAppStore.getState().setEdProg('A'); }, [edKey]); // the store's Save a copy reads the open program, so this view opens on A, not on the saved program that was being edited
+  const custom = !useAppStore.getState().isOriginal(programs[k] as Program, k as ProgKey);
   return <><ProgramViewHeader /><SavedPrograms k={k} custom={custom} tab /></>;
 }
 
