@@ -1,19 +1,18 @@
-import type { Boost as BoostT, SupplementItem, SupplementSlot, Supplements, Taken } from '../../types.ts';
+import type { SupplementItem, SupplementSlot, Supplements, Taken } from '../../types.ts';
 import type { MineOption, PickerChoice } from '../../lib/picker.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
+import { ymd } from '../../shared/dates.js';
 import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/supplements.js';
 import { pickerKey } from '../../lib/picker.js';
-import Icon from '../Icon.jsx';
 import ItemPicker from '../ItemPicker.jsx';
 import Diet from './Diet.js';
+import NutritionBoard from '../nutritionBoard/index.js';
 import SupplementLibrary from './SupplementLibrary.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Supplements.css';
-import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
 
 // One of yours as the add picker lists it: where it is now and its dose; badged Library or Custom only when syncing (ADR 027).
 const mineOf = (i: SupplementItem, syncing: boolean): MineOption => ({
@@ -89,15 +88,14 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
   );
 }
 
-// `editing` lives in the tab, so Edit also shows the whole library under the schedule.
-function Schedule({ date, supp, editing, setEditing }: { date: string; supp: Supplements; editing: boolean; setEditing: (f: (v: boolean) => boolean) => void }) {
+// The editor behind Edit supplements: every time of day with its add form, and the whole library under it. `date` is today (the ticks here are shown for today).
+function Schedule({ date, supp, editing }: { date: string; supp: Supplements; editing: boolean }) {
   const all = scheduled(supp.items); const done = all.filter(x => (supp.taken[date] || {})[x.id]).length;
   return (
     <section className="panel suppanel" aria-labelledby="sched-h">
       <div className="sstop">
         <h2 id="sched-h">Supplements</h2>
-        <span className="sstopend"><span className="note" role="status">{all.length ? `${done} of ${all.length} taken` : ''}</span>
-          <button type="button" className="btn sm ghost" id="sched-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button></span>
+        <span className="sstopend"><span className="note" role="status">{all.length ? `${done} of ${all.length} taken` : ''}</span></span>
       </div>
       {!all.length && !editing && <p className="note">Nothing scheduled yet. Use Edit to add what you take in the morning, at noon and at night; Edit also shows your whole supplement list.</p>}
       {SLOTS.map(([k, l]) => <Slot key={k} slot={k} label={l} date={date} items={supp.items} taken={supp.taken} editing={editing} />)}
@@ -105,129 +103,21 @@ function Schedule({ date, supp, editing, setEditing }: { date: string; supp: Sup
   );
 }
 
-function WaterGoal({ goal, mode }: { goal: ReturnType<typeof goalFor>; mode: Supplements['waterMode'] }) {
-  const s = useAppStore.getState();
-  const [editing, setEditing] = useState(false); const [v, setV] = useState('');
-  const text = goal.source === 'weight' ? `Base goal: ${fmtOz(goal.baseOz)} oz, half your ${fmtOz(goal.lb as number)} lb body weight`
-    : goal.source === 'default' ? `Base goal: ${fmtOz(goal.baseOz)} oz (log your body weight on the Board to set it from your weight)` : `Base goal: ${fmtOz(goal.baseOz)} oz, set by you`;
-  if (!editing) return <div className="wgoal"><span className="note">{text}</span><button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => { setV(fmtOz(goal.baseOz)); setEditing(true); }}>Change goal</button></div>;
-  return (
-    <form className="wgoalform" noValidate onSubmit={e => { e.preventDefault(); if (s.setWaterGoal(v)) setEditing(false); }}>
-      <label className="field">Fixed daily goal (oz)<input type="number" inputMode="decimal" min="8" max="500" step="any" value={v} autoFocus onChange={e => setV(e.target.value)} /></label>
-      <button type="submit" className="btn sm primary">Use this amount</button>
-      {mode === 'fixed' && <button type="button" className="btn sm" onClick={() => { s.setWaterByWeight(); setEditing(false); }}>Use my weight ({OZ_PER_LB} oz per lb)</button>}
-      <button type="button" className="btn sm ghost" onClick={() => setEditing(false)}>Cancel</button>
-    </form>
-  );
-}
-
-function Boost({ date, boost, extra }: { date: string; boost: BoostT | undefined; extra: ReturnType<typeof boostOz> }) {
-  const s = useAppStore.getState(); const mins = boost && boost.mins ? String(boost.mins) : ''; const [m, setM] = useState(mins);
-  return (
-    <div>
-      <div className="sect">Hot day or training</div>
-      <div className="wboost">
-        <label className="whot"><input type="checkbox" className="chk" id="water-hot" checked={!!(boost && boost.hot)} onChange={e => s.setWaterBoost(date, { hot: e.target.checked })} /> Hot day (+{HOT_OZ} oz)</label>
-        <label className="field">Training (minutes)<input id="water-train" type="number" inputMode="numeric" min="0" max="600" step="5" value={m} onChange={e => setM(e.target.value)} onBlur={() => { if (m !== mins) s.setWaterBoost(date, { mins: m }); }} /></label>
-      </div>
-      <p className="note">{extra.oz > 0 ? `+${fmtOz(extra.oz)} oz on the goal${extra.hot ? ` (heat ${fmtOz(extra.hot)}` : ''}${extra.hot && extra.train ? ', ' : extra.hot ? ')' : ''}${extra.train ? `${extra.hot ? '' : ' ('}training ${fmtOz(extra.train)})` : ''}` : `Adds ${TRAIN_OZ_PER_30} oz per 30 minutes of training and ${HOT_OZ} oz on a hot day.`}</p>
-    </div>
-  );
-}
-
-function Week({ water, goalOf, end, selected, onPick }: { water: Record<string, number[]>; goalOf: (d: string) => number; end: Date; selected: string; onPick: (d: string) => void }) {
-  const days = lastDays(water, end, 7, ymd).map(x => ({ ...x, goal: goalOf(x.d) })); const max = Math.max(...days.map(x => Math.max(x.goal, x.oz)));
-  return (
-    <div className="mbars" role="group" aria-label="Last 7 days of water">
-      {days.map(x => (
-        <button type="button" key={x.d} className="mbar" aria-current={x.d === selected ? 'date' : undefined} aria-label={`${DAY_NAMES[x.date.getDay()].slice(0, 3)} ${x.date.getDate()} ${fmtOz(x.oz)} oz, ${DAY_NAMES[x.date.getDay()]} ${fmtShort(x.date)}${x.oz >= x.goal ? ', goal met' : ''}`} onClick={() => onPick(x.d)}>
-          <span>{DAY_NAMES[x.date.getDay()].slice(0, 3)} {x.date.getDate()}</span>{' '}
-          <span className="track"><i className="l3" style={{ width: `${x.oz / max * 100}%`, background: x.oz >= x.goal ? 'var(--accent)' : undefined }} /></span>{' '}
-          <b>{fmtOz(x.oz)}</b>
-        </button>
-      ))}
-    </div>
-  );
-}
-
+// Nutrition (brief nutrition-board): one week board of meals, Supplements and Hydration per day, with the Targets block under it. Edit supplements opens the supplement editor and library below the board; PR 2 of the brief moves it into Manage.
 export default function Supplements() {
   const supp = useAppStore(s => s.supp);
-  const body = useAppStore(s => s.body);
   const today = useToday(s => s.today);
-  const s = useAppStore.getState();
-  const todayKey = ymd(today);
-  const [sel, setSel] = useState<string | null>(null); const date = sel || todayKey;
-  const [custom, setCustom] = useState('');
   const [editing, setEditing] = useState(false);
-  const [armingDrink, setArmingDrink] = useState<number | null>(null); // the drink whose Remove was pressed once
-  const list = supp.water[date] || []; const total = sumOz(list); const gi = goalFor(supp, body, date); const goal = gi.oz;
-  const pct = Math.min(100, Math.round(total / goal * 100)); const left = Math.max(0, goal - total);
-  const d = parseDate(date); const isToday = date === todayKey;
-  const step = (n: number) => { const k = ymd(addDays(d, n)); if (k <= todayKey) setSel(k === todayKey ? null : k); };
-  const add = (oz: string | number) => { s.addWater(date, oz); };
   return (
     <div>
-      <div className="weekbar">
-        <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}><Icon name="chevron-left" /></button>
-          <h2 className="cond">{isToday ? 'Today' : DAY_NAMES[d.getDay()]} · {fmtShort(d)}</h2>
-          <button type="button" className="btn sm" aria-label="Next day" disabled={isToday} onClick={() => step(1)}><Icon name="chevron-right" /></button>
-          {!isToday && <button type="button" className="btn sm ghost" onClick={() => setSel(null)}>Today</button>}
-        </div>
-      </div>
-      <div className="nutcols">
-        <div className="nutcol">
-          <Diet day={date} />
-        </div>
-        <div className="nutcol">
-          <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
-          {editing && <div className="mt-16"><SupplementLibrary /></div>}
-          <section className="panel suppanel mt-16" aria-labelledby="water-h">
-            <h2 id="water-h">Water</h2>
-            <div className="kpi wkpi" role="status">
-              <span className="kl">{isToday ? 'Today' : 'That day'}</span>
-              <span className="kv">{fmtOz(total)} <small>/ {fmtOz(goal)} oz</small></span>
-              <span className="ks">{cupsOf(total)} of {cupsOf(goal)} cups · {left > 0 ? `${fmtOz(left)} oz (${cupsOf(left)} cups) to go` : 'goal met'}</span>
-              <div className="bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
-            </div>
-            <div>
-              <div className="sect">Add a drink</div>
-              <div className="chips wchips" role="group" aria-label="Add water by container size">
-                {BOTTLES.map(b => (
-                  <button type="button" key={b.oz} className="chip" id={`water-${b.oz}`} onClick={() => add(b.oz)}>
-                    <b>+{fmtOz(b.oz)} oz</b> <span className="note">{b.label}{b.oz % CUP_OZ === 0 ? ` · ${b.oz / CUP_OZ} cup${b.oz === CUP_OZ ? '' : 's'}` : ''}</span>
-                  </button>
-                ))}
-              </div>
-              <form className="wcustom" noValidate onSubmit={e => { e.preventDefault(); if (s.addWater(date, custom)) setCustom(''); }}>
-                <label className="field">Other amount (oz)<input id="water-custom" type="number" inputMode="decimal" min="0" step="any" value={custom} onChange={e => setCustom(e.target.value)} /></label>
-                <button type="submit" className="btn sm primary" disabled={custom === ''}>Add</button>
-              </form>
-            </div>
-            <div>
-              <div className="sect">{isToday ? 'Logged today' : 'Logged'}</div>
-              <RemovedNotice scope={'water:' + date} />
-              {!list.length ? <p className="note">Nothing logged yet.</p> : (
-                <ul className="exrows wlogged">
-                  {list.map((oz, i) => (
-                    <li className={`exrow${armingDrink === i ? ' removing' : ''}`} key={i}>
-                      <span><b className="rmname">{fmtOz(oz)} oz</b> <span className="note">{cupsOf(oz)} cups</span></span>
-                      <ArmedButton className={`btn sm ${armingDrink === i ? 'danger' : 'ghost'}`} aria-label={`Remove ${fmtOz(oz)} ounces, drink ${i + 1}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArmingDrink(a ? i : null)} onConfirm={() => { setArmingDrink(null); s.removeWater(date, i); }} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <Boost key={`${date}:${supp.boost[date]?.mins ?? ''}`} date={date} boost={supp.boost[date]} extra={gi.extra} />
-            <WaterGoal goal={gi} mode={supp.waterMode} />
-          </section>
-          <section className="panel suppanel mt-16" aria-labelledby="water7-h">
-            <h2 id="water7-h">Last 7 days</h2>
-            <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
-            <p className="note">Ounces per day. A full bar means you hit your goal.</p>
-          </section>
-        </div>
-      </div>
+      <NutritionBoard actions={<button type="button" className="btn sm ghost" id="sched-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done editing supplements' : 'Edit supplements'}</button>} />
+      {editing && (
+        <>
+          <div className="mt-16"><Schedule date={ymd(today)} supp={supp} editing /></div>
+          <div className="mt-16"><SupplementLibrary /></div>
+        </>
+      )}
+      <div className="mt-16"><Diet /></div>
     </div>
   );
 }
