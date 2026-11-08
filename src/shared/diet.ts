@@ -55,6 +55,18 @@ export function normMeals(v: unknown): SavedMeal[] {
   return out;
 }
 
+/** The saved-meal id to Recipes-meal id map of a stored value, cleaned: text ids only, at most MAX_MEALS entries (brief saved-meals-into-recipes). */
+export function normMealsMoved(v: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const [k, val] of Object.entries(v)) {
+    if (Object.keys(out).length >= MAX_MEALS) break;
+    const from = str(k, MAX_DIET_ID), to = str(val, MAX_DIET_ID);
+    if (from && to) out[from] = to;
+  }
+  return out;
+}
+
 export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8;
 
 /** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1). */
@@ -146,6 +158,8 @@ export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   else if (o.pace === 'custom' && fin(o.rate) && rateError(o.rate) === null) { out.pace = 'custom'; out.rate = Math.round(o.rate * 100) / 100; }
   const meals = normMeals(o.meals);
   if (meals.length) out.meals = meals;
+  const moved = normMealsMoved(o.mealsMoved);
+  if (Object.keys(moved).length) out.mealsMoved = moved;
   const plan = normPlan(o.plan, today);
   if (Object.keys(plan).length) out.plan = plan;
   return Object.keys(out).length ? out : undefined;
