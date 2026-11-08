@@ -121,7 +121,7 @@
 }
 .rc-favmark {
   display: inline-block;
-  margin-inline-end: var(--sp-4);
+  margin-inline: var(--sp-4);
   color: var(--accent);
   vertical-align: -0.1em;
 }

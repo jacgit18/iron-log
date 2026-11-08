@@ -149,7 +149,7 @@ export default function Recipes() {
     <li key={key} className={`rc-item${current ? ' current' : ''}`}>
       <button type="button" className="rc-row" onClick={open} aria-current={current ? 'true' : undefined}>
         <span className="rc-main">
-          <span className="rc-title"><span><b id={`rc-t-${key}`}>{fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{title}</b><span className="pill custom">{pill}</span>{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
+          <span className="rc-title"><span><b id={`rc-t-${key}`}>{title}</b>{fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}<span className="pill custom">{pill}</span>{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
           <span className="rc-meta">{meta}</span>
         </span>
         {badge && <span className="rc-badge">{badge}</span>}
