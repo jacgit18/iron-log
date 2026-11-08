@@ -53,13 +53,14 @@ export type ScenarioFeature =
   | 'Security headers'
   | 'Price history'
   | 'Program desktop layout'
-  | 'Groceries views';
+  | 'Groceries views'
+  | 'Grocery budget';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Grocery budget',
 ];
 
 export interface Scenario {
@@ -1721,6 +1722,72 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The notice reads "Bought <item>. It has no price yet." with Undo, Add price and Dismiss.',
       'Add price opens Bought with that item\'s price field open. A bought item with no price shows an Add price chip in place of its count and price.',
+    ],
+  },
+  // ---- Grocery budget ----
+  {
+    id: 'S-133', feature: 'Grocery budget', title: 'Set a monthly budget and read spent of budget', persona: 'grocery-shopper', brief: 'grocery-budget',
+    steps: [
+      'Open Groceries, Shopping. Under the summary press Set a budget.',
+      'Type 400 and press Save. Then open Bought.',
+    ],
+    expected: [
+      'The card reads "Budget", then "<this month\'s spent> of $400.00" and "<amount> left", with a bar filled to the share spent and an Edit button.',
+      'Bought shows the same card with the same figures (spent includes tax, as the summary does).',
+    ],
+  },
+  {
+    id: 'S-134', feature: 'Grocery budget', title: 'The bar turns amber near the budget and red when over', persona: 'grocery-shopper', brief: 'grocery-budget',
+    steps: [
+      'Press Edit and set the budget to about 1.1 times what this month has spent, so spent is over 80% of it. Save.',
+      'Press Edit again and set a budget a little below what has been spent. Save.',
+    ],
+    expected: [
+      'From 80% of the budget the bar and card turn amber and the text still says how much is left.',
+      'When spent is above the budget the bar is full and red and the text reads "<amount> over budget".',
+    ],
+  },
+  {
+    id: 'S-135', feature: 'Grocery budget', title: 'Edit the budget, then remove it', persona: 'grocery-shopper', brief: 'grocery-budget',
+    steps: [
+      'Press Edit, change the amount to 600 and press Save.',
+      'Press Edit again, press Remove, then reload the page.',
+    ],
+    expected: [
+      'The card shows "of $600.00" and the bar shrinks to match.',
+      'The card goes back to Monthly budget with Set a budget, and stays that way after the reload. The budget is kept in your settings, so it also shows on another device you are signed in on.',
+    ],
+  },
+  {
+    id: 'S-136', feature: 'Grocery budget', title: 'An invalid amount is refused', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    steps: [
+      'Press Set a budget (or Edit), type "abc", and press Save.',
+      'Clear the box, press Save, then type 0 and press Save.',
+      'Type 425.50 and press Save.',
+    ],
+    expected: [
+      'Each bad try keeps the box open and says "Enter an amount in dollars, like 400 or 425.50."; nothing is saved.',
+      '425.50 saves and the card reads "of $425.50".',
+    ],
+  },
+  {
+    id: 'S-137', feature: 'Grocery budget', title: 'A planned list above the budget is said before anything is bought', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    steps: [
+      'Set the budget to a small amount, such as 10, so this month\'s priced to-get items add up to more than it.',
+      'Look at the card on Shopping.',
+    ],
+    expected: [
+      'A note under the bar reads "This month\u2019s list is planned <amount> over your budget."',
+      'Raising the budget above the plan removes the note.',
+    ],
+  },
+  {
+    id: 'S-138', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    steps: [
+      'Open Groceries on a computer and look at the Shopping and Bought buttons.',
+    ],
+    expected: [
+      'The two buttons show only their names, with no numbers, and sit centered on a row of their own.',
     ],
   },
 ];
