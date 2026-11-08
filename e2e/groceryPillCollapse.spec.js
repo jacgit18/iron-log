@@ -17,7 +17,7 @@ const seed = async page => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
   await page.click('#groc-view-shopping');
 };
-const row = (page, name) => page.locator('li.gget', { has: page.getByLabel(`Got ${name}`, { exact: true }) });
+const row = (page, name) => page.locator('li.gget', { has: page.getByLabel(`Have ${name}`, { exact: true }) });
 const pill = (page, name) => page.getByRole('button', { name: `Count and price of ${name}` });
 
 test('an item that follows its store’s group shows the split on the closed row without being changed', async ({ page }) => {
