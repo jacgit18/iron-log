@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carryOver, mergeGrocery, normGroceryData, onList, usedOneTime, withoutUsed } from './grocery.js';
+import { carryOver, mergeGrocery, normGroceryData, onList, untickBlock, usedOneTime, withoutUsed } from './grocery.js';
 import { normGroceryItem, validGroceryItem } from '../shared/grocery.js';
 import type { Grocery, GroceryItem, GroceryMonth } from '../types.ts';
 
@@ -127,5 +127,29 @@ describe('the field in saved data', () => {
     const old = normGroceryItem({ id: 'b', n: 'B', once: true });
     expect(old?.every).toBe(false);
     expect(old?.oneTime).toBeUndefined();
+  });
+});
+
+describe('untickBlock', () => {
+  const aldi = (id: string, extra: Partial<GroceryItem> = {}) => item(id, { n: 'Milk', store: 'Aldi', every: false, out: true, ...extra });
+  const old = aldi('milk-1', { oneTime: '2026-10' }), fresh = aldi('milk-2', { oneTime: '2026-11' });
+  const gg: Grocery = { stores: ['Aldi'], items: [fresh, old] };
+  const months = { '2026-10': month({ 'milk-1': { got: true } }) };
+  it('refuses to bring a used item back beside an active one with its name and store', () => {
+    expect(untickBlock(gg, months, '2026-10', 'milk-1')).toBe('There is already a Milk under Aldi. Remove it first, then untick this one.');
+  });
+  it('allows it when no other item holds the name, or the other one is itself used', () => {
+    expect(untickBlock({ stores: ['Aldi'], items: [old] }, months, '2026-10', 'milk-1')).toBeNull();
+    const both = { '2026-10': month({ 'milk-1': { got: true } }), '2026-11': month({ 'milk-2': { got: true } }) };
+    expect(untickBlock(gg, both, '2026-10', 'milk-1')).toBeNull();
+  });
+  it('allows it in another store, and for an item that is not one-time or not used', () => {
+    expect(untickBlock({ stores: ['Aldi', 'Lidl'], items: [{ ...fresh, store: 'Lidl' }, old] }, months, '2026-10', 'milk-1')).toBeNull();
+    expect(untickBlock({ stores: ['Aldi'], items: [{ ...old, oneTime: undefined }, fresh] }, months, '2026-10', 'milk-1')).toBeNull();
+    expect(untickBlock(gg, {}, '2026-10', 'milk-1')).toBeNull();
+  });
+  it('allows it when another month still holds a purchase, so the item stays used', () => {
+    const two = { '2026-10': month({ 'milk-1': { got: true } }), '2026-11': month({ 'milk-1': { got: true } }) };
+    expect(untickBlock(gg, two, '2026-10', 'milk-1')).toBeNull();
   });
 });

@@ -135,6 +135,19 @@ export function usedOneTime(g: Grocery, months: Record<string, GroceryMonth>): R
   for (const [k, m] of Object.entries(months)) for (const i of once) if (k >= i.oneTime! && m.lines[i.id]?.got) used.add(i.id); // purchases from before it was made one-time do not count
   return used;
 }
+/** Why unticking a used one-time item's purchase is refused, or null when it is fine. Unticking brings the item back into view; when another item with the same name is already in that store the list would hold two (the add-time duplicate check does not run on a comeback), so the person is asked to remove the other one first. An item that stays used because another month still holds its purchase is never refused. */
+export function untickBlock(g: Grocery, months: Record<string, GroceryMonth>, month: string, id: string): string | null {
+  const it = g.items.find(i => i.id === id);
+  const m = months[month];
+  if (!it?.oneTime || !m?.lines[id]?.got) return null;
+  const used = usedOneTime(g, months);
+  if (!used.has(id)) return null;
+  const { got: _got, ...rest } = m.lines[id]!;
+  if (usedOneTime(g, { ...months, [month]: { ...m, lines: { ...m.lines, [id]: rest } } }).has(id)) return null; // still used through another month
+  const twin = g.items.find(x => x.id !== id && !used.has(x.id) && x.n.toLowerCase() === it.n.toLowerCase() && x.store === it.store);
+  return twin ? `There is already a ${twin.n} under ${twin.store || 'Anywhere'}. Remove it first, then untick this one.` : null;
+}
+
 /** The catalogue without its used one-time items: what Inventory, the pickers and receipt matching see (the bought month, Spending and price history still read the full one). */
 export function withoutUsed(g: Grocery, months: Record<string, GroceryMonth>, keep?: ReadonlySet<string>): Grocery {
   const used = usedOneTime(g, months);
