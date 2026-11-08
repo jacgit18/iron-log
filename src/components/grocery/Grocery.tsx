@@ -8,7 +8,7 @@ import { DEFAULT_GROCERY_SORT, GET_SORTS, HOME_SORTS, filterGroceryItems, sortGr
 import { columnsClass } from '../../lib/groceryColumns.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
-import { allIds, allPicked, boughtRows, storeIds, viewCounts } from '../../lib/groceryBought.js';
+import { allIds, allPicked, boughtRows, storeIds } from '../../lib/groceryBought.js';
 import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, hasNoPrice, resolveChip, showChips } from '../../lib/groceryChips.js';
 import { dailyFix, pageOf } from '../../lib/route.js';
 import EmptyTiles from '../EmptyTiles.js';
@@ -16,6 +16,7 @@ import { navigate, useRoutePath } from '../useRoute.js';
 import ArmedButton from '../ArmedButton.jsx';
 import BulkShare, { SelectButton } from './BulkShare.js';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
+import GroceryBudget from './GroceryBudget.js';
 import GroceryMore from './GroceryMore.js';
 import GroceryRail from './GroceryRail.js';
 import GroceryStoreChips from './GroceryStoreChips.js';
@@ -253,6 +254,7 @@ function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, onAddPrice }: {
       </div>
       {!onBought && <ReceiptScan g={g} mk={mk} />}
       {summary}
+      <GroceryBudget spent={t.spent} planned={t.planned} />
       {onBought && split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {current && carried > 0 && !onBought && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
       {!t.count && off === 0 && !onBought && <p className="note">Your list comes from <b>Inventory</b>. Add what you usually buy there, and tick what you already have.</p>}
@@ -555,18 +557,17 @@ export default function Grocery() {
   const showReceipts = routed === 'receipts' && receiptsOn; // the saved receipts page (brief receipt-save-photo): admin only, and a reload of its address falls back to the list for anyone else
   const view = ((routed && routed !== 'receipts' ? routed : chosen)) as View;
   const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); };
-  const counts = useMemo(() => viewCounts(g, months[nowKey] || emptyMonth()), [g, months, nowKey]);
   if (showReceipts) return <section className="panel groc" aria-labelledby="rcs-h"><Receipts /></section>;
-  const tab = (v: View, label: string, n?: number) => (
-    <button type="button" id={`groc-view-${v}`} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>{label}{n !== undefined && n > 0 ? ` ${n}` : ''}</button>
+  const tab = (v: View, label: string) => (
+    <button type="button" id={`groc-view-${v}`} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>{label}</button>
   );
   return (
     <section className="panel groc" aria-labelledby="groc-h">
       <div className="gtop">
         <h2 id="groc-h">Groceries</h2>
         <div className="seg" role="group" aria-label="Grocery view">
-          {tab('shopping', 'Shopping', counts.shopping)}
-          {tab('bought', 'Bought', counts.bought)}
+          {tab('shopping', 'Shopping')}
+          {tab('bought', 'Bought')}
           {tab('inventory', 'Inventory')}
           {tab('spend', 'Spending')}
         </div>
