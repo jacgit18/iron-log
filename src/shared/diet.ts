@@ -1,4 +1,4 @@
-import type { DietCfg, DietEntry, PlanItem, SavedItem, SavedMeal } from '../types.ts';
+import type { DietCfg, DietEntry, PlanItem, PlanSlot, SavedItem, SavedMeal } from '../types.ts';
 import { addDays, parseDate, ymd } from './dates.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
@@ -67,6 +67,9 @@ export function normMealsMoved(v: unknown): Record<string, string> {
   return out;
 }
 
+/** The meals of a day, in order (brief week-board). */
+export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+
 export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8;
 
 /** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1). */
@@ -77,7 +80,8 @@ export function normPlanItem(x: unknown): PlanItem | null {
   if ((o.k !== 'r' && o.k !== 'm') || !id) return null;
   const x2 = o.x;
   const ok = o.k === 'r' && fin(x2) && x2 >= 0.5 && x2 <= 10 && x2 * 2 === Math.round(x2 * 2) && x2 !== 1;
-  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}) };
+  const slot = PLAN_SLOTS.find(t => t === o.s);
+  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}) };
 }
 
 /** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS a day, a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
@@ -91,8 +95,9 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
     const seen = new Set<string>(), items: PlanItem[] = [];
     for (const raw of Array.isArray((v as Record<string, unknown>)[d]) ? (v as Record<string, unknown[]>)[d]! : []) {
       const it = normPlanItem(raw);
-      if (!it || seen.has(it.k + it.id) || items.length >= MAX_PLAN_ITEMS) continue;
-      seen.add(it.k + it.id); items.push(it);
+      const key = it ? it.k + it.id + (it.s ?? '') : '';
+      if (!it || seen.has(key) || items.length >= MAX_PLAN_ITEMS) continue; // the same food may be in two different meals of a day
+      seen.add(key); items.push(it);
     }
     if (items.length) out[d] = items;
   }

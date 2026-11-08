@@ -23,7 +23,7 @@ export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries
 export function addItem(plan: Plan, day: string, item: PlanItem, today: string): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
   const list = plan[day] ?? [];
-  if (list.some(i => i.k === item.k && i.id === item.id)) return fail('That is already on this day.');
+  if (list.some(i => i.k === item.k && i.id === item.id && i.s === item.s)) return fail('That is already on this day.'); // the same food may be in two different meals
   if (list.length >= MAX_PLAN_ITEMS) return fail(`A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`);
   return { plan: { ...plan, [day]: [...list, item] }, error: null };
 }

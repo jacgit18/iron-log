@@ -1,4 +1,4 @@
-import type { FoodType, Recipe, RecipeCategory, RecipeChips, RecipeIngredient, RecipeUse } from '../types.ts';
+import type { FoodType, Recipe, RecipeCategory, RecipeChips, PlateMark, RecipeIngredient, RecipeUse } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';
@@ -47,6 +47,14 @@ export function cleanUses(v: unknown): RecipeUse[] | null {
   if (!Array.isArray(v)) return null;
   const kept = RECIPE_USES.filter(u => v.includes(u));
   return kept.length === 0 ? null : kept.includes('drink') ? ['drink'] : kept;
+}
+
+export const PLATE_MARKS: readonly PlateMark[] = ['protein', 'carb', 'veg'];
+/** The plate marks in `v`: known ones only, once each, in the fixed order. None when nothing usable is left. */
+export function cleanCounts(v: unknown): PlateMark[] | null {
+  if (!Array.isArray(v)) return null;
+  const kept = PLATE_MARKS.filter(m => v.includes(m));
+  return kept.length === 0 ? null : [...kept];
 }
 
 /** Most recipes one recipe can say it goes with (brief recipes-goes-with). */
@@ -100,13 +108,14 @@ export function normRecipe(x: unknown): Recipe | null {
   const library = from.startsWith('c:');
   const ready = cleanCategory(o.cat) === 'ready'; // a usual amount and a unit name belong to a ready-made food only
   const uses = cleanUses(o.uses); // any recipe may carry them; unknown labels are dropped
+  const counts = cleanCounts(o.counts); // what it covers on a plate, set by the person
   const pairs = cleanPairs(o.pairs, id); // recipes it goes with; ids of recipes that no longer exist are dropped by the app, not here (the server sees one list at a time)
   const type = ready ? cleanType(o.type) : null; // a type belongs to a ready-made food only; an unknown value is dropped (the food stays untyped)
   const usual = ready ? cleanUsual(o.usual) : null, unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
