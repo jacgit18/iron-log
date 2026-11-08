@@ -38,26 +38,24 @@ test('the pill has an arrow, and the arrow, the pill and the name all open and c
   await expect(page.locator('#groc-rice')).not.toBeChecked();
 });
 
-test('Show details and Hide details work on one store', async ({ page }) => {
+test('one Show details button opens every row, and Hide details closes them, whatever the stores', async ({ page }) => {
   await seed(page);
-  await page.getByRole('button', { name: "Show details in BJ's" }).click();
-  await expect(page.getByLabel('Count of Toilet paper')).toBeVisible();
-  await expect(page.getByLabel('Count of Rice')).toBeVisible();
-  await expect(page.getByLabel('Count of Milk')).toHaveCount(0); // Aldi is its own store
-  await expect(page.getByRole('button', { name: "Hide details in BJ's" })).toHaveText('Hide details');
-  await page.getByRole('button', { name: 'Show details in Aldi' }).click();
-  await expect(page.getByLabel('Count of Milk')).toBeVisible();
-  await page.getByRole('button', { name: "Hide details in BJ's" }).click();
-  await expect(page.getByLabel('Count of Rice')).toHaveCount(0);
-  await expect(page.getByLabel('Count of Milk')).toBeVisible(); // Aldi still open
+  await expect(page.locator('#groc-listsum')).toContainText('to get');
+  await page.locator('#groc-details-all').click();
+  for (const n of ['Toilet paper', 'Rice', 'Milk']) await expect(page.getByLabel(`Count of ${n}`)).toBeVisible();
+  await expect(page.locator('#groc-details-all')).toHaveText('Hide details');
+  await page.locator('#groc-details-all').click();
+  for (const n of ['Toilet paper', 'Rice', 'Milk']) await expect(page.getByLabel(`Count of ${n}`)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /details in / })).toHaveCount(0); // no button on a store heading any more
 });
 
-test('opening one row makes the store button Hide details only once every row is open', async ({ page }) => {
+test('opening one row makes the button Hide details only once every row is open', async ({ page }) => {
   await seed(page);
   await pill(page, 'Rice').click();
-  await expect(page.getByRole('button', { name: "Show details in BJ's" })).toBeVisible();
+  await expect(page.locator('#groc-details-all')).toHaveText('Show details');
   await pill(page, 'Toilet paper').click();
-  await expect(page.getByRole('button', { name: "Hide details in BJ's" })).toBeVisible();
+  await pill(page, 'Milk').click();
+  await expect(page.locator('#groc-details-all')).toHaveText('Hide details');
 });
 
 test('a refused count or price says why, and "I have this" takes the item off the list', async ({ page }) => {
@@ -74,8 +72,7 @@ test('a refused count or price says why, and "I have this" takes the item off th
 
 test('with every row open the page has no accessibility violations in both themes, and at 320px and 200% text it does not scroll sideways', async ({ page }) => {
   await seed(page);
-  await page.getByRole('button', { name: "Show details in BJ's" }).click();
-  await page.getByRole('button', { name: 'Show details in Aldi' }).click();
+  await page.locator('#groc-details-all').click();
   for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
     const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

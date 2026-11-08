@@ -96,7 +96,7 @@ test('a purchase of a removed item counts as bought on Bought and not as still t
   }, { catalogue, month });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  const head = page.locator('.gstorehead', { hasText: 'Aldi' }).locator('.gstoremeta .note');
+  const head = page.locator('#groc-listsum');
   await expect(head).toContainText('1 to get'); // only bread: the removed purchase is not still to get
   await expect(page.locator('#groc-summary')).toContainText('Bought 2 of 3');
   await view(page, 'Bought').click();

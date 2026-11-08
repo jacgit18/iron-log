@@ -624,11 +624,8 @@ html:has(.gdock) body .toasts {
   justify-content: flex-end;
   gap: var(--sp-4) var(--sp-8);
 }
-.gstoremeta .btn,.gstorehead>.gall {
+.gstoremeta .btn {
   min-height: 44px;
-}
-.gstorehead:has(.gall) {
-  align-items: center;
 }
 .gfold {
   display: inline-flex;

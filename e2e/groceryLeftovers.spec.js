@@ -55,7 +55,7 @@ test('X-8: a store whose only bought item was removed still shows its tax box, a
   await expect(page.getByLabel('Tax at Aldi this month')).toBeVisible(); // something was bought at Aldi, even though that item is gone
   await page.click('#groc-view-shopping');
   await page.click('#groc-prev');
-  await expect(page.locator('.gstorehead', { hasText: 'Aldi' }).locator('.gstoremeta .note')).toHaveText('2/2 · $6.00');
+  await expect(page.locator('#groc-listsum')).toHaveText('2/2 bought · $6.00');
 });
 
 test('X-8: the tax box shows for a store that has no items left at all', async ({ page }) => {
