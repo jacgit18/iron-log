@@ -116,12 +116,12 @@ export default function Recipes() {
     <li key={key}>
       <button type="button" className="rc-row" onClick={open}>
         <span className="rc-main">
-          <span className="rc-title"><span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
+          <span className="rc-title"><span><b id={`rc-t-${key}`}>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
           <span className="rc-meta">{meta}</span>
         </span>
         {badge && <span className="rc-badge">{badge}</span>}
       </button>
-      {logId && <button type="button" className="btn sm rc-log" aria-label={`Log ${title}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: logId })}>Log</button>}
+      {logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: logId })}>Log</button>}
     </li>
   );
 

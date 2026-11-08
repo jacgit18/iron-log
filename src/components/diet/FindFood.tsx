@@ -36,8 +36,8 @@ export default function FindFood({ day, onAdded, onFood }: { day: string; onAdde
             const type = rec ? foodTypeOf(rec) : null;
             return (
               <li key={f.n}>
-                <button type="button" className="btn sm" onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
-                {rec && <button type="button" className="btn sm" aria-label={`Log ${f.n}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: rec.id, day })}>Log</button>}
+                <button type="button" className="btn sm" id={`dt-find-${f.from ?? f.n}`} onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
+                {rec && <button type="button" className="btn sm" aria-describedby={`dt-find-${rec.id}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: rec.id, day })}>Log</button>}
               </li>
             );
           })}

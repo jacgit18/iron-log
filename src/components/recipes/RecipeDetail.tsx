@@ -101,7 +101,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
 const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
 const MineActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => (
   <>
-    {hasMacros(recipe) && <button type="button" className="btn" aria-label={`Log ${recipe.n}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id })}>Log</button>}
+    {hasMacros(recipe) && <button type="button" className="btn" onClick={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id })}>Log</button>}
     <button type="button" className="btn" onClick={onEdit}>Edit</button>
     <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the ${noun} ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
   </>
