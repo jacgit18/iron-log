@@ -164,4 +164,10 @@
     overflow: auto;
   }
 }
+.rc-inmine {
+  display: inline-block;
+  margin-inline: var(--sp-4);
+  color: var(--accent);
+  vertical-align: -0.1em;
+}
 }
