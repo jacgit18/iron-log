@@ -34,9 +34,10 @@ test('untyped foods show a banner; Review types suggests from the name, a change
   await expect(page.getByText('3 foods need a type.')).toBeVisible();
   await page.getByRole('button', { name: 'Review types' }).click();
   await expect(page).toHaveURL(/#\/daily\/recipes\/types$/);
-  const pressed = async (food, label) => expect(page.getByRole('group', { name: `Type of ${food}` }).getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
+  const pressed = async (food, label) => expect(page.getByRole('group', { name: `Used as for ${food}` }).getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
   await pressed('Whole milk', 'Drink');
   await pressed('Eggs, large', 'Ingredient');
+  await pressed('Eggs, large', 'Ready to eat'); // eggs are both: one food, two labels
   await pressed('Frozen lasagna', 'Ready to eat');
   await page.reload(); // the page is not kept in the address: a reload shows the list
   await expect(page).toHaveURL(/#\/daily\/recipes$/);
@@ -44,10 +45,14 @@ test('untyped foods show a banner; Review types suggests from the name, a change
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
   await page.getByRole('button', { name: 'Review types' }).click();
-  await page.getByRole('group', { name: 'Type of Frozen lasagna' }).getByRole('button', { name: 'Drink' }).click();
+  await page.getByRole('group', { name: 'Used as for Frozen lasagna' }).getByRole('button', { name: 'Drink' }).click();
   await page.getByRole('button', { name: 'Looks right' }).click();
   await expect(page.getByText('Food types saved.')).toBeVisible();
   await expect(page.getByText(/needs? a type/)).toHaveCount(0);
+  for (const tab of ['ingredients', 'foods']) { // the two-label food is in both tabs
+    await page.locator(`#recipes-tab-${tab}`).click();
+    await expect(page.locator('.rc-row', { hasText: /Eggs, large/ })).toBeVisible();
+  }
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByText('3 foods need a type.')).toBeVisible();
 });

@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -324,7 +324,7 @@ export interface RecipesSlice {
   renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
   removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
   setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
-  setFoodTypes(choices: Record<string, FoodType>): { changed: number; undo: () => boolean }; // give ready-made foods a Type in one save (the review screen's Looks right); `undo` puts back the untyped state for the whole batch, false when something changed since
+  setFoodTypes(choices: Record<string, FoodType>, uses?: Record<string, RecipeUse[]>): { changed: number; undo: () => boolean }; // give ready-made foods a Type in one save (the review screen's Looks right); `undo` puts back the untyped state for the whole batch, false when something changed since
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
   acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned

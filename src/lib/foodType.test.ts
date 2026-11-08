@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FOOD_TYPE, foodTypeOf, formFoodType, reviewChoices, suggestFoodType, untypedBanner, untypedFoods } from './foodType.js';
+import { DEFAULT_FOOD_TYPE, foodTypeOf, formFoodType, reviewUses, savedFromUses, suggestFoodType, suggestUses, untypedBanner, untypedFoods } from './foodType.js';
 import type { Recipe } from '../types.ts';
 
 const food = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'ready', ing: [], steps: [], kcal: 100, p: 5, ...extra });
@@ -49,8 +49,27 @@ describe('untyped foods', () => {
     expect(foodTypeOf(list[2]!)).toBeNull();
   });
   it('proposes the suggestion for each untyped food, with a changed row winning', () => {
-    expect(reviewChoices(list)).toEqual({ a: 'drink' });
-    expect(reviewChoices(list, { a: 'ready' })).toEqual({ a: 'ready' });
-    expect(reviewChoices(list, { b: 'drink' })).toEqual({ a: 'drink' }); // a typed food is not part of the review
+    expect(reviewUses(list)).toEqual({ a: ['drink'] });
+    expect(reviewUses(list, { a: ['ready'] })).toEqual({ a: ['ready'] });
+    expect(reviewUses(list, { b: ['drink'] })).toEqual({ a: ['drink'] }); // a typed food is not part of the review
+  });
+});
+
+describe('suggestUses', () => {
+  it('suggests Ingredient and Ready to eat together for a food eaten as it is', () => {
+    for (const n of ['Eggs, large', 'Banana', 'Rolled oats']) expect(suggestUses(n)).toEqual(['ingredient', 'ready']);
+  });
+  it('keeps a plain ingredient, a drink and a ready food to one label each', () => {
+    expect(suggestUses('Flour')).toEqual(['ingredient']);
+    expect(suggestUses('Oat milk')).toEqual(['drink']);
+    expect(suggestUses('Frozen lasagna')).toEqual(['ready']);
+  });
+});
+
+describe('savedFromUses', () => {
+  it('uses the first label as the Type and writes uses only for several', () => {
+    expect(savedFromUses(['ingredient', 'ready'])).toEqual({ type: 'ingredient', uses: ['ingredient', 'ready'] });
+    expect(savedFromUses(['drink'])).toEqual({ type: 'drink' });
+    expect(savedFromUses([])).toEqual({ type: 'ready' });
   });
 });

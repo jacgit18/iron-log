@@ -1,31 +1,35 @@
 import { useMemo, useState } from 'react';
-import { FOOD_TYPES, FOOD_TYPE_LABEL } from '../../shared/recipes.js';
-import { reviewChoices, untypedFoods } from '../../lib/foodType.js';
+import UsedAsChips from './UsedAsChips.js';
+import { reviewUses, savedFromUses, untypedFoods } from '../../lib/foodType.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import type { FoodType } from '../../types.ts';
+import type { FoodType, RecipeUse } from '../../types.ts';
 import './FoodTypeReview.css';
 
-// Review types (brief food-type-and-migration): the one-time screen for ready-made foods saved before types existed. Each row starts on the Type its
-// name suggests; Looks right saves every row (a changed one with the person's choice) in one store action and the list offers Undo. Logic: lib/foodType.ts.
+const FOOD_USES: readonly RecipeUse[] = ['ingredient', 'ready', 'drink'];
+
+// Review types (brief food-type-and-migration): the one-time screen for ready-made foods saved before types existed. Each row starts on the Used as labels its
+// name suggests (eggs: Ingredient and Ready to eat); Looks right saves every row (a changed one with the person's choice) in one store action and the list offers Undo. Logic: lib/foodType.ts.
 export default function FoodTypeReview({ onDone, onBack }: { onDone: (undo: () => boolean) => void; onBack: () => void }) {
   const recipes = useAppStore(s => s.recipes);
-  const [picked, setPicked] = useState<Record<string, FoodType>>({});
+  const [picked, setPicked] = useState<Record<string, RecipeUse[]>>({});
   const foods = untypedFoods(recipes);
-  const choices = useMemo(() => reviewChoices(recipes, picked), [recipes, picked]);
-  const save = () => { const r = useAppStore.getState().setFoodTypes(choices); onDone(r.undo); };
+  const choices = useMemo(() => reviewUses(recipes, picked), [recipes, picked]);
+  const save = () => {
+    const types: Record<string, FoodType> = {}, uses: Record<string, RecipeUse[]> = {};
+    for (const [id, u] of Object.entries(choices)) { const s = savedFromUses(u); types[id] = s.type; if (s.uses) uses[id] = s.uses; }
+    onDone(useAppStore.getState().setFoodTypes(types, uses).undo);
+  };
   return (
     <section className="panel" aria-labelledby="ftr-h">
       <button type="button" className="btn ghost" onClick={onBack}>Back to recipes</button>
       <h2 id="ftr-h" tabIndex={-1}>Review types</h2>
-      <p className="note">We picked a type from each name. Change any that are wrong, then press Looks right.</p>
+      <p className="note">We picked what each food is used as from its name. Change any that are wrong, then press Looks right.</p>
       {!foods.length && <p className="note" role="status">Every food has a type.</p>}
       <ul className="ftr-list">
         {foods.map(f => (
           <li key={f.id} className="ftr-row">
             <b>{f.n}</b>
-            <div className="seg" role="group" aria-label={`Type of ${f.n}`}>
-              {FOOD_TYPES.map(t => <button type="button" key={t} className={choices[f.id] === t ? 'on' : ''} aria-pressed={choices[f.id] === t} onClick={() => setPicked({ ...picked, [f.id]: t })}>{FOOD_TYPE_LABEL[t]}</button>)}
-            </div>
+            <UsedAsChips name={`Used as for ${f.n}`} value={choices[f.id] ?? []} options={FOOD_USES} onChange={next => setPicked({ ...picked, [f.id]: next })} />
           </li>
         ))}
       </ul>
