@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useFeature } from '../../features.js';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
@@ -32,7 +31,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const [unit, setUnit] = useState(recipe?.unit ?? '');
   const [plural, setPlural] = useState(recipe?.plural ?? '');
   const [err, setErr] = useState('');
-  const canScan = useFeature('scan') && !recipe;
+  const canScan = !recipe;
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState('');
   const camera = useRef<HTMLInputElement>(null);

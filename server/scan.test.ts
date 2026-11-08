@@ -13,11 +13,12 @@ const good = '{"name":"Gnocchi","serving":"1 cup","servingG":140,"servingsPerPac
 
 async function start(deps: ScanDeps) {
   const app = express();
+  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
   app.use('/api/scan', scanRoutes(deps));
   server = app.listen(0);
   await new Promise(done => server!.once('listening', done));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/label`;
-  return (body: unknown, raw = false) => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, body: raw ? String(body) : JSON.stringify(body) });
+  return (body: unknown, raw = false, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: raw ? String(body) : JSON.stringify(body) });
 }
 
 describe('POST /api/scan/label', () => {
@@ -27,7 +28,7 @@ describe('POST /api/scan/label', () => {
     const res = await post({ image: jpeg });
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'Gnocchi', serving: '1 cup', servingG: 140, servingsPerPack: 3, kcal: 210, p: 6, c: 40, f: 1 } }, left: 29, max: 30 }); // the shared count after this call (brief barcode-miss-ladder)
+    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'Gnocchi', serving: '1 cup', servingG: 140, servingsPerPack: 3, kcal: 210, p: 6, c: 40, f: 1 } }, left: 14, max: 15 }); // this person's count after this call (brief barcode-miss-ladder)
     expect(text).not.toContain('SECRET');
     const [url, init] = ask.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
@@ -95,6 +96,29 @@ describe('POST /api/scan/label', () => {
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg })).status).toBe(200);
   });
+
+  it('stops one person at their own daily allowance and leaves everyone else their scans', async () => {
+    const ask = vi.fn(async () => model(good));
+    const post = await start({ key: 'k', userDailyMax: 2, dailyMax: 50, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg }, false, 'greedy')).status).toBe(200);
+    expect((await post({ image: jpeg }, false, 'greedy')).status).toBe(200);
+    const over = await post({ image: jpeg }, false, 'greedy');
+    expect(over.status).toBe(503);
+    expect(await over.json()).toMatchObject({ why: 'cap', retryAfterSec: expect.any(Number) });
+    expect(ask).toHaveBeenCalledTimes(2); // the refused call never reached the model
+    const other = await post({ image: jpeg }, false, 'someone-else');
+    expect(other.status).toBe(200);
+    expect(await other.json()).toMatchObject({ left: 1, max: 2 });
+  });
+
+  it('still stops everyone at the server-wide ceiling, and shows the lower of the two counts', async () => {
+    const ask = vi.fn(async () => model(good));
+    const post = await start({ key: 'k', userDailyMax: 5, dailyMax: 2, fetch: ask as unknown as typeof fetch });
+    expect(await (await post({ image: jpeg }, false, 'a')).json()).toMatchObject({ left: 1, max: 5 });
+    expect((await post({ image: jpeg }, false, 'b')).status).toBe(200);
+    expect((await post({ image: jpeg }, false, 'c')).status).toBe(503);
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('POST /api/scan/receipt', () => {
@@ -102,11 +126,12 @@ describe('POST /api/scan/receipt', () => {
   const reply = JSON.stringify({ store: "BJ'S", date: '2026-11-03', tax: 204, total: 4000, lines: [{ text: 'EGGS LRG 5 DZ', qty: 2, total: 2698, match: 'eggs' }, { text: 'GONE', qty: 1, total: 100, match: 'not-sent' }] });
   async function startReceipt(deps: ScanDeps) {
     const app = express();
-    app.use('/api/scan', scanRoutes(deps));
+  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
+  app.use('/api/scan', scanRoutes(deps));
     server = app.listen(0);
     await new Promise(done => server!.once('listening', done));
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/receipt`;
-    return (body: unknown) => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    return (body: unknown, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: JSON.stringify(body) });
   }
 
   it('sends the photo, the item names and the key to the larger model, and answers with the checked receipt', async () => {
@@ -173,5 +198,14 @@ describe('POST /api/scan/receipt', () => {
     expect(await over.json()).toMatchObject({ why: 'cap' });
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg, items })).status).toBe(200);
+  });
+
+  it('stops one person at their own receipt allowance and leaves the others theirs', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 50, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'greedy')).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'greedy')).status).toBe(503);
+    expect((await post({ image: jpeg, items }, 'other')).status).toBe(200);
+    expect(ask).toHaveBeenCalledTimes(2);
   });
 });
