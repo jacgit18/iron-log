@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt, ReceiptLine } from '../shared/receipt.js';
 import { applyPlan, planReceipt, restoreSnapshot, takeSnapshot, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
-import { heldOf, missingIntro, reconcile, untickedText } from './receiptReconcile.js';
+import { earlierText, heldOf, missingIntro, reconcile, untickedText } from './receiptReconcile.js';
 
 // Receipt: reconcile items already ticked in the store (brief receipt-reconcile-ticked).
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: 'Costco', qty: 1, cents: null, every: true, out: false, ...extra });
@@ -96,13 +96,42 @@ describe('reconcile: ticked items the receipt does not show', () => {
     const wrong: Receipt = { lines: [L('SOMETHING ELSE', 100, null)] };
     const out = run(wrong, items, lines);
     expect(out.missing).toHaveLength(3);
-    expect(missingIntro(out)).toMatch(/^None of the items you marked bought are on this receipt/);
-    expect(missingIntro(run(r, items, lines))).toMatch(/^You marked these as bought/);
+    expect(missingIntro(out)).toMatch(/^None of the items on your list match this receipt. Is this the right one\?/);
+    expect(missingIntro(run(r, items, lines))).toMatch(/^Normal if you bought these/);
+  });
+  it('asks "Is this the right one?" only when nothing on the receipt matched an item', () => {
+    const all = { missing: [{ id: 'a', name: 'A', held: '' }, { id: 'b', name: 'B', held: '' }], ticked: 2 };
+    expect(missingIntro(all, 0)).toMatch(/Is this the right one\?/);
+    expect(missingIntro(all, 2)).not.toMatch(/right one/); // two receipt lines matched: it is plainly this month's receipt
+    expect(missingIntro(all, 2)).toMatch(/^Normal if you bought these on another trip or scanned another receipt\. Nothing changes unless you move one back to Shopping\.$/);
   });
   it('words the unticked count for the Applied notice', () => {
     expect(untickedText(0)).toBe('');
     expect(untickedText(1)).toBe(' 1 item moved back to Shopping.');
     expect(untickedText(2)).toBe(' 2 items moved back to Shopping.');
+  });
+});
+
+describe('items an earlier receipt ticked', () => {
+  const shop = [item('milk', 'Milk', { cents: 379 }), item('rice', 'Rice', { cents: 549 }), item('eggs', 'Eggs')];
+  const rs: Receipt = { lines: [L('ORG EGGS 18CT', 899, 'eggs')] };
+  const choices = choose(rs);
+  const go = (lines: Record<string, GroceryLine>) => reconcile(planReceipt(rs, choices, shop, null), choices, shop, lines);
+  it('are left out of the missing list and the ticked count, and counted as earlier', () => {
+    const out = go({ milk: { got: true, qty: 1, cents: 379, rc: true }, rice: { got: true, qty: 1, cents: 549 } });
+    expect(out.missing.map(m => m.id)).toEqual(['rice']); // Milk was ticked by a receipt, Rice by hand
+    expect(out.ticked).toBe(1);
+    expect(out.earlier).toBe(1);
+  });
+  it('still show in the list when this receipt is the one that matches them, and are not counted as earlier', () => {
+    const out = go({ eggs: { got: true, qty: 1, rc: true } });
+    expect(out.earlier).toBe(0);
+    expect(out.compare.eggs).toBeDefined();
+  });
+  it('say how many are not listed', () => {
+    expect(earlierText(0)).toBe('');
+    expect(earlierText(1)).toBe('1 item from an earlier receipt is not listed.');
+    expect(earlierText(3)).toBe('3 items from an earlier receipt are not listed.');
   });
 });
 
