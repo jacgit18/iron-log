@@ -440,6 +440,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         library: padLibrary(normLibrary((LS.get('library/main') || {}).items)),
         experiments: normExperiments((LS.get('experiments/main') || {}).items),
         recipes: normRecipes((LS.get('recipes/main') || {}).items),
+        recipesLoaded: true,
         diet: normDietEntries((LS.get('diet/main') || {}).items),
         stretches: normStretches(LS.get('stretches/main')).items,
         stretchExps: normStretches(LS.get('stretches/main')).experiments,
@@ -483,6 +484,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ diet: s.exists ? normDietEntries((s.data() || {}).items) : [] });
     }, () => flag('Couldn’t load your food log. Reload the page.'));
     db.doc('recipes/main').onSnapshot((s: any) => {
+      set({ recipesLoaded: true });
       if (queue.pending('recipes/main')) return;
       set({ recipes: s.exists ? normRecipes((s.data() || {}).items) : [] });
     }, () => flag('Couldn’t load your recipes. Reload the page.'));
@@ -610,6 +612,12 @@ useAppStore.subscribe((s, prev) => {
   s.refreshRan();
   if (LS.get(RAN_FLAG(s))) return;
   void s.loadHistory().then(() => { const st = useAppStore.getState(); if (st.weekHist && !histFailed) LS.set(RAN_FLAG(st), true); });
+});
+// Saved meals move into Recipes once the data is in AND the recipes list has been read: a list built on an unread one could replace the account's
+// recipes (brief saved-meals-into-recipes). Each saved meal moves once (cfg.diet.mealsMoved); the old list is left alone.
+const moveReady = (s: AppState) => allReady(s.ready) && s.recipesLoaded && (s.sync === null || s.sync.ready);
+useAppStore.subscribe((s, prev) => {
+  if (moveReady(s) && !moveReady(prev)) s.moveSavedMeals();
 });
 // An installed app left open past the end of the week moves on to the new week, but only if you
 // were looking at the week that just ended; browsing elsewhere stays put.

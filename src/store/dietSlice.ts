@@ -1,8 +1,10 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { renameMeal, saveMeal } from '../lib/dietMeals.js';
+import { renameMeal } from '../lib/dietMeals.js';
 import { addItem, recipeIdsFor, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
-import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
+import { moveMeals, remapPlan } from '../lib/quickMeals.js';
+import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
+import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 import type { DietEntry, SavedMeal } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
@@ -81,11 +83,31 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   },
 
   saveDietMeal(name, entryIds) {
-    const meals = mealsOf(get), pick = new Set(entryIds);
-    const r = saveMeal(meals, name, get().diet.filter(e => pick.has(e.id)), newMealId(meals));
-    if (r.meals === null) return r.error;
-    putMeals(get, r.meals);
-    return null;
+    const n = name.trim().slice(0, MAX_MEAL_NAME), picked = get().diet.filter(e => entryIds.includes(e.id));
+    if (!n) return 'Give the meal a name.';
+    if (!picked.length) return 'Tick at least one food.';
+    if (picked.length > MAX_MEAL_ITEMS) return `A meal can hold ${MAX_MEAL_ITEMS} foods.`;
+    const recipes = get().recipes;
+    if (recipes.some(r => r.n.trim().toLowerCase() === n.toLowerCase())) return 'You already have a recipe or meal with that name.';
+    const items = picked.map(e => ({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}), ...(e.from ? { from: e.from } : {}) }));
+    return get().saveRecipe(savedMealToRecipe({ id: '', n, items }, recipes)); // a Recipes meal: linked foods when they still match, else the logged totals
+  },
+
+  moveSavedMeals() {
+    const st = get(), meals = mealsOf(get), have = st.cfg.diet?.mealsMoved ?? {};
+    if (!st.isReady() || !st.recipesLoaded || meals.every(m => have[m.id])) return 0;
+    const r = moveMeals(meals, have, st.recipes);
+    if (!r.added) return 0;
+    set({ recipes: r.recipes });
+    get().saveRecipes(); // recipes first: if the settings write below fails, the next load moves again (a copy), never loses a meal
+    get().mutateCfg(c => {
+      const next = { ...(c.diet || {}), mealsMoved: r.moved };
+      const plan = remapPlan(next.plan, r.moved);
+      if (plan) next.plan = plan;
+      const clean = normDietCfg(next);
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+    return r.added;
   },
 
   renameDietMeal(id, name) {

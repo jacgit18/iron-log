@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
+import { saveMeal } from '../lib/dietMeals.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
@@ -154,28 +155,67 @@ describe('the data file', () => {
   });
 });
 
-describe('saved meals', () => {
+// The old saved-meals list (cfg.diet.meals) still exists until a later PR removes it; these tests seed it directly, since Save meal now makes a Recipes meal.
+const oldMeal = (name: string, entryIds: string[]) => {
+  const meals = st().cfg.diet?.meals ?? [];
+  const r = saveMeal(meals, name, st().diet.filter(e => entryIds.includes(e.id)), `m${meals.length + 1}`);
+  st().mutateCfg(c => { c.diet = { ...(c.diet || {}), meals: r.meals! }; });
+};
+
+describe('Save meal makes a Recipes meal', () => {
   const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
-  it('saves the ticked entries as a meal under cfg.diet.meals', () => {
+  beforeEach(() => { useAppStore.setState({ recipes: [] }); });
+  it('saves the ticked entries as a meal recipe with their totals, and leaves the old list alone', () => {
     const a = log('Oats', 350), b = log('Banana', 100); log('Skipped');
     expect(st().saveDietMeal('Breakfast', [a, b])).toBeNull();
-    expect(st().cfg.diet!.meals!.map(m => [m.n, m.items.map(i => i.n)])).toEqual([['Breakfast', ['Oats', 'Banana']]]);
+    expect(st().recipes).toHaveLength(1);
+    expect(st().recipes[0]).toMatchObject({ n: 'Breakfast', cat: 'other', kcal: 450, p: 10 });
+    expect(st().recipes[0]!.ing.map(i => i.n)).toEqual(['Oats', 'Banana']);
+    expect(st().cfg.diet?.meals).toBeUndefined();
   });
-  it('saving the same name again replaces it', () => {
-    const a = log('Oats'), b = log('Toast');
-    st().saveDietMeal('Breakfast', [a]); st().saveDietMeal('breakfast', [b]);
-    expect(st().cfg.diet!.meals).toHaveLength(1);
-    expect(st().cfg.diet!.meals![0]!.items[0]!.n).toBe('Toast');
-  });
-  it('refuses a blank name or nothing ticked and changes nothing', () => {
+  it('refuses a blank name, nothing ticked and a name a recipe already has, and changes nothing', () => {
     const a = log('Oats');
     expect(st().saveDietMeal(' ', [a])).toMatch(/name/);
     expect(st().saveDietMeal('M', [])).toMatch(/Tick/);
-    expect(st().cfg.diet?.meals).toBeUndefined();
+    expect(st().saveDietMeal('Breakfast', [a])).toBeNull();
+    expect(st().saveDietMeal('breakfast', [a])).toMatch(/already/);
+    expect(st().recipes).toHaveLength(1);
   });
+});
+
+describe('moveSavedMeals', () => {
+  const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
+  beforeEach(() => { useAppStore.setState({ recipes: [], recipesLoaded: true }); });
+  it('copies each saved meal into Recipes once, records it, and leaves the old list', () => {
+    oldMeal('One', [log('Oats')]); oldMeal('Two', [log('Toast')]);
+    expect(st().moveSavedMeals()).toBe(2);
+    expect(st().recipes.map(r => r.n)).toEqual(['One', 'Two']);
+    expect(Object.keys(st().cfg.diet!.mealsMoved!)).toEqual(['m1', 'm2']);
+    expect(st().cfg.diet!.meals).toHaveLength(2);
+    expect(st().moveSavedMeals()).toBe(0);
+    expect(st().recipes).toHaveLength(2);
+  });
+  it('does nothing before the recipes list has been read', () => {
+    oldMeal('One', [log('Oats')]);
+    useAppStore.setState({ recipesLoaded: false });
+    expect(st().moveSavedMeals()).toBe(0);
+    expect(st().recipes).toHaveLength(0);
+    expect(st().cfg.diet!.mealsMoved).toBeUndefined();
+  });
+  it('points a planned saved meal at the recipe it became', () => {
+    const id = log('Oats'); oldMeal('One', [id]);
+    st().addPlanItem(ymd(new Date()), 'm', 'm1');
+    st().moveSavedMeals();
+    const plan = st().cfg.diet!.plan![ymd(new Date())]!;
+    expect(plan).toEqual([{ k: 'r', id: st().recipes[0]!.id }]);
+  });
+});
+
+describe('saved meals', () => {
+  const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
   it('renames, and refuses a name another meal has', () => {
     const a = log('Oats'), b = log('Toast');
-    st().saveDietMeal('One', [a]); st().saveDietMeal('Two', [b]);
+    oldMeal('One', [a]); oldMeal('Two', [b]);
     const [one] = st().cfg.diet!.meals!;
     expect(st().renameDietMeal(one!.id, 'two')).toMatch(/already/);
     expect(st().renameDietMeal(one!.id, 'First')).toBeNull();
@@ -183,7 +223,7 @@ describe('saved meals', () => {
   });
   it('delete offers Undo, which puts the meal back in its place', () => {
     const a = log('Oats'), b = log('Toast'), c = log('Eggs');
-    st().saveDietMeal('One', [a]); st().saveDietMeal('Two', [b]); st().saveDietMeal('Three', [c]);
+    oldMeal('One', [a]); oldMeal('Two', [b]); oldMeal('Three', [c]);
     const two = st().cfg.diet!.meals![1]!;
     st().removeDietMeal(two.id);
     expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Three']);
@@ -193,7 +233,7 @@ describe('saved meals', () => {
   });
   it('deleting the last meal leaves no diet key behind, and targets and pace keep the meals', () => {
     const a = log('Oats');
-    st().saveDietMeal('One', [a]);
+    oldMeal('One', [a]);
     st().setDietTarget('kcal', 3000); st().setDietPace('slow');
     expect(st().cfg.diet).toMatchObject({ kcal: 3000, pace: 'slow', meals: [{ n: 'One' }] });
     st().setDietTarget('kcal', null); st().setDietPace(null);
@@ -208,7 +248,7 @@ describe('the meal planner', () => {
   const tomorrow = ymd(new Date(Date.now() + 864e5));
   const recipe = (id: string, n: string, extra = {}) => ({ id, n, cat: 'protein' as const, ing: [{ n: 'Chicken' }, { n: 'Rice' }], steps: [], kcal: 600, p: 40, ...extra });
   beforeEach(() => { useAppStore.setState({ recipes: [recipe('r1', 'Chili'), recipe('r2', 'Stir fry', { ing: [{ n: 'Chicken' }, { n: 'Peppers' }] })] }); });
-  const meal = () => { const a = st().addDietEntry({ ...rice, d: today }).id!; st().saveDietMeal('Breakfast', [a]); return st().cfg.diet!.meals![0]!.id; };
+  const meal = () => { const a = st().addDietEntry({ ...rice, d: today }).id!; oldMeal('Breakfast', [a]); return st().cfg.diet!.meals![0]!.id; };
 
   it('plans a recipe and a saved meal on a day, in order', () => {
     const m = meal();

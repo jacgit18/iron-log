@@ -14,6 +14,7 @@ const clean = (n: string) => n.replace(/\s+/g, ' ').trim();
 
 export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   recipes: [],
+  recipesLoaded: false,
 
   saveRecipes() { get().saveDoc(MAIN, { items: get().recipes }); },
 
