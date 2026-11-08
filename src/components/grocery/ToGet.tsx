@@ -9,6 +9,7 @@ import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, hasNo
 import { boughtSummaryText, getSummaryText } from '../../lib/groceryListSummary.js';
 import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import ArmedButton from '../ArmedButton.jsx';
+import { navigate } from '../useRoute.js';
 import BulkShare, { SelectButton } from './BulkShare.js';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
 import GroceryBudget from './GroceryBudget.js';
@@ -159,7 +160,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
       {summary}
       <GroceryBudget spent={t.spent} planned={t.planned} />
       {current && carried > 0 && !onBought && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
-      {!t.count && off === 0 && !onBought && <p className="note">Your list comes from <b>Inventory</b>. Add what you usually buy there, and tick what you already have.</p>}
+      {!t.count && off === 0 && !onBought && <p className="note">Your list comes from <b>Inventory</b>, where you keep what you buy every month. <button type="button" className="btn sm ghost" id="groc-open-inventory" onClick={() => navigate('daily/grocery/inventory', 'push')}>Open Inventory</button></p>}
       {onBought && !bought.length && !q.trim() && <p className="note" id="groc-boughtnone">Nothing bought yet this month. Tick an item on Shopping and it shows up here.</p>}
       {phoneShop
         ? <GroceryPhoneBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} searchOn={list.length > 0} select={selectBtn}

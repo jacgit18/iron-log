@@ -67,7 +67,7 @@ test('Inventory shows what was bought, Shopping explains the fold, and Edit mode
   await page.click('#groc-view-bought');
   await expect(page.locator('.groc')).toContainText('These count as in your inventory');
   await page.click('#groc-view-inventory');
-  await expect(page.locator('.ghome .gchip')).toHaveText('Bought');
+  await expect(page.locator('.ghome .ghomebought')).toHaveText(/^bought [A-Z][a-z]{2}$/);
   await page.click('#groc-edit');
   await expect(page.locator('.geditbadge')).toHaveText('Editing');
   for (const colorScheme of ['light', 'dark']) {

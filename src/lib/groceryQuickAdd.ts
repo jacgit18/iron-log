@@ -1,7 +1,7 @@
 import type { GroceryItem } from '../types.ts';
 import type { GroceryForm } from '../store/types.ts';
 
-// Quick add on Shopping (brief groceries-spending-buttons-quick-add): a `+ Add item to <store>` row at the end of a store's list adds a one-time item (marked out, so it is on the list to get, and `oneTime`, so it leaves after it is bought) from just a name. The store's add-item rules (duplicate name, full list, name length) do the checking; these are the pure parts around it.
+// Quick add on Shopping (brief groceries-spending-buttons-quick-add): a `+ Add one-time item to <store>` row at the end of a store's list adds a one-time item (marked out, so it is on the list to get, and `oneTime`, so it leaves after it is bought) from just a name. The store's add-item rules (duplicate name, full list, name length) do the checking; these are the pure parts around it.
 
 /** The name as the store keeps it: trimmed, spaces collapsed, at most 80 characters (the same cleaning as `addGroceryItem`). */
 export const cleanQuickName = (name: string): string => name.trim().replace(/\s+/g, ' ').slice(0, 80);
@@ -16,7 +16,7 @@ export const findQuickAdded = (items: readonly GroceryItem[], name: string, stor
 };
 
 /** The label of the row at the end of a store's list. Items with no store are under Anywhere. */
-export const quickAddLabel = (label: string): string => `Add item to ${label}`;
+export const quickAddLabel = (label: string): string => `Add one-time item to ${label}`;
 
 /** The notice after a quick add: what was added and where, then what will happen to it (brief quickadd-one-time-items): it is a one-time item that leaves Inventory and next month's list once it is bought. */
 export const quickAddNotice = (name: string, label: string): string =>

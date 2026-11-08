@@ -6,7 +6,8 @@ import { DEFAULT_GROCERY_SORT, HOME_SORTS, filterGroceryItems, sortGroceryItems 
 import { hasSharing } from '../../lib/grocerySettle.js';
 import { isCollapsed, toggleFolded, unfoldGrown } from '../../lib/groceryCollapse.js';
 import { editSummaryText } from '../../lib/groceryListSummary.js';
-import { ALL_CHIP, chipGroups, chipsOf, haveCount, itemsText, resolveChip, showChips } from '../../lib/groceryChips.js';
+import { ALL_CHIP, chipGroups, chipsOf, haveCount, resolveChip, showChips } from '../../lib/groceryChips.js';
+import { boughtMonthText, homeFilterChips, homeFilterEmpty, homeFilterItems, toBuyText, type HomeFilter } from '../../lib/groceryHomeState.js';
 import { dailyFix } from '../../lib/route.js';
 import EmptyTiles from '../EmptyTiles.js';
 import { navigate } from '../useRoute.js';
@@ -59,7 +60,10 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
   const chips = chipsOf(homeGroups);
   const [chipPick, setChipPick] = useState(ALL_CHIP);
   const chip = resolveChip(chipPick, homeGroups);
-  const listed = chipGroups(shown, chip);
+  const [homeFilter, setHomeFilter] = useState<HomeFilter>('all'); // Need / Have / All: a filter on the tick, not a screen, so no address; it starts at All each time Inventory opens
+  const filterOn = !editing && homeFilter !== 'all' && g.items.length > 0; // no items: no chip row to clear a filter with, so it does not apply
+  const listed = chipGroups(shown, chip).map(grp => (filterOn ? { ...grp, items: homeFilterItems(grp.items, hasIt, homeFilter) } : grp)).filter(grp => !filterOn || grp.items.length > 0);
+  const filterChips = homeFilterChips(g.items, hasIt);
   const withChips = showChips(chips);
   const counts = new Map(homeGroups.map(grp => [grp.store, grp.items.length] as const));
   const countsKey = [...counts].join('|');
@@ -68,13 +72,18 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
     setFolded(f => (f.size ? unfoldGrown(f, prevCounts.current, counts) : f));
     prevCounts.current = counts;
   }, [countsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- `counts` is rebuilt every render; its text is the real dependency
-  const setHave = (it: GroceryItem, on: boolean) => { focusAfter.current = `groc-have-${it.id}`; useAppStore.getState().setGroceryHave(nowKey, it.id, on); }; // a sorted row may move: keep focus on its box
+  const setHave = (it: GroceryItem, on: boolean) => {
+    const order = listed.flatMap(grp => grp.items.map(i => i.id)); // under Need or Have the ticked row leaves the list: focus the next row here, else the one before, else Edit
+    const at = order.indexOf(it.id); const next = order[at + 1] ?? order[at - 1];
+    focusAfter.current = filterOn ? (next ? `groc-have-${next}` : 'groc-edit') : `groc-have-${it.id}`;
+    useAppStore.getState().setGroceryHave(nowKey, it.id, on);
+  }; // a sorted row may move: keep focus on its box
   const railOn = rail && g.items.length > 0;
   const page = (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead gsharehead">
         {editing && <b className="geditbadge">Editing</b>}
-        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'Tick what you already have this month. It leaves Shopping. On the 1st every tick clears.'}</p>
+        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'Ticks carry into next month. Untick an item when you run out, and it comes back to Shopping.'}</p>
         <div className="ghomebtns">
           <button type="button" className="btn sm ghost" id="groc-sharing" aria-pressed={sharingOpen} onClick={() => { setSharingSaved(false); setSharingOpen(v => !v); }}>{sharingOpen ? 'Close sharing groups' : 'Sharing groups'}</button>
           <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditMode(!editing)}>{editing ? 'Done' : 'Edit'}</button>
@@ -95,7 +104,9 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
       )}
       {g.items.length > 0 && (editing ? <GroceryBar q={q} onQ={setQ} /> : <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />)}
       {!!q.trim() && !listed.length && <NoMatch q={q} />}
+      {g.items.length > 0 && !editing && <GroceryStoreChips chips={filterChips} value={homeFilter} onChange={k => setHomeFilter(k as HomeFilter)} label="Show" />}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
+      {filterOn && !listed.length && !q.trim() && <p className="note" id="groc-home-filter-empty">{homeFilterEmpty(homeFilter, chip !== ALL_CHIP ? chips.find(c => c.key === chip)?.label : undefined)}</p>}
       {editing && listed.length > 0 && <ListSummary text={editSummaryText(listed.reduce((n, grp) => n + grp.items.length, 0), listed.reduce((n, grp) => n + haveCount(grp.items, hasIt), 0))} all={listed.every(grp => grp.items.every(i => openEdit.has(i.id)))} onToggle={on => setEdits(listed.flatMap(grp => grp.items.map(i => i.id)), on)} />}
       <div className={`gshoplist${chip !== ALL_CHIP && !editing ? ' gcompact' : ''}`}>
       {listed.map((grp, gi) => (
@@ -109,14 +120,14 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
             </h3>
             {editing
               ? null
-              : <span className="gstoremeta"><span className="note">{itemsText(grp.items.length, haveCount(grp.items, hasIt))}</span></span>}
+              : <span className="gstoremeta"><span className="note">{toBuyText(grp.items.length, haveCount(grp.items, hasIt))}</span></span>}
           </div>
           {editing && hasSharing(g) && !isCollapsed(folded, grp.store, q) && (
             <button type="button" className="btn sm ghost gadjust" aria-pressed={adjusting.has(grp.store)} onClick={() => { if (!adjusting.has(grp.store)) setEdits(grp.items.map(i => i.id), true); toggleAdjust(grp.store); }}>
               {adjusting.has(grp.store) ? `Done adjusting ${grp.label}` : `Adjust shares for ${grp.label}`}
             </button>
           )}
-          <ul className="glist" hidden={editing && isCollapsed(folded, grp.store, q)}>{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; setChipPick(ALL_CHIP); }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} last={lastBoughtText(it, itemHistory(it, months), nowKey)} />))}</ul>
+          <ul className="glist" hidden={editing && isCollapsed(folded, grp.store, q)}>{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; setChipPick(ALL_CHIP); }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} boughtText={lineOf(it, month).got ? boughtMonthText(nowKey) : ''} onHave={on => setHave(it, on)} last={lastBoughtText(it, itemHistory(it, months), nowKey)} />))}</ul>
         </section>
       ))}
       </div>

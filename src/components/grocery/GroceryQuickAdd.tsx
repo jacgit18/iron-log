@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.js';
 import './GroceryQuickAdd.css';
 
-// The `+ Add item to <store>` row at the end of a store's list on Shopping (brief groceries-spending-buttons-quick-add): a name and Enter adds an item through the
+// The `+ Add one-time item to <store>` row at the end of a store's list on Shopping (brief groceries-spending-buttons-quick-add): a name and Enter adds an item through the
 // same add-item rules as Inventory (a duplicate name, an empty name and a full list answer with their usual messages). `onAdded` tells Shopping what was made, for its notice.
 export default function GroceryQuickAdd({ idKey, label, store, onAdded }: { idKey: string; label: string; store: string; onAdded: (a: { id: string; name: string }) => void }) {
   const [open, setOpen] = useState(false);

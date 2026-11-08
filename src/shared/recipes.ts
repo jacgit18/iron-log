@@ -49,6 +49,19 @@ export function cleanUses(v: unknown): RecipeUse[] | null {
   return kept.length === 0 ? null : kept.includes('drink') ? ['drink'] : kept;
 }
 
+/** Most recipes one recipe can say it goes with (brief recipes-goes-with). */
+export const MAX_PAIRS = 3;
+/** The ids in `v` a recipe goes with: text ids only, not its own, not a reserved id, once each, at most MAX_PAIRS. None when nothing is left. */
+export function cleanPairs(v: unknown, selfId: string): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: string[] = [];
+  for (const x of v) {
+    const id = str(x, MAX_RECIPE_ID);
+    if (id && id !== selfId && !reservedId(id) && !out.includes(id)) out.push(id);
+  }
+  return out.length === 0 ? null : out.slice(0, MAX_PAIRS);
+}
+
 const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c => c === v) ?? 'other';
 /** A unit name or plural for a ready-made food (brief usual-amount-and-unit): letters first, then letters, spaces, hyphens or apostrophes, 1 to MAX_UNIT characters. */
 export const MAX_UNIT = 20;
@@ -87,12 +100,13 @@ export function normRecipe(x: unknown): Recipe | null {
   const library = from.startsWith('c:');
   const ready = cleanCategory(o.cat) === 'ready'; // a usual amount and a unit name belong to a ready-made food only
   const uses = cleanUses(o.uses); // any recipe may carry them; unknown labels are dropped
+  const pairs = cleanPairs(o.pairs, id); // recipes it goes with; ids of recipes that no longer exist are dropped by the app, not here (the server sees one list at a time)
   const type = ready ? cleanType(o.type) : null; // a type belongs to a ready-made food only; an unknown value is dropped (the food stays untyped)
   const usual = ready ? cleanUsual(o.usual) : null, unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

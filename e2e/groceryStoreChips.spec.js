@@ -47,7 +47,7 @@ test('chips filter to one store, All shows one column, and no store leaves an em
 test('a chip whose store has nothing left falls back to All, and leaving the view resets it', async ({ page }) => {
   await open(page);
   await chip(page, /^Aldi/).click();
-  await page.getByLabel('Got Milk').click();
+  await page.getByLabel('Have Milk').click();
   await expect(stores(page)).toHaveCount(2); // Aldi is gone, All is back
   await expect(chip(page, /^All/)).toHaveAttribute('aria-pressed', 'true');
   await chip(page, /^Costco/).click();
@@ -91,7 +91,7 @@ test('a phone has a sticky total bar above the tab bar and no summary card; the 
   await expect(bar).toBeVisible();
   await expect(bar).toContainText('Bought 1 of 13');
   await expect(page.locator('.gsum')).toHaveCount(0);
-  await page.getByLabel('Got Milk').click();
+  await page.getByLabel('Have Milk').click();
   await expect(page.locator('.gtickednote')).toContainText('Bought Milk.');
   await expect(bar).toContainText('Bought 2 of 13');
   const b = await bar.boundingBox(); const n = await page.locator('.gtickednote').boundingBox();
@@ -115,7 +115,7 @@ test('row details start open on a computer and closed on a phone, and the More m
 test('a bought row with no price says Add price, and the tick notice offers it', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, { lines: {}, pulled: [] }, { stores: ['Aldi'], items: [{ id: 'milk', n: 'Milk', store: 'Aldi', qty: 1, cents: null, every: true, out: false }] });
-  await page.getByLabel('Got Milk').click();
+  await page.getByLabel('Have Milk').click();
   const note = page.locator('.gtickednote');
   await expect(note).toContainText('It has no price yet.');
   await note.getByRole('button', { name: 'Add price' }).click();

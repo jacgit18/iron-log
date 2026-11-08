@@ -1,0 +1,56 @@
+import { describe, expect, it } from 'vitest';
+import { MAX_PAIRS, cleanPairs, normRecipe, validRecipe } from '../shared/recipes.js';
+import type { Recipe } from '../types.ts';
+import { addPair, dropPairsTo, pairError, pairsOf, removePair } from './recipePairs.js';
+
+const r = (id: string, pairs?: string[]): Recipe => ({ id, n: id.toUpperCase(), cat: 'protein', ing: [{ n: 'x' }], steps: ['Cook.'], ...(pairs ? { pairs } : {}) });
+const names = (list: Recipe[]) => list.map(x => x.id);
+
+describe('cleanPairs', () => {
+  it('keeps text ids once, drops its own and reserved ones, caps at MAX_PAIRS', () => {
+    expect(cleanPairs(['b', 'b', 'me', 4, '', 'c', 'd', 'e'], 'me')).toEqual(['b', 'c', 'd']);
+    expect(MAX_PAIRS).toBe(3);
+  });
+  it('is null for nothing usable', () => { expect(cleanPairs(undefined, 'me')).toBeNull(); expect(cleanPairs([], 'me')).toBeNull(); expect(cleanPairs(['me'], 'me')).toBeNull(); });
+  it('survives the server cleaner as it came (a sync round trip)', () => {
+    const rec = r('chili', ['rice']);
+    expect(validRecipe(rec)).toBe(true);
+    expect(normRecipe(rec)?.pairs).toEqual(['rice']);
+    expect(normRecipe({ ...rec, pairs: ['chili', 'rice', 'rice'] })?.pairs).toEqual(['rice']);
+  });
+});
+
+describe('pairing', () => {
+  const list = [r('chili'), r('rice'), r('beans'), r('salad')];
+  it('adds a pair on both sides and shows it from either', () => {
+    const next = addPair(list, 'chili', 'rice');
+    expect(next.find(x => x.id === 'chili')?.pairs).toEqual(['rice']);
+    expect(next.find(x => x.id === 'rice')?.pairs).toEqual(['chili']);
+    expect(names(pairsOf(next[1]!, next))).toEqual(['chili']);
+  });
+  it('shows a one-sided pair (an older copy wrote one side) from the other recipe too', () => {
+    const one = [r('chili', ['rice']), r('rice')];
+    expect(names(pairsOf(one[1]!, one))).toEqual(['chili']);
+  });
+  it('refuses itself, a repeat, a missing recipe and a full side, with a reason', () => {
+    expect(pairError(list, 'chili', 'chili')).toMatch(/itself/);
+    expect(pairError(list, 'chili', 'ghost')).toMatch(/gone/);
+    const paired = addPair(list, 'chili', 'rice');
+    expect(pairError(paired, 'rice', 'chili')).toMatch(/already goes with/);
+    let full = list;
+    for (const id of ['rice', 'beans', 'salad']) full = addPair(full, 'chili', id);
+    const more = [...full, r('bread')];
+    expect(pairError(more, 'bread', 'chili')).toMatch(/already goes with 3/);
+    expect(addPair(more, 'bread', 'chili')).toBe(more);
+  });
+  it('removes a pair from both sides and drops an empty list', () => {
+    const next = removePair(addPair(list, 'chili', 'rice'), 'rice', 'chili');
+    expect(next.every(x => x.pairs === undefined)).toBe(true);
+  });
+  it('deleting a recipe removes it from everyone who listed it and leaves the rest untouched', () => {
+    const paired = addPair(addPair(list, 'chili', 'rice'), 'beans', 'salad');
+    const next = dropPairsTo(paired, 'rice');
+    expect(next.find(x => x.id === 'chili')?.pairs).toBeUndefined();
+    expect(next.find(x => x.id === 'beans')).toBe(paired.find(x => x.id === 'beans'));
+  });
+});

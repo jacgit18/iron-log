@@ -48,7 +48,7 @@ test('Bought has no money line; Who owes who is the first row; chips show one st
   await chip(page, /^Costco/).click();
   await expect(stores(page)).toHaveCount(1);
   await expect(page.locator('.gshoplist')).toHaveClass(/gcompact/);
-  await expect(page.getByLabel('Got Eggs')).toBeVisible();
+  await expect(page.getByLabel('Have Eggs')).toBeVisible();
   await chip(page, /^All/).click();
   await expect(stores(page)).toHaveCount(3);
 });
@@ -64,7 +64,7 @@ test('on Bought a chip falls back to All when its last row is put back, leaving 
   await open(page, 'bought');
   await chip(page, /^Aldi/).click();
   await expect(stores(page)).toHaveCount(1);
-  await page.getByLabel('Got Milk').click(); // put back
+  await page.getByLabel('Have Milk').click(); // put back
   await expect(stores(page)).toHaveCount(2); // Aldi is gone, All is back
   await expect(chip(page, /^All/)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.gtickednote')).toHaveCount(0); // putting back is not a tick, so no Undo notice (it was a Shopping tick)
@@ -80,7 +80,7 @@ test('on Bought a chip falls back to All when its last row is put back, leaving 
   await expect(chip(page, /^All/)).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Inventory shows chips with item counts and one column with ticks, the Bought tag and "n items · m you have"; Edit keeps the chips and the one column (groceryEditList.spec.js has the detail)', async ({ page }) => {
+test('Inventory shows chips with item counts and one column with ticks, the state pills and "n to buy · m you have"; Edit keeps the chips and the one column (groceryEditList.spec.js has the detail)', async ({ page }) => {
   await open(page, 'inventory');
   await expect(chip(page, /^All 7/)).toBeVisible();
   await expect(chip(page, /^Costco 4/)).toBeVisible();
@@ -88,11 +88,11 @@ test('Inventory shows chips with item counts and one column with ticks, the Boug
   await expect(chip(page, /^Aldi 1/)).toBeVisible();
   await expect(stores(page)).toHaveCount(3);
   await expect(page.locator('.gcols')).toHaveCount(0);
-  await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: /Costco/ }) })).toContainText('4 items · 2 you have'); // eggs and chicken are bought, so had
-  await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: /Aldi/ }) })).toContainText('1 item · 1 you have');
+  await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: /Costco/ }) })).toContainText('2 to buy · 2 you have'); // eggs and chicken are bought, so had
+  await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: /Aldi/ }) })).toContainText('0 to buy · 1 you have');
   await expect(page.getByLabel('Have Eggs')).toBeChecked();
   await expect(page.getByLabel('Have Oil')).not.toBeChecked();
-  await expect(page.locator('.gchip', { hasText: 'Bought' })).toHaveCount(4);
+  await expect(page.locator('.ghomebought')).toHaveCount(4);
   for (const [w, h] of WIDTHS) {
     await page.setViewportSize({ width: w, height: h });
     const lefts = await stores(page).evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().left)));
@@ -102,14 +102,14 @@ test('Inventory shows chips with item counts and one column with ticks, the Boug
   await expect(stores(page)).toHaveCount(1);
   await page.getByLabel('Have Oil').click(); // a tick still works inside a chip
   await expect(page.getByLabel('Have Oil')).toBeChecked();
-  await expect(page.locator('section.gstore')).toContainText('4 items · 3 you have');
+  await expect(page.locator('section.gstore')).toContainText('1 to buy · 3 you have');
   await page.click('#groc-edit');
-  await expect(page.locator('.gstorechips')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Store' })).toBeVisible();
   await expect(page.locator('.gcols')).toHaveCount(0);
   await expect(page.locator('.gshoplist')).toHaveCount(1);
   await expect(page.getByRole('complementary', { name: 'Inventory' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Done', exact: true }).first().click();
-  await expect(page.locator('.gstorechips')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Store' })).toBeVisible();
 });
 
 test('from 1100 px a rail lists the stores and picks the chip on Bought and Inventory; under it there is no rail', async ({ page }) => {
@@ -137,7 +137,7 @@ test('Spending history is still one tap away inside Bought', async ({ page }) =>
   await open(page, 'bought');
   await page.click('#groc-bought-history');
   await expect(page).toHaveURL(/#\/daily\/grocery\/bought\/history/);
-  await expect(page.locator('.gstorechips')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Store' })).toHaveCount(0);
   await page.click('#groc-bought-month');
   await expect(chip(page, /^All 4/)).toBeVisible();
 });
