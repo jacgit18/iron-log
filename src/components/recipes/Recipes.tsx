@@ -95,7 +95,7 @@ export default function Recipes() {
   const counts = useMemo(() => tabCounts(narrowed), [narrowed]);
   const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => tabOf(r) === tab), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
-  const selected = recipes.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
+  const selected = shown.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
   useEffect(() => {
     if (src !== 'library' || !syncing) return;
@@ -115,8 +115,10 @@ export default function Recipes() {
 
   const back = () => setView({ kind: 'list' });
   const openRecipe = (id: string) => {
-    openedThisVisit.push(id);
-    if (pane) setSelId(id); else setView({ kind: 'mine', id });
+    if (pane) { // a pick in the pane is not recorded as opened: the Recent chips would appear or reorder under the pointer and move the list
+      if (!shown.some(r => r.id === id)) setTab('all'); // a chip for a recipe the tab hides shows it under All
+      setSelId(id);
+    } else { openedThisVisit.push(id); setView({ kind: 'mine', id }); }
   };
   const choose = (c: NewChoice) => {
     if (c === 'library') { setSrc('library'); setNutSel([]); if (cat === 'ready') setCat(null); return; }
