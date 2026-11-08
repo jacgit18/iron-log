@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_PAIRS, cleanPairs, normRecipe, validRecipe } from '../shared/recipes.js';
 import type { Recipe } from '../types.ts';
-import { addPair, dropPairsTo, pairError, pairsOf, removePair } from './recipePairs.js';
+import { addPair, dropPairsTo, mealFromPair, pairCandidates, pairError, pairsOf, removePair } from './recipePairs.js';
 
 const r = (id: string, pairs?: string[]): Recipe => ({ id, n: id.toUpperCase(), cat: 'protein', ing: [{ n: 'x' }], steps: ['Cook.'], ...(pairs ? { pairs } : {}) });
 const names = (list: Recipe[]) => list.map(x => x.id);
@@ -52,5 +52,21 @@ describe('pairing', () => {
     const next = dropPairsTo(paired, 'rice');
     expect(next.find(x => x.id === 'chili')?.pairs).toBeUndefined();
     expect(next.find(x => x.id === 'beans')).toBe(paired.find(x => x.id === 'beans'));
+  });
+});
+
+describe('pairCandidates and mealFromPair', () => {
+  const sauce: Recipe = { ...r('salsa'), cat: 'sauces' };
+  const list = [r('chili'), r('rice'), r('beans'), sauce];
+  it('offers the others A to Z, not itself, a partner or a sauce', () => {
+    expect(names(pairCandidates(list[0]!, list))).toEqual(['beans', 'rice']);
+    const paired = addPair(list, 'chili', 'rice');
+    expect(names(pairCandidates(paired[0]!, paired))).toEqual(['beans']);
+  });
+  it('builds a one-serving meal that links both parts by id', () => {
+    const m = mealFromPair({ id: 'chili', n: 'Chili' }, { id: 'rice', n: 'Rice' });
+    expect(m).toMatchObject({ n: 'Chili with Rice', cat: 'other', servings: 1 });
+    expect(m.ing).toEqual([{ n: 'Chili', rid: 'chili', q: 1 }, { n: 'Rice', rid: 'rice', q: 1 }]);
+    expect(mealFromPair({ id: 'a', n: 'x'.repeat(60) }, { id: 'b', n: 'y'.repeat(60) }).n.length).toBe(80);
   });
 });

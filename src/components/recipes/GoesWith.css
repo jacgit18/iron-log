@@ -1,0 +1,30 @@
+@layer base, components;
+@layer components {
+/* Goes with (GoesWith.tsx): partners as a list of rows, each name, Make a meal and Remove at 44px, wrapping on a phone. */
+.rc-goes select {
+  min-height: 44px;
+  max-width: 100%;
+}
+.rc-goeslist {
+  display: grid;
+  gap: var(--sp-8);
+  margin: 0 0 var(--sp-12);
+  padding: 0;
+  list-style: none;
+}
+.rc-goeslist li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.rc-goeslist .btn {
+  min-height: 44px;
+}
+.rc-goesname {
+  flex: 1 1 8rem;
+  justify-content: flex-start;
+  font-weight: 600;
+  text-align: left;
+}
+}

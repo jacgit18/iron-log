@@ -325,6 +325,9 @@ export interface RecipesSlice {
   removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
   setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
   setFoodTypes(choices: Record<string, FoodType>, uses?: Record<string, RecipeUse[]>): { changed: number; undo: () => boolean }; // give ready-made foods a Type in one save (the review screen's Looks right); `undo` puts back the untyped state for the whole batch, false when something changed since
+  pairRecipes(aId: string, bId: string): string | null; // two recipes go with each other (both sides saved); an error text, or null
+  unpairRecipes(aId: string, bId: string): void; // takes the pair off both
+  makeMealFromPair(aId: string, bId: string): { id: string } | { error: string }; // a new meal linked to both, numbers rolled up
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
   acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned
