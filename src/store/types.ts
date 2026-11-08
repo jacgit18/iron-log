@@ -328,6 +328,7 @@ export interface RecipesSlice {
   pairRecipes(aId: string, bId: string): string | null; // two recipes go with each other (both sides saved); an error text, or null
   unpairRecipes(aId: string, bId: string): void; // takes the pair off both
   makeMealFromPair(aId: string, bId: string): { id: string } | { error: string }; // a new meal linked to both, numbers rolled up
+  undoCatalogCopy(id: string): boolean; // takes back a Library copy made a moment ago, silently (no removed-note); false when it is gone or not a Library copy
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
   acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned

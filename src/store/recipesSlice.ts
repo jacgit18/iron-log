@@ -53,6 +53,14 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     return null;
   },
 
+  undoCatalogCopy(id) {
+    const list = get().recipes;
+    if (get().blocked() || !list.some(r => r.id === id && r.from)) return false; // only a copy that came from the Library
+    set({ recipes: settleMeals(list.filter(r => r.id !== id)) }); // a meal that already used the copy keeps the line as plain text
+    get().saveRecipes();
+    return true;
+  },
+
   renameTag(from, to) {
     const r = renameTag(get().recipes, from, to);
     if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
