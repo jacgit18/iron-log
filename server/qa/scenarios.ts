@@ -1528,7 +1528,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Each row shows the name, a pill (Main lift, Accessory or Optional), sets and weight and a coloured phase pill; a superset card shows a line per exercise; consecutive superset cards share one box labelled Superset. Optional, Regular and Supersets explain themselves; a section you named yourself shows as you typed it.',
-      'Day at a glance shows the exercise and set counts and one sentence; the phase, muscles and equipment breakdown starts open from 1280 px and folded below it, and See the full breakdown toggles it. Edit and the more-actions button still open their sheets.',
+      'Day at a glance shows the exercise and set counts and one sentence; the phase, muscles and equipment breakdown starts open, and See the full breakdown toggles it. The panel is only drawn from 1280 px, so a narrower screen shows no Day at a glance. Edit and the more-actions button still open their sheets.',
     ],
   },
   {
@@ -2042,7 +2042,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Type 400 and press Save. Then open Bought.',
     ],
     expected: [
-      'The card reads "Budget", then "<this month\'s spent> of $400.00", with a bar filled to the share spent and an Edit button. Under it is "<amount> left", or, when this month\'s to-get items cost more than the budget, the amber note "You still have <amount> left in your budget to spend." (see S-166).',
+      'The card reads "Budget", then "<this month\'s spent> of $400.00", with a bar filled to the share spent and an Edit button. "<amount> left" sits beside the spent figure; when this month\'s list costs more than the budget, it is replaced by the amber note under the bar, "You still have <amount> left in your budget to spend." (see S-166).',
       'Bought shows the same card with the same figures (spent includes tax, as the summary does).',
     ],
   },
