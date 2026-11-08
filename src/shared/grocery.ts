@@ -149,6 +149,7 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
       const line: GroceryLine = {};
       if (o.got === true) line.got = true;
       if (o.have === true && !line.got) line.have = true;
+      if (o.rc === true && line.got) line.rc = true; // a bought tick that a scanned receipt wrote
       const qty = cleanQty(o.qty); if (qty != null) line.qty = qty;
       const cents = cleanCents(o.cents); if (cents != null) line.cents = cents;
       const prices = cleanPrices(o.prices); if (prices) line.prices = prices;
