@@ -41,12 +41,12 @@ describe('POST /api/scan/label through the whole app', () => {
   it('still refuses a body over its own 2 MB limit', async () => {
     expect((await post(photo(2_200_000), 'boss')).status).toBe(413);
   });
-  it('gives an anonymous caller 401 and a non-admin 403, with no parser run for either', async () => {
+  it('gives an anonymous caller 401 and reads a plain signed-in account (open to everyone since 2026-11-08), with no parser run for the anonymous one', async () => {
     expect((await post(photo(500_000))).status).toBe(401);
-    expect((await post(photo(500_000), 'plain')).status).toBe(403);
+    expect((await post(photo(500_000), 'plain')).status).toBe(200);
   });
 
-  it('reads a 1 MB receipt photo from an admin through the whole app, refuses over 5 MB, and keeps anonymous and non-admin out', async () => {
+  it('reads a 1 MB receipt photo from an admin through the whole app, refuses over 5 MB, and keeps anonymous out', async () => {
     const body = receiptPhoto(1_000_000);
     expect(body.length).toBeGreaterThan(100_000);
     const res = await post(body, 'boss', 'receipt');
@@ -54,7 +54,7 @@ describe('POST /api/scan/label through the whole app', () => {
     expect(await res.json()).toMatchObject({ ok: true, result: { kind: 'ok' } });
     expect((await post(receiptPhoto(5_400_000), 'boss', 'receipt')).status).toBe(413);
     expect((await post(body, undefined, 'receipt')).status).toBe(401);
-    expect((await post(body, 'plain', 'receipt')).status).toBe(403);
+    expect((await post(body, 'plain', 'receipt')).status).toBe(200);
   });
 });
 

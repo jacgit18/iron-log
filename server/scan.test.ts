@@ -27,7 +27,7 @@ describe('POST /api/scan/label', () => {
     const res = await post({ image: jpeg });
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'Gnocchi', serving: '1 cup', servingG: 140, servingsPerPack: 3, kcal: 210, p: 6, c: 40, f: 1 } }, left: 29, max: 30 }); // the shared count after this call (brief barcode-miss-ladder)
+    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'Gnocchi', serving: '1 cup', servingG: 140, servingsPerPack: 3, kcal: 210, p: 6, c: 40, f: 1 } }, left: 149, max: 150 }); // the shared count after this call (brief barcode-miss-ladder)
     expect(text).not.toContain('SECRET');
     const [url, init] = ask.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
