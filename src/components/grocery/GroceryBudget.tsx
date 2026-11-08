@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { budgetStatus } from '../../lib/groceryBudget.js';
+import { budgetListNote, budgetStatus } from '../../lib/groceryBudget.js';
 import { centsText, money, parseDollars } from '../../lib/grocery.js';
 import './GroceryBudget.css';
 
@@ -36,11 +36,11 @@ export default function GroceryBudget({ spent, planned }: { spent: number; plann
       <div className="gbudgetline">
         <span className="gbl">Budget</span>
         <b>{money(spent)} of {money(budget)}</b>
-        <span className="gbstate">{line}</span>
+        {s.plannedOver === 0 && <span className="gbstate">{line}</span>}
         <button type="button" className="btn sm ghost" id="groc-budget-edit" onClick={open}>Edit</button>
       </div>
       <div className="gprog gbbar" aria-hidden="true"><span style={{ width: `${s.pct}%` }} /></div>
-      {s.plannedOver > 0 && <p className="note gbwarn">This month’s list is planned {money(s.plannedOver)} over your budget.</p>}
+      {s.plannedOver > 0 && <p className="note gbnote" id="groc-budget-note">{budgetListNote(s.left)}</p>}
     </div>
   );
 }
