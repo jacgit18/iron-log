@@ -1808,7 +1808,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-140', feature: 'Groceries views', title: 'Quick add puts an item on Shopping with an honest notice, and Undo works', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
     steps: [
-      'On Shopping press + Add item to a store, type a name and press Enter.',
+      'On Shopping press + Add one-time item to a store, type a name and press Enter.',
       'Add another item and press Undo in the notice.',
     ],
     expected: [
@@ -1819,7 +1819,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-141', feature: 'Groceries views', title: 'Quick add refuses a name already in that store and an empty name', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', edge: true,
     steps: [
-      'On Shopping press + Add item to a store and press Enter with nothing typed.',
+      'On Shopping press + Add one-time item to a store and press Enter with nothing typed.',
       'Type the name of an item already in that store and press Enter.',
     ],
     expected: [
@@ -2096,7 +2096,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-168', feature: 'Groceries views', title: 'A quick-added item leaves Inventory after it is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items',
     steps: [
-      'On Shopping press + Add item to a store, type Milk and press Enter. The notice says it is a one-time item.',
+      'On Shopping press + Add one-time item to a store, type Milk and press Enter. The notice says it is a one-time item.',
       'Tick Milk on Shopping. Open Inventory, then Bought.',
     ],
     expected: [

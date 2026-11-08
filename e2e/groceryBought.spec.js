@@ -30,7 +30,7 @@ test('three views, no counts: a tick moves a row from Shopping to Bought, and th
   await expect(view(page, 'Spending')).toHaveCount(0); // Spending history is inside Bought
   await expect(page.getByText('Oat milk')).toBeVisible();
   await expect(page.getByText('Beef roast')).toHaveCount(0); // bought: not on Shopping
-  await page.getByLabel('Got Oat milk').click();
+  await page.getByLabel('Have Oat milk').click();
   await expect(view(page, 'Shopping')).toHaveText('Shopping');
   await expect(view(page, 'Bought')).toHaveText('Bought');
   await view(page, 'Bought').click();
@@ -38,7 +38,7 @@ test('three views, no counts: a tick moves a row from Shopping to Bought, and th
   await expect(page.locator('#groc-sub')).toContainText('Bought this month');
   await expect(page.getByText('Oat milk')).toBeVisible();
   await expect(page.locator('#groc-summary')).toContainText('Bought 3 of 3');
-  await page.getByLabel('Got Oat milk').click(); // the box puts it back on Shopping
+  await page.getByLabel('Have Oat milk').click(); // the box puts it back on Shopping
   await expect(view(page, 'Shopping')).toHaveText('Shopping');
   await page.reload();
   await expect(page).toHaveURL(/#\/daily\/grocery\/bought$/);

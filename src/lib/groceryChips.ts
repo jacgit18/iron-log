@@ -41,8 +41,5 @@ export const hasNoPrice = (line: { cents?: number | null; prices?: number[] }): 
 /** How many of an Inventory store's items you have (the "m you have" in its header and the rail's "m of n"). */
 export const haveCount = (items: GroceryItem[], has: (item: GroceryItem) => boolean): number => items.filter(has).length;
 
-/** An Inventory store header's count: "3 items · 2 you have". */
-export const itemsText = (n: number, have: number): string => `${n} ${n === 1 ? 'item' : 'items'} · ${have} you have`;
-
 /** The Inventory rail's line: "2 of 5 items this month". */
 export const haveMonthText = (have: number, n: number): string => `${have} of ${n} ${n === 1 ? 'item' : 'items'} this month`;

@@ -20,7 +20,7 @@ const seed = async page => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const row = (page, name) => page.locator('li.gget', { has: page.getByLabel(`Got ${name}`, { exact: true }) });
+const row = (page, name) => page.locator('li.gget', { has: page.getByLabel(`Have ${name}`, { exact: true }) });
 
 test('a closed row says how it is split, the store’s group split included', async ({ page }) => {
   await seed(page);
