@@ -145,17 +145,16 @@ export default function Recipes() {
     }} />;
   }
 
-  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null, tag: string | null = null, star?: { on: boolean; toggle: () => void }, current = false, logId?: string) => (
-    <li key={key} className={`rc-item${star ? ' starred' : ''}${current ? ' current' : ''}`}>
+  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null, tag: string | null = null, fav = false, current = false, logId?: string) => (
+    <li key={key} className={`rc-item${current ? ' current' : ''}`}>
       <button type="button" className="rc-row" onClick={open} aria-current={current ? 'true' : undefined}>
         <span className="rc-main">
-          <span className="rc-title"><span><b id={`rc-t-${key}`}>{title}</b><span className="pill custom">{pill}</span>{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
+          <span className="rc-title"><span><b id={`rc-t-${key}`}>{fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{title}</b><span className="pill custom">{pill}</span>{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
           <span className="rc-meta">{meta}</span>
         </span>
         {badge && <span className="rc-badge">{badge}</span>}
       </button>
       {logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: logId })}>Log</button>}
-      {star && <button type="button" className="rc-star" aria-pressed={star.on} aria-label={`${star.on ? 'Unstar' : 'Star'} ${title}`} onClick={star.toggle}><Icon name={star.on ? 'star-fill' : 'star'} /></button>}
     </li>
   );
 
@@ -225,7 +224,7 @@ export default function Recipes() {
             <ul className={`rc-list rc-cards${pane ? ' rc-narrow' : ''}`}>
               {shown.map((r: Recipe) => {
                 const have = haveBadge(status.get(r.id)!);
-                return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => openRecipe(r.id), !!r.edited, nutritionBadge(r), typeTag(r), { on: !!r.fav, toggle: () => useAppStore.getState().toggleRecipeFav(r.id) }, pane && selected?.id === r.id, hasMacros(r) ? r.id : undefined);
+                return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => openRecipe(r.id), !!r.edited, nutritionBadge(r), typeTag(r), !!r.fav, pane && selected?.id === r.id, hasMacros(r) ? r.id : undefined);
               })}
             </ul>
             {pane && recipes.length > 0 && <RecipeDetailPane recipe={selected} onEdit={id => setView({ kind: 'form', id })} onGone={() => setSelId(null)} onOpen={setSelId} />}

@@ -69,12 +69,27 @@ test('Filters is closed at first, and what is under it still filters and keeps t
   expect((await titles(page)).sort()).toEqual(['Chicken bowl', 'Lentil soup']); // a hidden filter still applies
 });
 
+// The star is in the recipe's own header (brief recipe-star-placement): open the recipe, press it, come back to the list.
+async function starInDetail(page, name, verb = 'Star') {
+  await page.locator('.rc-row', { hasText: name }).first().click();
+  const star = page.getByRole('button', { name: `${verb} ${name}` });
+  const box = await star.boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(43.5);
+  expect(box.height).toBeGreaterThanOrEqual(43.5);
+  await star.click();
+  await expect(page.getByRole('button', { name: `${verb === 'Star' ? 'Unstar' : 'Star'} ${name}` })).toHaveAttribute('aria-pressed', verb === 'Star' ? 'true' : 'false');
+  const back = page.getByRole('button', { name: 'Back to recipes' });
+  if (await back.isVisible()) await back.click(); // from 1280 px the detail sits beside the list and has no Back
+}
+const favMark = (page, name) => page.locator('.rc-row', { hasText: name }).locator('.rc-favmark');
+
 test('a star persists after a reload, starred recipes lead the Recent and favorites chips, and a chip opens its recipe', async ({ page }) => {
   await open(page);
   await expect(page.getByRole('group', { name: 'Recent and favorites' })).toHaveCount(0); // nothing starred, logged or opened yet
-  await page.getByRole('button', { name: 'Star Oat milk' }).click();
-  await page.getByRole('button', { name: 'Star Lemon cake' }).click();
-  await expect(page.getByRole('button', { name: 'Unstar Oat milk' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.rc-star')).toHaveCount(0); // no star on a list row: it sat over Log and the at-home count
+  await starInDetail(page, 'Oat milk');
+  await starInDetail(page, 'Lemon cake');
+  await expect(favMark(page, 'Oat milk')).toBeVisible(); // a small mark after the name, not a button
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   const chips = page.getByRole('group', { name: 'Recent and favorites' }).getByRole('button');
@@ -82,9 +97,9 @@ test('a star persists after a reload, starred recipes lead the Recent and favori
   await chips.nth(1).click();
   await expect(page.getByRole('heading', { name: 'Oat milk' })).toBeVisible();
   await page.goBack();
-  await page.getByRole('button', { name: 'Unstar Oat milk' }).click();
-  await page.getByRole('button', { name: 'Unstar Lemon cake' }).click();
-  await expect(page.getByRole('button', { name: 'Star Oat milk' })).toBeVisible();
+  await starInDetail(page, 'Oat milk', 'Unstar');
+  await starInDetail(page, 'Lemon cake', 'Unstar');
+  await expect(favMark(page, 'Oat milk')).toHaveCount(0);
 });
 
 for (const [w, h] of [[1920, 1080], [1280, 800]]) {
@@ -155,12 +170,13 @@ for (const [w, h] of [[1440, 900], [375, 812]]) {
   test(`the tabs, chips, menu, Filters and stars have no accessibility violations and 44 px targets at ${w} px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await open(page, items, 'auto');
-    await page.getByRole('button', { name: 'Star Lemonade' }).click();
+    await starInDetail(page, 'Lemonade');
+    await expect(favMark(page, 'Lemonade')).toBeVisible();
     await page.click('#recipes-filters');
     await page.click('#recipes-new');
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(' | ')}`)).toEqual([]);
-    const small = await page.locator('.rc-tabs button, .rc-quick button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-star, .rc-chips button').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
+    const small = await page.locator('.rc-tabs button, .rc-quick button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-chips button').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
     expect(small).toEqual([]);
   });
 }
