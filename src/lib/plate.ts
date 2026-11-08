@@ -59,5 +59,5 @@ export function togglePlateMark(current: readonly PlateMark[], m: PlateMark): Pl
   return next.length === 0 ? [...current] : PLATE_MARKS.filter(x => next.includes(x));
 }
 
-/** The `counts` a form saves: only a choice the person made that differs from the automatic marks; otherwise nothing is written and the marks stay automatic. */
-export const countsToSave = (picked: boolean, chosen: readonly PlateMark[], auto: readonly PlateMark[]): PlateMark[] | undefined => (picked && chosen.join() !== auto.join() ? [...chosen] : undefined);
+/** The `counts` a form saves: the person's own choice, kept even when it equals today's automatic marks (a later change of category or protein must not move it); nothing while automatic. */
+export const countsToSave = (picked: boolean, chosen: readonly PlateMark[]): PlateMark[] | undefined => (picked ? [...chosen] : undefined);

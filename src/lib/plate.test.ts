@@ -98,9 +98,9 @@ describe('the Counts as chips', () => {
     expect(togglePlateMark(['protein', 'veg'], 'protein')).toEqual(['veg']);
     expect(togglePlateMark(['veg'], 'veg')).toEqual(['veg']);
   });
-  it('saves a choice only when it differs from the automatic marks', () => {
-    expect(countsToSave(false, ['protein', 'veg'], ['protein'])).toBeUndefined();
-    expect(countsToSave(true, ['protein'], ['protein'])).toBeUndefined();
-    expect(countsToSave(true, ['protein', 'veg'], ['protein'])).toEqual(['protein', 'veg']);
+  it('saves a choice the person made, even one that equals the automatic marks, and nothing while automatic', () => {
+    expect(countsToSave(false, ['protein', 'veg'])).toBeUndefined();
+    expect(countsToSave(true, ['protein'])).toEqual(['protein']);
+    expect(countsToSave(true, ['protein', 'veg'])).toEqual(['protein', 'veg']);
   });
 });
