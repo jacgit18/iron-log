@@ -14,7 +14,7 @@ test.describe('as an admin', () => {
     await page.click('#groc-edit');
     await add(page, 'Eggs'); await add(page, 'Rice');
     await page.click('#groc-done');
-    await page.click('#groc-view-get');
+    await page.click('#groc-view-shopping');
     await page.route('**/api/scan/receipt', async route => {
       const { items } = route.request().postDataJSON();
       const id = n => items.find(i => i.n === n)?.id ?? null;
@@ -31,7 +31,7 @@ test.describe('as an admin', () => {
   test('Add to list stages a pre-filled item, Apply creates it bought with the receipt price, and Undo removes it', async ({ page }) => {
     const sheet = page.getByRole('dialog');
     await sheet.getByLabel('Add this store to your stores').uncheck(); // brief receipt-add-store: ticked, the item would be added to the new store; this test is about Anywhere
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 2');
     await sheet.getByRole('button', { name: 'Add to list: ZEVIA SODA 12PK' }).click();
     await expect(sheet.locator('#rc-new-name')).toHaveValue('Zevia soda 12pk');
     await expect(sheet.locator('#rc-new-price')).toHaveValue('7.99'); // 8.99 less 1.00 savings
@@ -39,13 +39,13 @@ test.describe('as an admin', () => {
     await expect(sheet.getByText('New', { exact: true })).toBeVisible();
     await expect(sheet.getByText('1 new item will be added.')).toBeVisible();
     await expect(sheet.getByRole('button', { name: 'Apply 2 items' })).toBeEnabled();
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2'); // staged only: nothing reached the list
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 2'); // staged only: nothing reached the list
     await sheet.getByRole('button', { name: 'Apply 2 items' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('#groc-summary')).toContainText('Got 2 of 3');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 2 of 3');
     await expect(page.getByText('Added Zevia soda 12pk to Anywhere.')).toBeVisible();
     await page.getByRole('button', { name: 'Undo' }).click();
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 2');
     await expect(page.getByText('Zevia soda 12pk')).toHaveCount(0);
   });
 
@@ -62,7 +62,7 @@ test.describe('as an admin', () => {
     await sheet.locator('#rc-new-add').click();
     await sheet.locator('#rc-cancel').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 2');
   });
 
   test('a name already on the list is refused in the form and stages nothing', async ({ page }) => {

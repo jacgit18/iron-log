@@ -31,7 +31,7 @@ export default function GrocerySpend({ nowKey }: { nowKey: string }) {
         <p className="note" id="groc-spend-summary" role="status">
           {shopped.length
             ? `Average ${money(avg)} a month over ${shopped.length} ${shopped.length === 1 ? 'month' : 'months'} you shopped · This month ${money(now.spent)} so far`
-            : 'Tick items on To get and each month’s spending shows up here.'}
+            : 'Tick items on Shopping and each month’s spending shows up here.'}
         </p>
         <div className="seg" role="group" aria-label="Months shown">
           {RANGES.map(n => <button key={n} type="button" className={count === n ? 'on' : ''} aria-pressed={count === n} onClick={() => setCount(n)}>{n} mo</button>)}

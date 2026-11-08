@@ -15,7 +15,7 @@ const seed = async (page, stores = []) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: {}, pulled: [] }));
   }, stores);
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
 };
 const answer = (page, store) => page.route('**/api/scan/receipt', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'ok', receipt: { store, date: '2026-09-10', lines } } }) }));
 const stores = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).stores);
@@ -31,11 +31,13 @@ test('a store the list does not have is offered with a tidy name, Apply adds it 
   expect(await stores(page)).toEqual([]); // nothing is saved before Apply
   await sheet.getByRole('button', { name: /^Apply/ }).click();
   expect(await stores(page)).toEqual(['Costco']);
-  expect((await month(page)).eggs).toMatchObject({ got: true, store: 'Costco' });
+  expect((await month(page)).eggs).toMatchObject({ got: true }); // eggs had no store, so the box starts ticked and Costco becomes its usual store: no month note needed
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items.find(i => i.id === 'eggs').store)).toBe('Costco');
   await expect(page.getByText('Added the store Costco.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   expect(await stores(page)).toEqual([]);
   expect(await month(page)).toEqual({});
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items.find(i => i.id === 'eggs').store)).toBe(''); // Undo gives eggs its old usual store back (none), though the new store was made in the same Apply
 });
 
 test('the name can be edited, and unticking the box adds nothing and moves nothing', async ({ page }) => {

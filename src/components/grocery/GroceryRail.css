@@ -1,0 +1,48 @@
+@layer base, components;
+@layer components {
+/* The right rail: sticks under the top while the list scrolls. */
+.grail {
+  position: sticky;
+  top: var(--sp-8);
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+.grail .gsumtiles {
+  grid-template-columns: 1fr;
+}
+.grailstores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.grailstores .grailstore {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  min-height: 44px;
+  margin: 0;
+  padding: 0 var(--sp-10);
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--sunk);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+}
+.grailstores button.grailstore {
+  cursor: pointer;
+}
+.grailstores .grailstore.on {
+  border-color: var(--accent);
+  background: var(--dock);
+  font-weight: 700;
+}
+}

@@ -1,0 +1,18 @@
+@layer base, components;
+@layer components {
+/* The Program tab's floating New program pill (ProgramFab.tsx). It borrows the look of .fab (TimerBar.css: gold pill, same corner and layer) and sits 14px above the
+   fixed tab bar, exactly where the Board's timer button sits (checked in the built app: both 16px from the right edge). Phones only. */
+.fab.programfab {
+  display: none;
+}
+@media (max-width:700px) {
+  .fab.programfab {
+    display: block;
+    min-height: 44px;
+    bottom: calc(var(--tabbar, 0px) + 14px + env(safe-area-inset-bottom, 0px));
+  }
+  body.timing .fab.programfab {
+    display: none;
+  }
+}
+}

@@ -95,6 +95,12 @@
   text-align: left;
   font: inherit;
 }
+.rc-list .rc-log {
+  align-self: center;
+  flex: none;
+  min-height: 44px;
+  margin-right: var(--sp-8);
+}
 .rc-row .rc-meta {
   display: block;
 }

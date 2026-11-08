@@ -1,0 +1,71 @@
+import { test, expect } from './fixtures.js';
+
+// Quick add on Shopping (brief groceries-spending-buttons-quick-add): a `+ Add one-time item to <store>` row creates a one-time item with a notice that says it leaves after it is bought, and an Undo.
+// The add logic and the refusals are node tests (groceryQuickAdd.test.ts, groceryQuickAddStore.test.ts); this covers the row, the field, the notice and the item showing on Shopping, Inventory and the chips: wiring across two pages and the store that a unit test cannot reach.
+const CATALOGUE = {
+  stores: ['Aldi', 'Costco'],
+  items: [
+    { id: 'eggs', n: 'Eggs', store: 'Costco', qty: 1, cents: 1000, every: true, out: false },
+    { id: 'rice', n: 'Rice', store: 'Aldi', qty: 1, cents: 500, every: true, out: false },
+  ],
+};
+const open = async page => {
+  await page.evaluate(CATALOGUE => localStorage.setItem('ironlog:grocery/main', JSON.stringify(CATALOGUE)), CATALOGUE);
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#groc-view-shopping');
+};
+const row = (page, store) => page.getByRole('button', { name: `Add one-time item to ${store}` });
+const add = async (page, store, name) => { await row(page, store).click(); await page.getByLabel(`Item name, to add to ${store}`).fill(name); await page.keyboard.press('Enter'); };
+
+test('+ Add item to a store adds an item to that store, with a notice', async ({ page }) => {
+  await open(page);
+  await add(page, 'Costco', 'Milk');
+  const costco = page.locator('section.gstore', { has: page.getByRole('heading', { name: 'Costco' }) });
+  await expect(costco.getByLabel('Have Milk')).toBeVisible();
+  await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: 'Aldi' }) }).getByLabel('Have Milk')).toHaveCount(0);
+  await expect(page.getByText('Added Milk to Costco. It is a one-time item: it leaves Inventory and next month\'s list after you buy it.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Make it every month' })).toHaveCount(0);
+  await expect(row(page, 'Costco')).toBeVisible(); // the field closed; the row is back
+});
+
+test('Undo removes the item', async ({ page }) => {
+  await open(page);
+  await add(page, 'Aldi', 'Milk');
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByLabel('Have Milk')).toHaveCount(0);
+  await page.click('#groc-view-inventory');
+  await expect(page.getByText('Milk', { exact: true })).toHaveCount(0);
+});
+
+test('a duplicate name and an empty name show the usual messages and keep the field open; Escape cancels', async ({ page }) => {
+  await open(page);
+  await row(page, 'Aldi').click();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('alert')).toHaveText('Give the item a name.');
+  await page.getByLabel('Item name, to add to Aldi').fill('rice');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('alert')).toHaveText('That item is already in this store’s list.');
+  await page.keyboard.press('Escape');
+  await expect(row(page, 'Aldi')).toBeFocused();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('the item is in Inventory and the chip counts, and survives a reload', async ({ page }) => {
+  await open(page);
+  await add(page, 'Costco', 'Milk');
+  await expect(page.locator('.gstorechips').getByRole('button', { name: /Costco/ })).toContainText('2');
+  await page.reload();
+  await expect(page.getByLabel('Have Milk')).toBeVisible();
+  await page.click('#groc-view-inventory');
+  await expect(page.getByText('Milk', { exact: true })).toBeVisible();
+});
+
+test('in a store chip view the row adds to that store', async ({ page }) => {
+  await open(page);
+  await page.locator('.gstorechips').getByRole('button', { name: /Aldi/ }).click();
+  await add(page, 'Aldi', 'Salt');
+  await expect(page.getByLabel('Have Salt')).toBeVisible();
+  await page.click('#groc-view-inventory');
+  await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: 'Aldi' }) }).getByText('Salt', { exact: true })).toBeVisible();
+});

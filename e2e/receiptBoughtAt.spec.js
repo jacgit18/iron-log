@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 import { photo } from './receiptHelpers.js';
 
 // Receipt bought-at store (brief receipt-bought-at). The plan, the words and the writes are node tests (groceryReceiptMoves.test.ts); this covers the wiring a unit test
-// cannot: the sheet's "Bought at" notes and warning, Apply marking items bought at the receipt's store for the month without touching At home, the opt-in usual store,
+// cannot: the sheet's "Bought at" notes and warning, Apply marking items bought at the receipt's store for the month without touching Inventory, the opt-in usual store,
 // a refused duplicate, a store that is not on the list, and Undo. The route is stubbed. The fixed date is in September 2026 (month 2026-09).
 const item = (id, n, store, cents = 300) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CAT = { stores: ["BJ's", 'Aldi'], items: [item('eggs', 'Eggs', 'Aldi', 500), item('rice', 'Rice', '', 700), item('tp', 'Toilet paper', "BJ's", 2499)],
@@ -19,14 +19,14 @@ const seed = async (page, cat = CAT) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: {}, pulled: [] }));
   }, cat);
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
 };
 const answer = (page, store) => page.route('**/api/scan/receipt', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'ok', receipt: { store, date: '2026-09-10', lines } } }) }));
 const month = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09') ?? '{"lines":{}}').lines);
 const usual = (page, id) => page.evaluate(id => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items.find(i => i.id === id).store, id);
 const scan = async page => { await page.getByLabel('Receipt photo').setInputFiles(photo); return page.getByRole('dialog'); };
 
-test('rows say where each item was bought, Apply marks them bought at BJ\'s for the month and leaves At home alone, and Undo puts them back', async ({ page }) => {
+test('rows say where each item was bought, Apply marks them bought at BJ\'s for the month and leaves Inventory alone, and Undo puts them back', async ({ page }) => {
   await seed(page); await answer(page, "BJ'S WHOLESALE CLUB");
   const sheet = await scan(page);
   await expect(sheet.getByText("Bought at BJ's (usually Aldi)")).toHaveCount(1);
@@ -34,20 +34,21 @@ test('rows say where each item was bought, Apply marks them bought at BJ\'s for 
   await expect(sheet.locator('.rcatnote')).toHaveCount(2); // the toilet paper is at BJ's already: no note
   await expect(sheet.getByText("2 items will be marked bought at BJ's this month.")).toBeVisible();
   await expect(sheet.getByText('changes who shares them')).toBeVisible(); // Aldi and Anywhere have no group, BJ's splits with Sister
+  await expect(sheet.getByText("Inventory stays as it is. Tick the box to list these under BJ's there.")).toBeVisible(); // mixed usual stores: the box starts unticked
   expect(await month(page)).toEqual({}); // nothing is written before Apply
   await sheet.getByRole('button', { name: /^Apply/ }).click();
   const after = await month(page);
   expect(after.eggs).toMatchObject({ got: true, store: "BJ's" });
   expect(after.rice).toMatchObject({ got: true, store: "BJ's" });
   expect(after.tp.store).toBeUndefined();
-  expect(await usual(page, 'eggs')).toBe('Aldi'); // At home is unchanged
+  expect(await usual(page, 'eggs')).toBe('Aldi'); // Inventory is unchanged
   expect(await usual(page, 'rice')).toBe('');
   await expect(page.getByText("2 marked bought at BJ's.", { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   expect(await month(page)).toEqual({});
 });
 
-test('ticking Also make BJ\'s the usual store changes At home, and Undo changes it back', async ({ page }) => {
+test('ticking Also make BJ\'s the usual store changes Inventory, and Undo changes it back', async ({ page }) => {
   await seed(page); await answer(page, "BJ's");
   const sheet = await scan(page);
   await sheet.getByLabel("Also make BJ's the usual store for these items").check();

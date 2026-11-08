@@ -18,7 +18,7 @@ export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: 
 // A scan miss can offer the AI label photo (brief barcode-miss-ladder): where the caller has no label camera of its own (`onLabelPhoto`, the Ready-made form's) this opens one,
 // reads the photo and shows the numbers marked "AI", with the check line, before Use.
 // With `text` given, the words come from another box (the "Search your past meals and recipes" box) and this shows only the results and the grams step.
-export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse: (fill: FoodFill) => void; text?: string; onLabelPhoto?: () => void }) {
+export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst }: { onUse: (fill: FoodFill) => void; text?: string; onLabelPhoto?: () => void; scanFirst?: boolean }) {
   const [own, setText] = useState('');
   const text = given ?? own;
   const { hits, note } = useFoodHits(text);
@@ -59,14 +59,16 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse
   const useAi = () => { if (!ai) return; onUse(ai.fill); setAi(null); setText(''); };
 
   // Scan barcode (brief barcode-scan): another way to ask the same source, by a product code instead of a name. A found product is picked like a typed result.
-  const scanOn = useFeature('barcode');
   const labelOn = useFeature('scan');
   const openLabel = onLabelPhoto ?? (() => labelCamera.current?.click());
   const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), ...(onLabelPhoto || labelOn ? { onLabel: openLabel } : {}) });
 
+  const scanned = useRef(false);
+  useEffect(() => { if (scanFirst && !scanned.current) { scanned.current = true; scan(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival: Recipes + New, Scan a food opens the barcode sheet over this form
+
   return (
     <div className="dt-lookup">
-      {scanOn && <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>}
+      <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>
       {given === undefined && (
         <label className="field" htmlFor="dt-lookup-q">Look up nutrition
           <input id="dt-lookup-q" type="search" autoComplete="off" maxLength={60} value={own} onChange={e => { setText(e.target.value); setPick(null); }} />

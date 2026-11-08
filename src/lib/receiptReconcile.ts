@@ -12,7 +12,8 @@ interface Held { qty: number; cents: number | null; prices: number[] | null }
 export interface Compare { id: string; was: string; now: string; label: string; same: boolean }
 /** A ticked item that no included receipt line is matched to: `held` is what its line holds now, as text. */
 export interface Missing { id: string; name: string; held: string }
-export interface Reconciled { compare: Record<string, Compare>; missing: Missing[]; ticked: number }
+/** `earlier`: ticked items a scanned receipt ticked before (the line's `rc`), left out of `missing` and `ticked` because a second receipt at the same store is not expected to show them. */
+export interface Reconciled { compare: Record<string, Compare>; missing: Missing[]; ticked: number; earlier: number }
 
 /** What the month holds for a ticked line (null: not ticked). A bought line with no price of its own takes the item's price unless it was bought unpriced, as the month's totals read it. */
 export function heldOf(line: GroceryLine | undefined, item: GroceryItem): Held | null {
@@ -62,21 +63,25 @@ export function reconcile(plan: Plan, choices: readonly Choice[], items: readonl
   }
   const matched = new Set(choices.flatMap(c => (c.include && c.itemId ? [c.itemId] : [])));
   const missing: Missing[] = [];
-  let ticked = 0;
+  let ticked = 0, earlier = 0;
   for (const item of items) {
     const held = heldOf(lines[item.id], item);
     if (!held) continue;
     const at = lines[item.id]?.store ?? item.store;
     if (store && at && at.toLowerCase() !== store.toLowerCase()) continue;
+    if (lines[item.id]?.rc && !matched.has(item.id)) { earlier++; continue; }
     ticked++;
     if (!matched.has(item.id)) missing.push({ id: item.id, name: item.n, held: heldText(held, item.unit) });
   }
-  return { compare, missing, ticked };
+  return { compare, missing, ticked, earlier };
 }
 
-/** The line above the not-on-receipt list: when every ticked item is missing the receipt is probably the wrong one. */
-export const missingIntro = (r: Pick<Reconciled, 'missing' | 'ticked'>): string =>
-  `${r.ticked > 0 && r.missing.length === r.ticked ? 'None of your ticked items are on this receipt. Is this the right one? ' : ''}They stay as they are unless you tick Untick. A photo cut off at the bottom can hide lines.`;
+/** The line above the not-on-receipt list. It says first that this is normal and that nothing changes unless an item is moved back; the question "Is this the right one?" is asked only when nothing on the receipt matched an item (`matched` is how many receipt items did), since a receipt with matches is plainly this month's. */
+export const missingIntro = (r: Pick<Reconciled, 'missing' | 'ticked'>, matched = 0): string =>
+  `${r.ticked > 0 && r.missing.length === r.ticked && matched === 0 ? 'None of the items on your list match this receipt. Is this the right one? ' : ''}Normal if you bought these on another trip or scanned another receipt. Nothing changes unless you move one back to Shopping.`;
 
-/** The Applied notice's words for the items that were unticked. */
-export const untickedText = (n: number): string => (n > 0 ? ` ${n} ${n === 1 ? 'item' : 'items'} unticked.` : '');
+/** The quiet line for the items an earlier receipt ticked, which are not listed: "2 items from an earlier receipt are not listed." Empty when there are none. */
+export const earlierText = (n: number): string => (n > 0 ? `${n} ${n === 1 ? 'item' : 'items'} from an earlier receipt ${n === 1 ? 'is' : 'are'} not listed.` : '');
+
+/** The Applied notice's words for the items that were moved back to Shopping. */
+export const untickedText = (n: number): string => (n > 0 ? ` ${n} ${n === 1 ? 'item' : 'items'} moved back to Shopping.` : '');

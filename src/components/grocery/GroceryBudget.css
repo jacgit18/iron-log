@@ -1,0 +1,76 @@
+@layer base, components;
+@layer components {
+/* The monthly grocery budget card: a row to set it, or the amount spent against it with a bar. */
+.gbudget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+form.gbudget,
+.gbudget:not([role="status"]) {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+}
+.gbl {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+.gbin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  color: var(--muted);
+}
+.gbin input {
+  width: 110px;
+  border: 1px solid var(--field-line);
+  background: var(--bg);
+  border-radius: var(--r-md);
+  padding: var(--sp-6) var(--sp-8);
+  font-size: var(--fs-lg);
+  color: var(--ink);
+}
+.gbudgetline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-12);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+.gbudgetline .btn {
+  margin-left: auto;
+}
+.gbudget .gprog {
+  margin: 0;
+}
+.gbudget .note {
+  margin: 0;
+}
+.gbwarn {
+  color: var(--str);
+}
+.gbnote {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+.gbudget-near .gbstate {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+.gbudget-over .gbstate {
+  color: var(--str);
+  font-weight: 600;
+}
+.gbudget-over .gbbar > span {
+  background: var(--str);
+}
+}

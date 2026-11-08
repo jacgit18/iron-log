@@ -1,0 +1,53 @@
+@layer base, components;
+@layer components {
+/* The summary card over Shopping and Bought: three tiles and the progress bar. */
+.gsum {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.gsum .gprog {
+  margin: 0;
+}
+.gsum .note {
+  margin: 0;
+}
+.gsumtiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-8);
+}
+.gsumtile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--sp-6) var(--sp-10);
+  border-radius: var(--r-md);
+  background: var(--sunk);
+}
+.gsumtile small {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.gsumtile b {
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.gsumtile em {
+  font-size: var(--fs-xs);
+  font-style: normal;
+  color: var(--muted);
+}
+/* At a large text size the tiles go one a row so no number is clipped. */
+@media (max-width: 380px) {
+  .gsumtiles {
+    grid-template-columns: 1fr;
+  }
+}
+}

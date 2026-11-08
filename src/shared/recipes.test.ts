@@ -4,6 +4,11 @@ import { MAX_INGREDIENTS, MAX_RECIPE_ID, MAX_STEPS, MAX_TAG, MAX_TAGS, MAX_TAGS_
 const base = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans', amt: '2 cans' }], steps: ['Simmer.'] };
 
 describe('normRecipe', () => {
+  it('keeps fav: true and drops any other value (brief nutrition-quick-log)', () => {
+    expect(normRecipe({ ...base, fav: true })).toEqual({ ...base, fav: true });
+    expect(normRecipe({ ...base, fav: 'yes' })).toEqual(base);
+    expect(validRecipe({ ...base, fav: true })).toBe(true);
+  });
   it('keeps a clean recipe as it is', () => {
     expect(normRecipe(base)).toEqual(base);
     expect(validRecipe(base)).toBe(true);
@@ -119,6 +124,28 @@ describe('rid: a link to one of your sauces or seasonings', () => {
   });
 });
 
+describe('q and own: a meal built from linked foods (brief meals-from-foods)', () => {
+  const meal = { ...base, ing: [{ n: 'Oat cereal', amt: '1 cup', rid: 'oat-cereal', q: 1.5 }, { n: 'Whole milk', rid: 'whole-milk', q: 0.5 }], own: true as const };
+  it('keeps q beside rid and own, and accepts them as valid (the API takes what the app writes)', () => {
+    expect(normRecipe(meal)).toEqual(meal);
+    expect(validRecipe(meal)).toBe(true);
+  });
+  it('drops a q that is out of range, not a number or has no link; the line stays', () => {
+    const r = normRecipe({ ...base, ing: [{ n: 'A', rid: 'a', q: 0 }, { n: 'B', rid: 'b', q: 101 }, { n: 'C', rid: 'c', q: '2' }, { n: 'D', q: 2 }, { n: 'E', rid: 'e', q: 0.1 }, { n: 'F', rid: 'f', q: 100 }] })!;
+    expect(r.ing).toEqual([{ n: 'A', rid: 'a' }, { n: 'B', rid: 'b' }, { n: 'C', rid: 'c' }, { n: 'D' }, { n: 'E', rid: 'e', q: 0.1 }, { n: 'F', rid: 'f', q: 100 }]);
+  });
+  it('rounds q to two decimals and drops own unless it is exactly true', () => {
+    expect(normRecipe({ ...base, ing: [{ n: 'A', rid: 'a', q: 1.3333 }] })!.ing[0]!.q).toBe(1.33);
+    expect(normRecipe({ ...base, own: 'yes' })).not.toHaveProperty('own');
+    expect(validRecipe({ ...base, ing: [{ n: 'A', rid: 'a', q: 1.3333 }] })).toBe(false);
+  });
+  it('reads a recipe saved before q and own byte for byte, and survives a JSON round trip (backup, sync)', () => {
+    const old = { ...base, ing: [{ n: 'Taco seasoning', amt: '2 tbsp', rid: 'taco-seasoning' }, { n: 'Beef' }], kcal: 400, p: 30 };
+    expect(JSON.stringify(normRecipe(old))).toBe(JSON.stringify(old));
+    expect(normRecipe(JSON.parse(JSON.stringify(meal)))).toEqual(meal);
+  });
+});
+
 describe('recipe tags', () => {
   it('keeps clean tags and drops the field when there are none', () => {
     const r = { ...base, tags: ['weeknight', 'Meal prep'] };
@@ -171,5 +198,39 @@ describe('usual amount and unit name (ready-made foods)', () => {
   });
   it('is not a valid recipe while it carries a value normRecipe would change', () => {
     expect(validRecipe({ ...food, usual: 2.3 })).toBe(false);
+  });
+});
+
+describe('food type (ready-made foods)', () => {
+  const food = { id: 'milk', n: 'Whole milk', cat: 'ready', ing: [], steps: [], kcal: 150, p: 8 };
+  it('keeps a valid type on a ready-made food and round-trips it', () => {
+    for (const type of ['ingredient', 'ready', 'drink']) {
+      const r = { ...food, type };
+      expect(normRecipe(r)).toEqual(r);
+      expect(validRecipe(r)).toBe(true);
+    }
+  });
+  it('drops an unknown type, and a type on a recipe that is not ready-made', () => {
+    expect(normRecipe({ ...food, type: 'soup' })).toEqual(food);
+    expect(validRecipe({ ...food, type: 'soup' })).toBe(false);
+    expect(normRecipe({ ...base, type: 'drink' })).toEqual(base);
+  });
+  it('keeps a food that an older app build loaded: with the type field stripped it is still a valid, untyped ready-made food', () => {
+    const { type: _t, ...old } = { ...food, type: 'drink' };
+    expect(normRecipe(old)).toEqual(old);
+    expect(validRecipe(old)).toBe(true);
+  });
+  it('leaves an untyped food untyped', () => {
+    expect(normRecipe(food)).not.toHaveProperty('type');
+    expect(normRecipes([food, { ...food, id: 'k', n: 'Kefir', type: 'drink' }]).map(r => r.type)).toEqual([undefined, 'drink']);
+  });
+});
+
+describe('fav (brief recipes-find-type-tabs)', () => {
+  const base = { id: 'a', n: 'Soup', cat: 'protein', ing: [], steps: [] };
+  it('keeps fav true and round-trips it, and drops anything else', () => {
+    expect(normRecipe({ ...base, fav: true })).toMatchObject({ fav: true });
+    expect(validRecipe(normRecipe({ ...base, fav: true }))).toBe(true);
+    for (const v of [false, 'yes', 1, null]) expect(normRecipe({ ...base, fav: v })).not.toHaveProperty('fav');
   });
 });

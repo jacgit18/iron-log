@@ -10,7 +10,7 @@ for (const [w, zoom] of [[320, true], [390, true], [320, false]]) {
     if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' });
     await page.click('#tab-program');
     await page.getByRole('button', { name: 'Programs', exact: true }).click();
-    await page.getByRole('button', { name: 'Create a program' }).click();
+    await page.getByRole('button', { name: /^(Create a program|\+ New program)$/ }).click(); // a phone has the floating pill instead of the header button
     await page.getByLabel('Name').fill(NAME);
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /^Not yet/ }).click();
@@ -22,7 +22,7 @@ for (const [w, zoom] of [[320, true], [390, true], [320, false]]) {
 }
 
 // Review of PR 412: the rule was first on .edpanel, which the Exercise and Stretch libraries share, and it broke their Edit buttons into "Ed / it".
-for (const lib of ['Exercise library', 'Stretch library']) {
+for (const lib of ['Exercises', 'Stretches']) {
   test(`${lib} at 320px: the Edit buttons stay on one line`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.click('#tab-program');
@@ -42,7 +42,7 @@ for (const [w, zoom] of [[320, false], [320, true]]) {
     if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' });
     await page.click('#tab-program');
     await page.getByRole('button', { name: 'Programs', exact: true }).click();
-    await page.getByRole('button', { name: 'Create a program' }).click();
+    await page.getByRole('button', { name: /^(Create a program|\+ New program)$/ }).click(); // a phone has the floating pill instead of the header button
     await page.getByLabel('Name').fill(NAME);
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /^Not yet/ }).click();

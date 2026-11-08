@@ -13,6 +13,7 @@ import SavedMeals from './SavedMeals.js';
 import EntryForm, { type EntryValues } from './EntryForm.js';
 import type { FoodFill } from './FoodSearch.js';
 import FindFood from './FindFood.js';
+import QuickLog from './QuickLog.js';
 
 // One meter: a bar with the numbers in words. Past the target the bar stays full and the text says how far over (no scolding).
 function Meter({ label, unit, have, target }: { label: string; unit: string; have: number; target: number | null }) {
@@ -82,6 +83,7 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
               </ul>
             </>
           )}
+          <QuickLog day={day} onAdded={setMsg} />
           <FindFood day={day} onAdded={setMsg} onFood={f => { setFill(old => ({ key: old.key + 1, food: f })); setOneOff(true); }} />
           <CopyDay key={day} day={day} onAdded={setMsg} />
           <div className="dt-oneoff">

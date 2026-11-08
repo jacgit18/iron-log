@@ -29,7 +29,7 @@ export default function StretchLibrary() {
   return (
     <section className={`panel edpanel exlib exlibwide${reordering ? ' exreorder' : ''}`}>
       <div className="inline spread">
-        <h2 id="slib-h" tabIndex={-1}>Stretch library</h2>
+        <h2 id="slib-h" tabIndex={-1}>Stretches</h2>
         <div className="inline">
           <button type="button" className="btn primary" id="slib-new" onClick={() => openModal({ type: 'stretch' })}>+ New stretch</button>
         </div>

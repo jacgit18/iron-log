@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startFood } from './recipesNav.js';
 
 // Scan label on a new ready-made food (brief label-photo-scan). The validator, the route and the photo sizing are node tests (scan.test.ts, server/scan.test.ts,
 // scanPhoto.test.ts); this covers the wiring a unit test cannot: the button only for an admin, a photo filling the real form without saving, and a failure
@@ -8,7 +9,7 @@ const photo = { name: 'label.png', mimeType: 'image/png', buffer: PNG };
 const asAdmin = page => page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true'));
 const openForm = async page => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
 };
 const answer = (page, status, body) => page.route('**/api/scan/label', route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }));
 
@@ -32,7 +33,7 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('button', { name: /Gnocchi/ })).toHaveCount(0); // cancelled: nothing was saved
   });
 
-  test('Scan label opens the camera and Choose photo opens the library, and either fills the form', async ({ page }) => {
+  test('Scan label opens the camera and Pick from photos opens the library, and either fills the form', async ({ page }) => {
     await answer(page, 200, { ok: true, result: { kind: 'ok', label: { kcal: 95, p: 3 } } });
     await openForm(page);
     await expect(page.getByLabel('Label camera')).toHaveAttribute('capture', 'environment');
@@ -76,5 +77,5 @@ test('a person who is not an admin sees no Scan label button', async ({ page }) 
   await openForm(page);
   await expect(page.getByRole('button', { name: 'Save food' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Scan label' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Choose photo' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Pick from photos' })).toHaveCount(0);
 });

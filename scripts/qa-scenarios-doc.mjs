@@ -68,11 +68,11 @@ function frontOf(existing, today) {
 
 const automationText = id => {
   const a = automationOf(id);
-  return a ? `${a.auto}${a.specs?.length ? ` (${a.specs.map(f => `\`${f}\``).join(', ')})` : ''}` : 'untagged';
+  return a ? `${a.auto}${a.specs?.length ? ` (${a.specs.map(f => `\`${f}\``).join(', ')})` : ''}${a.partial ? `; **partial**: ${a.partial}` : ''}` : 'untagged';
 };
 const coverageLine = live => {
   const c = coverageCounts(live.map(s => s.id));
-  return `${c.e2e} e2e, ${c.api} api, ${c.manual} manual, ${c.untagged} untagged`;
+  return `${c.e2e} e2e, ${c.api} api, ${c.unit} unit, ${c.manual} manual, ${c.untagged} untagged`;
 };
 
 /** The page as text, for the test and for printing. Built on demand, so importing this file (or running --check) does no work. `existing` is the page being replaced: its Results and properties block carry over. */

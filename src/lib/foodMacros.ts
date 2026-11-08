@@ -1,5 +1,6 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { isEatable } from './recipeUses.js';
 
 /* ---------- Less typing for a meal (brief diet-auto-macros): calories from macros, foods you ate before, a portion of one. Pure; the form and the log call these. ---------- */
 
@@ -18,7 +19,7 @@ export function findFoods(entries: DietEntry[], recipes: Recipe[], query: string
   if (!q) return [];
   const seen = new Set<string>(), all: Food[] = [];
   const add = (x: Food) => { const k = x.n.toLowerCase(); if (!seen.has(k)) { seen.add(k); all.push(x); } };
-  recipes.filter(r => r.kcal !== undefined && r.p !== undefined && !r.from?.startsWith('c:')).forEach(r => add({ n: r.n, kcal: r.kcal!, p: r.p!, ...(r.c !== undefined ? { c: r.c } : {}), ...(r.f !== undefined ? { f: r.f } : {}), from: r.id }));
+  recipes.filter(r => r.kcal !== undefined && r.p !== undefined && !r.from?.startsWith('c:') && isEatable(r)).forEach(r => add({ n: r.n, kcal: r.kcal!, p: r.p!, ...(r.c !== undefined ? { c: r.c } : {}), ...(r.f !== undefined ? { f: r.f } : {}), from: r.id }));
   const byDay = [...entries].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)); // a stable sort: the list's own order breaks ties inside one day, and a synced list need not be in log order
   for (let i = byDay.length - 1; i >= 0; i--) {
     const e = byDay[i]!;

@@ -22,6 +22,10 @@ describe('kcalFromMacros', () => {
 describe('findFoods', () => {
   const entries = [e('1', 'Rice', 190, 4), e('2', 'Rice', 200, 4, undefined, 44, 0.5), e('3', 'Chili', 600, 40, 'r1'), e('4', 'Brown rice bowl', 500, 20)];
   const recipes = [r('r1', 'Chili', { kcal: 610, p: 41 }), r('r2', 'Rice pudding', { kcal: 300, p: 8, c: 50 }), r('r3', 'No numbers'), r('c:x', 'Rice salad', { kcal: 1, p: 1, from: 'c:x' })];
+  it('does not offer a recipe used only as an Ingredient, since it cannot be logged as eaten', () => {
+    const rs = [r('r1', 'Rice sauce', { kcal: 40, p: 1, cat: 'sauces' }), r('r2', 'Rice bowl', { kcal: 500, p: 20 }), r('r3', 'Rice base', { kcal: 300, p: 6, uses: ['meal', 'ingredient'] })];
+    expect(findFoods([], rs, 'rice').map(x => x.n)).toEqual(['Rice bowl', 'Rice base']);
+  });
   it('empty query offers nothing', () => expect(findFoods(entries, recipes, '  ')).toEqual([]));
   it('starts-with first, then contains; one per name; newest log wins; library copies not offered', () => {
     expect(findFoods(entries, recipes, 'RICE').map(x => x.n)).toEqual(['Rice pudding', 'Rice', 'Brown rice bowl']);

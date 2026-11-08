@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 import { photo } from './receiptHelpers.js';
 
 // Receipt: merge repeated lines (brief receipt-merge-lines). Grouping, the totals and the plan are node tests (receiptGroup.test.ts); this covers the wiring a unit test
-// cannot: one row and one checkbox for a repeated line, Add to list once, Apply writing one At home item with each pack's own price, Undo, and "Show these lines
+// cannot: one row and one checkbox for a repeated line, Add to list once, Apply writing one Inventory item with each pack's own price, Undo, and "Show these lines
 // separately" bringing back today's rows and the duplicate-name refusal. The route is stubbed: no photo leaves the test. The fixed date is September 2026 (month 2026-09).
 const eggs = { text: 'EGGS LRG', qty: 1, grossCents: 899, discountCents: 0, matchId: null };
 const beef = (c) => ({ text: 'BEEF CHUCK ROAST', qty: 1, grossCents: c, discountCents: 0, matchId: null });
@@ -13,7 +13,7 @@ const seed = async page => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: {}, pulled: [] }));
   });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
 };
 const answer = (page, lines) => page.route('**/api/scan/receipt', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'ok', receipt: { store: "BJ'S", date: '2026-09-10', lines } } }) }));
 const month = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09') ?? '{"lines":{}}').lines);
@@ -38,7 +38,7 @@ test('two identical lines are one row with one checkbox and a count of 2; Add to
   expect((await month(page))[made[0].id]).toMatchObject({ got: true, qty: 2, cents: 899 });
 });
 
-test('the beef lines at two prices are one row; Apply gives one At home item and the month keeps both prices; Undo removes it', async ({ page }) => {
+test('the beef lines at two prices are one row; Apply gives one Inventory item and the month keeps both prices; Undo removes it', async ({ page }) => {
   await seed(page); await answer(page, [beef(1412), beef(1786)]);
   const sheet = await scan(page);
   await expect(sheet.locator('.rcrow')).toHaveCount(1);

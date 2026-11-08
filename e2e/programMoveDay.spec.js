@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 const day = n => ({ name: `Day ${n}`, exact: true });
-const open = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', day(n)).click(); };
+const open = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: new RegExp(`^Day ${n}`) }).click(); };
 const names = page => page.locator('.edpanel:not(.lib) .edrow .edmain b').allTextContents();
 const firstRow = page => page.locator('.edpanel:not(.lib) .edrow').first();
 const more = row => row.getByRole('button', { name: /^More actions for / });
@@ -53,7 +53,7 @@ test('Go to Day 3 puts focus on the moved card’s ⋯ button', async ({ page })
 
 test('a superset moves as one card', async ({ page }) => {
   await open(page, 1);
-  const row = page.locator('.edpanel:not(.lib) .edrow').filter({ hasText: 'Superset' }).first();
+  const row = page.locator('.edpanel:not(.lib) .ssgroup .edrow').first(); // a superset sits in a boxed group
   const name = await row.locator('.edmain b').textContent();
   await moveTo(page, row, 2);
   expect(await names(page)).not.toContain(name);
