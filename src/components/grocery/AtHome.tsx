@@ -61,7 +61,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
   const [chipPick, setChipPick] = useState(ALL_CHIP);
   const chip = resolveChip(chipPick, homeGroups);
   const [homeFilter, setHomeFilter] = useState<HomeFilter>('all'); // Need / Have / All: a filter on the tick, not a screen, so no address; it starts at All each time Inventory opens
-  const filterOn = !editing && homeFilter !== 'all';
+  const filterOn = !editing && homeFilter !== 'all' && g.items.length > 0; // no items: no chip row to clear a filter with, so it does not apply
   const listed = chipGroups(shown, chip).map(grp => (filterOn ? { ...grp, items: homeFilterItems(grp.items, hasIt, homeFilter) } : grp)).filter(grp => !filterOn || grp.items.length > 0);
   const filterChips = homeFilterChips(g.items, hasIt);
   const withChips = showChips(chips);
@@ -106,7 +106,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
       {!!q.trim() && !listed.length && <NoMatch q={q} />}
       {g.items.length > 0 && !editing && <GroceryStoreChips chips={filterChips} value={homeFilter} onChange={k => setHomeFilter(k as HomeFilter)} label="Show" />}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
-      {filterOn && !listed.length && !q.trim() && <p className="note" id="groc-home-filter-empty">{homeFilterEmpty(homeFilter)}</p>}
+      {filterOn && !listed.length && !q.trim() && <p className="note" id="groc-home-filter-empty">{homeFilterEmpty(homeFilter, chip !== ALL_CHIP ? chips.find(c => c.key === chip)?.label : undefined)}</p>}
       {editing && listed.length > 0 && <ListSummary text={editSummaryText(listed.reduce((n, grp) => n + grp.items.length, 0), listed.reduce((n, grp) => n + haveCount(grp.items, hasIt), 0))} all={listed.every(grp => grp.items.every(i => openEdit.has(i.id)))} onToggle={on => setEdits(listed.flatMap(grp => grp.items.map(i => i.id)), on)} />}
       <div className={`gshoplist${chip !== ALL_CHIP && !editing ? ' gcompact' : ''}`}>
       {listed.map((grp, gi) => (

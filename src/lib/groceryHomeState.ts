@@ -30,5 +30,6 @@ export function homeFilterChips(items: GroceryItem[], has: Has): Chip[] {
   return [{ key: 'all', label: 'All', count: items.length }, { key: 'need', label: 'Need', count: items.length - have }, { key: 'have', label: 'Have', count: have }];
 }
 
-/** The line under a filter that shows nothing. */
-export const homeFilterEmpty = (filter: HomeFilter): string => (filter === 'need' ? 'Nothing to buy. You have everything.' : 'You have none of these yet.');
+/** The line under a filter that shows nothing. With a store chip on (`store`: its name) it says so, since other stores may still have rows. */
+export const homeFilterEmpty = (filter: HomeFilter, store?: string): string =>
+  filter === 'need' ? (store ? `Nothing to buy at ${store}. You have everything there.` : 'Nothing to buy. You have everything.') : (store ? `You have none of the ${store} items yet.` : 'You have none of these yet.');

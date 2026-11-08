@@ -71,3 +71,19 @@ test('Shopping quick add says one-time and the checkbox says Have', async ({ pag
   await expect(page.getByLabel('Have Milk')).toBeVisible();
   await expect(page.getByLabel('Got Milk')).toHaveCount(0);
 });
+
+test('with a store chip on, an empty Need says which store, and a filter left on does not outlive the last item', async ({ page }) => {
+  const two = { stores: ['Aldi', 'Costco'], items: [item('milk', 'Milk'), { ...item('oil', 'Oil'), store: 'Costco' }], groups: [] };
+  await open(page, 'inventory', { catalogue: two, month: { lines: { milk: { have: true } }, pulled: [] } });
+  await show(page, /^Need/).click();
+  await page.getByRole('group', { name: 'Store' }).getByRole('button', { name: /^Aldi/ }).click();
+  await expect(page.locator('#groc-home-filter-empty')).toHaveText('Nothing to buy at Aldi. You have everything there.'); // Costco still needs Oil
+  await page.click('#groc-edit'); // Edit lists every item; remove them all while the Need filter is still set
+  for (const n of ['Milk', 'Oil']) {
+    await page.click('#groc-details-all'); // the Aldi chip is still on in Edit, so Oil only appears (closed) after Milk is gone
+    const remove = page.getByRole('button', { name: `Remove ${n} from your list` });
+    await remove.click(); await remove.click();
+  }
+  await page.click('#groc-done');
+  await expect(page.locator('#groc-home-filter-empty')).toHaveCount(0);
+});

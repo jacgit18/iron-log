@@ -40,5 +40,7 @@ describe('Need / Have / All', () => {
   it('has a line for an empty filter', () => {
     expect(homeFilterEmpty('need')).toBe('Nothing to buy. You have everything.');
     expect(homeFilterEmpty('have')).toBe('You have none of these yet.');
+    expect(homeFilterEmpty('need', 'Aldi')).toBe('Nothing to buy at Aldi. You have everything there.'); // a store chip is on: other stores may still need things
+    expect(homeFilterEmpty('have', 'Aldi')).toBe('You have none of the Aldi items yet.');
   });
 });
