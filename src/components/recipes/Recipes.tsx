@@ -14,6 +14,7 @@ import './RecipeFind.css';
 import { hasMacros } from '../../lib/dietLog.js';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
+import { LIBRARY_TABS, inLibraryTab, inMine, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, haveBadge, inTab, librarySortedBy, recipeMeta, sortRecipes, tabCounts, typeTag, type RecipeTab } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
@@ -80,6 +81,8 @@ export default function Recipes() {
   const [mineSort, setMineSort] = useSortChoice('recipes', RECIPE_SORTS, DEFAULT_RECIPE_SORT);
   const [libSort, setLibSort] = useSortChoice('recipes-library', LIBRARY_SORTS, DEFAULT_LIBRARY_SORT);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
+  const [libTab, setLibTab] = useState<LibraryTab>('all');
+  const [added, setAdded] = useState<{ id: string; name: string } | { error: string } | null>(null); // the last one-tap Add from the Library, for its Undo
   const [tries, setTries] = useState(0);
   const month = monthKey(new Date());
   const asked = useRef(''); // the search the library list shows; a page that arrives for an older one is dropped
@@ -96,6 +99,8 @@ export default function Recipes() {
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
   const counts = useMemo(() => tabCounts(narrowed), [narrowed]);
   const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => inTab(r, tab)), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
+  const libShown = useMemo(() => (lib.status === 'ready' ? lib.items.filter(it => inLibraryTab(it, libTab)) : []), [lib, libTab]);
+  const libHave = useMemo(() => new Map(libShown.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libShown, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
   const selected = shown.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
@@ -146,16 +151,23 @@ export default function Recipes() {
     }} />;
   }
 
-  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null, tag: string | null = null, fav = false, current = false, logId?: string) => (
+  const addFromLibrary = (it: CatalogItem) => {
+    const err = useAppStore.getState().copyCatalogRecipe(it);
+    const copy = useAppStore.getState().recipes.find(r => r.from === it.id);
+    setAdded(err ? { error: err } : copy ? { id: copy.id, name: it.name } : null);
+  };
+
+  const row = (key: string, title: string, meta: string, pill: string | null, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null, tag: string | null = null, fav = false, current = false, logId?: string, addIt?: () => void, mine = false) => (
     <li key={key} className={`rc-item${current ? ' current' : ''}`}>
       <button type="button" className="rc-row" onClick={open} aria-current={current ? 'true' : undefined}>
         <span className="rc-main">
-          <span className="rc-title"><span><b id={`rc-t-${key}`}>{title}</b>{fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}<span className="pill custom">{pill}</span>{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
+          <span className="rc-title"><span><b id={`rc-t-${key}`}>{title}</b>{fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{pill && <span className="pill custom">{pill}</span>}{mine && <span className="rc-inmine" role="img" aria-label="In Mine"><Icon name="check" /></span>}{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
           <span className="rc-meta">{meta}</span>
         </span>
         {badge && <span className="rc-badge">{badge}</span>}
       </button>
       {logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: logId })}>Log</button>}
+      {addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add ${title}`} onClick={addIt}>+ Add</button>}
     </li>
   );
 
@@ -171,6 +183,7 @@ export default function Recipes() {
         {src === 'mine' && <RecipeNewMenu onChoose={choose} />}
       </div>
       {src === 'mine' && <RecipeTypeTabs value={tab} counts={counts} onChange={setTab} />}
+      {src === 'library' && <RecipeTypeTabs value={libTab} onChange={t => setLibTab(t as LibraryTab)} tabs={LIBRARY_TABS} />}
       {src === 'mine' && <RecipeQuickRow picks={picks} onOpen={openRecipe} />}
       <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
       <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
@@ -207,6 +220,13 @@ export default function Recipes() {
           Food types saved.
         </Notice>
       )}
+      {src === 'library' && added && ('error' in added ? (
+        <p className="note gerr" role="alert">{added.error} <button type="button" className="btn sm" onClick={() => setAdded(null)}>Dismiss</button></p>
+      ) : (
+        <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setAdded(null) }} actions={[{ label: 'Open', onClick: () => { setSrc('mine'); setView({ kind: 'mine', id: added.id }); setAdded(null); } }, { label: 'Undo', onClick: () => { useAppStore.getState().undoCatalogCopy(added.id); setAdded(null); } }, { label: 'Dismiss', onClick: () => setAdded(null), ghost: true }]}>
+          {added.name} added to Mine.
+        </Notice>
+      ))}
       {src === 'mine' && banner && (
         <Notice kind="suggestion" actions={[{ label: 'Review types', onClick: () => setView({ kind: 'types' }) }]}>{banner}</Notice>
       )}
@@ -239,10 +259,14 @@ export default function Recipes() {
           {syncing && lib.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
           {syncing && lib.status === 'failed' && <p className="note gerr" role="alert">{lib.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
           {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
+          {syncing && lib.status === 'ready' && lib.items.length > 0 && !libShown.length && <p className="note">No {LIBRARY_TABS.find(t => t.key === libTab)?.label.toLowerCase()} recipe among these{lib.more ? '. Show more to load others' : ''}.</p>}
           {syncing && lib.status === 'ready' && (
             <>
               <ul className="rc-list rc-cards">
-                {lib.items.map(it => row(it.id, it.name, recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), recipes.some(r => r.from === it.id) ? 'In Mine' : 'Library', null, false, () => setView({ kind: 'library', item: it })))}
+                {libShown.map(it => {
+                  const have = libHave.get(it.id) ?? null, mine = inMine(it, recipes);
+                  return row(it.id, it.name, recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), null, have ? `${have.text} at home` : null, !!have?.all, () => setView({ kind: 'library', item: it }), false, null, null, false, false, undefined, mine ? undefined : () => addFromLibrary(it), mine);
+                })}
               </ul>
               {lib.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}
               <p className="rc-attrib">Library recipes are from the Wikibooks Cookbook, CC BY-SA 4.0.</p>
