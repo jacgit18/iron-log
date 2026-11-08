@@ -56,13 +56,14 @@ export type ScenarioFeature =
   | 'Groceries views'
   | 'Food type'
   | 'Recipes find'
-  | 'Nutrition quick log';
+  | 'Nutrition quick log'
+  | 'Meals from foods';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods',
 ];
 
 export interface Scenario {
@@ -1978,6 +1979,51 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'A day ahead says Pick today or an earlier day, and a day too far back says entries are kept for 400 days. A day with 20 entries says that is the limit and logs nothing more.',
+    ],
+  },
+  {
+    id: 'S-157', feature: 'Meals from foods', title: 'Build a cereal bowl from two foods and see its numbers add up', persona: 'recipe-collector', brief: 'meals-from-foods',
+    steps: [
+      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Write a recipe, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
+    ],
+    expected: [
+      'While you build it the form says Per serving, from the parts: 375 kcal and 15.5 g protein, with 2 of 2 ingredients counted. After Save the recipe\'s page says the same, lists 1.5 portions Oat cereal and 1 portion Whole milk, and Log offers those numbers.',
+    ],
+  },
+  {
+    id: 'S-158', feature: 'Meals from foods', title: 'Build a shake from foods, then change one food and the shake follows', persona: 'recipe-collector', brief: 'meals-from-foods',
+    steps: [
+      'Make a Kefir drink, a Banana food and a Whey food with their calories and protein, then a recipe Shake that links all three with + Food or meal. Open Whey, press Edit, raise its calories and Save, then open Shake again.',
+    ],
+    expected: [
+      'The shake\'s numbers per serving include the new Whey calories without editing the shake, and Log opens at the new numbers. A day already logged keeps the numbers it had.',
+    ],
+  },
+  {
+    id: 'S-159', feature: 'Meals from foods', title: 'A meal inside a meal rolls up through both, and a loop is refused', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Put the Cereal bowl into a new recipe Lunch box with + Food or meal (it is listed under Meals), and check the numbers. Then edit Cereal bowl, press + Food or meal and pick Lunch box.',
+    ],
+    expected: [
+      'Lunch box shows the bowl\'s numbers through both levels. Picking Lunch box inside Cereal bowl says it already contains this meal, so that would loop, and adds nothing. A chain more than 3 levels deep says meals can hold other meals up to 3 levels deep.',
+    ],
+  },
+  {
+    id: 'S-160', feature: 'Meals from foods', title: 'Use my own numbers keeps typed numbers; turning it off adopts the roll-up', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Edit Cereal bowl, tick Use my own numbers, press Edit under Nutrition per serving, type 700 calories and Save. Open the page, then edit again and untick Use my own numbers and Save.',
+    ],
+    expected: [
+      'With the switch on the page says Your own numbers are used and shows what the parts add up to as a hint; 700 stays. With it off the page says Per serving, from the parts and the numbers come from the foods again.',
+    ],
+  },
+  {
+    id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Rename Whole milk to Milk and open Cereal bowl. Then add a food with no numbers by hand (just a name), link it to the bowl, and look at the counted line. Finally delete Milk from Recipes and open the bowl.',
+    ],
+    expected: [
+      'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
     ],
   },
 ];

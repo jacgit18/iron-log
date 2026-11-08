@@ -51,12 +51,17 @@ export const cleanUsual = (v: unknown): number | null => (typeof v === 'number' 
 
 const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max ? v : null);
 
+/** How many of a linked food's unit a line uses: 0.1 to 100, to two decimals (brief meals-from-foods). */
+export const MIN_Q = 0.1, MAX_Q = 100;
+export const cleanQ = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= MIN_Q && v <= MAX_Q ? Math.round(v * 100) / 100 : null);
+
 /** One ingredient line, or null when it has no name. */
 export function normIngredient(x: unknown): RecipeIngredient | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
   const o = x as Record<string, unknown>;
   const n = str(o.n, MAX_RECIPE_NAME), amt = str(o.amt, MAX_AMOUNT), home = str(o.home, MAX_RECIPE_ID), rid = str(o.rid, MAX_RECIPE_ID), sub = str(o.sub, MAX_RECIPE_NAME);
-  return n ? { n, ...(amt ? { amt } : {}), ...(home && !reservedId(home) ? { home } : {}), ...(rid && !reservedId(rid) ? { rid } : {}), ...(sub && sub.toLowerCase() !== n.toLowerCase() ? { sub } : {}), ...(o.skip === true ? { skip: true as const } : {}) } : null;
+  const q = rid && !reservedId(rid) ? cleanQ(o.q) : null; // an amount of a linked food: meaningless without the link
+  return n ? { n, ...(amt ? { amt } : {}), ...(home && !reservedId(home) ? { home } : {}), ...(rid && !reservedId(rid) ? { rid } : {}), ...(q !== null ? { q } : {}), ...(sub && sub.toLowerCase() !== n.toLowerCase() ? { sub } : {}), ...(o.skip === true ? { skip: true as const } : {}) } : null;
 }
 
 /** One recipe, cleaned: lists are capped, blank lines dropped, an unknown category becomes Other. Null without an id or a name. */
@@ -78,7 +83,7 @@ export function normRecipe(x: unknown): Recipe | null {
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
