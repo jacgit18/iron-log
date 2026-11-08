@@ -200,7 +200,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Look at a day after today.',
     ],
     expected: [
-      'The recipe logs one entry with its numbers at the planned portion; the saved meal logs each of its foods.',
+      'The recipe logs one entry with its numbers at the planned portion. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
       'Days after today show no Log button.',
     ],
   },
@@ -212,8 +212,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Return to the planner and press the grocery button again.',
     ],
     expected: [
-      'The first press adds every ingredient of the week\'s recipes once (a name two recipes share is added once) and reports "Added N. M already on the list."',
-      'The second press adds nothing and reports that all are already on the list.',
+      'The first press adds every ingredient of the week\'s recipes once (a name two recipes share is added once) and reports "Added N to Shopping. M are on Shopping already."',
+      'The second press adds nothing and reports that all of them are on Shopping already.',
     ],
   },
 
@@ -1508,27 +1508,27 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program tab clarity ----
   {
-    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the three sections', persona: 'new-user', brief: 'program-tab-clarity',
+    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs', persona: 'new-user', brief: 'program-tab-clarity',
     steps: [
       'On a computer open the Program tab for the first time on this browser (clear the site data first if you have been here).',
-      'Read the guide card at the top, then the three section buttons and the card under them.',
+      'Read the guide card at the top, then the section tabs (Programs, Exercises, Stretches, Saved, Compare) and the card under them.',
       'Press Open help, close it, then press Got it and reload the page.',
     ],
     expected: [
-      'The guide has four steps; step 4 has a Send me the link button. The sections read Programs, Exercises and Stretches, each with a one-line description. The card says "You are editing", Program A, an "On your Board" pill and "N exercises across 7 days", with the A | B switch and Create a program.',
+      'The guide has four steps; step 4 has a Send me the link button. The tabs read Programs, Exercises, Stretches, Saved and Compare, each with a one-line description. The card says "You are editing", Program A, an "On your Board" pill and "N exercises across 7 days", with the A | B switch and Create a program.',
       'Open help shows the Help sheet. Got it hides the guide, and after the reload it stays hidden.',
     ],
   },
   {
-    id: 'S-115', feature: 'Program tab clarity', title: 'Rows say what they hold; a superset sits in one box; Day at a glance folds', persona: 'superset-builder', brief: 'program-tab-clarity',
+    id: 'S-115', feature: 'Program tab clarity', title: 'Rows say what they hold; a superset sits in one box; Day at a glance and its breakdown', persona: 'superset-builder', brief: 'program-tab-clarity',
     steps: [
       'On a computer open Program, Day 1.',
       'Look at a Main lift row, a superset and an either/or row, and the section labels.',
-      'Look at Day at a glance, then press See the full breakdown.',
+      'Look at Day at a glance, then press See the full breakdown (on a screen 1280 px or wider it starts open, so the press folds it).',
     ],
     expected: [
       'Each row shows the name, a pill (Main lift, Accessory or Optional), sets and weight and a coloured phase pill; a superset card shows a line per exercise; consecutive superset cards share one box labelled Superset. Optional, Regular and Supersets explain themselves; a section you named yourself shows as you typed it.',
-      'Day at a glance shows the exercise and set counts and one sentence; the phase, muscles and equipment breakdown appears only after the fold is opened. Edit and the more-actions button still open their sheets.',
+      'Day at a glance shows the exercise and set counts and one sentence; the phase, muscles and equipment breakdown starts open from 1280 px and folded below it, and See the full breakdown toggles it. Edit and the more-actions button still open their sheets.',
     ],
   },
   {
@@ -1591,7 +1591,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The tabs read Programs, Exercises, Stretches, Saved, Compare, each with a short line under it. Programs ends after the day and its note: no Saved programs and no Compare strip below it.',
       'Saved shows the Save a copy form on top, the search and sort, and one row per program with Put on Board, Edit, Archive and Delete; the search keeps only names that contain what you typed and says "No saved program matches" when none does. The address reads #/program/saved.',
-      'Compare opens full width with the two program pickers and no toggle, its address is #/program/compare, Back returns to Saved, and a reload stays on Compare.',
+      'Compare opens full width with the two program pickers and no toggle, its address is #/program/compare, a reload stays on Compare, and Back goes to the screen before the tabs (a tab press replaces the address, so Back does not step back through Saved).',
     ],
   },
   {
@@ -1611,14 +1611,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-122', feature: 'Groceries views', title: 'A tick on Shopping moves the item to Bought, and the box on Bought puts it back', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory',
     steps: [
-      'Sign in as Grocery shopper and open Groceries. Read the four views and the counts beside Shopping and Bought.',
-      'Tick the box of one item on Shopping. Look at the counts and the notice, then open Bought.',
+      'Sign in as Grocery shopper and open Groceries. Read the three views; the buttons carry no counts.',
+      'Tick the box of one item on Shopping. Look at the "n to get" line and the notice, then open Bought.',
       'On Bought, tick the same item\'s box. Then reload the page.',
     ],
     expected: [
-      'The views read Shopping, Bought, Inventory, Spending. The address is #/daily/grocery/shopping.',
-      'The item leaves Shopping, the Shopping count goes down by one and the Bought count up by one, and a notice says "Bought <item>." with Undo. Bought lists it under its store.',
-      'The item is back on Shopping and the counts return. After the reload the same view is open (the address names it).',
+      'The views read Shopping, Bought and Inventory with no counts on the buttons (Spending history is inside Bought).',
+      'The item leaves Shopping, the "n to get" line goes down by one, and a notice says "Bought <item>." with Undo. Bought lists it under its store.',
+      'The item is back on Shopping and the to-get count returns. After the reload the same view is open (the address names it).',
     ],
   },
   {
@@ -2042,7 +2042,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Type 400 and press Save. Then open Bought.',
     ],
     expected: [
-      'The card reads "Budget", then "<this month\'s spent> of $400.00" and "<amount> left", with a bar filled to the share spent and an Edit button.',
+      'The card reads "Budget", then "<this month\'s spent> of $400.00", with a bar filled to the share spent and an Edit button. Under it is "<amount> left", or, when this month\'s to-get items cost more than the budget, the amber note "You still have <amount> left in your budget to spend." (see S-166).',
       'Bought shows the same card with the same figures (spent includes tax, as the summary does).',
     ],
   },
@@ -2385,7 +2385,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The saved meal is on that day as its Recipes meal, in the Not set group at the top of the day, with the same calories.',
-      'After Move to… it is in Dinner and the Not set group is gone.',
+      'After Move to… it is in Dinner. The Not set group disappears once every item of that day has a meal.',
     ],
   },
 ];
