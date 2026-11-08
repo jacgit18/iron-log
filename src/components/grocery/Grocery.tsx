@@ -21,12 +21,11 @@ import './SharingGroups.js';
 import './SplitSection.js';
 import './StoreTax.js';
 import './StoreMoney.js';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { emptyMonth, monthKey } from '../../lib/grocery.js';
-import { viewCounts } from '../../lib/groceryBought.js';
+import { monthKey } from '../../lib/grocery.js';
 import { pageOf } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import GroceryBoughtTabs, { type BoughtView } from './GroceryBoughtTabs.js';
@@ -61,18 +60,17 @@ export default function Grocery() {
   const inner: BoughtView = view === 'bought' && routed === 'bought/history' ? 'history' : 'month';
   const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); }; // leaving Bought, or pressing it, starts at This month
   const setInner = (v: BoughtView) => navigate(v === 'history' ? 'daily/grocery/bought/history' : 'daily/grocery/bought', 'replace');
-  const counts = useMemo(() => viewCounts(g, months[nowKey] || emptyMonth()), [g, months, nowKey]);
   if (showReceipts) return <section className="panel groc" aria-labelledby="rcs-h"><Receipts /></section>;
-  const tab = (v: View, label: string, n?: number) => (
-    <button type="button" id={`groc-view-${v}`} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>{label}{n !== undefined && n > 0 ? ` ${n}` : ''}</button>
+  const tab = (v: View, label: string) => (
+    <button type="button" id={`groc-view-${v}`} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>{label}</button>
   );
   return (
     <section className="panel groc" aria-labelledby="groc-h">
       <div className="gtop">
         <h2 id="groc-h">Groceries</h2>
         <div className="seg" role="group" aria-label="Grocery view">
-          {tab('shopping', 'Shopping', counts.shopping)}
-          {tab('bought', 'Bought', counts.bought)}
+          {tab('shopping', 'Shopping')}
+          {tab('bought', 'Bought')}
           {tab('inventory', 'Inventory')}
         </div>
       </div>

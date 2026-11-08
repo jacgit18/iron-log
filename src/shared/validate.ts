@@ -22,6 +22,8 @@ export const LIMITS = {
 
 const fin = (n: unknown): n is number => Number.isFinite(n);
 export const validBodyLb = (n: unknown) => fin(n) && n >= LIMITS.bodyLb.min && n < LIMITS.bodyLb.top;
+/** A monthly grocery budget in whole cents: from one cent up to what the price boxes can type ($999,999.99). */
+export const validGroceryBudget = (n: unknown) => Number.isInteger(n) && (n as number) > 0 && (n as number) <= 99999999;
 export const validLiftGoalLb = (n: unknown) => fin(n) && n > 0 && n < LIMITS.liftGoalLb.max;
 export const validFreq = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 7; // sessions of one exercise in a week
 export const validRest = (n: unknown) => fin(n) && n >= LIMITS.rest.min && n <= LIMITS.rest.max;
