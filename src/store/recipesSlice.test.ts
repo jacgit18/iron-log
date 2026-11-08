@@ -83,6 +83,32 @@ describe('removeRecipe', () => {
   });
 });
 
+describe('undoCatalogCopy', () => {
+  it('takes back a Library copy, and does not touch a recipe you wrote', () => {
+    useAppStore.setState({ removed: null });
+    st().saveRecipe(draft);
+    expect(st().undoCatalogCopy(st().recipes[0]!.id)).toBe(false);
+    st().copyCatalogRecipe(lib);
+    const copyId = st().recipes.find(r => r.from)!.id;
+    expect(st().undoCatalogCopy(copyId)).toBe(true);
+    expect(st().recipes.map(r => r.n)).toEqual(['Chili']);
+    expect(st().removed).toBeNull();
+  });
+  it('leaves a meal that already used the copy resolving as a plain line, not a link to a missing recipe', async () => {
+    const { linkedRecipe } = await import('../lib/recipeSuggest.js');
+    st().copyCatalogRecipe(lib);
+    const cid = st().recipes[0]!.id;
+    expect(st().saveRecipe({ n: 'Salad', cat: 'protein', ing: [{ n: 'Garlic Dressing', amt: '1 serving', q: 1, rid: cid }], steps: [] })).toBeNull();
+    expect(st().recipes.find(r => r.n === 'Salad')!.ing[0]).toHaveProperty('rid', cid);
+    expect(st().undoCatalogCopy(cid)).toBe(true);
+    const salad = st().recipes.find(r => r.n === 'Salad')!;
+    expect(salad.ing[0]!.n).toBe('Garlic Dressing');
+    expect(salad.ing[0]).not.toHaveProperty('rid');
+    expect(salad.ing[0]).not.toHaveProperty('q');
+    expect(linkedRecipe(salad.ing[0]!, st().recipes)).toBeUndefined();
+  });
+});
+
 describe('acceptSuggestions', () => {
   it('pins every Maybe at once, leaves matched, skipped and water ingredients alone, and then has nothing left', async () => {
     const { monthKey } = await import('../lib/grocery.js');

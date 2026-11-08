@@ -100,6 +100,7 @@ export default function Recipes() {
   const counts = useMemo(() => tabCounts(narrowed), [narrowed]);
   const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => inTab(r, tab)), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
   const libShown = useMemo(() => (lib.status === 'ready' ? lib.items.filter(it => inLibraryTab(it, libTab)) : []), [lib, libTab]);
+  const libHave = useMemo(() => new Map(libShown.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libShown, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
   const selected = shown.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
@@ -263,7 +264,7 @@ export default function Recipes() {
             <>
               <ul className="rc-list rc-cards">
                 {libShown.map(it => {
-                  const have = libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] }), mine = inMine(it, recipes);
+                  const have = libHave.get(it.id) ?? null, mine = inMine(it, recipes);
                   return row(it.id, it.name, recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), null, have ? `${have.text} at home` : null, !!have?.all, () => setView({ kind: 'library', item: it }), false, null, null, false, false, undefined, mine ? undefined : () => addFromLibrary(it), mine);
                 })}
               </ul>
