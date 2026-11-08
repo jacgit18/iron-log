@@ -919,7 +919,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-67', feature: 'Program compare', title: 'An empty day, and a day that exists on one side only', persona: 'new-user', brief: 'program-compare', edge: true,
     steps: [
-      'As a new account, create a program, open Program, Compare programs, and pick it against Program A.',
+      'On a phone (or a 375 px wide window), as a new account, create a program, open Program, Compare programs, and pick it against Program A.',
       'Step through the day buttons.',
     ],
     expected: [
