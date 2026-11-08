@@ -50,3 +50,14 @@ export function pairCandidates(r: Pick<Recipe, 'id' | 'pairs'>, list: readonly R
 export function mealFromPair(a: Pick<Recipe, 'id' | 'n'>, b: Pick<Recipe, 'id' | 'n'>): Omit<Recipe, 'id'> {
   return { n: `${a.n} with ${b.n}`.slice(0, MAX_RECIPE_NAME), cat: 'other', servings: 1, ing: [{ n: a.n, rid: a.id, q: 1 }, { n: b.n, rid: b.id, q: 1 }], steps: [] };
 }
+
+/** Why this pair cannot be made into a meal, or null when it can: Sauces and Seasonings have their own picker and are never parts of a meal (the same rule `pairCandidates` uses for the list). */
+export function mealPairError(a: Pick<Recipe, 'n' | 'cat'>, b: Pick<Recipe, 'n' | 'cat'>): string | null {
+  const part = [a, b].find(x => x.cat === 'sauces' || x.cat === 'seasonings');
+  return part ? `${part.n} is a ${part.cat === 'sauces' ? 'sauce' : 'seasoning'}, so it can’t be one part of a meal.` : null;
+}
+
+/** The meal that already links exactly these two recipes, so Make a meal opens it instead of building a second one. */
+export function existingPairMeal(list: readonly Recipe[], aId: string, bId: string): Recipe | undefined {
+  return list.find(m => m.ing.length === 2 && m.ing.every(i => i.q !== undefined && (i.rid === aId || i.rid === bId)) && new Set(m.ing.map(i => i.rid)).size === 2);
+}

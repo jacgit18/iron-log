@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_PAIRS, cleanPairs, normRecipe, validRecipe } from '../shared/recipes.js';
 import type { Recipe } from '../types.ts';
-import { addPair, dropPairsTo, mealFromPair, pairCandidates, pairError, pairsOf, removePair } from './recipePairs.js';
+import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairCandidates, pairError, pairsOf, removePair } from './recipePairs.js';
 
 const r = (id: string, pairs?: string[]): Recipe => ({ id, n: id.toUpperCase(), cat: 'protein', ing: [{ n: 'x' }], steps: ['Cook.'], ...(pairs ? { pairs } : {}) });
 const names = (list: Recipe[]) => list.map(x => x.id);
@@ -68,5 +68,21 @@ describe('pairCandidates and mealFromPair', () => {
     expect(m).toMatchObject({ n: 'Chili with Rice', cat: 'other', servings: 1 });
     expect(m.ing).toEqual([{ n: 'Chili', rid: 'chili', q: 1 }, { n: 'Rice', rid: 'rice', q: 1 }]);
     expect(mealFromPair({ id: 'a', n: 'x'.repeat(60) }, { id: 'b', n: 'y'.repeat(60) }).n.length).toBe(80);
+  });
+});
+
+describe('mealPairError and existingPairMeal', () => {
+  const chili = r('chili'), rice = r('rice'), salsa: Recipe = { ...r('salsa'), cat: 'sauces' }, spice: Recipe = { ...r('cumin'), cat: 'seasonings' };
+  it('refuses a pair with a sauce or a seasoning in it, naming which', () => {
+    expect(mealPairError(chili, rice)).toBeNull();
+    expect(mealPairError(chili, salsa)).toBe('SALSA is a sauce, so it can’t be one part of a meal.');
+    expect(mealPairError(spice, rice)).toBe('CUMIN is a seasoning, so it can’t be one part of a meal.');
+  });
+  it('finds the meal that links exactly these two, either order, and not a meal with a third part', () => {
+    const meal: Recipe = { ...r('m1'), ing: [{ n: 'chili', rid: 'chili', q: 1 }, { n: 'rice', rid: 'rice', q: 1 }] };
+    const three: Recipe = { ...r('m2'), ing: [{ n: 'chili', rid: 'chili', q: 1 }, { n: 'rice', rid: 'rice', q: 1 }, { n: 'beans', rid: 'beans', q: 1 }] };
+    expect(existingPairMeal([chili, rice, meal], 'rice', 'chili')?.id).toBe('m1');
+    expect(existingPairMeal([chili, rice, three], 'chili', 'rice')).toBeUndefined();
+    expect(existingPairMeal([chili, rice], 'chili', 'rice')).toBeUndefined();
   });
 });

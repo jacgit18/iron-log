@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MAX_PAIRS } from '../../shared/recipes.js';
-import { pairCandidates, pairsOf } from '../../lib/recipePairs.js';
+import { mealPairError, pairCandidates, pairsOf } from '../../lib/recipePairs.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe } from '../../types.ts';
 import './GoesWith.css';
@@ -13,9 +13,8 @@ export default function GoesWith({ recipe, mine, onOpen }: { recipe: Recipe; min
   const live = recipes.find(r => r.id === recipe.id);
   if (!mine || !live) return null;
   const partners = pairsOf(live, recipes), options = pairCandidates(live, recipes), full = partners.length >= MAX_PAIRS;
-  const store = useAppStore.getState();
   const make = (b: Recipe) => {
-    const r = store.makeMealFromPair(live.id, b.id);
+    const r = useAppStore.getState().makeMealFromPair(live.id, b.id);
     if ('error' in r) setMsg(r.error); else { setMsg(''); onOpen?.(r.id); }
   };
   return (
@@ -26,13 +25,13 @@ export default function GoesWith({ recipe, mine, onOpen }: { recipe: Recipe; min
         {partners.map(p => (
           <li key={p.id}>
             <button type="button" className="btn sm ghost rc-goesname" onClick={() => onOpen?.(p.id)}>{p.n}</button>
-            <button type="button" className="btn sm" aria-label={`Make a meal of ${live.n} with ${p.n}`} onClick={() => make(p)}>Make a meal</button>
-            <button type="button" className="btn sm ghost" aria-label={`Remove ${p.n} from Goes with`} onClick={() => { store.unpairRecipes(live.id, p.id); setMsg(''); }}>Remove</button>
+            {!mealPairError(live, p) && <button type="button" className="btn sm" aria-label={`Make a meal of ${live.n} with ${p.n}`} onClick={() => make(p)}>Make a meal</button>}
+            <button type="button" className="btn sm ghost" aria-label={`Remove ${p.n} from Goes with`} onClick={() => { useAppStore.getState().unpairRecipes(live.id, p.id); setMsg(''); }}>Remove</button>
           </li>
         ))}
       </ul>
       {!full && options.length > 0 && (
-        <select aria-label="Add a recipe it goes with" value="" onChange={e => { if (e.target.value) setMsg(store.pairRecipes(live.id, e.target.value) ?? ''); }}>
+        <select aria-label="Add a recipe it goes with" value="" onChange={e => { if (e.target.value) setMsg(useAppStore.getState().pairRecipes(live.id, e.target.value) ?? ''); }}>
           <option value="">Add a recipe it goes with…</option>
           {options.map(o => <option key={o.id} value={o.id}>{o.n}</option>)}
         </select>

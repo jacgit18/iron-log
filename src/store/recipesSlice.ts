@@ -1,6 +1,6 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
 import { linkError, settleMeals } from '../lib/mealRollup.js';
-import { addPair, dropPairsTo, mealFromPair, pairError, removePair } from '../lib/recipePairs.js';
+import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
@@ -111,10 +111,15 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   makeMealFromPair(aId, bId) {
     const list = get().recipes, a = list.find(r => r.id === aId), b = list.find(r => r.id === bId);
     if (!a || !b) return { error: 'That recipe is gone.' };
+    const not = mealPairError(a, b);
+    if (not) return { error: not };
+    const had = existingPairMeal(list, aId, bId);
+    if (had) return { id: had.id }; // a second press opens the meal that is already there
     const err = get().saveRecipe(mealFromPair(a, b));
     if (err) return { error: err };
-    const made = get().recipes[get().recipes.length - 1]!; // a new recipe is added at the end
-    return { id: made.id };
+    const known = new Set(list.map(r => r.id));
+    const made = get().recipes.find(r => !known.has(r.id));
+    return made ? { id: made.id } : { error: 'That meal can’t be saved.' };
   },
 
   removeRecipe(id) {
