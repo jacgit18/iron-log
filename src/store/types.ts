@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -306,7 +306,8 @@ export interface DietSlice {
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
   saveDietMeal(name: string, entryIds: string[]): string | null; // makes a Recipes meal from those entries (brief saved-meals-into-recipes); an error text, or null when saved
   moveSavedMeals(): number; // copies each saved meal not yet moved into Recipes as a meal, once; the old list is left as it is (brief saved-meals-into-recipes); how many were made
-  addPlanItem(day: string, kind: 'r' | 'm', id: string): string | null; // puts a recipe or saved meal on a day of the plan; an error text, or null
+  addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
+  movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
   removePlanItem(day: string, index: number): void;
   planToGroceries(days: string[]): { added: number; already: number; refused: string | null; recipes: number }; // the days' recipes' missing ingredients go to To get, each name once
