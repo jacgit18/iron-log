@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe } from '../types.ts';
-import { QUICK_MAX, quickItems } from './dietRecent.js';
+import { QUICK_MAX, existingReady, quickItems } from './dietRecent.js';
 
 const rec = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'ready', ing: [], steps: [], kcal: 100, p: 5, ...extra });
 const ate = (id: string, d: string, from: string): DietEntry => ({ id, d, n: from, kcal: 100, p: 5, from });
@@ -26,5 +26,13 @@ describe('quickItems', () => {
     expect(quickItems([], recipes)).toHaveLength(QUICK_MAX);
     expect(quickItems([], [rec('a', 'Apple')])).toEqual([]);
     expect(quickItems([], recipes)[0]!.fav).toBe(true);
+  });
+});
+
+describe('existingReady', () => {
+  it('finds a ready-made food by name, case-blind, and ignores recipes', () => {
+    const list = [rec('a', 'Oats (Brand)'), rec('b', 'Chili', { cat: 'protein' })];
+    expect(existingReady(list, ' oats (brand) ')?.id).toBe('a');
+    expect(existingReady(list, 'Chili')).toBeUndefined();
   });
 });

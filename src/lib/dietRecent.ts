@@ -33,3 +33,6 @@ export function scanFoodDraft(hit: FoodHit, grams: number, type: FoodType): (Pic
   const n = (hit.brand ? `${hit.name} (${hit.brand})` : hit.name).replace(/\s+/g, ' ').trim().slice(0, 80);
   return { ...nums, recipe: { n, cat: 'ready', type, ing: [], steps: [], ...nums, note: `From a barcode scan: the numbers are for ${g} g.` } };
 }
+
+/** The ready-made food already saved under `name` (case-blind), or undefined: a product scanned again is logged under it instead of being saved twice. */
+export const existingReady = (recipes: readonly Recipe[], name: string): Recipe | undefined => recipes.find(r => r.cat === 'ready' && r.n.toLowerCase() === name.trim().toLowerCase());

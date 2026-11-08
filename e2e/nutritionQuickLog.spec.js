@@ -91,4 +91,12 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await openRecipes(page);
   await expect(page.getByRole('button', { name: /Almond milk \(Silk\)/ }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: /^Almond milk \(Silk\)/ })).toHaveCount(1);
+  await openDiet(page); // the same product scanned again is logged under the saved food, not saved twice
+  await page.getByRole('button', { name: 'Scan a food' }).click();
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  await page.getByRole('group', { name: 'Scanned food' }).getByRole('button', { name: 'Save and log it' }).click();
+  await expect(diet(page).getByText('Logged Almond milk (Silk), a food you already had.')).toBeVisible();
+  await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
+  await openRecipes(page);
+  await expect(page.getByRole('button', { name: /^Almond milk \(Silk\)/ })).toHaveCount(1);
 });

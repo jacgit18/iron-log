@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import { scanFoodDraft } from '../../lib/dietRecent.js';
+import { existingReady, scanFoodDraft } from '../../lib/dietRecent.js';
 import { DEFAULT_FOOD_TYPE } from '../../lib/foodType.js';
-import { entryText } from '../../lib/dietLog.js';
+import { ateEntry, entryText } from '../../lib/dietLog.js';
 import { FOOD_TYPE_LABEL, FOOD_TYPES } from '../../shared/recipes.js';
 import { defaultGrams, hitLabel, type FoodHit } from '../../shared/foods.js';
 import { ymd } from '../../shared/dates.js';
@@ -22,14 +22,21 @@ export default function ScanFood({ hit, day, onDone, onCancel }: { hit: FoodHit;
   const go = () => {
     if (once.current) return;
     if (!draft) { setErr('Enter grams from 1 to 5000.'); return; }
+    const nums = { id: '', n: draft.recipe.n, kcal: draft.kcal, p: draft.p, ...(draft.c !== undefined ? { c: draft.c } : {}), ...(draft.f !== undefined ? { f: draft.f } : {}) };
+    const checked = ateEntry(nums, 1, day, today); // the day is checked before anything is saved
+    if ('error' in checked) { setErr(checked.error); return; }
     once.current = true;
     const st = useAppStore.getState();
-    const bad = st.saveRecipe(draft.recipe);
-    if (bad) { once.current = false; setErr(bad); return; }
-    const made = useAppStore.getState().recipes.filter(r => r.n === draft.recipe.n && r.cat === 'ready').at(-1);
-    const r = made && useAppStore.getState().addDietEntry({ d: day <= today ? day : today, n: made.n, kcal: draft.kcal, p: draft.p, ...(draft.c !== undefined ? { c: draft.c } : {}), ...(draft.f !== undefined ? { f: draft.f } : {}), from: made.id });
-    if (!r || r.error) { onDone(`Saved ${draft.recipe.n} as a food. ${r?.error ?? 'It was not logged.'}`); onCancel(); return; }
-    onDone(`Saved ${draft.recipe.n} as ${FOOD_TYPE_LABEL[type].toLowerCase()} and logged it.`);
+    const known = existingReady(st.recipes, draft.recipe.n); // a product scanned before is logged under its saved food, not saved again
+    if (!known) {
+      const bad = st.saveRecipe(draft.recipe);
+      if (bad) { once.current = false; setErr(bad); return; }
+    }
+    const food = known ?? existingReady(useAppStore.getState().recipes, draft.recipe.n);
+    const made = food && ateEntry({ ...nums, id: food.id }, 1, day, today);
+    const r = made && 'entry' in made ? useAppStore.getState().addDietEntry(made.entry) : null;
+    if (!r || r.error) { onDone(`${known ? 'Found' : 'Saved'} ${draft.recipe.n} as a food. ${r?.error ?? 'It was not logged.'}`); onCancel(); return; }
+    onDone(known ? `Logged ${draft.recipe.n}, a food you already had.` : `Saved ${draft.recipe.n} as ${FOOD_TYPE_LABEL[type].toLowerCase()} and logged it.`);
     onCancel();
   };
   return (
