@@ -65,6 +65,19 @@ describe('one-time items', () => {
     expect(st().grocery.items.filter(i => i.n === 'Milk')).toHaveLength(2);
     expect(findQuickAdded(st().grocery.items, 'Milk', 'Aldi')?.id).not.toBe(id); // Undo on the new notice takes away the new one, not the used one
   });
+  it('unticking a used item is refused while another item holds its name in the store, and works once that one is removed', () => {
+    st().addGroceryItem(quickAddForm('Milk', 'Aldi'));
+    const first = findQuickAdded(st().grocery.items, 'Milk', 'Aldi')!.id;
+    st().setGroceryGot('2026-11', first, true);
+    st().addGroceryItem(quickAddForm('Milk', 'Aldi'));
+    const second = findQuickAdded(st().grocery.items, 'Milk', 'Aldi')!.id;
+    expect(second).not.toBe(first);
+    expect(st().setGroceryGot('2026-11', first, false)).toBe(false);
+    expect(st().groceryMonths['2026-11']?.lines[first]?.got).toBe(true); // still bought
+    st().removeGroceryItem(second, { quiet: true });
+    expect(st().setGroceryGot('2026-11', first, false)).toBe(true);
+    expect(st().groceryMonths['2026-11']?.lines[first]?.got).toBeUndefined();
+  });
   it('ticking One-time on an item bought in an earlier month does not hide it', async () => {
     const { usedOneTime } = await import('../lib/grocery.js');
     st().addGroceryItem({ n: 'Rice', store: 'Aldi', qty: '1', price: '', every: false });

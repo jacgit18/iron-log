@@ -43,3 +43,15 @@ test('the One-time item box in Edit makes an ordinary item leave Inventory after
   await page.click('#groc-view-inventory');
   await expect(page.getByText('Rice', { exact: true })).toHaveCount(0);
 });
+
+test('unticking a used one-time item beside a new one with its name is refused with a reason', async ({ page }) => {
+  await open(page);
+  const add = async () => { await page.getByRole('button', { name: 'Add item to Aldi' }).click(); await page.getByLabel('Item name, to add to Aldi').fill('Milk'); await page.keyboard.press('Enter'); };
+  await add();
+  await page.getByLabel('Got Milk').click(); // the first Milk is bought and used
+  await add(); // the same name again: a fresh item is allowed
+  await page.click('#groc-view-bought');
+  await page.getByLabel('Got Milk').click(); // unticking the first one would bring back a second Milk under Aldi
+  await expect(page.getByText('There is already a Milk under Aldi. Remove it first, then untick this one.')).toBeVisible();
+  await expect(page.getByLabel('Got Milk')).toBeChecked(); // still bought
+});

@@ -3,7 +3,7 @@ import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor, usedOneTime
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor, untickBlock, usedOneTime
 } from '../lib/grocery.js';
 import { cleanAliases, cleanShare } from '../shared/grocery.js';
 import { validGroceryBudget } from '../shared/validate.js';
@@ -334,6 +334,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     setGroceryGot(month, id, on) {
       const it = get().grocery.items.find(i => i.id === id);
       if (!it || !MONTH_RE.test(month) || get().blocked()) return false; // false: nothing changed (sync is loading), so the screen shows no Undo for it
+      if (!on && untickBlock(get().grocery, get().groceryMonths, month, id)) return false; // it would come back beside an item with the same name; the screen says why before it gets here
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         if (on) {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally, usedOneTime } from '../../lib/grocery.js';
+import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally, untickBlock, usedOneTime } from '../../lib/grocery.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { hasSharing } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
@@ -98,6 +98,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const storeRows = (grp: { store: string; items: GroceryItem[] }) => grp.items;
   const rs = useReceiptScan(g, mk);
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
+  const [blocked, setBlocked] = useState<string | null>(null); // why an untick was refused (a one-time item would come back as a twin)
   const [quick, setQuick] = useState<{ id: string; name: string; label: string; t: number } | null>(null); // the item just quick-added, for its notice (Undo)
   const [selecting, setSelecting] = useState(false); // Select mode (brief grocery-bulk-share): the rows to get carry a checkbox; nothing is written until Share… is applied
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -110,6 +111,9 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
   const tick = (id: string, on: boolean) => {
+    const why = on ? null : untickBlock(g, months, mk, id); // a used one-time item would come back beside another with its name: say so instead (brief quickadd-one-time-items)
+    setBlocked(why);
+    if (why) return;
     if (!useAppStore.getState().setGroceryGot(mk, id, on)) return; // nothing changed (data still loading): no Undo notice and no focus jump for it
     if (current) {
       const order = onBought ? allIds(shown) : shownTodo.flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
@@ -202,6 +206,11 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
               actions={[{ label: 'Undo', onClick: () => tick(ticked.id, false) }, ...(ticked.unpriced ? [{ label: 'Add price', onClick: () => { const id = ticked.id; setTicked(null); onAddPrice(id); } }] : []), { label: 'Dismiss', ghost: true, onClick: () => setTicked(null) }]}>
               <b>Bought</b> {ticked.name}.{ticked.unpriced && ' It has no price yet.'}
             </Notice>
+          </div>
+        )}
+        {blocked && (
+          <div className="gtickednote">
+            <Notice kind="warning" actions={[{ label: 'Dismiss', ghost: true, onClick: () => setBlocked(null) }]}>{blocked}</Notice>
           </div>
         )}
         {quick && (
