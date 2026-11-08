@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
-// Saved meals (brief diet-saved-meals). The rules (make, replace, rename, total, plan) are node tests in dietMeals.test.ts; this covers the wiring:
-// tick logged foods and name a meal, tap it to log each food, rename it, delete it with Undo, and a refused name.
+// Saved meals (briefs diet-saved-meals, saved-meals-into-recipes). Save meal now makes a meal in Recipes and Quick add lists the Recipes meals; the rules are node tests (dietMeals.test.ts,
+// quickMeals.test.ts, savedMealToRecipe.test.ts, dietSlice.test.ts). This covers the wiring: tick logged foods and name a meal, tap it to log it, a refused name, and the 20 a day limit.
 const diet = page => page.getByRole('region', { name: 'Diet' });
 const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const log = async (page, name, kcal, p) => {
@@ -18,7 +18,7 @@ const save = async (page, name, foods) => {
   await diet(page).getByRole('button', { name: 'Save meal' }).click();
 };
 
-test('save two logged foods as a meal, tap it to log them again, and it survives a reload', async ({ page }) => {
+test('save two logged foods as a meal, tap it to log it again, and it survives a reload', async ({ page }) => {
   await nutrition(page);
   await expect(diet(page).getByRole('button', { name: 'Save as meal' })).toBeDisabled();
   await log(page, 'Oats', 350, 12);
@@ -26,17 +26,17 @@ test('save two logged foods as a meal, tap it to log them again, and it survives
   await log(page, 'Coffee', 5, 0);
   await save(page, 'Breakfast', ['Oats', 'Banana']);
   await expect(diet(page).getByRole('status').last()).toContainText('Saved Breakfast.');
-  const meal = diet(page).getByRole('list', { name: 'Saved meals' }).getByRole('button', { name: 'Breakfast · 2 foods · 450 kcal' });
+  const meal = diet(page).getByRole('list', { name: 'Saved meals' }).getByRole('button', { name: 'Breakfast · 1 food · 450 kcal' }); // hand-typed foods have no recipe to link, so the meal logs as one entry with its total
   await expect(meal).toBeVisible();
   await meal.click();
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(5);
-  await expect(diet(page).getByRole('status').last()).toContainText('Added 2 from Breakfast.');
+  await expect(diet(page).locator('.dt-entry')).toHaveCount(4);
+  await expect(diet(page).getByRole('status').last()).toContainText('Added 1 from Breakfast.');
   await page.reload();
   await nutrition(page);
-  await expect(diet(page).getByRole('button', { name: 'Breakfast · 2 foods · 450 kcal' })).toBeVisible();
+  await expect(diet(page).getByRole('button', { name: 'Breakfast · 1 food · 450 kcal' })).toBeVisible();
 });
 
-test('saving under the same name replaces the meal, and a blank name or nothing ticked is refused', async ({ page }) => {
+test('a blank name, nothing ticked and a name a recipe already has are refused', async ({ page }) => {
   await nutrition(page);
   await log(page, 'Oats', 350, 12);
   await log(page, 'Toast', 90, 3);
@@ -48,44 +48,27 @@ test('saving under the same name replaces the meal, and a blank name or nothing 
   await expect(diet(page).getByRole('alert')).toContainText('Tick at least one food.');
   await diet(page).getByRole('button', { name: 'Cancel' }).click();
   await save(page, 'Snack', ['Oats']);
-  await save(page, 'snack', ['Toast']);
-  const list = diet(page).getByRole('list', { name: 'Saved meals' });
-  await expect(list.getByRole('listitem')).toHaveCount(1);
-  await expect(list.getByRole('button', { name: 'snack · 1 food · 90 kcal' })).toBeVisible();
+  await diet(page).getByRole('button', { name: 'Save as meal' }).click();
+  await diet(page).getByRole('checkbox', { name: /Toast/ }).check();
+  await diet(page).getByLabel('Meal name').fill('snack');
+  await diet(page).getByRole('button', { name: 'Save meal' }).click();
+  await expect(diet(page).getByRole('alert')).toContainText('already have a recipe or meal');
 });
 
-test('rename a meal, delete it in two taps, and Undo brings it back', async ({ page }) => {
+test('Quick add says meals are renamed and edited in Recipes', async ({ page }) => {
   await nutrition(page);
   await log(page, 'Oats', 350, 12);
   await save(page, 'Breakfast', ['Oats']);
-  await diet(page).getByRole('button', { name: 'Manage' }).click();
-  await diet(page).getByRole('button', { name: 'Rename Breakfast' }).click();
-  await diet(page).getByLabel('Meal name').last().fill('Morning');
-  await diet(page).getByRole('button', { name: 'Save name' }).click();
-  await expect(diet(page).getByText('Morning · 1 food · 350 kcal')).toBeVisible();
-  await diet(page).getByRole('button', { name: 'Delete Morning' }).click();
-  await diet(page).getByRole('button', { name: /Delete Morning/ }).click();
-  await expect(diet(page).getByText('Morning · 1 food')).toHaveCount(0);
-  await diet(page).getByRole('button', { name: 'Undo' }).click();
-  await expect(diet(page).getByText('Morning · 1 food · 350 kcal')).toBeVisible();
+  await expect(diet(page).getByText('Rename or edit a meal in Recipes.')).toBeVisible();
+  await expect(diet(page).getByRole('button', { name: 'Manage' })).toHaveCount(0);
 });
 
-test('a meal stops at 20 a day and says how many it left out; on a full day meals can still be managed', async ({ page }) => {
+test('a meal stops at 20 a day, and on a full day its button is off', async ({ page }) => {
   await nutrition(page);
   await log(page, 'Oats', 350, 12);
-  await log(page, 'Banana', 100, 1);
-  await save(page, 'Pair', ['Oats', 'Banana']);
   await save(page, 'One', ['Oats']);
   const list = diet(page).getByRole('list', { name: 'Saved meals' });
-  for (let i = 0; i < 17; i++) await list.getByRole('button', { name: /^One · 1 food/ }).click(); // 2 + 17 = 19
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(19);
-  await list.getByRole('button', { name: /^Pair · 2 foods/ }).click();
+  for (let i = 0; i < 19; i++) await list.getByRole('button', { name: /^One · 1 food/ }).click(); // 1 + 19 = 20
   await expect(diet(page).locator('.dt-entry')).toHaveCount(20);
-  await expect(diet(page).getByRole('status').last()).toContainText('Added 1 from Pair. 1 left out: 20 a day is the limit.');
   await expect(list.getByRole('button', { name: /^One · 1 food/ })).toBeDisabled();
-  await diet(page).getByRole('button', { name: 'Manage' }).click();
-  await diet(page).getByRole('button', { name: 'Rename One' }).click();
-  await diet(page).getByLabel('Meal name').last().fill('Single');
-  await diet(page).getByRole('button', { name: 'Save name' }).click();
-  await expect(diet(page).getByText('Single · 1 food · 350 kcal')).toBeVisible();
 });

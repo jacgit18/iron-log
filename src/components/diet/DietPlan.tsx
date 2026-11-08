@@ -15,7 +15,9 @@ const dayName = (d: string) => parseDate(d).toLocaleDateString('en-US', { weekda
 export default function DietPlan({ targets }: { targets: Targets }) {
   const today = ymd(useToday(s => s.today));
   const plan = useAppStore(s => s.cfg.diet?.plan) ?? {};
-  const meals = useAppStore(s => s.cfg.diet?.meals) ?? [];
+  const allMeals = useAppStore(s => s.cfg.diet?.meals) ?? [];
+  const moved = useAppStore(s => s.cfg.diet?.mealsMoved) ?? {};
+  const meals = allMeals.filter(m => !moved[m.id]); // a saved meal that moved into Recipes is offered there, once
   const recipes = useAppStore(s => s.recipes);
   const [week, setWeek] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
@@ -25,8 +27,8 @@ export default function DietPlan({ targets }: { targets: Targets }) {
   const days = daysFrom(shiftDay(today, week * 7));
   const day = picked && days.includes(picked) && inWindow(picked, today) ? picked : days[0]!;
   const items = plan[day] ?? [];
-  const rows = items.map(it => resolve(it, recipes, meals));
-  const tot = dayTotals(items, recipes, meals);
+  const rows = items.map(it => resolve(it, recipes, allMeals));
+  const tot = dayTotals(items, recipes, allMeals);
   const need = recipeIdsFor(plan, days, recipes).length;
   const st = () => useAppStore.getState();
   const go = (w: number) => { setWeek(w); setPicked(null); setAdding(false); setMsg(''); };

@@ -37,7 +37,7 @@ test('plan a saved meal on a day, see the totals, and Log it only on today', asy
   await diet(page).getByLabel('Meal name').fill('Breakfast');
   await diet(page).getByRole('button', { name: 'Save meal' }).click();
   await plan(page).getByRole('button', { name: 'Add to plan' }).click();
-  await plan(page).getByRole('button', { name: 'Breakfast (meal)' }).click();
+  await plan(page).getByRole('button', { name: 'Breakfast (recipe)' }).click();
   await expect(plan(page).getByText(/^Planned 350 kcal/)).toBeVisible();
   await plan(page).getByRole('button', { name: 'Log Breakfast' }).click();
   await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
@@ -45,7 +45,7 @@ test('plan a saved meal on a day, see the totals, and Log it only on today', asy
   // tomorrow: plan it, but there is no Log button on a future day
   await plan(page).getByRole('list', { name: 'Plan', exact: true }).getByRole('button').nth(1).click();
   await plan(page).getByRole('button', { name: 'Add to plan' }).click();
-  await plan(page).getByRole('button', { name: 'Breakfast (meal)' }).click();
+  await plan(page).getByRole('button', { name: 'Breakfast (recipe)' }).click();
   await expect(plan(page).getByRole('button', { name: 'Log Breakfast' })).toHaveCount(0);
   await expect(plan(page).getByRole('button', { name: 'Remove Breakfast' })).toBeVisible();
   await page.reload();

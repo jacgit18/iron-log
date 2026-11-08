@@ -39,10 +39,10 @@ function freeName(name: string, recipes: readonly Recipe[]): string {
 }
 
 /** The meal a saved meal becomes, as a draft to save. Every food still a recipe with matching numbers: the meal links them (so it rolls up from them; the numbers are the saved ones to within 3%). Otherwise the saved totals, kept exactly, with the foods listed by name. A name another recipe already has gets " (saved)". */
-export function savedMealToRecipe(meal: SavedMeal, recipes: readonly Recipe[]): Omit<Recipe, 'id'> {
+export function savedMealToRecipe(meal: SavedMeal, recipes: readonly Recipe[], link = true): Omit<Recipe, 'id'> {
   const n = freeName(meal.n, recipes);
   const parts = meal.items.map(i => partOf(i, recipes));
-  if (parts.every(p => p !== null)) {
+  if (link && parts.every(p => p !== null)) { // `link` false: the caller found a link it cannot keep, so the meal keeps its saved totals
     const ing: RecipeIngredient[] = parts.map(p => ({ n: p!.recipe.n, rid: p!.recipe.id, q: p!.q }));
     return { n, cat: 'other', servings: 1, ing, steps: [] };
   }
