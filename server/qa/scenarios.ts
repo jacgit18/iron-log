@@ -1915,7 +1915,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-154', feature: 'Recipes find', title: 'Type tabs: counts, search inside a tab, rows tagged', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    id: 'S-151', feature: 'Recipes find', title: 'Type tabs: counts, search inside a tab, rows tagged', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
       'Open Recipes. Read the four tabs (All, Foods, Meals, Drinks) and their counts, then press Foods, Meals and Drinks in turn.',
       'Press All, type a word from one recipe name in the search box, then press each tab.',
@@ -1928,7 +1928,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-155', feature: 'Recipes find', title: 'List beside its detail on a wide screen, a page on a phone', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    id: 'S-152', feature: 'Recipes find', title: 'List beside its detail on a wide screen, a page on a phone', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
       'On a desktop browser 1280 px wide or more open Recipes and press three different rows.',
       'Narrow the window to a phone width (or open the app on a phone) and press a row, then press Back.',
@@ -1939,7 +1939,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-156', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
       'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
       'Press the star on two rows, reload the page, then press a starred chip above the list.',
