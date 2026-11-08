@@ -237,4 +237,14 @@
 .portionsheet .actions {
   margin-top: var(--sp-12);
 }
+.dt-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.dt-pair .btn {
+  min-height: 44px;
+}
 }
