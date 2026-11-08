@@ -1,4 +1,4 @@
-import type { FoodType, Recipe, RecipeCategory, RecipeChips, RecipeIngredient } from '../types.ts';
+import type { FoodType, Recipe, RecipeCategory, RecipeChips, RecipeIngredient, RecipeUse } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';
@@ -40,6 +40,14 @@ export function normRecipeChips(v: unknown): RecipeChips | null {
 export const FOOD_TYPES: readonly FoodType[] = ['ingredient', 'ready', 'drink'];
 export const FOOD_TYPE_LABEL: Record<FoodType, string> = { ingredient: 'Ingredient', ready: 'Ready to eat', drink: 'Drink' };
 const cleanType = (v: unknown): FoodType | null => FOOD_TYPES.find(t => t === v) ?? null;
+export const RECIPE_USES: readonly RecipeUse[] = ['meal', 'ingredient', 'ready', 'drink'];
+export const RECIPE_USE_LABEL: Record<RecipeUse, string> = { meal: 'Meal', ingredient: 'Ingredient', ready: 'Ready to eat', drink: 'Drink' };
+/** The labels in `v`: known ones only, once each, in the fixed order; a Drink is never combined with another. None when nothing usable is left. */
+export function cleanUses(v: unknown): RecipeUse[] | null {
+  if (!Array.isArray(v)) return null;
+  const kept = RECIPE_USES.filter(u => v.includes(u));
+  return kept.length === 0 ? null : kept.includes('drink') ? ['drink'] : kept;
+}
 
 const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c => c === v) ?? 'other';
 /** A unit name or plural for a ready-made food (brief usual-amount-and-unit): letters first, then letters, spaces, hyphens or apostrophes, 1 to MAX_UNIT characters. */
@@ -78,12 +86,13 @@ export function normRecipe(x: unknown): Recipe | null {
   const urlText = typeof o.url === 'string' ? o.url.trim() : '', url = urlText.length <= MAX_URL && /^https?:\/\/\S+$/i.test(urlText) ? urlText : ''; // only a web link, cut never (a cut address would not open): a script or file address never becomes a link
   const library = from.startsWith('c:');
   const ready = cleanCategory(o.cat) === 'ready'; // a usual amount and a unit name belong to a ready-made food only
+  const uses = cleanUses(o.uses); // any recipe may carry them; unknown labels are dropped
   const type = ready ? cleanType(o.type) : null; // a type belongs to a ready-made food only; an unknown value is dropped (the food stays untyped)
   const usual = ready ? cleanUsual(o.usual) : null, unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

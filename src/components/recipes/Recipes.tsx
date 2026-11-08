@@ -15,13 +15,14 @@ import { hasMacros } from '../../lib/dietLog.js';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
-import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, haveBadge, librarySortedBy, recipeMeta, sortRecipes, tabCounts, tabOf, typeTag, type RecipeTab } from '../../lib/recipeList.js';
+import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, haveBadge, inTab, librarySortedBy, recipeMeta, sortRecipes, tabCounts, typeTag, type RecipeTab } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
 import { NUTRITION_FILTERS, nutritionBadge, type NutritionKey } from '../../lib/recipeNutrition.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { pageOf } from '../../lib/route.js';
+import { isEatable } from '../../lib/recipeUses.js';
 import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import SortControl from '../SortControl.jsx';
@@ -94,7 +95,7 @@ export default function Recipes() {
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
   const counts = useMemo(() => tabCounts(narrowed), [narrowed]);
-  const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => tabOf(r) === tab), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
+  const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => inTab(r, tab)), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
   const selected = shown.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
@@ -224,7 +225,7 @@ export default function Recipes() {
             <ul className={`rc-list rc-cards${pane ? ' rc-narrow' : ''}`}>
               {shown.map((r: Recipe) => {
                 const have = haveBadge(status.get(r.id)!);
-                return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => openRecipe(r.id), !!r.edited, nutritionBadge(r), typeTag(r), !!r.fav, pane && selected?.id === r.id, hasMacros(r) ? r.id : undefined);
+                return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => openRecipe(r.id), !!r.edited, nutritionBadge(r), typeTag(r), !!r.fav, pane && selected?.id === r.id, hasMacros(r) && isEatable(r) ? r.id : undefined);
               })}
             </ul>
             {pane && recipes.length > 0 && <RecipeDetailPane recipe={selected} onEdit={id => setView({ kind: 'form', id })} onGone={() => setSelId(null)} onOpen={setSelId} />}
