@@ -10,8 +10,10 @@ import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../l
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { countsToSave, marksOf } from '../../lib/plate.js';
 import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
-import type { Recipe, RecipeCategory, RecipeIngredient, RecipeUse } from '../../types.ts';
+import type { Recipe, RecipeCategory, PlateMark, RecipeIngredient, RecipeUse } from '../../types.ts';
+import CountsAsChips from './CountsAsChips.js';
 import UsedAsChips from './UsedAsChips.js';
 import IngredientList from './IngredientList.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
@@ -38,6 +40,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [usesPicked, setUsesPicked] = useState(!!recipe?.uses);
   const pickUses = (next: RecipeUse[]) => { setUsesNow(next); setUsesPicked(true); };
   const pickCat = (c: RecipeCategory) => { setCat(c); if (!usesPicked) setUsesNow(defaultUsesFor(c)); };
+  const [counts, setCounts] = useState<PlateMark[]>(recipe?.counts ?? []); // brief week-board: what it covers on a plate; automatic until pressed
+  const [countsPicked, setCountsPicked] = useState(!!recipe?.counts);
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
   const [serving, setServing] = useState(recipe?.serving ?? '');
@@ -110,6 +114,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setTags([...tags, known ?? t]); setTagText(''); setErr('');
   };
 
+  const autoMarks = marksOf({ id: recipe?.id ?? '', n, cat, ing: ing.filter(i => i.n.trim()), steps: [], ...(protein.trim() && Number.isFinite(Number(protein)) ? { p: Number(protein) } : {}) }, recipes);
+  const shownMarks = countsPicked ? counts : autoMarks;
   const pendingTag = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t : ''; }; // a tag typed but not added yet is kept on Save
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
@@ -128,7 +134,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsToSave(countsPicked, counts, autoMarks) ? { counts: countsToSave(countsPicked, counts, autoMarks)! } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -232,6 +238,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
             <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
           </div>
           <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
+          <CountsAsChips value={shownMarks} picked={countsPicked} onChange={next => { setCounts(next); setCountsPicked(true); }} onAuto={() => { setCounts([]); setCountsPicked(false); }} />
           <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
           <div className="rc-nut">
             <div className="rc-nuthead">

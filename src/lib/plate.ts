@@ -52,3 +52,12 @@ export function fatCoverage(foods: readonly { r: Pick<Recipe, 'kcal' | 'f'>; x: 
 
 /** How to draw the fat bar: whole, hatched with "n of m foods", or not at all. */
 export const fatBarState = (coverage: number): 'full' | 'partial' | 'hidden' => (coverage >= 1 ? 'full' : coverage >= FAT_PARTIAL_FROM ? 'partial' : 'hidden');
+
+/** The marks after pressing one: turned on or off, at least one always on (an empty set would mean "automatic", which has its own button). */
+export function togglePlateMark(current: readonly PlateMark[], m: PlateMark): PlateMark[] {
+  const next = current.includes(m) ? current.filter(x => x !== m) : [...current, m];
+  return next.length === 0 ? [...current] : PLATE_MARKS.filter(x => next.includes(x));
+}
+
+/** The `counts` a form saves: only a choice the person made that differs from the automatic marks; otherwise nothing is written and the marks stay automatic. */
+export const countsToSave = (picked: boolean, chosen: readonly PlateMark[], auto: readonly PlateMark[]): PlateMark[] | undefined => (picked && chosen.join() !== auto.join() ? [...chosen] : undefined);

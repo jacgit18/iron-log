@@ -3,7 +3,7 @@ import { normDietCfg } from '../shared/diet.js';
 import { cleanCounts, normRecipe, validRecipe } from '../shared/recipes.js';
 import type { Recipe } from '../types.ts';
 import { addItem, removeItem, setPortion } from './dietPlan.js';
-import { FAT_PARTIAL_FROM, SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
+import { FAT_PARTIAL_FROM, SLOT_SHARE, countsToSave, fatBarState, fatCoverage, marksOf, plateCheck, togglePlateMark } from './plate.js';
 
 const rec = (id: string, cat: Recipe['cat'], extra: Partial<Recipe> = {}): Recipe => ({ id, n: id, cat, ing: [{ n: 'x' }], steps: ['Cook.'], ...extra });
 const chili = rec('chili', 'protein', { p: 30 }), rice = rec('rice', 'carbs'), salad = rec('salad', 'sides'), bowl = rec('bowl', 'other', { p: 48, counts: ['protein', 'carb', 'veg'] });
@@ -89,5 +89,18 @@ describe('fat bar honesty', () => {
     expect(fatCoverage([f(100, 5, 2), f(100, undefined, 2)])).toBe(0.5);
     expect(fatBarState(fatCoverage([f(300, 10), { r: {}, x: 1 }]))).toBe('partial');
     expect(fatCoverage([{ r: {}, x: 1 }])).toBe(0);
+  });
+});
+
+describe('the Counts as chips', () => {
+  it('turns a mark on and off in the fixed order, and never leaves none', () => {
+    expect(togglePlateMark(['protein'], 'veg')).toEqual(['protein', 'veg']);
+    expect(togglePlateMark(['protein', 'veg'], 'protein')).toEqual(['veg']);
+    expect(togglePlateMark(['veg'], 'veg')).toEqual(['veg']);
+  });
+  it('saves a choice only when it differs from the automatic marks', () => {
+    expect(countsToSave(false, ['protein', 'veg'], ['protein'])).toBeUndefined();
+    expect(countsToSave(true, ['protein'], ['protein'])).toBeUndefined();
+    expect(countsToSave(true, ['protein', 'veg'], ['protein'])).toEqual(['protein', 'veg']);
   });
 });
