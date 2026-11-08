@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
@@ -59,9 +58,8 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
   const useAi = () => { if (!ai) return; onUse(ai.fill); setAi(null); setText(''); };
 
   // Scan barcode (brief barcode-scan): another way to ask the same source, by a product code instead of a name. A found product is picked like a typed result.
-  const labelOn = useFeature('scan');
   const openLabel = onLabelPhoto ?? (() => labelCamera.current?.click());
-  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), ...(onLabelPhoto || labelOn ? { onLabel: openLabel } : {}) });
+  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), onLabel: openLabel });
 
   const scanned = useRef(false);
   useEffect(() => { if (scanFirst && !scanned.current) { scanned.current = true; scan(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival: Recipes + New, Scan a food opens the barcode sheet over this form
@@ -74,7 +72,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
           <input id="dt-lookup-q" type="search" autoComplete="off" maxLength={60} value={own} onChange={e => { setText(e.target.value); setPick(null); }} />
         </label>
       )}
-      {!onLabelPhoto && labelOn && <input ref={labelCamera} type="file" accept="image/*" capture="environment" hidden aria-label="Label camera" onChange={e => { void readPhoto(e.target.files?.[0]); e.target.value = ''; }} />}
+      {!onLabelPhoto && <input ref={labelCamera} type="file" accept="image/*" capture="environment" hidden aria-label="Label camera" onChange={e => { void readPhoto(e.target.files?.[0]); e.target.value = ''; }} />}
       {reading && <p className="note" role="status">Reading label...</p>}
       {aiNote && <p className="note" role="status">{aiNote}</p>}
       {ai && (

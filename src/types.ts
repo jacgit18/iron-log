@@ -344,7 +344,8 @@ export interface SavedItem { n: string; kcal: number; p: number; c?: number; f?:
 export interface SavedMeal { id: string; n: string; items: SavedItem[] }
 /** One planned item (brief diet-meal-planner): a recipe (`k` 'r') or a saved meal (`k` 'm') by id; `x` is the recipe's portion (0.5 to 10), left out when it is 1. */
 export interface PlanItem { k: 'r' | 'm'; id: string; x?: number }
-export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; plan?: Record<string, PlanItem[]> }
+/** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]> }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
 export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number }
 

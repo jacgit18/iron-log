@@ -25,9 +25,9 @@ const good = id => ({ kind: 'ok', receipt: { store: "BJ'S", date: '2026-09-24', 
   { text: 'ZEVIA SODA 12PK', qty: 1, grossCents: 800, discountCents: 0, matchId: null },
 ] } });
 
-test('a person who is not an admin sees no Scan receipt button', async ({ page }) => {
+test('a person who is not an admin sees the Scan receipt button (open to everyone since 2026-11-08)', async ({ page }) => {
   await setup(page);
-  await expect(page.locator('#groc-scan')).toHaveCount(0);
+  await expect(page.locator('#groc-scan')).toHaveCount(1);
 });
 
 test.describe('as an admin', () => {
