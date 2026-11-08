@@ -54,4 +54,6 @@ test('unticking a used one-time item beside a new one with its name is refused w
   await page.getByLabel('Got Milk').click(); // unticking the first one would bring back a second Milk under Aldi
   await expect(page.getByText('There is already a Milk under Aldi. Remove it first, then untick this one.')).toBeVisible();
   await expect(page.getByLabel('Got Milk')).toBeChecked(); // still bought
+  await page.click('#groc-next');
+  await expect(page.getByText('There is already a Milk under Aldi.')).toHaveCount(0); // the reason does not follow to another month
 });

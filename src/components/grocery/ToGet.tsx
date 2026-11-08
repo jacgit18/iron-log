@@ -111,6 +111,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const setOff = (f: (o: number) => number) => { const next = f(off); setOffNow(next); onOff(next); clearToggled(); setSplitOpen(null); setQ(''); setSelect(false); setQuick(null); }; // another month starts with every row and the split card folded
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
+  useEffect(() => setBlocked(null), [mk, mode]); // a refused untick's reason belongs to the month and view it was refused in
   const tick = (id: string, on: boolean) => {
     const why = on ? null : untickBlock(g, months, mk, id); // a used one-time item would come back beside another with its name: say so instead (brief quickadd-one-time-items)
     setBlocked(why);
