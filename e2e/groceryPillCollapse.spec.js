@@ -33,9 +33,9 @@ test('on Bought, Show details and Hide details cover the bought rows of a store'
   await page.click('#groc-view-bought');
   const rice = page.getByRole('button', { name: 'Count and price of Rice' });
   await expect(rice).toHaveAttribute('aria-expanded', 'false');
-  await page.getByRole('button', { name: "Show details in BJ's" }).click();
+  await page.locator('#groc-details-all').click();
   await expect(rice).toHaveAttribute('aria-expanded', 'true');
-  await page.getByRole('button', { name: "Hide details in BJ's" }).click();
+  await page.locator('#groc-details-all').click();
   await expect(rice).toHaveAttribute('aria-expanded', 'false');
 });
 

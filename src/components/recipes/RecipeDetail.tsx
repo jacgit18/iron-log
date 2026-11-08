@@ -4,7 +4,7 @@ import Icon from '../Icon.js';
 import { videoLabel } from '../../lib/data.js';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
 import { amountText } from '../../lib/foodUnit.js';
-import { monthKey } from '../../lib/grocery.js';
+import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
@@ -23,8 +23,9 @@ import type { Recipe } from '../../types.ts';
 // is a library recipe (a copy, not yet in your list) and "Add to Mine" copies it.
 export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOpen }: { recipe: Recipe; mine: boolean; onBack: () => void; onEdit: () => void; onAdd: (servings?: number) => void; onOpen?: (id: string) => void }) {
   const recipes = useAppStore(s => s.recipes);
-  const grocery = useAppStore(s => s.grocery);
+  const groceryAll = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
+  const grocery = useMemo(() => withoutUsed(groceryAll, months), [groceryAll, months]); // a used one-time item is no longer something you have
   const [msg, setMsg] = useState('');
   const [tonight, setTonight] = useState<number | null>(null); // servings for tonight; the amounts shown scale to it, nothing is saved
   const shown = recipe.servings ? tonight ?? recipe.servings : null;

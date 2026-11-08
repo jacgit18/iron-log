@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally } from '../../lib/grocery.js';
+import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally, untickBlock, usedOneTime } from '../../lib/grocery.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { hasSharing } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { allIds, allPicked, boughtRows, storeIds } from '../../lib/groceryBought.js';
 import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, hasNoPrice, resolveChip, showChips } from '../../lib/groceryChips.js';
+import { boughtSummaryText, getSummaryText } from '../../lib/groceryListSummary.js';
 import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import ArmedButton from '../ArmedButton.jsx';
 import BulkShare, { SelectButton } from './BulkShare.js';
@@ -29,7 +30,7 @@ import StoreTax from './StoreTax.js';
 import { StoreMoney } from './StoreMoney.js';
 import { useSortChoice } from '../useSortChoice.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
-import ExpandAll from './ExpandAll.js';
+import ListSummary from './ListSummary.js';
 import GetRow from './GetRow.js';
 import useIdSet from './useIdSet.js';
 
@@ -41,7 +42,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const [off, setOffNow] = useState(off0); // months from this one: below 0 is history, above 0 is planning ahead
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
-  const list = inMonth(g, onList(g, month, off >= 0), month); // each item sits under the store it is bought at this month (Move to)
+  const list = inMonth(g, onList(g, month, off >= 0, usedOneTime(g, months)), month); // each item sits under the store it is bought at this month (Move to)
   const everBought = [...list, ...removedBought(g, month)]; // the count, the Spent tile and the tax hint also see the bought lines of items removed since, as the store lines and Spending do
   const t = tally(everBought, month);
   // This month, what you have bought leaves the list (it is on At home as "have"); it stays one tap away under "Bought this month" so a
@@ -98,6 +99,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const storeRows = (grp: { store: string; items: GroceryItem[] }) => grp.items;
   const rs = useReceiptScan(g, mk);
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
+  const [blocked, setBlocked] = useState<string | null>(null); // why an untick was refused (a one-time item would come back as a twin)
   const [quick, setQuick] = useState<{ id: string; name: string; label: string; t: number } | null>(null); // the item just quick-added, for its notice (Undo)
   const [selecting, setSelecting] = useState(false); // Select mode (brief grocery-bulk-share): the rows to get carry a checkbox; nothing is written until Share… is applied
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -109,7 +111,11 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const setOff = (f: (o: number) => number) => { const next = f(off); setOffNow(next); onOff(next); clearToggled(); setSplitOpen(null); setQ(''); setSelect(false); setQuick(null); }; // another month starts with every row and the split card folded
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
+  useEffect(() => setBlocked(null), [mk, mode]); // a refused untick's reason belongs to the month and view it was refused in
   const tick = (id: string, on: boolean) => {
+    const why = on ? null : untickBlock(g, months, mk, id); // a used one-time item would come back beside another with its name: say so instead (brief quickadd-one-time-items)
+    setBlocked(why);
+    if (why) return;
     if (!useAppStore.getState().setGroceryGot(mk, id, on)) return; // nothing changed (data still loading): no Undo notice and no focus jump for it
     if (current) {
       const order = onBought ? allIds(shown) : shownTodo.flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
@@ -128,7 +134,6 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const selectBtn = <SelectButton g={g} canSelect={shown.length > 0} selecting={selecting} onSelecting={setSelect} />;
   const detailsBtns = (
     <>
-      <button type="button" className="btn sm ghost" id="groc-details-all" onClick={() => { clearToggled(); setDetailsChoice(defaultOpen ? 'closed' : 'open'); }}>{defaultOpen ? 'Hide details on all rows' : 'Show details on all rows'}</button>
       {detailsChoice !== 'auto' && <button type="button" className="btn sm ghost" id="groc-details-auto" onClick={() => { clearToggled(); setDetailsChoice('auto'); }}>Details by screen size</button>}
     </>
   );
@@ -136,6 +141,12 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
     <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip the ${todo.length} left: every item still to get this month`} label={`Skip the ${todo.length} left`} armedLabel={`Tap again to skip ${todo.length}`}
       onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
   );
+  const sum = shown.reduce((a, grp) => { // what is on screen, a bought-then-removed item still counted in its store (as in the old store headings)
+    const gt = tally(grp.items, month); const gone = removed[grp.store];
+    if (gone && (onBought || !current)) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
+    return { count: a.count + gt.count, got: a.got + gt.got, cents: a.cents + gt.planned };
+  }, { count: 0, got: 0, cents: 0 });
+  const summaryText = onBought ? boughtSummaryText(sum.count, sum.cents) : current ? getSummaryText(sum.count, sum.cents) : `${sum.got}/${sum.count} bought${sum.cents ? ` · ${money(sum.cents)}` : ''}`;
   const main = (
     <div className="gmain">
       {onBought && split && <SplitSection g={g} month={month} mk={mk} open={splitOpen === mk} onToggle={on => setSplitOpen(on ? mk : null)} />}
@@ -165,6 +176,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
       )}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
       {!onBought && current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought. See it under <b>Bought</b>.</p>}
+      {shown.length > 0 && <ListSummary text={summaryText} all={shown.every(grp => storeRows(grp).every(i => isOpen(i.id)))} onToggle={on => { clearToggled(); setDetailsChoice(on ? 'open' : 'closed'); }} />}
       <div className={`gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
       {shown.map((grp, gi) => {
         const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
@@ -174,11 +186,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
           <section key={grp.store || '_'} className={`gstore${!current && gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
             <div className="gstorehead">
               <h3 id={`groc-h-${gi}`}>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3>
-              <span className="gstoremeta">
-                <span className="note">{onBought ? `${gt.count} bought` : current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
-                {selecting && <button type="button" className="btn sm ghost gpickall" onClick={() => pickSome(ids, !allPicked(ids, picked))}>{allPicked(ids, picked) ? `Clear ${grp.label}` : `Select all in ${grp.label}`}</button>}
-                <ExpandAll label={grp.label} all={storeRows(grp).every(i => isOpen(i.id))} onToggle={on => setOpen(storeRows(grp).map(i => i.id), on)} />
-              </span>
+              {selecting && <span className="gstoremeta"><button type="button" className="btn sm ghost gpickall" onClick={() => pickSome(ids, !allPicked(ids, picked))}>{allPicked(ids, picked) ? `Clear ${grp.label}` : `Select all in ${grp.label}`}</button></span>}
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
@@ -202,6 +210,11 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
               actions={[{ label: 'Undo', onClick: () => tick(ticked.id, false) }, ...(ticked.unpriced ? [{ label: 'Add price', onClick: () => { const id = ticked.id; setTicked(null); onAddPrice(id); } }] : []), { label: 'Dismiss', ghost: true, onClick: () => setTicked(null) }]}>
               <b>Bought</b> {ticked.name}.{ticked.unpriced && ' It has no price yet.'}
             </Notice>
+          </div>
+        )}
+        {blocked && (
+          <div className="gtickednote">
+            <Notice kind="warning" actions={[{ label: 'Dismiss', ghost: true, onClick: () => setBlocked(null) }]}>{blocked}</Notice>
           </div>
         )}
         {quick && (

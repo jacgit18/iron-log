@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { VIDEO_ERR, isVideoUrl } from '../../lib/data.js';
+import { withoutUsed } from '../../lib/grocery.js';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
@@ -26,7 +27,9 @@ const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?
 // `start`: a name and link to begin a new recipe with (a link shared in from another app, lib/shareTarget.ts).
 export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
-  const items = useAppStore(s => s.grocery.items);
+  const groceryAll = useAppStore(s => s.grocery);
+  const groceryMonths = useAppStore(s => s.groceryMonths);
+  const items = useMemo(() => withoutUsed(groceryAll, groceryMonths).items, [groceryAll, groceryMonths]); // a used one-time item is not offered
   const sauces = useMemo(() => sauceCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the sauces and seasonings a line can link to
   const { foods, meals } = useMemo(() => foodCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the foods and meals a line can link to, with an amount
   const [n, setN] = useState(recipe?.n ?? start?.title ?? '');

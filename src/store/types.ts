@@ -339,7 +339,8 @@ export interface GrocerySlice {
   setGrocery(data: GroceryData, deferRemoves?: boolean): string[]; // an import replaces everything; with deferRemoves the old months' paths are returned, not removed
   addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
-  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | ''; aliases: string[] }>): string | null;
+  markGroceryFromReceipt(month: string, id: string): void;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | ''; aliases: string[]; oneTime: boolean }>): string | null;
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   forgetGroceryAlias(id: string, text: string): void;
   addGroceryStore(name: string): string | null;

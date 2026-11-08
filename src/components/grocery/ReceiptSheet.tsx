@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { NEW_STORE, addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, stagedAt, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
 import { aliasAddsFor, applyNames, movedFrom, resolveName, savedNamesText, type RowEdit } from '../../lib/groceryAliases.js';
-import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel } from '../../lib/grocery.js';
+import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel, withoutUsed } from '../../lib/grocery.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
-import { missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
+import { earlierText, missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import type { Receipt } from '../../shared/receipt.js';
@@ -20,7 +20,9 @@ import './ReceiptScan.css';
 export default function ReceiptSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
-  const g = useAppStore(s => s.grocery);
+  const gAll = useAppStore(s => s.grocery);
+  const allMonths = useAppStore(s => s.groceryMonths);
+  const g = useMemo(() => withoutUsed(gAll, allMonths), [gAll, allMonths]); // a used one-time item is not a match for a receipt line
   const receipt = modal?.receipt as Receipt | undefined;
   const mk = String(modal?.mk ?? '');
   const onApplied = modal?.onApplied as ((a: Applied) => void) | undefined;
@@ -218,20 +220,24 @@ export default function ReceiptSheet() {
         })}
       </ul>
       {rec.missing.length > 0 && (
-        <div className="rcmiss" role="group" aria-label="Marked bought, but not on this receipt">
-          <h3 className="cond">Marked bought, but not on this receipt</h3>
-          <p className="note">{missingIntro(rec)}</p>
-          <ul>
-            {rec.missing.map(m => (
-              <li key={m.id}>
-                <label className="rcuntick"><input type="checkbox" checked={unticked.has(m.id)} onChange={e => setUnticked(x => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Move back to Shopping: ${m.name}`} /><span>Move back to Shopping</span></label>
-                <span className="rcmisswhat">{m.name}<small>Marked bought: {m.held}</small></span>
-                <span className="rcmissstate">{unticked.has(m.id) ? 'Will move back to Shopping' : 'Stays bought'}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="rcmiss" role="group" aria-label="Already bought, not on this receipt">
+          <h3 className="cond">Already bought, not on this receipt ({rec.missing.length})</h3>
+          <p className="note">{missingIntro(rec, plan.items)}</p>
+          <details className="rcmissmore">
+            <summary>{`Review these ${rec.missing.length} ${rec.missing.length === 1 ? 'item' : 'items'}${unticked.size > 0 ? ` (${unticked.size} moving back)` : ''}`}</summary>
+            <ul>
+              {rec.missing.map(m => (
+                <li key={m.id}>
+                  <span className="rcmisswhat">{m.name}<small>Bought: {m.held}</small></span>
+                  <label className="rcuntick"><input type="checkbox" checked={unticked.has(m.id)} onChange={e => setUnticked(x => { const n = new Set(x); if (e.target.checked) n.add(m.id); else n.delete(m.id); return n; })} aria-label={`Move back to Shopping: ${m.name}`} /><span>Move back</span></label>
+                  {unticked.has(m.id) && <span className="rcmissstate">Will move back to Shopping</span>}
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
       )}
+      {rec.earlier > 0 && <p className="note rcearlier">{earlierText(rec.earlier)}</p>}
       {words.summary && (
         <div className="rcbought">
           <p className="note" role="status">{words.summary}</p>

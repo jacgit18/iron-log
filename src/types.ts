@@ -257,7 +257,8 @@ export interface GroceryShare { with: string[]; notMine?: true }
  *  `note` is an optional short comment ("the green ones"), left out when empty. `unit` is set for things sold by weight (meat, produce):
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
 /** `aliases`: receipt texts the person renamed to this item (brief receipt-rename-memory), kept as printed (spaces collapsed); a scan line whose text matches one (`aliasKey`) is mapped to the item before any model guess. At most MAX_ALIASES of up to MAX_ALIAS characters, one per key. */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare; aliases?: string[] }
+/** `oneTime`: the month it was made one-time in (`YYYY-MM`, brief quickadd-one-time-items): a quick-added item, or any item the person ticked One-time item on. Bought in that month or a later one, it is hidden from Inventory and from every later month's list, but stays in the catalogue so the month it was bought in, Spending and price history read as before. Purchases from before that month do not count. Older data has `once` (an occasional item) instead of `every`; that is a different thing. */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare; aliases?: string[]; oneTime?: string }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
 /** `retired`: stores that were removed while a past month still uses them (a purchase pinned to the store, its tax, who paid): hidden from every list and picker, but their name stays valid so those months read as they did; adding a store with the same name brings it back (ADR 063). */
 export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[]; retired?: string[] }
@@ -267,7 +268,8 @@ export interface GroceryStore { id: string; n: string; retired?: true }
  *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
 /** `store`: where the item was bought this month when that is not its usual store (Move to on To get); '' is Anywhere, absent is the item's own store. */
 /** `unpriced`: bought with no price at all (the item had none and none was typed), so a price given to the item later does not reach back and price this month's purchase. */
-export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
+/** `rc`: this bought tick was written by a scanned receipt's Apply (brief receipt-earlier-items); cleared when the item is unticked. A later receipt does not list the item as "bought but not on this receipt". */
+export interface GroceryLine { got?: true; rc?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
