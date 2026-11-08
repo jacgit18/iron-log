@@ -94,7 +94,7 @@ export default function Recipes() {
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
   const counts = useMemo(() => tabCounts(narrowed), [narrowed]);
   const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => tabOf(r) === tab), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
-  const picks = useMemo(() => quickPicks(recipes, diet, openedThisVisit), [recipes, diet, selId, view.kind]); // reread when something is opened (the opened list is outside React)
+  const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
   const selected = recipes.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
   useEffect(() => {

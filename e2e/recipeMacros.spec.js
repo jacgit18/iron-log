@@ -65,7 +65,7 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await page.reload();
   await open(page);
-  await page.getByRole('button', { name: /Chicken and rice/ }).click();
+  await page.locator('.rc-row', { hasText: /Chicken and rice/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await editNutrition(page);
   await expect(page.getByLabel('Calories per serving')).toHaveValue('365');

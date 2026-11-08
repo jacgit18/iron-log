@@ -34,7 +34,7 @@ test('an ingredient with an Alternative stays itself and counts as at home when 
   // and it survives a reload, with the form still holding it
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chimichurri/ }).click();
+  await page.locator('.rc-row', { hasText: /Chimichurri/ }).click();
   await expect(page.getByText('(or apple cider vinegar)')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Alternative for ingredient 1')).toHaveValue('apple cider vinegar');
@@ -48,7 +48,7 @@ test('an ingredient skipped before still shows Skipped, has no Skip checkbox, an
   });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chimichurri/ }).click();
+  await page.locator('.rc-row', { hasText: /Chimichurri/ }).click();
   await expect(page.locator('.rc-ing', { has: page.getByText('parsley') }).locator('.rc-state')).toHaveText('Skipped');
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel(/^Skip ingredient/)).toHaveCount(0);

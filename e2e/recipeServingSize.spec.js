@@ -31,7 +31,7 @@ test('Estimate from ingredients fills the grams and names what it left out; savi
   await expect(page.getByText('Serving size: 1 slice (125 g)')).toBeVisible();
   await page.reload();
   await open(page);
-  await page.getByRole('button', { name: /Bread/ }).click();
+  await page.locator('.rc-row', { hasText: /Bread/ }).click();
   await expect(page.getByText('Serving size: 1 slice (125 g)')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Serving size', { exact: true })).toHaveValue('1 slice');

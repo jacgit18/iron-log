@@ -127,7 +127,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await expect(diet(page).locator('.dt-entry')).toContainText('76.5 g carbs · 16.5 g fat');
   // editing the recipe afterwards does not change what was logged
   await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chili/ }).click();
+  await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('100');
@@ -136,7 +136,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await expect(diet(page).locator('.dt-entry')).toContainText('900 kcal');
   // Undo right after logging removes just that entry
   await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chili/ }).click();
+  await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Ate this' }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await nutrition(page);

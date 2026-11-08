@@ -34,12 +34,12 @@ test('a recipe you write is saved, marked Custom, found by an ingredient, and ke
   await expect(page.getByText('Custom')).toBeVisible();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.getByLabel('Search recipes').fill('olive');
-  await expect(page.getByRole('button', { name: /Garlic dressing/ })).toBeVisible();
+  await expect(page.locator('.rc-row', { hasText: /Garlic dressing/ })).toBeVisible();
   await page.getByLabel('Search recipes').fill('zzz');
   await expect(page.getByText('No recipe matches')).toBeVisible();
   await page.reload();
   await recipes(page);
-  await expect(page.getByRole('button', { name: /Garlic dressing/ })).toBeVisible();
+  await expect(page.locator('.rc-row', { hasText: /Garlic dressing/ })).toBeVisible();
 });
 
 test('a recipe needs a name and an ingredient', async ({ page }) => {
@@ -88,7 +88,7 @@ test('a recipe can be deleted with Undo', async ({ page }) => {
   await del.click(); await del.click();
   await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByRole('button', { name: /Short lived/ })).toBeVisible();
+  await expect(page.locator('.rc-row', { hasText: /Short lived/ })).toBeVisible();
 });
 
 test('the Library asks for a sign-in when syncing is off', async ({ page }) => {

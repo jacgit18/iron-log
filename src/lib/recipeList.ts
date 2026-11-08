@@ -37,8 +37,9 @@ export function tabCounts(list: readonly Recipe[]): Record<RecipeTab, number> {
 
 /** What an empty tab says to do. */
 export const emptyTabNote = (tab: RecipeTab, searching: boolean): string =>
-  searching ? 'Nothing here matches. Clear the search, the filters or pick another tab.'
-    : tab === 'foods' ? 'No foods yet. Use + New, then Scan a food.' : tab === 'drinks' ? 'No drinks yet. Use + New, then Write a recipe in the Drinks category, or scan a drink.' : tab === 'meals' ? 'No meals yet. Use + New, then Build a meal.' : 'No recipe matches. Clear the search or the filters.';
+  tab === 'all' ? 'No recipe matches. Clear the search or the filters.'
+    : searching ? 'Nothing in this tab matches. Clear the search, the filters or pick another tab.'
+      : tab === 'foods' ? 'No foods yet. Use + New, then Scan a food.' : tab === 'drinks' ? 'No drinks yet. Use + New, then Write a recipe in the Drinks category, or scan a drink.' : 'No meals yet. Use + New, then Build a meal.';
 
 /** Your recipes matching the typed words (every word in the name or an ingredient, as a word start), the category AND every selected tag AND every nutrition filter, and "can make"
  *  (`makeable`: ids of recipes with every ingredient at home), by name. */

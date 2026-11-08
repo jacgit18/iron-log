@@ -136,7 +136,7 @@ test.describe('on a phone, a recipe with an Alternative', () => {
     });
     await page.reload();
     await page.click('#tab-daily'); await page.click('#daily-recipes');
-    await page.getByRole('button', { name: /Oats/ }).click();
+    await page.locator('.rc-row', { hasText: /Oats/ }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     const alt = page.getByLabel('Alternative for ingredient 1');
     await alt.fill('');

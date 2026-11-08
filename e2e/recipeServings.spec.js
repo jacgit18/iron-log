@@ -46,7 +46,7 @@ test('changing Servings rewrites the amounts, and Save keeps the new amounts', a
   await expect(page.getByText('Other · 8 servings')).toBeVisible();
   await page.reload();
   await open(page);
-  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('4 cups flour')).toBeVisible();
 });
 
@@ -93,7 +93,7 @@ test('Scale for tonight changes the amounts shown and saves nothing', async ({ p
   await expect(page.getByText('2 cups flour')).toBeVisible();
   await page.getByRole('button', { name: 'More servings' }).click();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
-  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expectAmount(page, 0, '2 cups');

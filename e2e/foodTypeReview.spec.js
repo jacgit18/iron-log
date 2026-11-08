@@ -24,7 +24,7 @@ test('the ready-made form needs a Type, starting on Ready to eat, and saves the 
   await page.getByRole('button', { name: 'Save food' }).click();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await expect(page.getByText(/needs? a type/)).toHaveCount(0); // it is typed, so no banner
-  await page.getByRole('button', { name: /Goat kefir/ }).click();
+  await page.locator('.rc-row', { hasText: /Goat kefir/ }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true');
 });

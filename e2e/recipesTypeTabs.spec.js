@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // Recipes find: type tabs, Recent and favorites, + New, the Filters disclosure and the list beside its detail (brief recipes-find-type-tabs). The tab rules, counts and
@@ -149,3 +150,17 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible(); // the barcode sheet opens over the ready-made form
   await expect(page.getByRole('heading', { name: 'New ready-made food' })).toBeVisible();
 });
+
+for (const [w, h] of [[1440, 900], [375, 812]]) {
+  test(`the tabs, chips, menu, Filters and stars have no accessibility violations and 44 px targets at ${w} px`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await open(page, items, 'auto');
+    await page.getByRole('button', { name: 'Star Lemonade' }).click();
+    await page.click('#recipes-filters');
+    await page.click('#recipes-new');
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+    const small = await page.locator('.rc-tabs button, .rc-quick button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-star, .rc-chips button').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
+    expect(small).toEqual([]);
+  });
+}
