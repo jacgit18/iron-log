@@ -10,6 +10,7 @@ import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import ArmedButton from '../ArmedButton.jsx';
 import BulkShare, { SelectButton } from './BulkShare.js';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
+import GroceryBudget from './GroceryBudget.js';
 import GroceryMore from './GroceryMore.js';
 import GroceryPhoneBar from './GroceryPhoneBar.js';
 import GroceryQuickAdd from './GroceryQuickAdd.js';
@@ -145,6 +146,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
       </div>
       {!onBought && <ReceiptScan r={rs} phone={!wide} />}
       {summary}
+      <GroceryBudget spent={t.spent} planned={t.planned} />
       {current && carried > 0 && !onBought && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
       {!t.count && off === 0 && !onBought && <p className="note">Your list comes from <b>Inventory</b>. Add what you usually buy there, and tick what you already have.</p>}
       {onBought && !bought.length && !q.trim() && <p className="note" id="groc-boughtnone">Nothing bought yet this month. Tick an item on Shopping and it shows up here.</p>}

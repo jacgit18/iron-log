@@ -56,7 +56,7 @@ test('ticking Have at home takes an item off this month’s Shopping; buying it 
   await page.click('#groc-view-inventory');
   await expect(page.getByLabel('Have Kale')).toBeChecked(); // bought: you have it
   await page.click('#groc-view-bought');
-  await expect(page.locator('#groc-view-bought')).toHaveText('Bought 1'); // and it is kept there, one tap from undo
+  await expect(page.locator('#groc-view-bought')).toHaveText('Bought'); // the button carries no count (the budget brief); its row is kept there, one tap from undo
   await page.locator('#groc-kale').click();
   await page.click('#groc-view-inventory');
   await expect(page.getByLabel('Have Kale')).not.toBeChecked(); // unticked: back on the list

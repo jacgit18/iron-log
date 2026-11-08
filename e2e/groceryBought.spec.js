@@ -22,24 +22,24 @@ const open = async (page) => {
 };
 const view = (page, name) => page.locator('.seg[aria-label="Grocery view"]').getByRole('button', { name });
 
-test('three views with counts: a tick moves a row from Shopping to Bought, and the address follows each view', async ({ page }) => {
+test('three views, no counts: a tick moves a row from Shopping to Bought, and the address follows each view', async ({ page }) => {
   await open(page);
-  await expect(view(page, 'Shopping')).toHaveText('Shopping 1');
-  await expect(view(page, 'Bought')).toHaveText('Bought 2');
+  await expect(view(page, 'Shopping')).toHaveText('Shopping');
+  await expect(view(page, 'Bought')).toHaveText('Bought');
   await expect(view(page, 'Inventory')).toBeVisible();
   await expect(view(page, 'Spending')).toHaveCount(0); // Spending history is inside Bought
   await expect(page.getByText('Oat milk')).toBeVisible();
   await expect(page.getByText('Beef roast')).toHaveCount(0); // bought: not on Shopping
   await page.getByLabel('Got Oat milk').click();
   await expect(view(page, 'Shopping')).toHaveText('Shopping');
-  await expect(view(page, 'Bought')).toHaveText('Bought 3');
+  await expect(view(page, 'Bought')).toHaveText('Bought');
   await view(page, 'Bought').click();
   await expect(page).toHaveURL(/#\/daily\/grocery\/bought$/);
   await expect(page.locator('#groc-sub')).toContainText('Bought this month');
   await expect(page.getByText('Oat milk')).toBeVisible();
   await expect(page.locator('#groc-summary')).toContainText('Bought 3 of 3');
   await page.getByLabel('Got Oat milk').click(); // the box puts it back on Shopping
-  await expect(view(page, 'Shopping')).toHaveText('Shopping 1');
+  await expect(view(page, 'Shopping')).toHaveText('Shopping');
   await page.reload();
   await expect(page).toHaveURL(/#\/daily\/grocery\/bought$/);
   await expect(view(page, 'Bought')).toHaveAttribute('aria-pressed', 'true'); // a reload reopens it

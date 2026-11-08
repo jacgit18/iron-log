@@ -6,6 +6,7 @@ import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanAliases, cleanShare } from '../shared/grocery.js';
+import { validGroceryBudget } from '../shared/validate.js';
 import { storeStatus } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
@@ -323,6 +324,10 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
 
     // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month. Bought means you have it,
     // so a "have" tick is dropped; unticking puts it back on the list. Each month keeps its own ticks (ADR 054).
+    setGroceryBudget(cents) {
+      if (get().blocked() || (cents != null && !validGroceryBudget(cents))) return false;
+      return get().mutateCfg(c => { if (cents == null) delete c.groceryBudget; else c.groceryBudget = cents; });
+    },
     setGroceryGot(month, id, on) {
       const it = get().grocery.items.find(i => i.id === id);
       if (!it || !MONTH_RE.test(month) || get().blocked()) return false; // false: nothing changed (sync is loading), so the screen shows no Undo for it
