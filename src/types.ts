@@ -332,7 +332,7 @@ export type FoodType = 'ingredient' | 'ready' | 'drink';
 /** What a recipe is used as (brief recipes-used-as-ingredients-tab): one or more. Left out, the labels are worked out from its category and `type` (`lib/recipeUses.ts`). */
 export type RecipeUse = 'meal' | 'ingredient' | 'ready' | 'drink';
 /** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
