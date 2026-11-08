@@ -2,6 +2,7 @@ import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, recipeIdsFor, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
+import { moveItem } from '../lib/weekBoard.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
 import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
@@ -100,10 +101,17 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     return r.added;
   },
 
-  addPlanItem(day, kind, id) {
+  addPlanItem(day, kind, id, slot) {
     const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
     if (!there) return kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
-    const r = addItem(planOf(get), day, { k: kind, id }, ymd(new Date()));
+    const r = addItem(planOf(get), day, { k: kind, id, ...(slot ? { s: slot } : {}) }, ymd(new Date()));
+    if (r.plan === null) return r.error;
+    putPlan(get, r.plan);
+    return null;
+  },
+
+  movePlanItem(day, index, toDay, slot) {
+    const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()));
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return null;
