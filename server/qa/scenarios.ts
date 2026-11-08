@@ -58,13 +58,20 @@ export type ScenarioFeature =
   | 'Recipes find'
   | 'Nutrition quick log'
   | 'Meals from foods'
-  | 'Grocery budget';
+  | 'Grocery budget'
+  | 'Recipe star'
+  | 'Used as'
+  | 'Library rows'
+  | 'Goes with'
+  | 'Saved meals move'
+  | 'Counts as'
+  | 'Week board';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board',
 ];
 
 export interface Scenario {
@@ -150,24 +157,24 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-05', feature: 'Saved meals', title: 'Add a saved meal to another day', persona: 'meal-planner', brief: 'diet-saved-meals',
     steps: [
       'Open Nutrition and use the day stepper to go to yesterday.',
-      'In Saved meals tap "Usual breakfast".',
-      'Rename the meal "Weekday breakfast", then press Delete, press it again ("Tap again to delete"), and press Undo.',
+      'In Saved meals (the meals in Recipes) tap "Usual breakfast".',
+      'Open Recipes, press Meals, open the meal and rename it "Weekday breakfast" from Edit. Open Nutrition again and read Saved meals.',
     ],
     expected: [
-      'Tapping the meal adds each food as its own entry with the meal\'s numbers (two foods for Usual breakfast).',
-      'The rename shows at once; Delete takes two taps and then shows an Undo notice; Undo brings the meal back.',
+      'Tapping the meal adds its foods as entries with the meal\'s numbers (each linked food on its own, or one entry with the total for a meal with no linked foods).',
+      'The rename is made in Recipes (Quick add has no Manage button now) and shows in Quick add. See S-183 to S-185.',
     ],
   },
   {
-    id: 'S-06', feature: 'Saved meals', title: 'Save today\'s foods as a meal; same name replaces', persona: 'diet-on-target', brief: 'diet-saved-meals', edge: true,
+    id: 'S-06', feature: 'Saved meals', title: 'Save today\'s foods as a meal; a name a recipe has is refused', persona: 'diet-on-target', brief: 'diet-saved-meals', edge: true,
     steps: [
       'Open Nutrition. Tick Oatmeal with berries and Greek yogurt in today\'s list and save them as "Breakfast".',
       'Tick the same two foods again and save as "breakfast" (small b).',
       'Try saving with a blank name.',
     ],
     expected: [
-      'A saved meal "Breakfast" appears showing "2 foods" and their summed calories.',
-      'The second save replaces the first (still one meal, not two).',
+      'A meal "Breakfast" is made in Recipes (Meals) and appears in Saved meals as one food with the two foods\' summed calories.',
+      'The second save is refused ("You already have a recipe or meal with that name."); it no longer replaces.',
       'A blank name is refused.',
     ],
   },
@@ -176,8 +183,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-07', feature: 'Meal planner', title: 'Read a planned day and change a portion', persona: 'meal-planner', brief: 'diet-meal-planner',
     steps: [
-      'Open the meal planner and look at the seven planned days.',
-      'On one day with a recipe and a saved meal, open More on the recipe and raise the portions.',
+      'Open the meal planner and press List (a wide screen opens the Board; see S-187). Look at the seven planned days.',
+      'On one day with a recipe and a meal, open More on the recipe and raise the portions.',
       'Remove the recipe from that day.',
     ],
     expected: [
@@ -188,8 +195,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-08', feature: 'Meal planner', title: 'Log from the plan; later days have no Log button', persona: 'meal-planner', brief: 'diet-meal-planner', edge: true,
     steps: [
-      'In the planner, on today\'s planned recipe, press Log.',
-      'On today\'s planned saved meal, press Log.',
+      'In the planner (List view), on today\'s planned recipe, press Log.',
+      'On today\'s planned meal, press Log.',
       'Look at a day after today.',
     ],
     expected: [
@@ -200,7 +207,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-09', feature: 'Meal planner', title: 'Plan to Groceries adds each missing ingredient once', persona: 'meal-planner', brief: 'diet-meal-planner',
     steps: [
-      'In the planner press the grocery button for the shown week.',
+      'In the planner (List view) press the grocery button for the shown week.',
       'Open Groceries and look at Shopping.',
       'Return to the planner and press the grocery button again.',
     ],
@@ -1887,11 +1894,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new ready-made food', persona: 'diet-fresh', brief: 'food-type-and-migration',
     steps: [
-      'Open Recipes and press + New, then Add a food by hand. Look at the Type buttons, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
+      'Open Recipes and press + New, then Add a food by hand. Look at the Used as chips, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
       'Open the food and press Edit.',
     ],
     expected: [
-      'Type starts on Ready to eat. The food saves with no banner about types.',
+      'Used as starts on Ready to eat; Drink turns it off. The food saves with no banner about types.',
       'The form opens with Drink picked.',
     ],
   },
@@ -1899,11 +1906,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-149', feature: 'Food type', title: 'Review types: suggestions, one change, Looks right, Undo', persona: 'recipe-collector', brief: 'food-type-and-migration',
     steps: [
       'Make three ready-made foods without a Type (an older account that has them; or on a test account add them in an older build): Whole milk, Eggs large, Frozen lasagna. Open Recipes.',
-      'Read the banner and press Review types. Change Frozen lasagna to Drink, then press Looks right.',
+      'Read the banner and press Review types. Change Frozen lasagna to Drink (its Ready to eat chip turns off), then press Looks right.',
       'Press Undo on the notice.',
     ],
     expected: [
-      'The banner says "3 foods need a type." The review page lists each food with its suggestion: Whole milk Drink, Eggs large Ingredient, Frozen lasagna Ready to eat.',
+      'The banner says "3 foods need a type." The review page lists each food with its suggestion: Whole milk Drink, Eggs large Ingredient and Ready to eat together, Frozen lasagna Ready to eat. Each row shows the Used as chips.',
       'The list shows "Food types saved." and the banner is gone.',
       'The banner returns with "3 foods need a type."; Back from the review page returns to the list, and a reload on it shows the list.',
     ],
@@ -1911,7 +1918,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-150', feature: 'Food type', title: 'Nothing to review, and a food edited later', persona: 'diet-fresh', brief: 'food-type-and-migration', edge: true,
     steps: [
-      'With no ready-made foods open Recipes. Then add one food and, from its Edit form, change its Type from Ready to eat to Ingredient and save.',
+      'With no ready-made foods open Recipes. Then add one food and, from its Edit form, change its Used as from Ready to eat to Ingredient and save.',
     ],
     expected: [
       'There is no banner and no Review types button. The edited food keeps Ingredient when it is opened again.',
@@ -1920,12 +1927,12 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-151', feature: 'Recipes find', title: 'Type tabs: counts, search inside a tab, rows tagged', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
-      'Open Recipes. Read the four tabs (All, Foods, Meals, Drinks) and their counts, then press Foods, Meals and Drinks in turn.',
+      'Open Recipes. Read the five tabs (All, Foods, Meals, Ingredients, Drinks) and their counts, then press Foods, Meals, Ingredients and Drinks in turn.',
       'Press All, type a word from one recipe name in the search box, then press each tab.',
       'Press Filters, pick a category chip, and read the counts again.',
     ],
     expected: [
-      'Each count is the number of rows that tab shows, and All is the sum of the other three. Every row carries a small tag: Meal, Ingredient, Ready to eat or Drink.',
+      'Each count is the number of rows that tab shows. A recipe with two labels (for example Meal + Ingredient) is in both of its tabs, so the tab counts can add up to more than All. Every row carries a small tag naming its labels.',
       'The search narrows every tab, and the counts follow it.',
       'The counts follow the category too. A tab with nothing in it says what to do instead of showing a blank list.',
     ],
@@ -1945,12 +1952,12 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
       'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
-      'Press the star on two rows, reload the page, then press a starred chip above the list.',
-      'Unstar both.',
+      'Open two recipes and press Star in each recipe\'s header, press Back, reload the page, then press a starred chip above the list.',
+      'Unstar both from their headers.',
     ],
     expected: [
       'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
-      'The stars are still on after the reload. The chips above the list show the starred recipes first and open the one pressed.',
+      'A starred row shows a small filled star after its name (not a button) and it is still there after the reload. The chips above the list show the starred recipes first and open the one pressed.',
       'With no stars and nothing logged or opened the row is not shown.',
     ],
   },
@@ -2144,6 +2151,239 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The second sheet says how many items from an earlier receipt are not listed, and lists only Milk (ticked by hand) under "Already bought, not on this receipt", folded until you press Review.',
       'It does not say "Is this the right one?" because some of this receipt\'s lines match your list.',
+    ],
+  },
+  // ---- The Recipes and Nutrition redesign, 2026-11-08 ----
+  {
+    id: 'S-173', feature: 'Recipe star', title: 'The star is in the recipe\'s own header, and a starred row shows a small mark', persona: 'recipe-collector', brief: 'recipe-star-placement',
+    steps: [
+      'Open Recipes and open any recipe. Look at the top of its page and press the Star button.',
+      'Press Back to recipes and find that recipe in the list. Reload the page, then open the recipe again and press Unstar.',
+      'Open Recipes, press Library and open a Library recipe.',
+    ],
+    expected: [
+      'The Star button sits beside the recipe name in the page header and its name changes to Unstar when pressed.',
+      'The row shows a small filled star after the name, which is not a button and does not cover Log or the at-home count. It is still there after the reload, and gone after Unstar.',
+      'A Library recipe page has no Star button (it is not in Mine yet).',
+    ],
+  },
+  {
+    id: 'S-174', feature: 'Used as', title: 'Sauces and seasonings are Ingredients, not Meals', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
+    steps: [
+      'Open Recipes, press + New, Write a recipe. Name it Garlic aioli, set the category to Sauces and add one ingredient. Read the Used as chips, then Save.',
+      'Go Back to recipes and press the Meals tab, then the Ingredients tab.',
+    ],
+    expected: [
+      'Used as starts on Ingredient only. The recipe is not in Meals and is in Ingredients, and its row has no Log button.',
+      'The tabs read All, Foods, Meals, Ingredients, Drinks, each with a count.',
+    ],
+  },
+  {
+    id: 'S-175', feature: 'Used as', title: 'One food with two labels shows in both tabs', persona: 'diet-fresh', brief: 'recipes-used-as-ingredients-tab',
+    steps: [
+      'Open Recipes, press + New, Add a food by hand. Name it Eggs, 70 calories and 6 g protein. Look at the Used as chips, press Ingredient too, and Save food.',
+      'Go Back to recipes and press the Foods tab, then the Ingredients tab.',
+    ],
+    expected: [
+      'Used as starts on Ready to eat and takes a second chip. The row tag reads Ingredient + Ready to eat.',
+      'Eggs is in Foods and in Ingredients, with a Log button on its row.',
+    ],
+  },
+  {
+    id: 'S-176', feature: 'Used as', title: 'The chips follow the category until pressed; one always stays on, Drink stands alone', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab', edge: true,
+    steps: [
+      'Open + New, Write a recipe. Change the category to Sauces, then to Carbs, and read Used as each time.',
+      'Press Meal to turn it off, then change the category to Sauces again.',
+      'On + New, Add a food by hand, press Ready to eat off, then press Drink, then press Ingredient.',
+    ],
+    expected: [
+      'Sauces gives Ingredient only; Carbs gives Meal and Ingredient. Once you press a chip the category stops changing it.',
+      'The last chip cannot be turned off. Drink turns the others off, and pressing Ingredient afterwards turns Drink off.',
+    ],
+  },
+  {
+    id: 'S-177', feature: 'Library rows', title: 'Library rows: In Mine check and a one-tap Add with Undo', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
+    steps: [
+      'Open Recipes and press Library. Read a row: it has no Library pill. Press + Add on one row.',
+      'Read the notice, press Undo, then press + Add on the same row again and press Open.',
+      'Go back to Library and read that row.',
+    ],
+    expected: [
+      'The row\'s + Add copies it and the notice says "<name> added to Mine." with Open, Undo and Dismiss.',
+      'Undo takes the copy away silently. Adding again and pressing Open shows the copy in Mine.',
+      'That Library row now shows a check named In Mine and no + Add button.',
+    ],
+  },
+  {
+    id: 'S-178', feature: 'Library rows', title: 'Library tabs and how much of a recipe is at home', persona: 'grocery-shopper', brief: 'recipes-used-as-ingredients-tab',
+    steps: [
+      'Open Groceries and make sure a few items are in At home. Open Recipes, press Library.',
+      'Press Meals, Ingredients and Drinks in turn. Read the "n of m at home" on rows.',
+      'Press Ingredients when none of the loaded recipes fit.',
+    ],
+    expected: [
+      'Library has All, Meals, Ingredients and Drinks (no Foods) and no counts. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
+      'An empty tab says there is none among these and offers Show more to load others.',
+    ],
+  },
+  {
+    id: 'S-179', feature: 'Goes with', title: 'Pair chili with rice; it shows from both and Remove clears both', persona: 'meal-planner', brief: 'recipes-goes-with',
+    steps: [
+      'In Recipes press + New, Write a recipe: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
+      'Open Chili. In Goes with press "Add a recipe it goes with…" and pick Rice.',
+      'Open Rice and read its Goes with. Press Remove on Chili, then open Chili again.',
+    ],
+    expected: [
+      'Chili lists Rice with Make a meal and Remove. Rice lists Chili without being set separately.',
+      'After Remove, neither recipe lists the other.',
+    ],
+  },
+  {
+    id: 'S-180', feature: 'Goes with', title: 'Make a meal from a pair: numbers add up, and deleting a recipe clears the pairing', persona: 'meal-planner', brief: 'recipes-goes-with',
+    steps: [
+      'With Chili and Rice paired (S-179), open Chili and press Make a meal.',
+      'Read the new page, then open Recipes, press Meals and find it.',
+      'Delete Rice, then open Chili and read Goes with. Press Undo on the notice and read it again.',
+    ],
+    expected: [
+      'A meal "Chili with Rice" opens at 1 serving with 600 kcal and 34 g protein per portion, rolled up from its two parts, and it is in the Meals tab.',
+      'After Delete, Chili\'s Goes with no longer lists Rice. Undo brings the pairing back.',
+    ],
+  },
+  {
+    id: 'S-181', feature: 'Goes with', title: 'After you log a food, what goes with it is one tap away', persona: 'meal-planner', brief: 'recipes-goes-with',
+    steps: [
+      'With Chili and Rice paired, open Chili, press Ate this, then read under the message.',
+      'Press "+ Rice" and read the message. Press Undo next to Rice.',
+      'Open Quick add\'s Log on Chili from the Recipes row, press Log it and read the sheet.',
+    ],
+    expected: [
+      'A "Goes with it:" row offers + Rice. One tap logs Rice at its usual amount on the same day, and Undo takes back only the Rice entry (the Chili entry stays).',
+      'The Log sheet offers the same row after Log it. A recipe with no pairing offers nothing.',
+    ],
+  },
+  {
+    id: 'S-182', feature: 'Goes with', title: 'A recipe goes with at most three, and a sauce is not offered', persona: 'recipe-collector', brief: 'recipes-goes-with', edge: true,
+    steps: [
+      'Open a recipe and add three recipes in Goes with. Look for a fourth.',
+      'Press Remove on one and add a different one. Look at the choices for a recipe you categorised as Sauces.',
+    ],
+    expected: [
+      'After three, the drop-down is gone and the note says "It goes with 3 recipes. Remove one to add another."',
+      'Removing one brings the drop-down back. Sauces and seasonings are not offered as partners.',
+    ],
+  },
+  {
+    id: 'S-183', feature: 'Saved meals move', title: 'Old saved meals appear once in Recipes as meals', persona: 'meal-planner', brief: 'saved-meals-into-recipes',
+    steps: [
+      'Sign in to this account on QA and open Recipes. Press Meals.',
+      'Open "Usual breakfast" and read its numbers and ingredients. Reload the page and look at Meals again.',
+    ],
+    expected: [
+      'The four saved meals (Usual breakfast, Chicken bowl, Post-workout, Quick dinner) are meals in Recipes with the numbers they had.',
+      'After a reload each is still there once, not twice.',
+    ],
+  },
+  {
+    id: 'S-184', feature: 'Saved meals move', title: 'Quick add lists the Recipes meals and one tap logs one', persona: 'meal-planner', brief: 'saved-meals-into-recipes',
+    steps: [
+      'Open Nutrition and read the Saved meals row in Quick add. Tap "Usual breakfast".',
+      'Look for a Manage button, then open Recipes and rename the meal there.',
+    ],
+    expected: [
+      'The row lists the Recipes meals ("Usual breakfast · 2 foods · …" or one entry with its total for a meal with no linked foods). One tap adds its foods as entries on the day shown.',
+      'There is no Manage button; a note says to rename or edit a meal in Recipes. The new name shows in Quick add.',
+    ],
+  },
+  {
+    id: 'S-185', feature: 'Saved meals move', title: 'Save as meal makes a Recipes meal, and a name a recipe has is refused', persona: 'diet-on-target', brief: 'saved-meals-into-recipes', edge: true,
+    steps: [
+      'Open Nutrition. Press Save as meal, tick Oatmeal with berries and Greek yogurt, name it "Breakfast" and save.',
+      'Open Recipes, press Meals and find it. Then save another meal named "breakfast".',
+    ],
+    expected: [
+      'A meal Breakfast is in Recipes under Meals and in Quick add, with the two foods\' total (1 food · their calories).',
+      'The second save is refused with "You already have a recipe or meal with that name."',
+    ],
+  },
+  {
+    id: 'S-186', feature: 'Counts as', title: 'Counts as on a plate: automatic until you press, then your choice', persona: 'recipe-collector', brief: 'week-board',
+    steps: [
+      'Open + New, Write a recipe, set the category to Protein and read Counts as on a plate. Press Veg.',
+      'Save, open it again with Edit, then press Back to automatic.',
+      'On + New, Add a food by hand, type 30 g protein and read Counts as.',
+    ],
+    expected: [
+      'Protein is on to begin with. Pressing Veg adds it and a dashed Back to automatic chip appears. Your choice is still there after Save and Edit.',
+      'Back to automatic returns to Protein only. A food with 30 g protein counts as Protein, and the last chip cannot be turned off.',
+    ],
+  },
+  {
+    id: 'S-187', feature: 'Week board', title: 'Plan opens as the Board on a wide screen and the List on a phone', persona: 'meal-planner', brief: 'week-board',
+    steps: [
+      'On a desktop browser open Nutrition and find Plan. Press List, then Board.',
+      'On a phone open Nutrition, Plan. Press Board.',
+    ],
+    expected: [
+      'On a wide screen the Board is shown first: seven days side by side. The List is the plan you knew, unchanged.',
+      'On a phone the List is shown first, and the Board shows one day at a time with a row of day buttons.',
+    ],
+  },
+  {
+    id: 'S-188', feature: 'Week board', title: 'A day as four meals with Calories, Protein and Fat bars', persona: 'meal-planner', brief: 'week-board',
+    steps: [
+      'On the Board look at a day that has planned items. Read the three bars at the top and the four meals under them.',
+      'On a meal press + Add, find a recipe and add it. Tap a card and press More.',
+    ],
+    expected: [
+      'Each day shows Calories, Protein and Fat with "amount / target" against 2,400 kcal and 160 g, and each meal (Breakfast, Lunch, Dinner, Snack) shows its calories against its share of the day. Planned items from before meals existed sit under Not set.',
+      'The added recipe appears in that meal and the bars move; More raises that card\'s portion and the bars with it. A bar turns red when the day is over its target.',
+    ],
+  },
+  {
+    id: 'S-189', feature: 'Week board', title: 'The plate check and its one-tap fix', persona: 'meal-planner', brief: 'week-board',
+    steps: [
+      'With Chili and Rice paired (S-179), add Chili to today\'s Dinner on the Board. Read the marks under Dinner.',
+      'Press the dashed "+ Add a carb" button.',
+    ],
+    expected: [
+      'Dinner shows Protein, Carb and Veg marks; Protein has a check and Carb and Veg do not.',
+      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button follows from your sides or favorites.',
+    ],
+  },
+  {
+    id: 'S-190', feature: 'Week board', title: 'Move a card to another meal or day, and drag on a wide screen', persona: 'meal-planner', brief: 'week-board',
+    steps: [
+      'Tap a card, press Move to… and pick Lunch. Tap it again, press Move to… and pick another day.',
+      'On a wide screen drag a card into another meal and drag a recipe from the tray into a meal.',
+      'Try to move a card to a day that already holds 8 items.',
+    ],
+    expected: [
+      'The card moves to the meal or the day you picked and the bars of both days follow. A food already in that meal is refused.',
+      'Dragging does the same; a tray item is added as a new card.',
+      'A full day refuses with "A day can hold 8 things. Remove one to add another."',
+    ],
+  },
+  {
+    id: 'S-191', feature: 'Week board', title: 'The Fat bar says when some foods have no fat figure', persona: 'meal-planner', brief: 'week-board', edge: true,
+    steps: [
+      'Add a recipe that has a fat figure and one that has none to the same day. Read the Fat bar.',
+      'Add more portions of the food with no fat until it makes up most of the day\'s calories.',
+    ],
+    expected: [
+      'With a few foods missing fat the bar is hatched and a line says "Fat: n of m foods have it." and it never turns red.',
+      'When most of the day has no fat figure the bar is replaced by "Add fat to your foods to see fat here."',
+    ],
+  },
+  {
+    id: 'S-192', feature: 'Week board', title: 'A saved meal planned earlier is still on the board after the move', persona: 'meal-planner', brief: 'week-board', edge: true,
+    steps: [
+      'Open the Board and find a day that had a saved meal planned. Open the same day in the List.',
+      'Tap the item on the Board and press Move to… to put it in Dinner.',
+    ],
+    expected: [
+      'The saved meal is on that day as its Recipes meal, in the Not set group at the top of the day, with the same calories.',
+      'After Move to… it is in Dinner and the Not set group is gone.',
     ],
   },
 ];
