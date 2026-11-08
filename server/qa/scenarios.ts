@@ -1916,7 +1916,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Nutrition quick log ----
   {
-    id: 'S-151', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',
+    id: 'S-154', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',
     steps: [
       'Open a recipe that has calories and protein, press Ate this once, then open Daily, Nutrition and look under Quick add. Press the food in Recent and favorites, press Less once, then Log it, and press Undo.',
     ],
@@ -1925,7 +1925,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-152', feature: 'Nutrition quick log', title: 'Scan a food from Quick add: pick its Type and it is saved and logged once', persona: 'diet-fresh', brief: 'nutrition-quick-log',
+    id: 'S-155', feature: 'Nutrition quick log', title: 'Scan a food from Quick add: pick its Type and it is saved and logged once', persona: 'diet-fresh', brief: 'nutrition-quick-log',
     steps: [
       'On the Nutrition tab press Scan a food, scan a packaged product (or use the photo of a barcode), press Drink, set the grams and press Save and log it. Then open Recipes.',
     ],
@@ -1934,7 +1934,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-153', feature: 'Nutrition quick log', title: 'The sheet refuses a day ahead and a day too far back, and a full day says so', persona: 'recipe-collector', brief: 'nutrition-quick-log', edge: true,
+    id: 'S-156', feature: 'Nutrition quick log', title: 'The sheet refuses a day ahead and a day too far back, and a full day says so', persona: 'recipe-collector', brief: 'nutrition-quick-log', edge: true,
     steps: [
       'Open the portion sheet from a Recipes row (the Log button), set Day to tomorrow and press Log it, then set a day more than 400 days back and press Log it. Then fill one day with 20 entries and open the sheet again.',
     ],
