@@ -15,6 +15,7 @@ import { linkedRecipe } from '../../lib/recipeSuggest.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import AteThis from '../diet/AteThis.js';
+import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
 import type { Recipe } from '../../types.ts';
 
@@ -40,7 +41,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     return (
       <section className="panel" aria-labelledby="rc-h">
         <BackBar onBack={onBack} />
-        <h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2>
+        <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2><RecipeStar recipe={recipe} mine={mine} /></div>
         <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.usual !== undefined && <p className="note">Usual: {amountText(recipe.usual, recipe)}</p>}
@@ -52,7 +53,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   return (
     <section className="panel" aria-labelledby="rc-h">
       <BackBar onBack={onBack} />
-      <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2>
+      <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} /></div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
       {recipe.url && <p className="note"><a className="rc-video" href={recipe.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(recipe.url)}: ${recipe.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(recipe.url)}</a></p>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}

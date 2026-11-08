@@ -110,14 +110,24 @@
 .rc-item {
   position: relative;
 }
-.rc-item.starred .rc-row {
-  padding-inline-end: 52px;
+.rc-titlerow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.rc-titlerow h2 {
+  min-width: 0;
+}
+.rc-favmark {
+  display: inline-block;
+  margin-inline: var(--sp-4);
+  color: var(--accent);
+  vertical-align: -0.1em;
 }
 .rc-star {
-  position: absolute;
-  inset-block-end: 0;
-  inset-inline-end: 0;
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 44px;
