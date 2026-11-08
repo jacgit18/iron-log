@@ -15,6 +15,7 @@ import HelpSheet from './HelpSheet.js';
 import ShareSheet from './ShareSheet.js';
 import RestDateSheet from './RestDateSheet.js';
 import BarcodeSheet from '../diet/BarcodeSheet.js';
+import PortionSheet from '../diet/PortionSheet.js';
 import BoardFilterSheet from '../board/BoardFilterSheet.js';
 import BulkShareSheet from '../grocery/BulkShareSheet.js';
 import PriceHistorySheet from '../grocery/PriceHistorySheet.js';
@@ -49,6 +50,7 @@ export default function Modal() {
     case 'barcode': return <BarcodeSheet />;
     case 'boardfilter': return <BoardFilterSheet />;
     case 'bulkshare': return <BulkShareSheet />;
+    case 'portion': return <PortionSheet key={String(modal.id ?? '')} />;
     case 'pricehistory': return <PriceHistorySheet key={String(modal.id ?? '')} />;
     case 'receipt': return <ReceiptSheet />;
     case 'receiptview': return <ReceiptViewer key={String((modal.receipt as { id?: string } | undefined)?.id ?? '')} />;
