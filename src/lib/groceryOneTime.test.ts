@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { carryOver, normGroceryData, onList, usedOneTime, withoutUsed } from './grocery.js';
+import { carryOver, mergeGrocery, normGroceryData, onList, usedOneTime, withoutUsed } from './grocery.js';
 import { normGroceryItem, validGroceryItem } from '../shared/grocery.js';
 import type { Grocery, GroceryItem, GroceryMonth } from '../types.ts';
 
 // Brief quickadd-one-time-items: a one-time item that was bought in any month is hidden from Inventory and later months' lists, never deleted.
 const item = (id: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n: id, store: '', qty: 1, cents: 300, every: true, out: false, ...extra });
-const milk = item('milk', { every: false, out: true, oneTime: true });
-const g: Grocery = { stores: [], items: [item('rice'), milk, item('kale', { oneTime: true })] };
+const milk = item('milk', { every: false, out: true, oneTime: '2026-10' });
+const g: Grocery = { stores: [], items: [item('rice'), milk, item('kale', { oneTime: '2026-10' })] };
 const month = (lines: GroceryMonth['lines']): GroceryMonth => ({ lines, pulled: [] });
 
 describe('usedOneTime', () => {
@@ -59,20 +59,68 @@ describe('carryOver', () => {
   });
 });
 
-describe('the field in saved data', () => {
-  it('is kept only as true', () => {
-    expect(normGroceryItem({ id: 'a', n: 'A', every: false, out: true, oneTime: true })?.oneTime).toBe(true);
-    expect(normGroceryItem({ id: 'a', n: 'A', every: true, oneTime: 'yes' })?.oneTime).toBeUndefined();
-    expect(normGroceryItem({ id: 'a', n: 'A', every: true, oneTime: false })?.oneTime).toBeUndefined();
+describe('purchases from before it was made one-time', () => {
+  it('do not count: ticking One-time on an item bought last month leaves it visible', () => {
+    const rice = item('rice', { oneTime: '2026-11' });
+    const gg: Grocery = { stores: [], items: [rice] };
+    expect(usedOneTime(gg, { '2026-10': month({ rice: { got: true } }) }).size).toBe(0);
+    expect(withoutUsed(gg, { '2026-10': month({ rice: { got: true } }) }).items).toHaveLength(1);
   });
-  it('is accepted by the server check as true and refused as anything else', () => {
+  it('count from the month it was made one-time, in that month or a later one', () => {
+    const rice = item('rice', { oneTime: '2026-11' });
+    const gg: Grocery = { stores: [], items: [rice] };
+    expect(usedOneTime(gg, { '2026-11': month({ rice: { got: true } }) }).has('rice')).toBe(true);
+    expect(usedOneTime(gg, { '2026-12': month({ rice: { got: true } }) }).has('rice')).toBe(true);
+  });
+});
+
+describe('a row open in Edit', () => {
+  it('stays in the list while it is open, even when used', () => {
+    const months = { '2026-11': month({ milk: { got: true } }) };
+    expect(withoutUsed(g, months, new Set(['milk'])).items.map(i => i.id)).toEqual(['rice', 'milk', 'kale']);
+    expect(withoutUsed(g, months, new Set(['rice'])).items.map(i => i.id)).toEqual(['rice', 'kale']);
+  });
+});
+
+describe('backup import with a used and a fresh item of the same name', () => {
+  const usedMilk = item('milk-1', { n: 'Milk', store: 'Aldi', every: false, out: true, oneTime: '2026-10' });
+  const freshMilk = item('milk-2', { n: 'Milk', store: 'Aldi', every: false, out: true, oneTime: '2026-11' });
+  const file = { stores: ['Aldi'], items: [freshMilk, usedMilk], months: { '2026-10': month({ 'milk-1': { got: true } }), '2026-11': month({ 'milk-2': { qty: 2 } }) } };
+  it('keeps them as two items and each one\'s month lines on its own item', () => {
+    const r = mergeGrocery({ stores: [], items: [] }, {}, file);
+    expect(r.grocery.items.filter(i => i.n === 'Milk')).toHaveLength(2);
+    expect(Object.keys(r.months['2026-10']!.lines)).toHaveLength(1);
+    const ids = r.grocery.items.map(i => i.id);
+    expect(ids).toContain(Object.keys(r.months['2026-10']!.lines)[0]);
+    expect(Object.keys(r.months['2026-11']!.lines)[0]).not.toBe(Object.keys(r.months['2026-10']!.lines)[0]);
+  });
+  it('importing the same file again adds nothing', () => {
+    const first = mergeGrocery({ stores: [], items: [] }, {}, file);
+    const again = mergeGrocery(first.grocery, first.months, file);
+    expect(again.grocery.items).toHaveLength(2);
+  });
+  it('an incoming fresh Milk joins the unused Milk here, not a used one', () => {
+    const here: Grocery = { stores: ['Aldi'], items: [usedMilk, { ...freshMilk, id: 'local-fresh' }] };
+    const r = mergeGrocery(here, { '2026-10': month({ 'milk-1': { got: true } }) }, { stores: ['Aldi'], items: [{ ...freshMilk, id: 'other' }], months: {} });
+    expect(r.grocery.items).toHaveLength(2);
+  });
+});
+
+describe('the field in saved data', () => {
+  it('is kept only as a month', () => {
+    expect(normGroceryItem({ id: 'a', n: 'A', every: false, out: true, oneTime: '2026-11' })?.oneTime).toBe('2026-11');
+    expect(normGroceryItem({ id: 'a', n: 'A', every: true, oneTime: true })?.oneTime).toBeUndefined();
+    expect(normGroceryItem({ id: 'a', n: 'A', every: true, oneTime: 'soon' })?.oneTime).toBeUndefined();
+  });
+  it('is accepted by the server check as a month and refused as anything else', () => {
     expect(validGroceryItem({ ...milk })).toBe(true);
-    expect(validGroceryItem({ ...milk, oneTime: false })).toBe(false);
+    expect(validGroceryItem({ ...milk, oneTime: true })).toBe(false);
+    expect(validGroceryItem({ ...milk, oneTime: '2026-13' })).toBe(false);
     expect(validGroceryItem(item('rice'))).toBe(true);
   });
   it('is kept by a backup round trip', () => {
     const back = normGroceryData(JSON.parse(JSON.stringify({ ...g, months: {} })));
-    expect(back?.items.find(i => i.id === 'milk')?.oneTime).toBe(true);
+    expect(back?.items.find(i => i.id === 'milk')?.oneTime).toBe('2026-10');
     expect(back?.items.find(i => i.id === 'rice')?.oneTime).toBeUndefined();
   });
   it('is separate from the older `once` (an occasional item)', () => {

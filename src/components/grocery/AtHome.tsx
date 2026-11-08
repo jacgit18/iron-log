@@ -26,11 +26,11 @@ import Stores from './StoresPanel.js';
 import useIdSet from './useIdSet.js';
 
 export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
-  const g = useMemo(() => withoutUsed(all, months), [all, months]); // a one-time item that was bought is out of Inventory (brief quickadd-one-time-items)
   const [editing, setEditing] = useState(false);
   const [sharingOpen, setSharingOpen] = useState(false); // the Sharing panel (groups and who is in them) above the list, reachable without Edit
   const [sharingSaved, setSharingSaved] = useState(false); // Done in the Sharing panel closed it: say so until it is opened again
   const [openEdit, setEdits, clearEdits] = useIdSet(); // items whose edit form is open; every item starts closed each time Edit is pressed
+  const g = useMemo(() => withoutUsed(all, months, editing ? openEdit : undefined), [all, months, editing, openEdit]); // a one-time item that was bought is out of Inventory, but its row stays while it is open in Edit (brief quickadd-one-time-items)
   const [folded, setFolded] = useState<Set<string>>(new Set()); // stores folded to their header while editing; every store starts open each time Edit is pressed
   const setEditMode = (on: boolean) => { setEditing(on); clearEdits(); setFolded(new Set()); };
   const [adjusting, setAdjust] = useIdSet(); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)

@@ -132,13 +132,13 @@ const NO_IDS: ReadonlySet<string> = new Set();
 export function usedOneTime(g: Grocery, months: Record<string, GroceryMonth>): ReadonlySet<string> {
   const once = g.items.filter(i => i.oneTime); if (!once.length) return NO_IDS;
   const used = new Set<string>();
-  for (const m of Object.values(months)) for (const i of once) if (m.lines[i.id]?.got) used.add(i.id);
+  for (const [k, m] of Object.entries(months)) for (const i of once) if (k >= i.oneTime! && m.lines[i.id]?.got) used.add(i.id); // purchases from before it was made one-time do not count
   return used;
 }
 /** The catalogue without its used one-time items: what Inventory, the pickers and receipt matching see (the bought month, Spending and price history still read the full one). */
-export function withoutUsed(g: Grocery, months: Record<string, GroceryMonth>): Grocery {
+export function withoutUsed(g: Grocery, months: Record<string, GroceryMonth>, keep?: ReadonlySet<string>): Grocery {
   const used = usedOneTime(g, months);
-  return used.size ? { ...g, items: g.items.filter(i => !used.has(i.id)) } : g;
+  return used.size ? { ...g, items: g.items.filter(i => !used.has(i.id) || keep?.has(i.id)) } : g; // `keep`: rows open in Edit stay while they are being edited
 }
 
 /** The items on a month's list, in catalogue order. This month and later ones (`live`): everything you do not have yet, so a tick on At home takes one off
@@ -288,14 +288,18 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     if (g.stores.length < MAX_STORES) { const back = g.retired?.find(x => sameName(x, s)); g.stores.push(back ?? s); if (back) { g.retired = g.retired!.filter(x => x !== back); if (!g.retired.length) delete g.retired; } changed = true; } // a retired twin comes back under the spelling it had
   });
   (inc.retired ?? []).forEach(s => { if (!isReservedName(s) && !hereAs(s) && (g.retired?.length ?? 0) < MAX_STORES) { g.retired = [...(g.retired ?? []), s]; changed = true; } }); // history in the file may name them
+  const usedHere = usedOneTime(cur, curMonths); const usedIn = usedOneTime({ stores: inc.stores, items: inc.items }, inc.months); const addedUsed = new Set<string>(); // one-time items already bought (brief quickadd-one-time-items)
   inc.items.forEach(raw => {
     const here = raw.store ? g.stores.find(x => sameName(x, raw.store)) : undefined;
     const i = raw.store && !here ? { ...raw, store: '' } : here && here !== raw.store ? { ...raw, store: here } : raw;
-    const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);
+    // The same item (its own id, name and store) first; else the one with that name in that store, never a used one-time item, so a used Milk and a fresh Milk stay two items.
+    const sameNameStore = (x: GroceryItem) => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store;
+    const same = g.items.find(x => x.id === raw.id && sameNameStore(x)) ?? (usedIn.has(raw.id) ? undefined : g.items.find(x => sameNameStore(x) && !usedHere.has(x.id) && !addedUsed.has(x.id)));
     if (same) { map.set(raw.id, same.id); return; }
     if (g.items.length >= MAX_ITEMS) return;
     const id = g.items.some(x => x.id === i.id) || keptIds.has(i.id) ? newGroceryId(g.items, i.n, keptIds) : i.id;
     g.items.push({ ...i, id }); map.set(raw.id, id); changed = true;
+    if (usedIn.has(raw.id)) addedUsed.add(id);
   });
   // A group is matched by its id (made at random, so the same group in a backup of this account has the same id here); one that is missing is
   // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.

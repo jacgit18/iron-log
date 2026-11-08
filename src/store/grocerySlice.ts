@@ -212,7 +212,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         const used = usedOneTime(g, get().groceryMonths); // a used one-time item is out of the list, so it does not block the same name
         if (g.items.some(i => !used.has(i.id) && i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         const full = ensureStore(g, store); if (full) return full;
-        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: !d.oneTime, out: !!d.oneTime, ...(d.oneTime ? { oneTime: true as const } : {}), ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: !d.oneTime, out: !!d.oneTime, ...(d.oneTime ? { oneTime: monthKey(new Date()) } : {}), ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
     },
@@ -239,7 +239,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (patch.note !== undefined) { const note = patch.note.trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE); if (note) it.note = note; else delete it.note; }
         if (patch.unit !== undefined) { const unit = UNITS.find(u => u === patch.unit); if (unit) it.unit = unit; else delete it.unit; }
         if (patch.aliases !== undefined) { const a = cleanAliases(patch.aliases); if (a) it.aliases = a; else delete it.aliases; } // receipt names (brief receipt-rename-memory); an empty list clears them
-        if (patch.oneTime !== undefined) { if (patch.oneTime) it.oneTime = true; else delete it.oneTime; } // the Edit row's One-time item box
+        if (patch.oneTime !== undefined) { if (patch.oneTime) it.oneTime = monthKey(new Date()); else delete it.oneTime; } // the Edit row's One-time item box
         if (patch.every !== undefined) { it.every = patch.every; if (it.every) it.out = false; }
         const used = usedOneTime(g, get().groceryMonths);
         if (g.items.some(i => i !== it && !used.has(i.id) && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
