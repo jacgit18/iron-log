@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { NEW_STORE, addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, stagedAt, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
 import { aliasAddsFor, applyNames, movedFrom, resolveName, savedNamesText, type RowEdit } from '../../lib/groceryAliases.js';
-import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel } from '../../lib/grocery.js';
+import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel, withoutUsed } from '../../lib/grocery.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
 import { missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
@@ -20,7 +20,9 @@ import './ReceiptScan.css';
 export default function ReceiptSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
-  const g = useAppStore(s => s.grocery);
+  const gAll = useAppStore(s => s.grocery);
+  const allMonths = useAppStore(s => s.groceryMonths);
+  const g = useMemo(() => withoutUsed(gAll, allMonths), [gAll, allMonths]); // a used one-time item is not a match for a receipt line
   const receipt = modal?.receipt as Receipt | undefined;
   const mk = String(modal?.mk ?? '');
   const onApplied = modal?.onApplied as ((a: Applied) => void) | undefined;

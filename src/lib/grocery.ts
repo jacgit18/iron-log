@@ -127,13 +127,27 @@ export function parsePrices(text: string): number[] | null {
 /** Whether you have an item this month: ticked "have" on At home, or bought (ticked on To get). A new month starts with the last month's ticks (ADR 079); before that, every month started unticked (ADR 054). */
 export const haveOf = (item: GroceryItem, m: GroceryMonth) => { const l = lineOf(item, m); return l.have || l.got; };
 
+const NO_IDS: ReadonlySet<string> = new Set();
+/** The one-time items already bought in any month (brief quickadd-one-time-items): they are hidden from Inventory and from every later month's list, and stay in the month they were bought in. Derived from the month lines, so unticking the purchase brings the item back and nothing extra is stored. */
+export function usedOneTime(g: Grocery, months: Record<string, GroceryMonth>): ReadonlySet<string> {
+  const once = g.items.filter(i => i.oneTime); if (!once.length) return NO_IDS;
+  const used = new Set<string>();
+  for (const m of Object.values(months)) for (const i of once) if (m.lines[i.id]?.got) used.add(i.id);
+  return used;
+}
+/** The catalogue without its used one-time items: what Inventory, the pickers and receipt matching see (the bought month, Spending and price history still read the full one). */
+export function withoutUsed(g: Grocery, months: Record<string, GroceryMonth>): Grocery {
+  const used = usedOneTime(g, months);
+  return used.size ? { ...g, items: g.items.filter(i => !used.has(i.id)) } : g;
+}
+
 /** The items on a month's list, in catalogue order. This month and later ones (`live`): everything you do not have yet, so a tick on At home takes one off
  *  (a new month starts with the last month's ticks, `carryOver`, ADR 079). A past month shows what was bought then (a ticked item, or one with its own
  *  count or price), not what is out today. */
-export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
+export const onList = (g: Grocery, m: GroceryMonth, live: boolean, used?: ReadonlySet<string>) =>
   g.items.filter(i => {
     const l = m.lines[i.id];
-    if (live) return !l?.have;
+    if (live) return !l?.have && !(used?.has(i.id) && !l?.got); // a used one-time item is only on the month it was bought in
     return l?.got === true || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id);
   });
 
@@ -144,7 +158,8 @@ export function carryOver(g: Grocery, months: Record<string, GroceryMonth>, nowK
   if (cur?.carried || (cur && Object.values(cur.lines).some(l => l.have))) return null; // a Have tick is only made on the current month's At home list, so it means the month is already lived in
   const earlier = Object.keys(months).filter(k => MONTH_RE.test(k) && k < nowKey).sort().reverse();
   for (const from of earlier) {
-    const ids = g.items.filter(i => haveOf(i, months[from]) && !cur?.lines[i.id]?.got).map(i => i.id); // an item already bought this month needs no tick
+    const used = usedOneTime(g, months);
+    const ids = g.items.filter(i => haveOf(i, months[from]) && !cur?.lines[i.id]?.got && !used.has(i.id)).map(i => i.id); // an item already bought this month needs no tick
     if (ids.length) return { from, ids };
   }
   return null;

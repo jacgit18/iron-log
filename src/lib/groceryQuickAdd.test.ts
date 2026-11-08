@@ -36,6 +36,6 @@ describe('findQuickAdded', () => {
 describe('words', () => {
   it('names the row and the notice', () => {
     expect(quickAddLabel('Aldi')).toBe('Add item to Aldi');
-    expect(quickAddNotice('Milk', 'Aldi')).toBe("Added Milk to Aldi. It is on this month's list and stays in Inventory. Remove it there when you no longer need it.");
+    expect(quickAddNotice('Milk', 'Aldi')).toBe("Added Milk to Aldi. It is a one-time item: it leaves Inventory and next month's list after you buy it.");
   });
 });

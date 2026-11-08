@@ -74,7 +74,7 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
   const every = o.every === true || (o.every === undefined && o.once !== true);
   const qty = cleanQty(o.qty);
   const note = str(o.note, MAX_NOTE); const unit = cleanUnit(o.unit); const share = cleanShare(o.share); const aliases = cleanAliases(o.aliases);
-  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}), ...(unit ? { unit } : {}), ...(share ? { share } : {}), ...(aliases ? { aliases } : {}) };
+  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}), ...(unit ? { unit } : {}), ...(share ? { share } : {}), ...(aliases ? { aliases } : {}), ...(o.oneTime === true ? { oneTime: true as const } : {}) };
 }
 
 /** One store, as a row of its own: the name is its id. */
@@ -127,6 +127,7 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
   if (o.unit !== undefined && cleanUnit(o.unit) === null) return false;
   if (o.share !== undefined && !validShare(o.share)) return false;
   if (o.aliases !== undefined) { const c = cleanAliases(o.aliases); const raw = o.aliases as unknown[]; if (!c || !Array.isArray(raw) || c.length !== raw.length || c.some((a, i) => a !== raw[i])) return false; }
+  if (o.oneTime !== undefined && o.oneTime !== true) return false; // `once` is older data (an occasional item); `oneTime` is the quick-add item that leaves after it is bought
   if (typeof o.every !== 'boolean' || typeof o.out !== 'boolean' || (o.every && o.out)) return false;
   return true;
 }

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { byStore, emptyMonth, groupTag, haveOf, lineOf, lineTotal } from '../../lib/grocery.js';
+import { byStore, emptyMonth, groupTag, haveOf, lineOf, lineTotal, withoutUsed } from '../../lib/grocery.js';
 import { itemHistory, lastBoughtText } from '../../lib/itemHistory.js';
 import { DEFAULT_GROCERY_SORT, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { hasSharing } from '../../lib/grocerySettle.js';
@@ -25,7 +25,8 @@ import HomeRow from './HomeRow.js';
 import Stores from './StoresPanel.js';
 import useIdSet from './useIdSet.js';
 
-export default function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
+export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
+  const g = useMemo(() => withoutUsed(all, months), [all, months]); // a one-time item that was bought is out of Inventory (brief quickadd-one-time-items)
   const [editing, setEditing] = useState(false);
   const [sharingOpen, setSharingOpen] = useState(false); // the Sharing panel (groups and who is in them) above the list, reachable without Edit
   const [sharingSaved, setSharingSaved] = useState(false); // Done in the Sharing panel closed it: say so until it is opened again
