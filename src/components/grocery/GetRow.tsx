@@ -32,7 +32,7 @@ export default function GetRow({ g, item, month, mk, future, carries, onGot, ope
         {pick && <label className="gtickbox"><input type="checkbox" className="chk" aria-label={`Select ${item.n}`} checked={pick.on} onChange={e => pick.set(e.target.checked)} /></label>}
         {/* Only the checkbox ticks (a 44px target of its own): tapping the name opens the count, price and Move to panel, so a stray tap on the row cannot mark it bought. */}
         {!pick && <label className="gtickbox">
-          <input type="checkbox" className="chk" id={`groc-${item.id}`} aria-label={`Got ${item.n}`} checked={l.got} disabled={future} onChange={e => onGot(e.target.checked)} />
+          <input type="checkbox" className="chk" id={`groc-${item.id}`} aria-label={`Have ${item.n}`} checked={l.got} disabled={future} onChange={e => onGot(e.target.checked)} />
         </label>}
         <button type="button" className="gtickname gnamebtn" aria-expanded={open} aria-controls={moreId} onClick={() => onOpen(!open)}>
           {item.n}

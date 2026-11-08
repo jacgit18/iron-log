@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem } from '../types.ts';
-import { ALL_CHIP, DETAILS_OPEN_FROM, chipGroups, chipsOf, detailsStartOpen, haveCount, haveMonthText, hasNoPrice, itemsText, resolveChip, showChips, storeChip } from './groceryChips.js';
+import { ALL_CHIP, DETAILS_OPEN_FROM, chipGroups, chipsOf, detailsStartOpen, haveCount, haveMonthText, hasNoPrice, resolveChip, showChips, storeChip } from './groceryChips.js';
 
 const item = (id: string, store: string): GroceryItem => ({ id, n: id, store, qty: 1, cents: 100, every: true, out: false });
 const groups = [
@@ -65,10 +65,6 @@ describe('Inventory counts', () => {
   it('counts the items you have in a store', () => {
     expect(haveCount(groups[0]!.items, i => i.id !== 'b')).toBe(2);
     expect(haveCount([], () => true)).toBe(0);
-  });
-  it('says items and you have in a store header', () => {
-    expect(itemsText(3, 2)).toBe('3 items · 2 you have');
-    expect(itemsText(1, 0)).toBe('1 item · 0 you have');
   });
   it('says how many of the items you have this month in the rail', () => {
     expect(haveMonthText(2, 5)).toBe('2 of 5 items this month');
