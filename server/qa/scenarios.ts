@@ -2093,6 +2093,48 @@ export const SCENARIOS: readonly Scenario[] = [
       'The two buttons show only their names, with no numbers, and sit centered on a row of their own.',
     ],
   },
+  {
+    id: 'S-168', feature: 'Groceries views', title: 'A quick-added item leaves Inventory after it is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items',
+    steps: [
+      'On Shopping press + Add item to a store, type Milk and press Enter. The notice says it is a one-time item.',
+      'Tick Milk on Shopping. Open Inventory, then Bought.',
+    ],
+    expected: [
+      'The notice says Milk leaves Inventory and next month\'s list after you buy it.',
+      'Milk is not in Inventory any more, and it shows on Bought for this month.',
+    ],
+  },
+  {
+    id: 'S-169', feature: 'Groceries views', title: 'The One-time item box in Edit makes any item leave after it is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items',
+    steps: [
+      'Open Inventory, press Edit, open an item and tick One-time item.',
+      'Press Done, tick that item on Shopping, then open Inventory.',
+    ],
+    expected: [
+      'The box stays ticked after you reopen the row.',
+      'The item is gone from Inventory and shows on Bought.',
+    ],
+  },
+  {
+    id: 'S-170', feature: 'Groceries views', title: 'Unticking a bought one-time item brings it back', persona: 'grocery-shopper', brief: 'quickadd-one-time-items', edge: true,
+    steps: [
+      'Quick add Milk and tick it on Shopping.',
+      'Open Bought and untick Milk, then open Inventory.',
+    ],
+    expected: [
+      'Milk goes back to Shopping.',
+      'Milk is in Inventory again, with its one-time box still ticked.',
+    ],
+  },
+  {
+    id: 'S-171', feature: 'Groceries views', title: 'The same name can be quick-added again after the first one is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items', edge: true,
+    steps: [
+      'Quick add Milk, tick it, then quick add Milk in the same store again.',
+    ],
+    expected: [
+      'The second Milk is added with no "already in this store\'s list" message and shows on Shopping.',
+    ],
+  },
 ];
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
