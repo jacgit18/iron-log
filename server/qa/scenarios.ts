@@ -54,7 +54,8 @@ export type ScenarioFeature =
   | 'Price history'
   | 'Program desktop layout'
   | 'Groceries views'
-  | 'Food type';
+  | 'Food type'
+  | 'Nutrition quick log';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
