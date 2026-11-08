@@ -2239,7 +2239,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-180', feature: 'Goes with', title: 'Make a meal from a pair: numbers add up, and deleting a recipe clears the pairing', persona: 'meal-planner', brief: 'recipes-goes-with',
+    id: 'S-180', feature: 'Goes with', title: 'Make a meal from a pair (after S-179): numbers add up, and deleting a recipe clears the pairing', persona: 'meal-planner', brief: 'recipes-goes-with',
     steps: [
       'With Chili and Rice paired (S-179), open Chili and press Make a meal.',
       'Read the new page, then open Recipes, press Meals and find it.',
@@ -2255,7 +2255,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'With Chili and Rice paired, open Chili, press Ate this, then read under the message.',
       'Press "+ Rice" and read the message. Press Undo next to Rice.',
-      'Open Quick add\'s Log on Chili from the Recipes row, press Log it and read the sheet.',
+      'Go back to Recipes, press Log on the Chili row, press Log it and read the sheet.',
     ],
     expected: [
       'A "Goes with it:" row offers + Rice. One tap logs Rice at its usual amount on the same day, and Undo takes back only the Rice entry (the Chili entry stays).',
@@ -2350,7 +2350,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Dinner shows Protein, Carb and Veg marks; Protein has a check and Carb and Veg do not.',
-      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button follows from your sides or favorites.',
+      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button appears only if you have a recipe that counts as Veg (a side or a favorite); with the four starter recipes there may be none.',
     ],
   },
   {
@@ -2358,10 +2358,10 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Tap a card, press Move to… and pick Lunch. Tap it again, press Move to… and pick another day.',
       'On a wide screen drag a card into another meal and drag a recipe from the tray into a meal.',
-      'Try to move a card to a day that already holds 8 items.',
+      'Try to move a card to a day that already holds 8 items, and to a day that already has the same food in another meal.',
     ],
     expected: [
-      'The card moves to the meal or the day you picked and the bars of both days follow. A food already in that meal is refused.',
+      'The card moves to the meal or the day you picked and the bars of both days follow. A food already on that day is refused with "That is already on this day.", whatever the meal.',
       'Dragging does the same; a tray item is added as a new card.',
       'A full day refuses with "A day can hold 8 things. Remove one to add another."',
     ],
