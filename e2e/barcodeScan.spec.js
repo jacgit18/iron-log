@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startFood } from './recipesNav.js';
 
 // Scan barcode in the food search box (brief barcode-scan). The code check, the route and the client are node tests (shared/barcode.test.ts, foodBarcode.test.ts,
 // barcodeScan.test.ts); this covers the wiring a unit test cannot: the button for any signed-in account, the sheet, a read code becoming a pick that fills the real form,
@@ -14,7 +15,7 @@ const withReader = (page, codes) => page.addInitScript(c => {
 const noCamera = page => page.addInitScript(() => { navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
 const openForm = async page => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
 };
 const CHEERIOS = { ok: true, hit: { id: 2, name: 'Cheerios Cereal', brand: 'General Mills', kcal: 380, p: 10, c: 70, f: 6, serving: 28 } };
 const answer = (page, status, body) => page.route('**/api/foods/barcode/*', route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }));

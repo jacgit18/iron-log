@@ -1,0 +1,32 @@
+@layer base, components;
+@layer components {
+/* The quick add row at the end of a store's list on Shopping. */
+.gqaopen {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: 44px;
+  width: 100%;
+  justify-content: flex-start;
+  color: var(--accent);
+}
+.gqaform {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-top: var(--sp-4);
+}
+.gqaform .gqaname {
+  flex: 1 1 10rem;
+  min-width: 0;
+  min-height: 44px;
+}
+.gqaform .btn {
+  min-height: 44px;
+}
+.gqaerr {
+  flex: 1 1 100%;
+  margin: 0;
+}
+}

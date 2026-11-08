@@ -18,6 +18,9 @@ describe('parseRoute', () => {
   it('gives null for nothing known, an empty hash, or an anchor that is not ours', () => {
     for (const h of ['', '#', '#/', '#view', '#/nope', '#/nope/progress']) expect(parseRoute(h)).toBeNull();
   });
+  it('has a screen for the food type review, opened from the Recipes banner', () => {
+    expect(parseRoute('#/daily/recipes/types')).toEqual({ tab: 'daily', path: 'daily/recipes/types' });
+  });
   it('ignores case, a trailing slash and a query', () => {
     expect(parseRoute('#/Progress/Trends/')).toEqual({ tab: 'progress', path: 'progress/trends' });
     expect(parseRoute('#/program?x=1')).toEqual({ tab: 'program', path: 'program' });
@@ -33,7 +36,7 @@ describe('pageOf', () => {
     expect(pageOf('progress', 'progress')).toBeNull();
     expect(pageOf('program/exercises', 'progress')).toBeNull();
     expect(pageOf('progress/zzz', 'progress')).toBeNull(); // not a screen
-    expect(pageOf('daily/grocery/spend', 'daily/grocery')).toBe('spend');
+    expect(pageOf('daily/grocery/bought/history', 'daily/grocery')).toBe('bought/history');
     expect(pageOf('daily/grocery/receipts', 'daily/grocery')).toBe('receipts');
     expect(pageOf('daily/grocery/bought', 'daily/grocery')).toBe('bought');
     expect(pageOf('daily/grocery/shopping', 'daily/grocery')).toBe('shopping');
@@ -42,6 +45,7 @@ describe('pageOf', () => {
   it('keeps the old Grocery addresses opening the renamed screens', () => {
     expect(parseRoute('#/daily/grocery/get')?.path).toBe('daily/grocery/shopping');
     expect(parseRoute('#/daily/grocery/home')?.path).toBe('daily/grocery/inventory');
+    expect(parseRoute('#/daily/grocery/spend')?.path).toBe('daily/grocery/bought/history');
   });
 });
 
@@ -50,7 +54,7 @@ describe('dailySection and dailyFix', () => {
   it('names the section an address points at, only when it is offered', () => {
     expect(dailySection('daily/recipes', keys)).toBe('recipes');
     expect(dailySection('daily/recipes/mine', keys)).toBe('recipes');
-    expect(dailySection('daily/grocery/spend', keys)).toBe('grocery');
+    expect(dailySection('daily/grocery/bought/history', keys)).toBe('grocery');
     expect(dailySection('daily/medical', keys)).toBeNull(); // not offered to this person
     expect(dailySection('daily', keys)).toBeNull();
     expect(dailySection('progress/trends', keys)).toBeNull();

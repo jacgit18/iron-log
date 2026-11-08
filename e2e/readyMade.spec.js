@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe, startFood } from './recipesNav.js';
 
 // Ready-made foods and the recipe-first day screen (brief recipe-first-diet-log). The cleaner, the day limits and the logging rules are node tests
 // (recipes.test.ts, recipeDraft.test.ts, dietLog.test.ts); this covers the wiring a unit test cannot: the real form and list, the address and Back, the
@@ -10,7 +11,7 @@ const hits = [{ id: 1, name: 'Oats, rolled', kcal: 379, p: 13.2, c: 67.7, f: 6.5
 const stub = page => page.route('**/api/foods/search*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hits }) }));
 const make = async (page, name = 'Frozen lasagna') => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Calories per serving').fill('420');
   await page.getByLabel('Protein per serving (g)').fill('22');
@@ -21,8 +22,9 @@ const make = async (page, name = 'Frozen lasagna') => {
 
 test('a ready-made food needs a name and numbers, lists under its chip, and its page has no ingredients or steps', async ({ page }) => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await expect(page).toHaveURL(/#\/daily\/recipes\/form$/);
+  await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Ready to eat' })).toHaveAttribute('aria-pressed', 'true'); // brief food-type-and-migration: required, starts on Ready to eat
   await page.getByRole('button', { name: 'Save food' }).click();
   await expect(page.getByRole('alert')).toHaveText('Give the food a name.');
   await page.getByLabel('Name', { exact: true }).fill('Frozen lasagna');
@@ -37,13 +39,13 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await expect(page.getByRole('button', { name: /missing to Shopping/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' }).click();
-  await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toBeVisible();
+  await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toBeVisible();
   await page.getByRole('button', { name: 'Can make' }).click(); // nothing is missing from a food with no ingredients, but it is not "can make"
-  await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toHaveCount(0);
+  await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Can make' }).click();
   await page.reload();
   await openRecipes(page);
-  await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toBeVisible();
+  await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toBeVisible();
 });
 
 test('Ate this logs a ready-made food as a snapshot, to today or to a chosen day, and refuses a future day', async ({ page }) => {
@@ -66,7 +68,7 @@ test('Ate this logs a ready-made food as a snapshot, to today or to a chosen day
 test('the food lookup in the ready-made form fills the numbers, still editable', async ({ page }) => {
   await stub(page);
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await page.getByLabel('Look up nutrition').fill('oats');
   await page.getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' }).click();
   await page.getByLabel('Grams').fill('50');
@@ -98,7 +100,7 @@ test('the day screen has no separate lookup box, and the One-off food form start
 test('Enter in the lookup box does not save the form, and the Ready-made filter is dropped when you open the Library', async ({ page }) => {
   await stub(page);
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await page.getByLabel('Look up nutrition').fill('oats');
   await page.getByLabel('Look up nutrition').press('Enter');
   await expect(page.getByRole('alert')).toHaveCount(0);
@@ -112,6 +114,6 @@ test('Enter in the lookup box does not save the form, and the Ready-made filter 
 
 test('the normal recipe form does not offer Ready-made as a category', async ({ page }) => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await expect(page.getByLabel('Category').locator('option', { hasText: 'Ready-made' })).toHaveCount(0);
 });

@@ -60,7 +60,7 @@ test('Spending shows a bar for a month you bought in, with the average as text',
   await page.click('#groc-done');
   await page.click('#groc-view-shopping');
   await page.locator('#groc-rice').click();
-  await page.click('#groc-view-spend');
+  await page.click('#groc-view-bought'); await page.click('#groc-bought-history');
   await expect(page.locator('#groc-spend-summary')).toContainText('Average $10.00 a month over 1 month');
   await expect(page.locator('.gbars li.cur')).toHaveAttribute('aria-label', /\$10\.00 on 1 item/);
 });

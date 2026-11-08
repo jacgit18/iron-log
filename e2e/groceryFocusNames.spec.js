@@ -86,6 +86,6 @@ test('the Spent tile, the count and the tax hint include a bought line whose ite
   const summary = page.locator('#groc-summary');
   await expect(summary).toContainText('Bought 2 of 4'); // rice, and the removed item's line, of three items plus the removed one
   await expect(summary).toContainText('Spent $11.60 with tax'); // 500 + 2 x 300 + 60 tax
-  await page.click('#groc-view-spend');
+  await page.click('#groc-view-bought'); await page.click('#groc-bought-history');
   await expect(page.locator('.groc')).toContainText('$11.60');
 });

@@ -54,13 +54,17 @@ export type ScenarioFeature =
   | 'Price history'
   | 'Program desktop layout'
   | 'Groceries views'
+  | 'Food type'
+  | 'Recipes find'
+  | 'Nutrition quick log'
+  | 'Meals from foods'
   | 'Grocery budget';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Grocery budget',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget',
 ];
 
 export interface Scenario {
@@ -330,7 +334,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-20', feature: 'Recipe-first log', title: 'New ready-made food', persona: 'diet-fresh', brief: 'recipe-first-diet-log',
     steps: [
-      'Open Recipes and press New ready-made food.',
+      'Open Recipes and press + New, then Add a food by hand.',
       'Save it with only a name; then add 250 kcal and 20 g protein and save.',
       'Find it under the Ready-made chip, open it and press Ate this.',
       'Edit the food to 300 kcal and look at the entry already logged.',
@@ -693,7 +697,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
+      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
@@ -706,7 +710,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a non-admin account', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
     steps: [
       'On a phone as an admin, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
-      'Sign in as a test account that is not an admin and open New ready-made food.',
+      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
       'The form stays empty and says it could not read the numbers (or that the label shows per 100 g only); you can still type the numbers and save.',
@@ -717,7 +721,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
     steps: [
-      'On Recipes press New ready-made food, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
+      'On Recipes press + New, then Add a food by hand, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
       'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
       'Press Whole pack (12) again, press Ate this, then press Undo.',
     ],
@@ -729,7 +733,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-52', feature: 'Whole pack', title: 'A wrong pack size is refused', persona: 'diet-fresh', brief: 'whole-pack', edge: true,
     steps: [
-      'On New ready-made food fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
+      'On the new ready-made food form fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
       'Change it to 8, save, then edit the food and clear the box.',
     ],
     expected: [
@@ -767,7 +771,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-55', feature: 'Usual amount', title: 'Log 4 eggs in two taps', persona: 'diet-on-target', brief: 'usual-amount-and-unit',
     steps: [
-      'On Recipes press New ready-made food, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
+      'On Recipes press + New, then Add a food by hand, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
       'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
       'Press Ate this, look at today\'s Diet log, then press Undo.',
     ],
@@ -991,7 +995,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
     steps: [
-      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan barcode and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
       'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
       'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
@@ -1005,9 +1009,9 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account still sees the scan', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
     steps: [
-      'Open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Open + New, then Add a food by hand, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
-      'Sign in as a test account that is not an admin and open New ready-made food.',
+      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
       'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
@@ -1171,7 +1175,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
       'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
       'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
       'Scan a product USDA does know (oatmeal) and read the same place.',
@@ -1185,7 +1189,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
     steps: [
-      'On a phone, as an admin, open New ready-made food, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'On a phone, as an admin, open + New, then Add a food by hand, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
       'Read the sheet, then press Photo the label.',
       'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
     ],
@@ -1724,9 +1728,308 @@ export const SCENARIOS: readonly Scenario[] = [
       'Add price opens Bought with that item\'s price field open. A bought item with no price shows an Add price chip in place of its count and price.',
     ],
   },
+  {
+    id: 'S-133', feature: 'Receipt scan', title: 'Rename a matched receipt line and apply', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt. Find a line that matched an item and look at its name field and the area under it.',
+      'Type a different name in that line’s name field, leave the field, and look under it. Leave Remember this name ticked and press Apply.',
+    ],
+    expected: [
+      'Every line has a name field. A match you have not touched shows no Remember tick.',
+      'Remember this name appears once the name changed, ticked. After Apply the item has the new name and the notice says "Remembered 1 receipt name."; Undo puts the old name back.',
+    ],
+  },
+  {
+    id: 'S-134', feature: 'Receipt scan', title: 'Scan again and see the saved name matched', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt that has the same printed line text as the one you renamed.',
+      'Look at that line’s item and the chip beside its name.',
+    ],
+    expected: [
+      'The line is already set to your item, with the chip "Matched your earlier rename", whatever the scan guessed.',
+      'Changing the item on that line removes the chip.',
+    ],
+  },
+  {
+    id: 'S-135', feature: 'Receipt scan', title: 'Name a line that is not on your list', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt with a line that matched nothing. Type a name in its name field and leave the field.',
+      'Press Apply, then scan the same text again.',
+    ],
+    expected: [
+      'The line shows New with that name and a Remember tick; Apply creates the item bought with the receipt price.',
+      'The second scan sets that line to the new item with the "Matched your earlier rename" chip.',
+    ],
+  },
+  {
+    id: 'S-136', feature: 'Receipt scan', title: 'A receipt text saved for another item moves', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt, pick an item that already holds a receipt name on a line with that text, choose a different item for the line, and read under the name field.',
+      'Press Apply, then open the first item’s edit row in Inventory.',
+    ],
+    expected: [
+      'A note says the text is saved for the first item and that remembering it moves it here.',
+      'The text is now listed under the new item and no longer under the first.',
+    ],
+  },
+  {
+    id: 'S-137', feature: 'Receipt scan', title: 'Forget a receipt name from an item and Undo', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
+    steps: [
+      'On a phone, in Inventory press Edit and open an item that has receipt names. Press Forget beside one.',
+      'Press Undo in the Removed notice, then scan a receipt with that text.',
+    ],
+    expected: [
+      'The name is gone from the list and a Removed notice with Undo appears; the Forget buttons are easy to hit.',
+      'The name is back after Undo. After Forget (without Undo) a scan with that text no longer matches.',
+    ],
+  },
+  {
+    id: 'S-138', feature: 'Groceries views', title: 'Spending history is inside Bought, and the old Spending address opens it', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    steps: [
+      'Open Groceries. Look at the three views, then open Bought.',
+      'Press Spending history, then reload the page. Then open the address ending /daily/grocery/spend.',
+    ],
+    expected: [
+      'The views read Shopping, Bought and Inventory. Bought has This month and Spending history under its title.',
+      'Spending history shows the chart, the 6 mo and 12 mo buttons and the text lines. The reload and the old address both open it.',
+    ],
+  },
+  {
+    id: 'S-139', feature: 'Groceries views', title: 'On a phone Shopping has Scan receipt, a search box and Sort, Select items, More in one row', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', device: true,
+    steps: [
+      'On a phone open Shopping.',
+      'Look at the buttons under the month row, then press More.',
+    ],
+    expected: [
+      'Scan receipt and the search box are full width. Sort, Select items and More are three equal buttons in one row.',
+      'More holds Pick from photos, Saved receipts, Show details on all rows and Skip the N left. A computer keeps its own toolbar.',
+    ],
+  },
+  {
+    id: 'S-140', feature: 'Groceries views', title: 'Quick add puts a one-time item on Shopping; Make it every month and Undo work', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    steps: [
+      'On Shopping press + Add item to a store, type a name and press Enter.',
+      'Press Make it every month in the notice. Add another item and press Undo.',
+    ],
+    expected: [
+      'The item shows under that store and in Inventory. The notice says it is a one-time item and stays in Inventory.',
+      'Make it every month changes the notice. Undo takes the second item away.',
+    ],
+  },
+  {
+    id: 'S-141', feature: 'Groceries views', title: 'Quick add refuses a name already in that store and an empty name', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', edge: true,
+    steps: [
+      'On Shopping press + Add item to a store and press Enter with nothing typed.',
+      'Type the name of an item already in that store and press Enter.',
+    ],
+    expected: [
+      'A message says to give the item a name, and the field stays open.',
+      'A message says the item is already in this store\'s list, and nothing is added.',
+    ],
+  },
+  {
+    id: 'S-142', feature: 'Groceries views', title: 'Bought has one Who owes who row and no money line under the month switcher', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists',
+    steps: [
+      'Open Groceries, then Bought (This month). Look at what sits above the store sections, then press the Who owes who row.',
+    ],
+    expected: [
+      'Who owes who is the first row, closed, above the month switcher. There is no line reading Paid, Your share and Owed to you under the switcher. Opening the row shows Paid, Your share and Still owed to you.',
+    ],
+  },
+  {
+    id: 'S-143', feature: 'Groceries views', title: 'Store chips filter Bought and Inventory, one column with no empty block', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists',
+    steps: [
+      'On Bought press one store chip, then All. Press the Spending history switch and back to This month.',
+      'Open Inventory. Press a store chip, tick a Have box inside it, then press Edit.',
+    ],
+    expected: [
+      'A chip shows only that store; All shows every store in one column with no gap beside a short store. Spending history opens and This month comes back.',
+      'Each store header reads "n items · m you have" and the count goes up with the tick. Edit shows no chips and keeps its columns; Done brings the chips back.',
+    ],
+  },
+  {
+    id: 'S-144', feature: 'Groceries views', title: 'On a wide screen the right rail lists the stores and picks the chip on Bought and Inventory', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists', edge: true,
+    steps: [
+      'On a computer at 1280 px or wider open Bought, then Inventory. Press a store in the rail on each, then make the window narrower than 1100 px.',
+    ],
+    expected: [
+      'The rail lists the stores with counts; on Inventory it also says "m of n items this month". Pressing a store picks that chip. Under 1100 px there is no rail and the chips still work.',
+    ],
+  },
+  {
+    id: 'S-145', feature: 'Groceries views', title: 'Edit on Inventory shows store chips and one list; a chip shows one store; stores fold', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list',
+    steps: [
+      'Open Inventory with two or more stores and press Edit. Press a store chip, then Done, then Edit again. Press a store\'s name to fold it, then press it again.',
+    ],
+    expected: [
+      'Chips with counts show above one list of stores (no columns). A chip shows one store and stays across Done and Edit. A folded store shows only its name and count; opening it brings the rows back. There is no Sort in Edit mode.',
+    ],
+  },
+  {
+    id: 'S-146', feature: 'Groceries views', title: 'Search in Edit mode filters by name and opens folded stores', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list',
+    steps: [
+      'In Edit mode fold a store, then type part of one of its item names in the search box. Then type a name that matches nothing.',
+    ],
+    expected: [
+      'The folded store opens and shows the matching row. The second search says "No items match" and the Add item, More and Done buttons stay at the bottom.',
+    ],
+  },
+  {
+    id: 'S-147', feature: 'Groceries views', title: 'Moving an item to another store under a chip switches the chip to All', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list', edge: true,
+    steps: [
+      'In Edit mode press one store\'s chip, open an item there and change its store to another one. On a computer 1100 px or wider look at the right side.',
+    ],
+    expected: [
+      'The chip switches to All, the cursor stays on the item\'s Store box, and the item shows under its new store. On a wide screen the Stores panel sits in the right rail; on a narrower one it sits under the list.',
+    ],
+  },
+  // ---- Food type ----
+  {
+    id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new ready-made food', persona: 'diet-fresh', brief: 'food-type-and-migration',
+    steps: [
+      'Open Recipes and press + New, then Add a food by hand. Look at the Type buttons, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
+      'Open the food and press Edit.',
+    ],
+    expected: [
+      'Type starts on Ready to eat. The food saves with no banner about types.',
+      'The form opens with Drink picked.',
+    ],
+  },
+  {
+    id: 'S-149', feature: 'Food type', title: 'Review types: suggestions, one change, Looks right, Undo', persona: 'recipe-collector', brief: 'food-type-and-migration',
+    steps: [
+      'Make three ready-made foods without a Type (an older account that has them; or on a test account add them in an older build): Whole milk, Eggs large, Frozen lasagna. Open Recipes.',
+      'Read the banner and press Review types. Change Frozen lasagna to Drink, then press Looks right.',
+      'Press Undo on the notice.',
+    ],
+    expected: [
+      'The banner says "3 foods need a type." The review page lists each food with its suggestion: Whole milk Drink, Eggs large Ingredient, Frozen lasagna Ready to eat.',
+      'The list shows "Food types saved." and the banner is gone.',
+      'The banner returns with "3 foods need a type."; Back from the review page returns to the list, and a reload on it shows the list.',
+    ],
+  },
+  {
+    id: 'S-150', feature: 'Food type', title: 'Nothing to review, and a food edited later', persona: 'diet-fresh', brief: 'food-type-and-migration', edge: true,
+    steps: [
+      'With no ready-made foods open Recipes. Then add one food and, from its Edit form, change its Type from Ready to eat to Ingredient and save.',
+    ],
+    expected: [
+      'There is no banner and no Review types button. The edited food keeps Ingredient when it is opened again.',
+    ],
+  },
+  {
+    id: 'S-151', feature: 'Recipes find', title: 'Type tabs: counts, search inside a tab, rows tagged', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'Open Recipes. Read the four tabs (All, Foods, Meals, Drinks) and their counts, then press Foods, Meals and Drinks in turn.',
+      'Press All, type a word from one recipe name in the search box, then press each tab.',
+      'Press Filters, pick a category chip, and read the counts again.',
+    ],
+    expected: [
+      'Each count is the number of rows that tab shows, and All is the sum of the other three. Every row carries a small tag: Meal, Ingredient, Ready to eat or Drink.',
+      'The search narrows every tab, and the counts follow it.',
+      'The counts follow the category too. A tab with nothing in it says what to do instead of showing a blank list.',
+    ],
+  },
+  {
+    id: 'S-152', feature: 'Recipes find', title: 'List beside its detail on a wide screen, a page on a phone', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'On a desktop browser 1280 px wide or more open Recipes and press three different rows.',
+      'Narrow the window to a phone width (or open the app on a phone) and press a row, then press Back.',
+    ],
+    expected: [
+      'The list stays on the left and the pressed recipe shows on the right, in place, with no Back to recipes bar.',
+      'The recipe opens as its own page and Back returns to the list.',
+    ],
+  },
+  {
+    id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
+      'Press the star on two rows, reload the page, then press a starred chip above the list.',
+      'Unstar both.',
+    ],
+    expected: [
+      'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
+      'The stars are still on after the reload. The chips above the list show the starred recipes first and open the one pressed.',
+      'With no stars and nothing logged or opened the row is not shown.',
+    ],
+  },
+  // ---- Nutrition quick log ----
+  {
+    id: 'S-154', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',
+    steps: [
+      'Open a recipe that has calories and protein, press Ate this once, then open Daily, Nutrition and look under Quick add. Press the food in Recent and favorites, press Less once, then Log it, and press Undo.',
+    ],
+    expected: [
+      'Recent and favorites lists the food. The sheet opens at the usual amount (1 portion if none is set), Less lowers it by a half and the numbers change with it. Log it says Logged ... to today with an Undo, and Undo removes only that entry.',
+    ],
+  },
+  {
+    id: 'S-155', feature: 'Nutrition quick log', title: 'Scan a food from Quick add: pick its Type and it is saved and logged once', persona: 'diet-fresh', brief: 'nutrition-quick-log',
+    steps: [
+      'On the Nutrition tab press Scan a food, scan a packaged product (or use the photo of a barcode), press Drink, set the grams and press Save and log it. Then open Recipes.',
+    ],
+    expected: [
+      'The food shows once in the day\'s list and once in Recipes as a Drink, and one entry is logged however many times Save and log it was tapped. Scanning on a phone needs a camera: try it on a real phone.',
+    ],
+  },
+  {
+    id: 'S-156', feature: 'Nutrition quick log', title: 'The sheet refuses a day ahead and a day too far back, and a full day says so', persona: 'recipe-collector', brief: 'nutrition-quick-log', edge: true,
+    steps: [
+      'Open the portion sheet from a Recipes row (the Log button), set Day to tomorrow and press Log it, then set a day more than 400 days back and press Log it. Then fill one day with 20 entries and open the sheet again.',
+    ],
+    expected: [
+      'A day ahead says Pick today or an earlier day, and a day too far back says entries are kept for 400 days. A day with 20 entries says that is the limit and logs nothing more.',
+    ],
+  },
+  {
+    id: 'S-157', feature: 'Meals from foods', title: 'Build a cereal bowl from two foods and see its numbers add up', persona: 'recipe-collector', brief: 'meals-from-foods',
+    steps: [
+      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Write a recipe, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
+    ],
+    expected: [
+      'While you build it the form says Per serving, from the parts: 375 kcal and 15.5 g protein, with 2 of 2 ingredients counted. After Save the recipe\'s page says the same, lists 1.5 portions Oat cereal and 1 portion Whole milk, and Log offers those numbers.',
+    ],
+  },
+  {
+    id: 'S-158', feature: 'Meals from foods', title: 'Build a shake from foods, then change one food and the shake follows', persona: 'recipe-collector', brief: 'meals-from-foods',
+    steps: [
+      'Make a Kefir drink, a Banana food and a Whey food with their calories and protein, then a recipe Shake that links all three with + Food or meal. Open Whey, press Edit, raise its calories and Save, then open Shake again.',
+    ],
+    expected: [
+      'The shake\'s numbers per serving include the new Whey calories without editing the shake, and Log opens at the new numbers. A day already logged keeps the numbers it had.',
+    ],
+  },
+  {
+    id: 'S-159', feature: 'Meals from foods', title: 'A meal inside a meal rolls up through both, and a loop is refused', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Put the Cereal bowl into a new recipe Lunch box with + Food or meal (it is listed under Meals), and check the numbers. Then edit Cereal bowl, press + Food or meal and pick Lunch box.',
+    ],
+    expected: [
+      'Lunch box shows the bowl\'s numbers through both levels. Picking Lunch box inside Cereal bowl says it already contains this meal, so that would loop, and adds nothing. A chain more than 3 levels deep says meals can hold other meals up to 3 levels deep.',
+    ],
+  },
+  {
+    id: 'S-160', feature: 'Meals from foods', title: 'Use my own numbers keeps typed numbers; turning it off adopts the roll-up', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Edit Cereal bowl, tick Use my own numbers, press Edit under Nutrition per serving, type 700 calories and Save. Open the page, then edit again and untick Use my own numbers and Save.',
+    ],
+    expected: [
+      'With the switch on the page says Your own numbers are used and shows what the parts add up to as a hint; 700 stays. With it off the page says Per serving, from the parts and the numbers come from the foods again.',
+    ],
+  },
+  {
+    id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Rename Whole milk to Milk and open Cereal bowl. Then add a food with no numbers by hand (just a name), link it to the bowl, and look at the counted line. Finally delete Milk from Recipes and open the bowl.',
+    ],
+    expected: [
+      'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
+    ],
+  },
   // ---- Grocery budget ----
   {
-    id: 'S-133', feature: 'Grocery budget', title: 'Set a monthly budget and read spent of budget', persona: 'grocery-shopper', brief: 'grocery-budget',
+    id: 'S-162', feature: 'Grocery budget', title: 'Set a monthly budget and read spent of budget', persona: 'grocery-shopper', brief: 'grocery-budget',
     steps: [
       'Open Groceries, Shopping. Under the summary press Set a budget.',
       'Type 400 and press Save. Then open Bought.',
@@ -1737,7 +2040,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-134', feature: 'Grocery budget', title: 'The bar turns amber near the budget and red when over', persona: 'grocery-shopper', brief: 'grocery-budget',
+    id: 'S-163', feature: 'Grocery budget', title: 'The bar turns amber near the budget and red when over', persona: 'grocery-shopper', brief: 'grocery-budget',
     steps: [
       'Press Edit and set the budget to about 1.1 times what this month has spent, so spent is over 80% of it. Save.',
       'Press Edit again and set a budget a little below what has been spent. Save.',
@@ -1748,7 +2051,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-135', feature: 'Grocery budget', title: 'Edit the budget, then remove it', persona: 'grocery-shopper', brief: 'grocery-budget',
+    id: 'S-164', feature: 'Grocery budget', title: 'Edit the budget, then remove it', persona: 'grocery-shopper', brief: 'grocery-budget',
     steps: [
       'Press Edit, change the amount to 600 and press Save.',
       'Press Edit again, press Remove, then reload the page.',
@@ -1759,7 +2062,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-136', feature: 'Grocery budget', title: 'An invalid amount is refused', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    id: 'S-165', feature: 'Grocery budget', title: 'An invalid amount is refused', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
     steps: [
       'Press Set a budget (or Edit), type "abc", and press Save.',
       'Clear the box, press Save, then type 0 and press Save.',
@@ -1771,7 +2074,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-137', feature: 'Grocery budget', title: 'A planned list above the budget is said before anything is bought', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    id: 'S-166', feature: 'Grocery budget', title: 'A planned list above the budget is said before anything is bought', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
     steps: [
       'Set the budget to a small amount, such as 10, so this month\'s priced to-get items add up to more than it.',
       'Look at the card on Shopping.',
@@ -1782,7 +2085,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-138', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
     steps: [
       'Open Groceries on a computer and look at the Shopping and Bought buttons.',
     ],
@@ -1791,10 +2094,6 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
 ];
-
-
-
-
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
 /** The scenarios a persona runs (retired ones left out), in id order. */

@@ -1,0 +1,51 @@
+@layer base, components;
+@layer components {
+/* Shopping on a phone: full-width search, then one row of equal 48px buttons. At the largest text sizes the row wraps to a second line, never sideways. */
+.gphone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.gphonesearch .gsearch {
+  width: 100%;
+  min-height: 48px;
+}
+.gphonebtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  position: relative;
+}
+.gphonebtns>.btn,
+.gphonebtns>.bsrow,
+.gphonebtns>.gtoolmore {
+  flex: 1 1 6rem;
+  min-width: 0;
+  margin: 0;
+}
+.gphonebtns .bsrow .btn,
+.gphonebtns .gtoolmore>summary {
+  width: 100%;
+  min-height: 48px;
+}
+.gsortbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+}
+.gsortbtn select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-size: var(--fs-md);
+}
+.gsortbtn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+}

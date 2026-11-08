@@ -256,7 +256,8 @@ export interface GroceryShare { with: string[]; notMine?: true }
  *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list).
  *  `note` is an optional short comment ("the green ones"), left out when empty. `unit` is set for things sold by weight (meat, produce):
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare }
+/** `aliases`: receipt texts the person renamed to this item (brief receipt-rename-memory), kept as printed (spaces collapsed); a scan line whose text matches one (`aliasKey`) is mapped to the item before any model guess. At most MAX_ALIASES of up to MAX_ALIAS characters, one per key. */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare; aliases?: string[] }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
 /** `retired`: stores that were removed while a past month still uses them (a purchase pinned to the store, its tax, who paid): hidden from every list and picker, but their name stays valid so those months read as they did; adding a store with the same name brings it back (ADR 063). */
 export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[]; retired?: string[] }
@@ -317,13 +318,17 @@ export type RecipeCategory = 'protein' | 'carbs' | 'sides' | 'sauces' | 'seasoni
 /** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
  *  of the At home item the person linked it to by hand. `sub` is an Alternative to use if they do not have `n` (it never replaces `n`: the ingredient is at home when either is); `skip` marks an
  *  ingredient they leave out (listed, but not counted and never added to To get). `rid` is the id of one of the person's own Sauces or Seasonings recipes the
- *  line links to (`n` stays as the fallback text). */
-export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; sub?: string; skip?: true }
+ *  line links to (`n` stays as the fallback text). `q` is how many of the linked food's own unit this line uses (0.1 to 100, only with `rid`; brief meals-from-foods):
+ *  a meal's numbers are the sum of its linked lines times `q`. */
+export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; q?: number; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
 /** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
 export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
-export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
+/** What a ready-made food is (brief food-type-and-migration): a base ingredient, something you only heat or open, or a drink. Only meaningful when `cat` is `ready`. */
+export type FoodType = 'ingredient' | 'ready' | 'drink';
+/** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

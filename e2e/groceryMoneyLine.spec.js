@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The shared-grocery money where you shop (sharing, ADR 059): one line over the Shopping list and a line under a shared store's heading.
+// The shared-grocery money where you shop (sharing, ADR 059): a line under a shared store's heading. The month's line over the Bought list went in brief groceries-bought-inventory-lists;
+// the paid, share and owed numbers it showed are asserted below from the Who owes who card, which is now the only place for them.
 // The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CATALOGUE = {
@@ -22,14 +23,24 @@ const seed = async (page, { admin = true, soapGot = false, payer = null } = {}) 
   await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
 };
 
-test('one line over the list says what you paid, your share and what is owed to you', async ({ page }) => {
+// The card's summary: a term and its amount.
+const sum = (page, name) => page.getByRole('region', { name: 'Who owes who' }).getByText(name, { exact: true }).locator('xpath=following-sibling::dd');
+
+test('there is no money line under the month switcher; Who owes who is the one place for what you paid, your share and what is owed to you', async ({ page }) => {
   await seed(page);
-  await expect(page.locator('#groc-money')).toContainText('Paid $58.72 · Your share $36.06 · Owed to you $11.33');
+  await expect(page.locator('#groc-money')).toHaveCount(0);
+  await page.getByRole('button', { name: /^Who owes who/ }).click();
+  await expect(sum(page, 'Paid')).toHaveText('$58.72');
+  await expect(sum(page, 'Your share')).toHaveText('$36.06');
+  await expect(sum(page, 'Still owed to you')).toHaveText('$11.33');
 });
 
-test('when someone else paid BJ\'s the top line says what you owe instead of a $0.00 owed to you', async ({ page }) => {
+test('when someone else paid BJ\'s the card says what you still owe instead of a $0.00 owed to you', async ({ page }) => {
   await seed(page, { payer: { "BJ's": 'mom' } });
-  await expect(page.locator('#groc-money')).toContainText('Paid $5.00 · Your share $36.06 · You owe $31.06');
+  await page.getByRole('button', { name: /^Who owes who/ }).click();
+  await expect(sum(page, 'Paid')).toHaveText('$5.00');
+  await expect(sum(page, 'Your share')).toHaveText('$36.06');
+  await expect(sum(page, 'You still owe')).toHaveText('$31.06');
 });
 
 test('a shared store with things still to get shows its money under its heading, once, and a solo store shows none', async ({ page }) => {

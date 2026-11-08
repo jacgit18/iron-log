@@ -1,11 +1,12 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // Sort on the Recipes screen (brief recipes-sort). The orders themselves are node tests (recipeList.test.ts, server/catalog.test.ts). This covers
 // what they cannot see: the control on both tabs, each tab remembering its own choice across a reload, the Library sending sort=name to the API and
 // starting again from the first page, and the "Sorted by" line. The Library API is scripted (the account is signed in, syncing is on).
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, minutes) => {
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   if (minutes) await page.getByLabel('Minutes').fill(String(minutes));

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { NEW_STORE, addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, stagedAt, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
+import { aliasAddsFor, applyNames, movedFrom, resolveName, savedNamesText, type RowEdit } from '../../lib/groceryAliases.js';
 import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel } from '../../lib/grocery.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
 import { missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
@@ -9,6 +10,7 @@ import type { Receipt } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
 import ReceiptApplyBar from './ReceiptApplyBar.js';
+import ReceiptLineName from './ReceiptLineName.js';
 import type { Applied } from './ReceiptScan.js';
 import './ReceiptScan.css';
 
@@ -24,6 +26,10 @@ export default function ReceiptSheet() {
   const onApplied = modal?.onApplied as ((a: Applied) => void) | undefined;
   const canKeep = !!modal?.image; // the photo is held by Scan receipt only for an account that has Receipts (brief receipt-save-photo)
   const onKeep = modal?.onKeep as ((meta: KeepMeta) => void) | undefined;
+  const remembered = (modal?.remembered ?? {}) as Record<number, string>; // line index to the item a saved receipt name matched it to (brief receipt-rename-memory)
+  const [renames, setRenames] = useState<Record<string, string>>({}); // item id to the name typed on the sheet; the item takes it at Apply
+  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set()); // row keys whose name or item the person changed: only those can be remembered
+  const [noRemember, setNoRemember] = useState<ReadonlySet<string>>(() => new Set()); // row keys whose Remember tick is off (on by default)
   const [keep, setKeep] = useState(false); // off for every receipt: nothing is uploaded unless this is ticked and Apply is pressed
   const [separate, setSeparate] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-merge-lines: text keys whose lines the person split back into their own rows (sheet only)
   const [choices, setChoices] = useState<Choice[]>(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId }))); // the lines of one row share a match (groupLines), so they start with one choice
@@ -51,6 +57,7 @@ export default function ReceiptSheet() {
   const rec = useMemo(() => (base ? reconcile(base, choices, g.items, monthLines ?? {}, taxStore) : null), [base, choices, g.items, monthLines, taxStore]);
   const plan = useMemo(() => (base && rec ? { ...base, untick: rec.missing.filter(m => unticked.has(m.id)).map(m => m.id) } : null), [base, rec, unticked]); // an item the person re-included leaves the missing list, so its Untick no longer counts
   const rows = useMemo(() => groupLines(receipt?.lines ?? [], separate), [receipt, separate]);
+  const listed = useMemo(() => g.items.map(i => (renames[i.id] ? { ...i, n: renames[i.id]! } : i)), [g.items, renames]); // the list with the names typed here
   if (!receipt || !plan || !rec) return null;
 
   const check = checkText(plan.check);
@@ -60,14 +67,29 @@ export default function ReceiptSheet() {
   const newCount = staged.filter(x => stagedUsed.has(x.id)).length;
   const openForm = (i: number) => setForm({ line: i, draft: proposeItem(rowAsLine(rows[i]!, receipt.lines), receipt.store, g.stores, newStore ? NEW_STORE : taxStore ?? ''), error: '' });
   const setDraft = (patch: Partial<ItemDraft>) => setForm(f => (f ? { ...f, draft: { ...f.draft, ...patch }, error: '' } : f));
-  const stage = () => {
-    if (!form) return;
-    const atNew = form.draft.store === NEW_STORE && !!newStore; // only when the choice was showing it: a renamed-to-existing or unticked store left the screen on Anywhere
-    const r = stageDraft(form.draft.store === NEW_STORE ? { ...form.draft, store: atNew ? newStore : '' } : form.draft, g.items, staged, `new:${++seq.current}`);
-    if (!r.ok) { setForm({ ...form, error: r.error }); return; }
+  const touch = (key: string) => setTouched(x => new Set(x).add(key));
+  const stageFrom = (line: number, draft: ItemDraft) => {
+    const atNew = draft.store === NEW_STORE && !!newStore; // only when the choice was showing it: a renamed-to-existing or unticked store left the screen on Anywhere
+    const r = stageDraft(draft.store === NEW_STORE ? { ...draft, store: atNew ? newStore : '' } : draft, g.items, staged, `new:${++seq.current}`);
+    if (!r.ok) { setForm({ line, draft, error: r.error }); return; }
     setStaged(xs => [...xs, atNew ? { ...r.item, atNew: true } : r.item]);
-    setChoice(rows[form.line]!.lines, { itemId: r.item.id, include: true });
+    setChoice(rows[line]!.lines, { itemId: r.item.id, include: true });
+    touch(rows[line]!.key);
     setForm(null);
+  };
+  const stage = () => { if (form) stageFrom(form.line, form.draft); };
+  // A name typed in a row's field (brief receipt-rename-memory): another item with that name takes the row, else the row's item is renamed, else a row with no item gets a new one.
+  const commitName = (i: number, typed: string) => {
+    const row = rows[i]!, c = choices[row.lines[0]!]!, all = [...listed, ...staged];
+    const cur = all.find(x => x.id === c.itemId) ?? null;
+    const r = resolveName(typed, cur, all);
+    if (r.kind === 'same') return;
+    const n = typed.replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (r.kind === 'new') { stageFrom(i, { ...proposeItem(rowAsLine(row, receipt.lines), receipt.store, g.stores, newStore ? NEW_STORE : taxStore ?? ''), n }); return; }
+    touch(row.key);
+    if (r.kind === 'match') setChoice(row.lines, { itemId: r.id, include: true });
+    else if (isStaged(cur!.id)) setStaged(xs => xs.map(x => (x.id === cur!.id ? { ...x, n } : x)));
+    else setRenames(m => ({ ...m, [cur!.id]: n }));
   };
   const unstage = (id: string) => {
     setStaged(xs => xs.filter(x => x.id !== id));
@@ -83,10 +105,16 @@ export default function ReceiptSheet() {
     if (newStore) snap.addedStore = newStore;
     const out: { refused: string[]; unticked?: number } = { refused: [] };
     const done = applyPlan(real, mk, st, out);
+    const used = new Set(real.steps.flatMap(x => (x.kind === 'tax' ? [] : [x.id])));
+    const edits: RowEdit[] = rows.map(r => { const c = choices[r.lines[0]!]!; return { text: r.text, itemId: c.itemId, include: c.include, touched: touched.has(r.key), remember: !noRemember.has(r.key) }; });
+    const nm = applyNames({ items: () => useAppStore.getState().grocery.items, updateGroceryItem: st.updateGroceryItem }, Object.fromEntries(Object.entries(renames).filter(([id]) => used.has(id))), aliasAddsFor(edits, used, made.ids)); // after the plan: the plan works by id, so a rename cannot disturb it
+    if (Object.keys(nm.names).length) snap.names = nm.names;
+    if (Object.keys(nm.aliases).length) snap.aliases = nm.aliases;
+    const namesText = `${savedNamesText(nm.saved)}${nm.refused.length ? ` Could not rename: ${nm.refused.join(', ')}.` : ''}`;
     const storeText = newStore ? ` Added the store ${newStore}.` : '';
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;
@@ -144,9 +172,9 @@ export default function ReceiptSheet() {
             <li key={l.lines.join("-")} className={`rcrow${off ? ' rcoff' : ''}`}>
               <label className="rctick"><input type="checkbox" checked={!!c.itemId && c.include} disabled={!c.itemId || !priced} onChange={e => setChoice(l.lines, { include: e.target.checked })} aria-label={`Include ${l.text}`} /></label>
               <span className="rctext">{l.text}</span>
-              <select aria-label={`Item for ${l.text}`} value={c.itemId ?? ''} disabled={!priced} onChange={e => { if (form?.line === i) setForm(null); setChoice(l.lines, { itemId: e.target.value || null, include: !!e.target.value }); }}>
+              <select aria-label={`Item for ${l.text}`} value={c.itemId ?? ''} disabled={!priced} onChange={e => { if (form?.line === i) setForm(null); touch(l.key); setChoice(l.lines, { itemId: e.target.value || null, include: !!e.target.value }); }}>
                 <option value="">Not on your list</option>
-                {g.items.map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
+                {listed.map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
                 {staged.map(x => <option key={x.id} value={x.id}>{x.n} (new)</option>)}
               </select>
               {isNew && <span className="rcpill">New</span>}
@@ -154,6 +182,9 @@ export default function ReceiptSheet() {
               {!c.itemId && priced && form?.line !== i && <button type="button" className="rclink rcaddbtn" aria-label={`Add to list: ${l.text}`} onClick={() => openForm(i)}>Add to list</button>}
               <span className="rcqty">{l.qty}{unitOf(l.lines[0]!)}</span>
               <span className="rcnet">{l.discountCents > 0 && <s>{money(l.grossCents)}</s>}{money(l.netCents)}</span>
+              <ReceiptLineName text={l.text} name={[...listed, ...staged].find(x => x.id === c.itemId)?.n ?? ''} disabled={!priced} hasItem={!!c.itemId && c.include} touched={touched.has(l.key)} remember={!noRemember.has(l.key)}
+                onRemember={on => setNoRemember(x => { const n = new Set(x); if (on) n.delete(l.key); else n.add(l.key); return n; })}
+                matched={l.lines.some(j => remembered[j] !== undefined && choices[j]!.itemId === remembered[j])} movedFrom={c.itemId ? movedFrom(g.items, l.text, c.itemId)?.n : undefined} onCommit={t => commitName(i, t)} />
               {merged && (
                 <span className="note rcnote rcmerge">
                   {mergeNote(l)}

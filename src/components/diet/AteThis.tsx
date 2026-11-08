@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
-import { ateDayError, ateMax, entryText, hasMacros, oldestDay, packServings, servingNumbers } from '../../lib/dietLog.js';
+import { ateEntry, ateMax, entryText, hasMacros, oldestDay, packServings } from '../../lib/dietLog.js';
 import { amountText, unitWord, usualStart } from '../../lib/foodUnit.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -19,13 +19,11 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
   if (!hasMacros(recipe)) {
     return <div className="dt-ate"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
   }
-  const nums = servingNumbers(recipe, servings);
   const max = ateMax(recipe), pack = packServings(recipe);
   const log = () => {
-    if (!nums) { setErr('Those numbers are out of range.'); return; }
-    const bad = ateDayError(day, today);
-    if (bad) { setErr(bad); return; }
-    const r = useAppStore.getState().addDietEntry({ d: day, n: recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: recipe.id });
+    const made = ateEntry(recipe, servings, day, today);
+    if ('error' in made) { setErr(made.error); return; }
+    const r = useAppStore.getState().addDietEntry(made.entry);
     if (r.error || !r.id) { setErr(r.error ?? 'Couldn’t log that.'); return; }
     setErr(''); setDone({ id: r.id, text: `Logged ${amountText(servings, recipe)} of ${recipe.n} to ${day === today ? 'today' : day}.` });
   };

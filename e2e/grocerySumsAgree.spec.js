@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
-// Done-when C4: the money shown in four places for one month tells the same story: the line over the list, the split section's tiles and footer,
-// and the line under the store's heading. The fixed date is in September 2026; BJ's is shared and Aldi is solo.
+// Done-when C4: the money shown for one month tells the same story: the split section's tiles and footer, the line under the store's heading, and the page's own tiles.
+// The line over the Bought list went in brief groceries-bought-inventory-lists, so the tiles are the reference now (paid, share and owed come from the card). The fixed date is in September 2026; BJ's is shared and Aldi is solo.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CATALOGUE = {
   stores: ["BJ's", 'Aldi'],
@@ -11,23 +11,19 @@ const CATALOGUE = {
 const MONTH = { lines: { tp: { got: true }, chicken: { got: true, prices: [1049, 925, 899], packShares: [{ with: [] }, { with: [] }, null] }, rice: { got: true } }, pulled: [] };
 const dollars = s => Math.round(parseFloat(s.replace(/[^0-9.]/g, '')) * 100);
 
-test('the line over the list, the tiles, the footer and the store line agree', async ({ page }) => {
+test('the split card\'s tiles, the footer and the store line agree', async ({ page }) => {
   await page.evaluate(({ CATALOGUE, MONTH }) => {
     localStorage.setItem('ironlog:grocery/main', JSON.stringify(CATALOGUE));
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(MONTH));
   }, { CATALOGUE, MONTH });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-bought'); // the money line and Who owes who live on Bought
-  const money = (await page.locator('#groc-money').innerText()).replace(/\s+/g, ' ');
-  const m = /Paid \$([\d.]+) · Your share \$([\d.]+) · Owed to you \$([\d.]+)/.exec(money);
-  expect(m, money).not.toBeNull();
-  const [paid, share, owed] = [m[1], m[2], m[3]].map(dollars);
+  await expect(page.locator('#groc-money')).toHaveCount(0);
   await page.getByRole('button', { name: /^Who owes who/ }).click();
   const split = page.getByRole('region', { name: 'Who owes who' });
   const tile = async name => dollars(await split.getByText(name, { exact: true }).locator('xpath=following-sibling::dd').innerText());
-  expect(await tile('Paid')).toBe(paid);
-  expect(await tile('Your share')).toBe(share);
-  expect(await tile('Still owed to you')).toBe(owed);
+  const [paid, share, owed] = [await tile('Paid'), await tile('Your share'), await tile('Still owed to you')];
+  expect([paid, share, owed]).toEqual([5872, 3606, 1133]); // the numbers the money line showed
   expect(dollars(await split.locator('.gsplitfoot').innerText())).toBe(owed); // the footer is the outstanding total of the cards
   const line = (await page.locator('.gstoremoney').first().innerText()).replace(/\s+/g, ' ');
   const s = /Bought \$([\d.]+) · Your share \$([\d.]+) · Owed to you \$([\d.]+)/.exec(line);

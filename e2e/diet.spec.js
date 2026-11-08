@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086), the first box on that screen: the daily calorie, protein, carbs and fat targets, and a food log a day at a time. The rules (the target numbers, totals,
 // caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, quick add, "Ate this" on
@@ -103,7 +104,7 @@ test('a bad number is refused with the limit stated and nothing is added', async
 
 test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and a recipe without macros asks for them', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Chili');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('beans');
   await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -126,7 +127,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await expect(diet(page).locator('.dt-entry')).toContainText('76.5 g carbs · 16.5 g fat');
   // editing the recipe afterwards does not change what was logged
   await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chili/ }).click();
+  await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('100');
@@ -135,7 +136,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await expect(diet(page).locator('.dt-entry')).toContainText('900 kcal');
   // Undo right after logging removes just that entry
   await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chili/ }).click();
+  await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Ate this' }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await nutrition(page);
