@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe, SavedMeal } from '../types.ts';
-import { mealItems, moveMeals, quickMeals, remapPlan } from './quickMeals.js';
+import { mealItems, moveMeals, quickMeals, quickRows, remapPlan } from './quickMeals.js';
 
 const rec = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'carbs', ing: [{ n: 'x' }], steps: ['Cook.'], ...extra });
 const rice = rec('rice', 'Rice', { kcal: 200, p: 4 }), chili = rec('chili', 'Chili', { cat: 'protein', kcal: 400, p: 30 });
@@ -50,6 +50,36 @@ describe('moveMeals', () => {
     const r = moveMeals(meals, {}, full);
     expect(r.limited).toBe(true);
     expect(r.added).toBe(0);
+  });
+});
+
+describe('moveMeals link depth', () => {
+  it('keeps the saved totals, with no links, when a linked part would nest meals too deep', () => {
+    const mk = (id: string, ing: Recipe['ing']) => rec(id, id, { cat: 'other', ing, kcal: 200, p: 4 });
+    const m1 = mk('m1', [{ n: 'Rice', rid: 'rice', q: 1 }]), m2 = mk('m2', [{ n: 'm1', rid: 'm1', q: 1 }]), m3 = mk('m3', [{ n: 'm2', rid: 'm2', q: 1 }]);
+    const meal: SavedMeal = { id: 's1', n: 'Deep', items: [{ n: 'm3', kcal: 200, p: 4, from: 'm3' }] };
+    const r = moveMeals([meal], {}, [rice, m1, m2, m3]);
+    const made = r.recipes.find(x => x.n === 'Deep')!;
+    expect(made.ing.every(i => i.rid === undefined)).toBe(true);
+    expect(made).toMatchObject({ kcal: 200, p: 4 });
+    expect(r.moved).toEqual({ s1: made.id });
+  });
+  it('still links a part that fits', () => {
+    const meal: SavedMeal = { id: 's1', n: 'Plate', items: [{ n: 'Rice', kcal: 200, p: 4, from: 'rice' }] };
+    const made = moveMeals([meal], {}, [rice]).recipes.find(x => x.n === 'Plate')!;
+    expect(made.ing[0]).toMatchObject({ rid: 'rice', q: 1 });
+  });
+});
+
+describe('quickRows', () => {
+  const saved: SavedMeal[] = [{ id: 'a', n: 'Waiting', items: [{ n: 'Oats', kcal: 300, p: 10 }] }, { id: 'b', n: 'Moved', items: [{ n: 'Eggs', kcal: 150, p: 12 }] }];
+  it('lists Recipes meals and saved meals not yet moved together, A to Z, and marks the waiting ones', () => {
+    const rows = quickRows([linked, rice, chili, plain], saved, { b: 'snack' });
+    expect(rows.map(r => [r.n, r.waiting])).toEqual([['Dinner', false], ['Snack box', false], ['Waiting', true]]);
+  });
+  it('gives a recipe and a saved meal with one id different row ids, and drops a meal with no foods', () => {
+    const rows = quickRows([rec('a', 'Cake', { cat: 'other', kcal: 100, p: 1 })], [{ id: 'a', n: 'Pie', items: [{ n: 'x', kcal: 1, p: 0 }] }, { id: 'e', n: 'Empty', items: [] }], {});
+    expect(rows.map(r => r.id)).toEqual(['r:a', 's:a']);
   });
 });
 

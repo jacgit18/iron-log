@@ -1,5 +1,4 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { renameMeal } from '../lib/dietMeals.js';
 import { addItem, recipeIdsFor, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
@@ -15,20 +14,11 @@ const MAIN = 'diet/main';
 const newId = (taken: DietEntry[]) => {
   for (;;) { const id = `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; if (!taken.some(e => e.id === id)) return id; }
 };
-const newMealId = (taken: SavedMeal[]) => {
-  for (;;) { const id = `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; if (!taken.some(m => m.id === id)) return id; }
-};
 // A function, not a constant: toLocaleString at module load cost startup time for a message shown only on a bad entry.
 const bad = () => `Give it a name, calories (1 to ${MAX_KCAL.toLocaleString('en-US')}) and protein (0 to ${MAX_PROTEIN} g).`;
 
 // Saved meals live in cfg.diet.meals (brief diet-saved-meals), so they sync and export with the settings. Every write goes back through normDietCfg.
 const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
-const putMeals = (get: StoreGet, meals: SavedMeal[]) => get().mutateCfg(c => {
-  const next = { ...(c.diet || {}) };
-  if (meals.length) next.meals = meals; else delete next.meals;
-  const clean = normDietCfg(next);
-  if (clean) c.diet = clean; else delete c.diet;
-});
 
 // The plan lives in cfg.diet.plan (brief diet-meal-planner), keyed by date; every write goes back through normDietCfg with today, which drops earlier days.
 const planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
@@ -108,25 +98,6 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
       if (clean) c.diet = clean; else delete c.diet;
     });
     return r.added;
-  },
-
-  renameDietMeal(id, name) {
-    const r = renameMeal(mealsOf(get), id, name);
-    if (r.meals === null) return r.error;
-    putMeals(get, r.meals);
-    return null;
-  },
-
-  removeDietMeal(id) {
-    const meals = mealsOf(get); const i = meals.findIndex(m => m.id === id);
-    if (i < 0) return;
-    const gone = meals[i]!;
-    putMeals(get, meals.filter(m => m.id !== id));
-    get().noteRemoved('diet', gone.n, () => {
-      const now = mealsOf(get);
-      if (get().blocked() || now.some(m => m.id === id || m.n.toLowerCase() === gone.n.toLowerCase())) return false;
-      const l = [...now]; l.splice(Math.min(i, l.length), 0, gone); putMeals(get, l); return true;
-    });
   },
 
   addPlanItem(day, kind, id) {

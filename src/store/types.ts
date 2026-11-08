@@ -305,8 +305,6 @@ export interface DietSlice {
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
   saveDietMeal(name: string, entryIds: string[]): string | null; // makes a Recipes meal from those entries (brief saved-meals-into-recipes); an error text, or null when saved
-  renameDietMeal(id: string, name: string): string | null; // an error text, or null
-  removeDietMeal(id: string): void; // Undo is offered (noteRemoved 'diet')
   moveSavedMeals(): number; // copies each saved meal not yet moved into Recipes as a meal, once; the old list is left as it is (brief saved-meals-into-recipes); how many were made
   addPlanItem(day: string, kind: 'r' | 'm', id: string): string | null; // puts a recipe or saved meal on a day of the plan; an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)

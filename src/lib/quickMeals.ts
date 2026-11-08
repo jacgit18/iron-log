@@ -1,7 +1,7 @@
 import type { DietCfg, PlanItem, Recipe, SavedItem, SavedMeal } from '../types.ts';
 import { MAX_RECIPES, normRecipe } from '../shared/recipes.js';
 import { servingNumbers } from './dietLog.js';
-import { hasParts, settleMeals } from './mealRollup.js';
+import { hasParts, linkError, settleMeals } from './mealRollup.js';
 import { newRecipeId } from './recipeDraft.js';
 import { savedMealToRecipe } from './savedMealToRecipe.js';
 import { usesOf } from './recipeUses.js';
@@ -13,6 +13,13 @@ import { sortByName } from './sort.js';
 export function quickMeals(recipes: readonly Recipe[]): Recipe[] {
   const isMeal = (r: Recipe) => hasParts(r) || (r.cat === 'other' && usesOf(r).includes('meal') && r.kcal !== undefined && r.p !== undefined);
   return sortByName(recipes.filter(isMeal), r => r.n, r => r.id);
+}
+
+/** What Quick add lists: the Recipes meals, then any saved meal that has not moved yet (waiting for room in Recipes), A to Z, each with the foods one tap logs. Ids are prefixed so a recipe and a saved meal never share one. */
+export function quickRows(recipes: readonly Recipe[], saved: readonly SavedMeal[], moved: Readonly<Record<string, string>>): { id: string; n: string; items: SavedItem[]; waiting: boolean }[] {
+  const own = quickMeals(recipes).map(r => ({ id: `r:${r.id}`, n: r.n, items: mealItems(r, recipes), waiting: false }));
+  const old = saved.filter(m => !moved[m.id]).map(m => ({ id: `s:${m.id}`, n: m.n, items: m.items, waiting: true }));
+  return sortByName([...own, ...old].filter(m => m.items.length > 0), m => m.n, m => m.id);
 }
 
 /** The foods one tap logs for a meal, each as its own entry: a linked meal gives each part at the amount it holds (a part that is gone or has no numbers is left out); any other meal, or one on its own numbers, gives one entry with its totals. */
@@ -37,7 +44,8 @@ export function moveMeals(meals: readonly SavedMeal[], moved: Readonly<Record<st
   for (const m of meals) {
     if (next[m.id]) continue;
     if (list.length >= MAX_RECIPES) { limited = true; break; }
-    const draft = savedMealToRecipe(m, list);
+    let draft = savedMealToRecipe(m, list);
+    if (draft.ing.some(i => i.rid && linkError(list, undefined, i.rid))) draft = savedMealToRecipe(m, list, false); // a part would nest meals too deep: keep the saved totals instead of links
     const made = normRecipe({ ...draft, id: newRecipeId(list.map(r => r.id), draft.n) });
     if (!made) continue;
     list = settleMeals([...list, made]);

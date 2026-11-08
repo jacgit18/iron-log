@@ -1,6 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
-import { saveMeal } from '../lib/dietMeals.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
@@ -158,8 +157,8 @@ describe('the data file', () => {
 // The old saved-meals list (cfg.diet.meals) still exists until a later PR removes it; these tests seed it directly, since Save meal now makes a Recipes meal.
 const oldMeal = (name: string, entryIds: string[]) => {
   const meals = st().cfg.diet?.meals ?? [];
-  const r = saveMeal(meals, name, st().diet.filter(e => entryIds.includes(e.id)), `m${meals.length + 1}`);
-  st().mutateCfg(c => { c.diet = { ...(c.diet || {}), meals: r.meals! }; });
+  const items = st().diet.filter(e => entryIds.includes(e.id)).map(e => ({ n: e.n, kcal: e.kcal, p: e.p, ...(e.from ? { from: e.from } : {}) }));
+  st().mutateCfg(c => { c.diet = { ...(c.diet || {}), meals: [...meals, { id: `m${meals.length + 1}`, n: name, items }] }; });
 };
 
 describe('Save meal makes a Recipes meal', () => {
@@ -213,33 +212,13 @@ describe('moveSavedMeals', () => {
 
 describe('saved meals', () => {
   const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
-  it('renames, and refuses a name another meal has', () => {
-    const a = log('Oats'), b = log('Toast');
-    oldMeal('One', [a]); oldMeal('Two', [b]);
-    const [one] = st().cfg.diet!.meals!;
-    expect(st().renameDietMeal(one!.id, 'two')).toMatch(/already/);
-    expect(st().renameDietMeal(one!.id, 'First')).toBeNull();
-    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['First', 'Two']);
-  });
-  it('delete offers Undo, which puts the meal back in its place', () => {
-    const a = log('Oats'), b = log('Toast'), c = log('Eggs');
-    oldMeal('One', [a]); oldMeal('Two', [b]); oldMeal('Three', [c]);
-    const two = st().cfg.diet!.meals![1]!;
-    st().removeDietMeal(two.id);
-    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Three']);
-    expect(st().removed?.text).toContain('Two');
-    st().undoRemoved();
-    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Two', 'Three']);
-  });
-  it('deleting the last meal leaves no diet key behind, and targets and pace keep the meals', () => {
+  it('targets and pace changes keep the old saved meals', () => {
     const a = log('Oats');
     oldMeal('One', [a]);
     st().setDietTarget('kcal', 3000); st().setDietPace('slow');
     expect(st().cfg.diet).toMatchObject({ kcal: 3000, pace: 'slow', meals: [{ n: 'One' }] });
     st().setDietTarget('kcal', null); st().setDietPace(null);
     expect(st().cfg.diet!.meals).toHaveLength(1);
-    st().removeDietMeal(st().cfg.diet!.meals![0]!.id);
-    expect(st().cfg.diet).toBeUndefined();
   });
 });
 
