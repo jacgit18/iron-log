@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startFood } from './recipesNav.js';
 
 // Usual amount and unit name on a ready-made food (brief usual-amount-and-unit). The words (egg, eggs, boxes), the validation and the opening amount are node tests
 // (foodUnit.test.ts, readyMade.test.ts, dietLog.test.ts, recipes.test.ts); this covers the wiring: the three boxes saving and coming back, Ate this opening at the usual
@@ -6,7 +7,7 @@ import { test, expect } from './fixtures.js';
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, extra = {}) => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Calories per serving').fill('72');
   await page.getByLabel('Protein per serving (g)').fill('6');
@@ -33,7 +34,7 @@ test('Ate this opens at the usual amount in the unit name, and logs it in those 
 
 test('the plural box appears with a unit, an odd plural is used, and the three boxes come back on edit', async ({ page }) => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await expect(page.getByLabel('Plural, only if adding s is wrong')).toHaveCount(0);
   await page.getByLabel('One serving is called, optional').fill('loaf');
   await expect(page.getByLabel('Plural, only if adding s is wrong')).toBeVisible();

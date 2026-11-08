@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe, newMenuVisible } from './recipesNav.js';
 
 // Progress here is the hub with drill-in pages, which is what a window under 1280px shows (progressOnePage.spec.js covers the wide page).
 test.use({ viewport: { width: 1100, height: 900 } });
@@ -84,14 +85,14 @@ test('the Daily section and the Grocery view are in the address', async ({ page 
 test('a recipe form adds a Back step; a reload on it shows the list', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await expect.poll(() => hash(page)).toBe('#/daily/recipes/form');
   await page.goBack();
-  await expect(page.getByRole('button', { name: 'New recipe' })).toBeVisible();
+  await newMenuVisible(page);
   expect(await hash(page)).toBe('#/daily/recipes');
   await page.goForward();
   await page.reload(); // the recipe itself is not in the address, so there is nothing to show but the list
-  await expect(page.getByRole('button', { name: 'New recipe' })).toBeVisible();
+  await newMenuVisible(page);
   await expect.poll(() => hash(page)).toBe('#/daily/recipes');
 });
 
