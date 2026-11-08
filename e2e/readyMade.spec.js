@@ -1,12 +1,14 @@
 import { test, expect } from './fixtures.js';
 import { startRecipe, startFood } from './recipesNav.js';
+import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Ready-made foods and the recipe-first day screen (brief recipe-first-diet-log). The cleaner, the day limits and the logging rules are node tests
 // (recipes.test.ts, recipeDraft.test.ts, dietLog.test.ts); this covers the wiring a unit test cannot: the real form and list, the address and Back, the
 // detail without ingredients, Ate this on a chosen day, the lookup filling the form (route stubbed), and the folded One-off food form.
-const diet = page => page.getByRole('region', { name: 'Diet' });
+const diet = page => page.getByRole('dialog'); // the add sheet of the Nutrition board (brief nutrition-board)
+const eaten = page => page.locator('.nb-col.today .nb-eat');
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
-const openDiet = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+const openDiet = openNutrition;
 const hits = [{ id: 1, name: 'Oats, rolled', kcal: 379, p: 13.2, c: 67.7, f: 6.5 }];
 const stub = page => page.route('**/api/foods/search*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hits }) }));
 const make = async (page, name = 'Frozen lasagna') => {
@@ -61,8 +63,8 @@ test('Ate this logs a ready-made food as a snapshot, to today or to a chosen day
   await page.getByRole('button', { name: 'Ate this' }).click();
   await expect(page.getByText(`Logged 1 portion of Frozen lasagna to ${yesterday}.`)).toBeVisible();
   await openDiet(page);
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(1); // today's only; yesterday's is on the other day
-  await expect(diet(page).locator('.dt-entry')).toContainText('Frozen lasagna');
+  await expect(eaten(page)).toHaveCount(1); // today's column only; yesterday's is in the other day's column
+  await expect(eaten(page)).toContainText('Frozen lasagna');
 });
 
 test('the food lookup in the ready-made form fills the numbers, still editable', async ({ page }) => {
@@ -81,16 +83,16 @@ test('the food lookup in the ready-made form fills the numbers, still editable',
   await expect(page.getByText('Per portion: 185 kcal · 6.6 g protein')).toBeVisible();
 });
 
-test('the day screen has no separate lookup box, and the One-off food form starts folded and opens on a pick', async ({ page }) => {
+test('the add sheet has no separate lookup box, the One-off food form is open, and a Find food pick fills it', async ({ page }) => {
   await stub(page);
-  await page.click('#tab-daily');
-  await page.click('#daily-supplements');
-  await expect(diet(page).getByLabel('Look up nutrition')).toHaveCount(0);
-  await expect(diet(page).getByLabel('Food', { exact: true })).toBeHidden();
-  await diet(page).getByRole('button', { name: 'Add one' }).click();
+  await openNutrition(page);
+  await expect(page.getByLabel('Look up nutrition')).toHaveCount(0);
+  await openAdd(page, 'One-off food'); // no folded 'Add one' any more: the form is always open in its own way
   await expect(diet(page).getByLabel('Food', { exact: true })).toBeVisible();
-  await diet(page).getByRole('button', { name: 'Hide' }).click();
-  await expect(diet(page).getByLabel('Food', { exact: true })).toBeHidden();
+  await expect(diet(page).getByRole('button', { name: 'Add one' })).toHaveCount(0);
+  await expect(diet(page).getByLabel('Look up nutrition')).toHaveCount(0);
+  await diet(page).getByRole('button', { name: 'Back to ways of adding' }).click();
+  await diet(page).getByRole('button', { name: /^Find food/ }).click();
   await diet(page).getByLabel('Search your past meals and recipes').fill('oats');
   await diet(page).getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' }).click();
   await diet(page).getByRole('button', { name: 'Use', exact: true }).click();

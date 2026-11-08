@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { openDrink, openNutrition } from './nutritionBoardHelpers.js';
 
 // The Progress pages are hub drill-ins, which is what a window under 1280px shows (the one page is scanned in progressOnePage.spec.js).
 test.use({ viewport: { width: 1100, height: 900 } });
@@ -32,21 +33,21 @@ test('ticking a stretch and logging water both stick', async ({ page }) => {
   await page.click('#board-stretches');
   await page.locator('#sday-4').check();
   await expect(page.locator('#sday-4')).toBeChecked();
-  await page.click('#tab-daily');
-  await page.click('#daily-supplements');
+  await openNutrition(page);
+  await openDrink(page, '2026-09-24'); // the water panel moved into the drink sheet of a day
   await page.click('#water-16\\.9');
   await expect(page.getByRole('status').filter({ hasText: '16.9' }).first()).toBeVisible();
 });
 
 test('training minutes for the water goal are kept after leaving the box and shown again after a reload', async ({ page }) => {
-  await page.click('#tab-daily');
-  await page.click('#daily-supplements');
+  await openNutrition(page);
+  await openDrink(page, '2026-09-24');
   await page.fill('#water-train', '45');
   await page.locator('#water-hot').focus();
   await expect(page.locator('#water-train')).toHaveValue('45');
   await page.reload();
-  await page.click('#tab-daily');
-  await page.click('#daily-supplements');
+  await openNutrition(page);
+  await openDrink(page, '2026-09-24');
   await expect(page.locator('#water-train')).toHaveValue('45');
 });
 

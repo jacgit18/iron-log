@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures.js';
+import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Saved meals move into Recipes (brief saved-meals-into-recipes, part 2). The move, its once-only record and the plan remap are node tests
 // (quickMeals.test.ts, dietSlice.test.ts); this covers what they cannot: a real load with old saved meals, the meals showing in Recipes and Quick add, and no second copy after a reload.
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const seedOld = async page => {
   await page.evaluate(() => {
     const cfg = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}');
@@ -14,8 +14,8 @@ const seedOld = async page => {
 
 test('old saved meals appear in Recipes and Quick add once, with their saved numbers, and a reload does not copy them again', async ({ page }) => {
   await seedOld(page);
-  await nutrition(page);
-  const list = page.getByRole('region', { name: 'Diet' }).getByRole('list', { name: 'Saved meals' });
+  await openNutrition(page);
+  const list = (await openAdd(page, 'Saved meals')).getByRole('list', { name: 'Saved meals' }); // the add sheet's Saved meals way
   await expect(list.getByRole('button', { name: 'Usual breakfast · 1 food · 450 kcal' })).toBeVisible();
   await expect(list.getByRole('button', { name: 'Post-workout · 1 food · 240 kcal' })).toBeVisible();
   await page.reload();

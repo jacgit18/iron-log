@@ -78,6 +78,7 @@ test('a logged drink moves the next reminder to an interval from then; reaching 
   await expect.poll(() => water(calls).length).toBe(1);
   await page.clock.fastForward(30 * 60_000); // 10:30
   await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await page.locator('.nb-col.today').getByRole('button', { name: /^\+ Drink/ }).click(); // the water buttons are in the drink sheet
   await page.click('#water-8');
   await expect.poll(() => water(calls).length).toBe(2);
   near(water(calls)[1].body.at, NOW.getTime() + 30 * 60_000 + 2 * H);

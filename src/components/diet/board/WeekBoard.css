@@ -209,47 +209,4 @@
   background: transparent;
   color: var(--muted);
 }
-.wb-find {
-  display: grid;
-  gap: var(--sp-4);
-}
-.wb-results {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.wb-tray {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-6);
-  margin-bottom: var(--sp-8);
-}
-.wb-trayl {
-  font-size: var(--fs-sm);
-  color: var(--muted);
-}
-.wb-chip {
-  min-height: 44px;
-  padding: 0 var(--sp-12);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: inherit;
-  font: inherit;
-  font-weight: 600;
-  cursor: grab;
-}
-.wb-daytabs {
-  display: flex;
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-8);
-  overflow-x: auto;
-}
-.wb-daytabs .btn {
-  flex: none;
-}
 }

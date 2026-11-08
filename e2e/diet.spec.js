@@ -1,21 +1,30 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 import { startRecipe } from './recipesNav.js';
 
-// Diet inside Nutrition (ADR 086), the first box on that screen: the daily calorie, protein, carbs and fat targets, and a food log a day at a time. The rules (the target numbers, totals,
-// caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, quick add, "Ate this" on
-// a recipe, Undo, the Nutrition date bar driving Diet's day, and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
+// Diet inside Nutrition (ADR 086): the daily calorie, protein, carbs and fat targets (the Diet box under the week board), and the food log, now a day column of the Nutrition week board with food added from the add sheet.
+// The rules (the target numbers, totals, caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, adding food, "Ate this" on
+// a recipe, Undo, the board's days (last week read-only, a day ahead has no eaten list), and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
 const seedBody = (page, goal, weight) => page.addInitScript(([g, w]) => {
   if (localStorage.getItem('ironlog:config/main')) return; // seed once: the script runs again on every reload and would wipe what the test saved
   localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: g } }));
   localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w }] }));
 }, [goal, weight]);
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
-// The One-off food form starts folded; a test that types into it opens it first.
-const oneOff = page => page.getByRole('button', { name: 'Add one' }).click();
+const nutrition = openNutrition;
+// The add sheet's One-off food form (always open there); returns the dialog.
+const oneOff = page => openAdd(page, 'One-off food');
+// Types one food into the open One-off food form and presses Add.
+const addFood = async (sheet, name, kcal, p) => {
+  await sheet.locator('#dt-add-n').fill(name);
+  await sheet.locator('#dt-add-k').fill(String(kcal));
+  await sheet.locator('#dt-add-p').fill(String(p));
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+};
+const eaten = page => todayCol(page).locator('.nb-eat');
 const noViolations = async page => {
-  const { violations } = await new AxeBuilder({ page }).include('#diet-h').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  const { violations } = await new AxeBuilder({ page }).include('#diet-h').include('.nb').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 };
 
@@ -23,7 +32,7 @@ test('Diet is on Nutrition for everyone; with no goal weight it asks for one and
   await nutrition(page);
   await expect(diet(page).getByRole('heading', { name: 'Diet' })).toBeVisible();
   await expect(diet(page)).toContainText('Set a goal weight under Progress');
-  await expect(diet(page)).toContainText('Nothing logged yet');
+  await expect(todayCol(page)).toContainText('Nothing logged'); // the food log is today's column on the board
   await diet(page).getByRole('button', { name: 'Set target' }).click();
   await page.locator('#dt-tk').fill('3000');
   await page.locator('#dt-tp').fill('180');
@@ -66,40 +75,39 @@ test('quick add logs a food, the meters move, it is offered again, Delete has Un
   await seedBody(page, 185, 170);
   await page.reload();
   await nutrition(page);
-  await oneOff(page);
-  await diet(page).getByLabel('Food').fill('Rice');
-  await diet(page).getByLabel('Calories', { exact: true }).last().fill('200');
-  await diet(page).getByLabel('Protein (g)').last().fill('4');
-  await page.locator('#dt-add-c').fill('44');
-  await page.locator('#dt-add-f').fill('0.5');
-  await diet(page).getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(diet(page).locator('.dt-entry')).toContainText('Rice');
-  await expect(diet(page).locator('.dt-entry')).toContainText('44 g carbs · 0.5 g fat');
-  await expect(diet(page).getByRole('progressbar', { name: /Calories 200 of 2,800 kcal/ })).toBeVisible();
-  await expect(diet(page).getByRole('progressbar', { name: /Protein 4 of 150 g/ })).toBeVisible();
-  await expect(diet(page).getByRole('progressbar', { name: /Carbs 44 of 370 g/ })).toBeVisible();
-  await expect(diet(page).getByRole('progressbar', { name: /Fat 0.5 of 80 g/ })).toBeVisible();
-  await diet(page).getByRole('button', { name: 'Rice · 200 kcal' }).click(); // offered again in one tap
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
-  await diet(page).getByRole('button', { name: 'Delete Rice' }).first().click();
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
-  await diet(page).getByRole('button', { name: 'Undo' }).click();
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
+  const sheet = await oneOff(page);
+  await sheet.locator('#dt-add-c').fill('44');
+  await sheet.locator('#dt-add-f').fill('0.5');
+  await addFood(sheet, 'Rice', 200, 4);
+  await expect(sheet.getByRole('status')).toContainText('Added Rice.');
+  await closeSheet(page);
+  await expect(eaten(page)).toContainText('Rice');
+  await expect(eaten(page)).toContainText('44 g carbs · 0.5 g fat');
+  // the board's meters (calories, protein, fat, water) move; carbs have no meter, they show in the entry above
+  await expect(todayCol(page).getByRole('img', { name: /Calories eaten so far: 200 \/ 2,800 kcal/ })).toBeVisible();
+  await expect(todayCol(page).getByRole('img', { name: /Protein eaten so far: 4 \/ 150 g/ })).toBeVisible();
+  await expect(todayCol(page).getByRole('img', { name: /Fat eaten so far: 0.5 \/ 80 g/ })).toBeVisible();
+  const quick = await openAdd(page, 'Quick add');
+  await quick.getByRole('button', { name: 'Rice · 200 kcal' }).click(); // offered again in one tap
+  await closeSheet(page);
+  await expect(eaten(page)).toHaveCount(2);
+  await todayCol(page).getByRole('button', { name: 'Delete Rice' }).first().click();
+  await expect(eaten(page)).toHaveCount(1);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(eaten(page)).toHaveCount(2);
   await page.reload();
   await nutrition(page);
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
+  await expect(eaten(page)).toHaveCount(2);
   await noViolations(page);
 });
 
 test('a bad number is refused with the limit stated and nothing is added', async ({ page }) => {
   await nutrition(page);
-  await oneOff(page);
-  await diet(page).getByLabel('Food').fill('Feast');
-  await diet(page).getByLabel('Calories', { exact: true }).last().fill('20000');
-  await diet(page).getByLabel('Protein (g)').last().fill('10');
-  await diet(page).getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(diet(page).getByRole('alert')).toContainText('1 to 9,999');
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(0);
+  const sheet = await oneOff(page);
+  await addFood(sheet, 'Feast', 20000, 10);
+  await expect(sheet.getByRole('alert')).toContainText('1 to 9,999');
+  await closeSheet(page);
+  await expect(eaten(page)).toHaveCount(0);
 });
 
 test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and a recipe without macros asks for them', async ({ page }) => {
@@ -121,10 +129,9 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByRole('button', { name: 'Ate this' }).click();
   await expect(page.getByText('Logged 1.5 portions of Chili to today.')).toBeVisible();
   await nutrition(page);
-  await oneOff(page);
-  await expect(diet(page).locator('.dt-entry')).toContainText('Chili');
-  await expect(diet(page).locator('.dt-entry')).toContainText('900 kcal');
-  await expect(diet(page).locator('.dt-entry')).toContainText('76.5 g carbs · 16.5 g fat');
+  await expect(eaten(page)).toContainText('Chili');
+  await expect(eaten(page)).toContainText('900 kcal');
+  await expect(eaten(page)).toContainText('76.5 g carbs · 16.5 g fat');
   // editing the recipe afterwards does not change what was logged
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
@@ -133,52 +140,51 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByLabel('Calories per serving').fill('100');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await nutrition(page);
-  await expect(diet(page).locator('.dt-entry')).toContainText('900 kcal');
+  await expect(eaten(page)).toContainText('900 kcal');
   // Undo right after logging removes just that entry
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Ate this' }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await nutrition(page);
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
+  await expect(eaten(page)).toHaveCount(1);
 });
 
-test('Diet follows the Nutrition date bar: yesterday is a separate day, and the bar cannot go past today', async ({ page }) => {
+test('the food log follows the board: today is a separate day from yesterday (read-only, last week) and from a day ahead (no eaten list)', async ({ page }) => {
   await nutrition(page);
-  await oneOff(page);
-  await diet(page).getByLabel('Food').fill('Toast');
-  await diet(page).getByLabel('Calories', { exact: true }).last().fill('90');
-  await diet(page).getByLabel('Protein (g)').last().fill('3');
-  await diet(page).getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Next day' })).toBeDisabled();
-  await expect(diet(page)).toContainText('Food eaten · Today');
-  await page.getByRole('button', { name: 'Previous day' }).click();
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(0);
-  await expect(diet(page)).toContainText('Food eaten · Wednesday 09/23');
-  await expect(page.locator('.weekbar')).toContainText('Wednesday');
-  await page.getByRole('button', { name: 'Next day' }).click();
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
-  await expect(diet(page)).toContainText('Food eaten · Today');
+  const sheet = await oneOff(page);
+  await addFood(sheet, 'Toast', 90, 3);
+  await closeSheet(page);
+  await expect(page.locator('.nb-target')).toContainText('Adding to Thu 24 · today');
+  await expect(eaten(page)).toHaveCount(1);
+  await page.getByRole('button', { name: 'Fri 25, add food here' }).click(); // a day ahead: food is planned, not eaten, so no Eaten list
+  await expect(page.locator('.nb-target')).toContainText('Adding to Fri 25');
+  await expect(page.locator('.nb-col[data-day="2026-09-25"] .nb-eat')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Last week' }).click();
+  const yesterday = page.locator('.nb-col[data-day="2026-09-23"]');
+  await expect(yesterday.locator('.nb-eat')).toHaveCount(0);
+  await expect(page.locator('.nb-target')).toContainText('food is read-only'); // and nothing can be added to it
+  await expect(page.locator('#nb-add')).toHaveCount(0);
+  await page.getByRole('button', { name: 'This week' }).click();
+  await expect(eaten(page)).toHaveCount(1);
+  await expect(page.locator('.nb-target')).toContainText('Adding to Thu 24 · today');
 });
 
-test('the Nutrition screen reads date bar, Diet, Supplements, Water: Diet comes before Supplements and Water and shares the one date bar', async ({ page }) => {
+test('the Nutrition screen reads the week board first, then the Diet targets; Supplements and Hydration sit inside each day and there is no second date bar', async ({ page }) => {
   await nutrition(page);
   const y = async loc => (await loc.boundingBox()).y;
-  const dietY = await y(page.locator('#diet-h'));
-  await expect(page.getByRole('heading', { name: 'Supplements' })).toBeVisible();
-  expect(await y(page.locator('.weekbar'))).toBeLessThan(dietY);
-  expect(dietY).toBeLessThan(await y(page.getByRole('heading', { name: 'Supplements' })));
-  expect(dietY).toBeLessThan(await y(page.locator('#water-h')));
-  await expect(diet(page).getByRole('button', { name: /Day before|Day after/ })).toHaveCount(0); // no second day selector inside Diet
+  await expect(todayCol(page).getByText('Supplements', { exact: true })).toBeVisible();
+  await expect(todayCol(page).getByText('Hydration', { exact: true })).toBeVisible();
+  expect(await y(page.locator('#nb-h'))).toBeLessThan(await y(page.locator('#diet-h')));
+  await expect(page.locator('.weekbar')).toHaveCount(0);
+  await expect(diet(page).getByRole('button', { name: /Day before|Day after|Previous day|Next day/ })).toHaveCount(0); // no day selector inside Diet
 });
 
 test('an entry without carbs and fat still logs, and the log says carbs and fat count only what was entered', async ({ page }) => {
   await nutrition(page);
-  await oneOff(page);
-  await diet(page).getByLabel('Food').fill('Toast');
-  await diet(page).getByLabel('Calories', { exact: true }).last().fill('90');
-  await diet(page).getByLabel('Protein (g)').last().fill('3');
-  await diet(page).getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(diet(page).locator('.dt-entry')).toContainText('90 kcal · 3 g protein');
-  await expect(diet(page)).toContainText('Carbs and fat count only what you enter.');
+  const sheet = await oneOff(page);
+  await addFood(sheet, 'Toast', 90, 3);
+  await closeSheet(page);
+  await expect(eaten(page)).toContainText('90 kcal · 3 g protein');
+  await expect(todayCol(page)).toContainText('Carbs and fat count only what you enter.');
 });
