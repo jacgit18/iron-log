@@ -3,7 +3,7 @@ import { fmtNum, shiftDay } from '../../lib/dietLog.js';
 import { dayTotals, daysFrom, findMatches, inWindow, planLog, recipeIdsFor, resolve, totalsText, type Resolved } from '../../lib/dietPlan.js';
 import type { Targets } from '../../lib/dietTarget.js';
 import { addMissingMessage } from '../../lib/recipePantry.js';
-import { MAX_PLAN_ITEMS } from '../../shared/diet.js';
+import { MAX_PLAN_ITEMS, planItemKey } from '../../shared/diet.js';
 import { parseDate, ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -70,7 +70,7 @@ export default function DietPlan({ targets }: { targets: Targets }) {
       <p className="note">{items.length ? totalsText(tot, targets.kcal, targets.protein) : 'Nothing planned.'}</p>
       <ul className="dt-planlist" aria-label={`Planned for ${dayName(day)}`}>
         {rows.map((r, i) => (
-          <li key={r.item.k + r.item.id} className="dt-planrow">
+          <li key={planItemKey(r.item)} className="dt-planrow">
             <span className="dt-name">{r.name}{r.item.k === 'm' ? ' (meal)' : ''}</span>
             {r.gone ? <span className="note">Removed</span> : <span className="note">{r.kcal !== undefined ? `${fmtNum(r.kcal)} kcal` : 'No calories'}</span>}
             {r.item.k === 'r' && !r.gone && (

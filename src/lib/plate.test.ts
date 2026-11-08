@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normDietCfg } from '../shared/diet.js';
 import { cleanCounts, normRecipe, validRecipe } from '../shared/recipes.js';
 import type { Recipe } from '../types.ts';
-import { addItem } from './dietPlan.js';
+import { addItem, removeItem, setPortion } from './dietPlan.js';
 import { FAT_PARTIAL_FROM, SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
 
 const rec = (id: string, cat: Recipe['cat'], extra: Partial<Recipe> = {}): Recipe => ({ id, n: id, cat, ing: [{ n: 'x' }], steps: ['Cook.'], ...extra });
@@ -20,6 +20,19 @@ describe('contract: slot and counts survive the cleaners', () => {
     expect(added.error).toBeNull();
     expect(addItem(added.plan!, '2099-01-01', { k: 'r', id: 'a', s: 'dinner' }, '2099-01-01').error).toMatch(/already/);
   });
+  it('keeps the slot through a portion change and a removal beside it', () => {
+    const plan = { '2099-01-01': [{ k: 'r' as const, id: 'a', s: 'lunch' as const }, { k: 'r' as const, id: 'a', s: 'dinner' as const }] };
+    expect(setPortion(plan, '2099-01-01', 1, 2)['2099-01-01']![1]).toEqual({ k: 'r', id: 'a', x: 2, s: 'dinner' });
+    expect(setPortion(plan, '2099-01-01', 1, 1)['2099-01-01']![1]).toEqual({ k: 'r', id: 'a', s: 'dinner' });
+    expect(removeItem(plan, '2099-01-01', 0)['2099-01-01']).toEqual([{ k: 'r', id: 'a', s: 'dinner' }]);
+  });
+  it('treats "no meal" as a meal of its own: an old untagged item never blocks adding the food to a meal', () => {
+    const day = '2099-01-01';
+    expect(addItem({ [day]: [{ k: 'r', id: 'a' }] }, day, { k: 'r', id: 'a', s: 'dinner' }, day).error).toBeNull();
+    expect(addItem({ [day]: [{ k: 'r', id: 'a' }] }, day, { k: 'r', id: 'a' }, day).error).toMatch(/already/);
+    const cfg = normDietCfg({ plan: { [day]: [{ k: 'r', id: 'a' }, { k: 'r', id: 'a', s: 'dinner' }, { k: 'r', id: 'adinner' }] } });
+    expect(cfg?.plan?.[day]).toHaveLength(3);
+  });
   it('keeps valid counts in order, once each, and round-trips a recipe', () => {
     expect(cleanCounts(['veg', 'protein', 'protein', 'fat'])).toEqual(['protein', 'veg']);
     expect(cleanCounts([])).toBeNull();
@@ -36,6 +49,10 @@ describe('marksOf', () => {
     expect(marksOf(salad)).toEqual(['veg']);
     expect(marksOf(rec('shake', 'drinks', { p: 40 }))).toEqual(['protein']);
     expect(marksOf(rec('plain', 'other'))).toEqual([]);
+  });
+  it('falls back to its own category and protein when no part of a meal resolves', () => {
+    const meal = rec('stew', 'other', { p: 40, ing: [{ n: 'Chili', rid: 'gone', q: 1 }, { n: 'Rice', rid: 'rice', q: 1, skip: true }] });
+    expect(marksOf(meal, [meal, rice])).toEqual(['protein']);
   });
   it('lets what the person set win over the derived marks', () => {
     expect(marksOf({ ...rice, counts: ['veg'] })).toEqual(['veg']);
@@ -70,5 +87,7 @@ describe('fat bar honesty', () => {
     expect(fatBarState(FAT_PARTIAL_FROM - 0.01)).toBe('hidden');
     expect(fatCoverage([])).toBe(1);
     expect(fatCoverage([f(100, 5, 2), f(100, undefined, 2)])).toBe(0.5);
+    expect(fatBarState(fatCoverage([f(300, 10), { r: {}, x: 1 }]))).toBe('partial');
+    expect(fatCoverage([{ r: {}, x: 1 }])).toBe(0);
   });
 });

@@ -26,7 +26,8 @@ export function marksOf(r: Recipe, recipes: readonly Recipe[] = [], seen: Readon
       const part = i.rid && i.q !== undefined && !i.skip ? recipes.find(x => x.id === i.rid) : undefined;
       if (part) marksOf(part, recipes, path).forEach(m => marks.add(m));
     }
-  } else {
+  }
+  if (!marks.size) { // no parts, or none that resolve: the category and the protein figure
     (DEFAULT_OF[r.cat as keyof typeof DEFAULT_OF] ?? []).forEach(m => marks.add(m));
     if (r.p !== undefined && r.p >= PROTEIN_G) marks.add('protein');
   }
@@ -44,8 +45,9 @@ export function plateCheck(slot: PlanSlot, foods: readonly Recipe[], recipes: re
 /** The share of a day's planned calories that come from foods with a fat figure, 0 to 1 (1 for an empty day: nothing is missing). */
 export function fatCoverage(foods: readonly { r: Pick<Recipe, 'kcal' | 'f'>; x: number }[]): number {
   const total = foods.reduce((a, { r, x }) => a + (r.kcal ?? 0) * x, 0);
-  if (total <= 0) return 1;
-  return foods.reduce((a, { r, x }) => a + (r.f !== undefined ? (r.kcal ?? 0) * x : 0), 0) / total;
+  if (total <= 0) return foods.every(({ r }) => r.f !== undefined) ? 1 : 0;
+  const share = foods.reduce((a, { r, x }) => a + (r.f !== undefined ? (r.kcal ?? 0) * x : 0), 0) / total;
+  return foods.some(({ r }) => r.f === undefined && r.kcal === undefined) ? Math.min(share, 0.99) : share; // a food with neither figure weighs nothing, but it still keeps the bar from being whole
 }
 
 /** How to draw the fat bar: whole, hatched with "n of m foods", or not at all. */

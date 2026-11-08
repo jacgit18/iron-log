@@ -1,4 +1,4 @@
-import type { FoodType, Recipe, RecipeCategory, RecipeChips, PlateMark, RecipeIngredient, RecipeUse } from '../types.ts';
+import type { FoodType, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeIngredient, RecipeUse } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';

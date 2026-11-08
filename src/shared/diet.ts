@@ -84,6 +84,11 @@ export function normPlanItem(x: unknown): PlanItem | null {
   return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}) };
 }
 
+/** Whether two planned items are the same food in the same meal; "no meal" is a meal of its own, so the same food may sit untagged and in a meal. */
+export const samePlanItem = (a: PlanItem, b: PlanItem): boolean => a.k === b.k && a.id === b.id && a.s === b.s;
+/** A key for one planned item among its day's items (a day never holds two that `samePlanItem` matches). */
+export const planItemKey = (i: PlanItem): string => JSON.stringify([i.k, i.id, i.s ?? '']);
+
 /** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS a day, a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {
   const out: Record<string, PlanItem[]> = {};
@@ -92,12 +97,11 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
   const hi = lo ? ymd(addDays(parseDate(lo), MAX_PLAN_AHEAD)) : null;
   for (const d of Object.keys(v as object).sort()) {
     if (!validDate(d) || (lo && d < lo) || (hi && d > hi)) continue;
-    const seen = new Set<string>(), items: PlanItem[] = [];
+    const items: PlanItem[] = [];
     for (const raw of Array.isArray((v as Record<string, unknown>)[d]) ? (v as Record<string, unknown[]>)[d]! : []) {
       const it = normPlanItem(raw);
-      const key = it ? it.k + it.id + (it.s ?? '') : '';
-      if (!it || seen.has(key) || items.length >= MAX_PLAN_ITEMS) continue; // the same food may be in two different meals of a day
-      seen.add(key); items.push(it);
+      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_PLAN_ITEMS) continue; // the same food may be in two different meals of a day
+      items.push(it);
     }
     if (items.length) out[d] = items;
   }
