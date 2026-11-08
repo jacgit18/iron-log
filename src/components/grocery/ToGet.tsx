@@ -97,7 +97,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const storeRows = (grp: { store: string; items: GroceryItem[] }) => grp.items;
   const rs = useReceiptScan(g, mk);
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
-  const [quick, setQuick] = useState<{ id: string; name: string; label: string; every: boolean; t: number } | null>(null); // the item just quick-added, for its notice (Make it every month, Undo)
+  const [quick, setQuick] = useState<{ id: string; name: string; label: string; t: number } | null>(null); // the item just quick-added, for its notice (Undo)
   const [selecting, setSelecting] = useState(false); // Select mode (brief grocery-bulk-share): the rows to get carry a checkbox; nothing is written until Share… is applied
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const pickedIds = allIds(shown).filter(id => picked.has(id)); // only what is on screen: a search that hides a row leaves it out
@@ -181,7 +181,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
             <ul className="glist">{(onBought ? grp.items : gotLast(grp.items, month)).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={onBought ? false : off > 0} carries={off >= 0} onGot={on => tick(it.id, on)} open={isOpen(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; setChipPick(ALL_CHIP); }} pick={selecting ? { on: picked.has(it.id), set: on => pickSome([it.id], on) } : undefined} />)}</ul>
-            {!onBought && current && <GroceryQuickAdd idKey={String(gi)} label={grp.label} store={grp.store} onAdded={a => setQuick({ ...a, label: grp.label, every: false, t: Date.now() })} />}
+            {!onBought && current && <GroceryQuickAdd idKey={String(gi)} label={grp.label} store={grp.store} onAdded={a => setQuick({ ...a, label: grp.label, t: Date.now() })} />}
           </section>
         );
       })}
@@ -205,9 +205,8 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
         {quick && (
           <div className="gtickednote">
             <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: () => setQuick(null), key: quick.t }}
-              actions={[...(quick.every ? [] : [{ label: 'Make it every month', onClick: () => { if (!useAppStore.getState().updateGroceryItem(quick.id, { every: true })) setQuick({ ...quick, every: true, t: Date.now() }); } }]),
-                { label: 'Undo', onClick: () => { useAppStore.getState().removeGroceryItem(quick.id, { quiet: true }); setQuick(null); } }, { label: 'Dismiss', ghost: true, onClick: () => setQuick(null) }]}>
-              {quickAddNotice(quick.name, quick.label, quick.every)}
+              actions={[{ label: 'Undo', onClick: () => { useAppStore.getState().removeGroceryItem(quick.id, { quiet: true }); setQuick(null); } }, { label: 'Dismiss', ghost: true, onClick: () => setQuick(null) }]}>
+              {quickAddNotice(quick.name, quick.label)}
             </Notice>
           </div>
         )}

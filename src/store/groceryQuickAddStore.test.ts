@@ -19,11 +19,9 @@ describe('quick add through addGroceryItem', () => {
     expect(st().addGroceryItem({ n: 'Rice', store: 'Aldi', qty: '1', price: '', every: false })).toBeNull();
     expect(findQuickAdded(st().grocery.items, 'Rice', 'Aldi')).toMatchObject({ every: true, out: false });
   });
-  it('Make it every month changes it, Undo removes it', () => {
+  it('Undo removes it', () => {
     st().addGroceryItem(quickAddForm('Milk', 'Aldi'));
     const id = findQuickAdded(st().grocery.items, 'Milk', 'Aldi')!.id;
-    expect(st().updateGroceryItem(id, { every: true })).toBeNull();
-    expect(st().grocery.items.find(i => i.id === id)).toMatchObject({ every: true, out: false });
     st().removeGroceryItem(id, { quiet: true });
     expect(st().grocery.items.some(i => i.id === id)).toBe(false);
   });

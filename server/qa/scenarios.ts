@@ -1805,14 +1805,14 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-140', feature: 'Groceries views', title: 'Quick add puts a one-time item on Shopping; Make it every month and Undo work', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    id: 'S-140', feature: 'Groceries views', title: 'Quick add puts an item on Shopping with an honest notice, and Undo works', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
     steps: [
       'On Shopping press + Add item to a store, type a name and press Enter.',
-      'Press Make it every month in the notice. Add another item and press Undo.',
+      'Add another item and press Undo in the notice.',
     ],
     expected: [
-      'The item shows under that store and in Inventory. The notice says it is a one-time item and stays in Inventory.',
-      'Make it every month changes the notice. Undo takes the second item away.',
+      'The item shows under that store and in Inventory. The notice says it is on this month\'s list and stays in Inventory, and has no Make it every month button.',
+      'Undo takes the second item away.',
     ],
   },
   {
