@@ -14,7 +14,6 @@ const good = '{"name":"Gnocchi","serving":"1 cup","servingG":140,"servingsPerPac
 async function start(deps: ScanDeps) {
   const app = express();
   app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
-  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
   app.use('/api/scan', scanRoutes(deps));
   server = app.listen(0);
   await new Promise(done => server!.once('listening', done));
@@ -127,7 +126,6 @@ describe('POST /api/scan/receipt', () => {
   const reply = JSON.stringify({ store: "BJ'S", date: '2026-11-03', tax: 204, total: 4000, lines: [{ text: 'EGGS LRG 5 DZ', qty: 2, total: 2698, match: 'eggs' }, { text: 'GONE', qty: 1, total: 100, match: 'not-sent' }] });
   async function startReceipt(deps: ScanDeps) {
     const app = express();
-    app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
   app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
   app.use('/api/scan', scanRoutes(deps));
     server = app.listen(0);
