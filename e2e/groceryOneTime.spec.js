@@ -1,0 +1,45 @@
+import { test, expect } from './fixtures.js';
+
+// One-time items (brief quickadd-one-time-items): a quick-added item leaves Inventory once it is bought, the Edit row's One-time item box does the same for any item,
+// and the item stays on Bought for the month it was bought in. Which items count as used, and the later months, are node tests (groceryOneTime.test.ts).
+const CATALOGUE = {
+  stores: ['Aldi'],
+  items: [{ id: 'rice', n: 'Rice', store: 'Aldi', qty: 1, cents: 500, every: true, out: false }],
+};
+const open = async page => {
+  await page.evaluate(CATALOGUE => localStorage.setItem('ironlog:grocery/main', JSON.stringify(CATALOGUE)), CATALOGUE);
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#groc-view-shopping');
+};
+
+test('a quick-added item leaves Inventory after it is bought and stays on Bought', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Add item to Aldi' }).click();
+  await page.getByLabel('Item name, to add to Aldi').fill('Milk');
+  await page.keyboard.press('Enter');
+  await page.click('#groc-view-inventory');
+  await expect(page.getByText('Milk', { exact: true })).toBeVisible(); // not bought yet: it is on the list
+  await page.click('#groc-view-shopping');
+  await page.getByLabel('Got Milk').click();
+  await page.click('#groc-view-inventory');
+  await expect(page.getByText('Milk', { exact: true })).toHaveCount(0);
+  await page.click('#groc-view-bought');
+  await expect(page.getByText('Milk', { exact: true })).toBeVisible();
+});
+
+test('the One-time item box in Edit makes an ordinary item leave Inventory after it is bought', async ({ page }) => {
+  await open(page);
+  await page.click('#groc-view-inventory');
+  await page.click('#groc-edit');
+  await page.getByRole('button', { name: 'Expand Rice' }).click();
+  const box = page.getByRole('checkbox', { name: /^One-time item/ });
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await expect(box).toBeChecked();
+  await page.click('#groc-edit');
+  await page.click('#groc-view-shopping');
+  await page.getByLabel('Got Rice').click();
+  await page.click('#groc-view-inventory');
+  await expect(page.getByText('Rice', { exact: true })).toHaveCount(0);
+});

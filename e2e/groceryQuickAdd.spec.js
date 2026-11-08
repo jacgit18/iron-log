@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// Quick add on Shopping (brief groceries-spending-buttons-quick-add): a `+ Add item to <store>` row creates an item with a notice that says it is on this month's list and stays in Inventory, and an Undo.
+// Quick add on Shopping (brief groceries-spending-buttons-quick-add): a `+ Add item to <store>` row creates a one-time item with a notice that says it leaves after it is bought, and an Undo.
 // The add logic and the refusals are node tests (groceryQuickAdd.test.ts, groceryQuickAddStore.test.ts); this covers the row, the field, the notice and the item showing on Shopping, Inventory and the chips: wiring across two pages and the store that a unit test cannot reach.
 const CATALOGUE = {
   stores: ['Aldi', 'Costco'],
@@ -24,7 +24,7 @@ test('+ Add item to a store adds an item to that store, with a notice', async ({
   const costco = page.locator('section.gstore', { has: page.getByRole('heading', { name: 'Costco' }) });
   await expect(costco.getByLabel('Got Milk')).toBeVisible();
   await expect(page.locator('section.gstore', { has: page.getByRole('heading', { name: 'Aldi' }) }).getByLabel('Got Milk')).toHaveCount(0);
-  await expect(page.getByText('Added Milk to Costco. It is on this month\'s list and stays in Inventory. Remove it there when you no longer need it.')).toBeVisible();
+  await expect(page.getByText('Added Milk to Costco. It is a one-time item: it leaves Inventory and next month\'s list after you buy it.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Make it every month' })).toHaveCount(0);
   await expect(row(page, 'Costco')).toBeVisible(); // the field closed; the row is back
 });

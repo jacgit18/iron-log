@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useFeature } from '../../features.js';
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
+import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
 import { RECEIPT_TEXT, scanReceipt } from '../../lib/scanPhoto.js';
 import type { ItemRef } from '../../shared/receipt.js';
@@ -28,7 +29,8 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const [msg, setMsg] = useState('');
   const [applied, setApplied] = useState<(Applied & { mk: string; t: number }) | null>(null);
   const [kept, setKept] = useState<{ image: string; meta: KeepMeta; busy: boolean; fail: SaveFailure['reason'] | null } | null>(null);
-  const canScan = on && g.items.length > 0;
+  const months = useAppStore(s => s.groceryMonths);
+  const canScan = on && withoutUsed(g, months).items.length > 0;
 
   // Uploads the photo kept in memory. On a failure the photo stays here for Try again until the notice is dismissed or the page closes.
   const keep = async (image: string, meta: KeepMeta) => {
@@ -43,13 +45,14 @@ export function useReceiptScan(g: Grocery, mk: string) {
     if (!file || busy) return;
     setBusy(true); setMsg(''); setApplied(null); setKept(null);
     const lines = useAppStore.getState().groceryMonths[mk]?.lines ?? {}; // the items ticked this month go with `got`, so the scan prefers them for a close name (brief receipt-reconcile-ticked)
-    const items: ItemRef[] = g.items.map(i => ({ id: i.id, n: i.n, ...(i.unit ? { unit: i.unit } : {}), ...(lines[i.id]?.got ? { got: true as const } : {}) }));
+    const catalogue = withoutUsed(useAppStore.getState().grocery, useAppStore.getState().groceryMonths); // a used one-time item is not offered to the scan
+    const items: ItemRef[] = catalogue.items.map(i => ({ id: i.id, n: i.n, ...(i.unit ? { unit: i.unit } : {}), ...(lines[i.id]?.got ? { got: true as const } : {}) }));
     const r = await scanReceipt(file, items);
     if (!mounted.current) return;
     setBusy(false);
     if (!r.ok) { setMsg(RECEIPT_TEXT[r.reason]); return; }
     if (r.result.kind !== 'ok') { setMsg(RECEIPT_TEXT.unreadable); return; }
-    const { receipt, remembered } = applySavedNames(r.result.receipt, useAppStore.getState().grocery.items); // the person's saved receipt names win over the model's guess (brief receipt-rename-memory)
+    const { receipt, remembered } = applySavedNames(r.result.receipt, catalogue.items); // the person's saved receipt names win over the model's guess (brief receipt-rename-memory)
     useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk, image: keepOn ? r.image : null, onApplied: (a: Applied) => setApplied({ ...a, mk, t: Date.now() }), onKeep: (meta: KeepMeta) => void keep(r.image, meta) });
   };
   const notes = (

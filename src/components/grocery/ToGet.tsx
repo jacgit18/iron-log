@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally } from '../../lib/grocery.js';
+import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally, usedOneTime } from '../../lib/grocery.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { hasSharing } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
@@ -41,7 +41,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const [off, setOffNow] = useState(off0); // months from this one: below 0 is history, above 0 is planning ahead
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
-  const list = inMonth(g, onList(g, month, off >= 0), month); // each item sits under the store it is bought at this month (Move to)
+  const list = inMonth(g, onList(g, month, off >= 0, usedOneTime(g, months)), month); // each item sits under the store it is bought at this month (Move to)
   const everBought = [...list, ...removedBought(g, month)]; // the count, the Spent tile and the tax hint also see the bought lines of items removed since, as the store lines and Spending do
   const t = tally(everBought, month);
   // This month, what you have bought leaves the list (it is on At home as "have"); it stays one tap away under "Bought this month" so a

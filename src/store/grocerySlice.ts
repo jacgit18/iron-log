@@ -3,7 +3,7 @@ import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor, usedOneTime
 } from '../lib/grocery.js';
 import { cleanAliases, cleanShare } from '../shared/grocery.js';
 import { validGroceryBudget } from '../shared/validate.js';
@@ -209,9 +209,10 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       return mutateCatalogue(g => {
         const store = sameStore(g, typedStore);
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
-        if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
+        const used = usedOneTime(g, get().groceryMonths); // a used one-time item is out of the list, so it does not block the same name
+        if (g.items.some(i => !used.has(i.id) && i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         const full = ensureStore(g, store); if (full) return full;
-        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: !d.oneTime, out: !!d.oneTime, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: !d.oneTime, out: !!d.oneTime, ...(d.oneTime ? { oneTime: monthKey(new Date()) } : {}), ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
     },
@@ -238,8 +239,10 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (patch.note !== undefined) { const note = patch.note.trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE); if (note) it.note = note; else delete it.note; }
         if (patch.unit !== undefined) { const unit = UNITS.find(u => u === patch.unit); if (unit) it.unit = unit; else delete it.unit; }
         if (patch.aliases !== undefined) { const a = cleanAliases(patch.aliases); if (a) it.aliases = a; else delete it.aliases; } // receipt names (brief receipt-rename-memory); an empty list clears them
+        if (patch.oneTime !== undefined) { if (patch.oneTime) it.oneTime = monthKey(new Date()); else delete it.oneTime; } // the Edit row's One-time item box
         if (patch.every !== undefined) { it.every = patch.every; if (it.every) it.out = false; }
-        if (g.items.some(i => i !== it && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
+        const used = usedOneTime(g, get().groceryMonths);
+        if (g.items.some(i => i !== it && !used.has(i.id) && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
         return null;
       });
       if (!err && patch.store !== undefined && was !== undefined && get().grocery.items.find(i => i.id === id)?.store !== was) pinPastStores(id, was);
@@ -437,7 +440,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     takeGroceryAllOff(month) {
       if (!MONTH_RE.test(month) || get().blocked()) return 0;
       const m = get().groceryMonths[month] || emptyMonth();
-      const ids = onList(get().grocery, m, true).filter(i => !lineOf(i, m).got).map(i => i.id);
+      const ids = onList(get().grocery, m, true, usedOneTime(get().grocery, get().groceryMonths)).filter(i => !lineOf(i, m).got).map(i => i.id);
       if (!ids.length) return 0;
       mutateMonth(month, mm => ids.forEach(id => { mm.lines[id] = { ...(mm.lines[id] || {}), have: true }; }));
       get().noteRemoved('groceryoff', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} from this month’s list`, () => {

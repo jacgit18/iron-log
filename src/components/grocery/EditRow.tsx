@@ -10,6 +10,7 @@ import type { Grocery as GroceryT, GroceryItem, GroceryUnit } from '../../types.
 import { COUNT_ERROR, PRICE_ERROR } from './groceryMessages.js';
 import { commitPrice, commitQty } from './commitNumber.js';
 import { NumBox } from './NumBox.js';
+import './GroceryOneTime.css';
 
 export default function EditRow({ item, g, have, onHave, adjust, open, onOpen, onMove, onRemoved }: { item: GroceryItem; g: GroceryT; have: boolean; onHave: (on: boolean) => void; adjust: boolean; open: boolean; onOpen: (on: boolean) => void; onMove: (id: string) => void; onRemoved: (id: string) => void }) {
   const s = useAppStore.getState();
@@ -60,6 +61,7 @@ export default function EditRow({ item, g, have, onHave, adjust, open, onOpen, o
               onCommit={t => commitPrice(t, c => setErr(s.updateGroceryItem(item.id, { cents: c })))} />
           </label>
         </div>
+        <label className="gonetime"><input type="checkbox" className="chk" checked={!!item.oneTime} onChange={e => setErr(s.updateGroceryItem(item.id, { oneTime: e.target.checked }))} /> One-time item <span className="note">Leaves Inventory and next month’s list after you buy it.</span></label>
         <ReceiptNames item={item} />
         {split && (adjust || !!item.share) && <SharePicker name={item.n} people={allPeople(g)} parties={partiesFor(g, item)} own={!!item.share} onChange={sh => s.setGroceryItemShare(item.id, sh)} />}
         <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => { setArming(false); onRemoved(item.id); onOpen(false); s.removeGroceryItem(item.id); }} />
