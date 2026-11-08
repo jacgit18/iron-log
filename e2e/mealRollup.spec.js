@@ -64,3 +64,17 @@ test('a loop is refused in the picker with a message, and the form stays usable'
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 });
+
+test('on a phone the picker, the amount stepper and the switch fit and every target is at least 44 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await seed(page, [oats, milk]);
+  await openRecipes(page);
+  await startRecipe(page);
+  await page.getByRole('button', { name: '+ Food or meal' }).click();
+  await page.getByRole('group', { name: 'Foods and meals' }).getByRole('button', { name: /Oat cereal/ }).click();
+  const small = await page.locator('.rc-form button, .rc-form input:not([type=hidden])').evaluateAll(els => els
+    .filter(e => e.offsetParent !== null && e.getBoundingClientRect().height > 0 && (e.getBoundingClientRect().height < 43.5 || (e.type !== 'checkbox' && e.getBoundingClientRect().width < 43.5)))
+    .map(e => `${e.getAttribute('aria-label') ?? e.textContent?.trim() ?? e.id}: ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`));
+  expect(small.filter(t => /food|meal|amount|oat|Less|More|own numbers/i.test(t))).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
