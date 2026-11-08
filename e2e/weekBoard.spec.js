@@ -26,7 +26,7 @@ test('a wide screen opens the Board: seven days, four meals each, bars with word
   await expect(board(page).locator('.wb-col')).toHaveCount(7);
   await expect(today(page).locator('.wb-slot')).toHaveCount(4);
   for (const m of ['Breakfast', 'Lunch', 'Dinner', 'Snack']) await expect(today(page).getByText(m, { exact: true })).toBeVisible();
-  for (const b of ['Calories', 'Protein']) await expect(today(page).getByRole('meter', { name: b })).toBeVisible();
+  for (const b of ['Calories', 'Protein']) await expect(today(page).getByRole('meter', { name: `${b} planned` })).toBeVisible();
 });
 
 test('adding to Dinner shows the card, the plate check and a fix that goes with the food', async ({ page }) => {
@@ -41,9 +41,9 @@ test('adding to Dinner shows the card, the plate check and a fix that goes with 
   await dinner(page).getByRole('button', { name: '+ Add a carb: Rice (goes with Chili)' }).click(); // Rice goes with Chili
   await expect(check).toContainText('✓ Carb');
   await expect(dinner(page).getByText('Rice', { exact: true })).toBeVisible();
-  await expect(today(page).getByRole('meter', { name: 'Calories' })).toHaveAttribute('aria-valuenow', '600');
+  await expect(today(page).getByRole('meter', { name: 'Calories planned' })).toHaveAttribute('aria-valuenow', '600');
   await expect(today(page).getByText('Add fat to your foods')).toHaveCount(0); // both have a fat figure: the fat bar is whole
-  await expect(today(page).getByRole('meter', { name: 'Fat' })).toHaveAttribute('aria-valuenow', '15');
+  await expect(today(page).getByRole('meter', { name: 'Fat planned' })).toHaveAttribute('aria-valuenow', '15');
 });
 
 test('Move to changes the meal of a card, and a card can be moved to another day', async ({ page }) => {

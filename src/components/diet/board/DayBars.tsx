@@ -9,7 +9,7 @@ function Bar({ cls, label, value, target, unit, over }: { cls: string; label: st
   return (
     <div className="wb-bar">
       <div className="wb-barl"><span>{label}</span><b>{fmtNum(value)}{target ? ` / ${fmtNum(target)}` : ''} {unit}</b></div>
-      <div className={`wb-meter ${cls}${over ? ' over' : ''}`} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={target ?? Math.max(value, 1)} aria-valuenow={value} aria-valuetext={`${fmtNum(value)}${target ? ` of ${fmtNum(target)}` : ''} ${unit}`}><i style={{ width: `${pct}%` }} /></div>
+      <div className={`wb-meter ${cls}${over ? ' over' : ''}`} role="meter" aria-label={`${label} planned`} aria-valuemin={0} aria-valuemax={target ?? Math.max(value, 1)} aria-valuenow={value} aria-valuetext={`${fmtNum(value)}${target ? ` of ${fmtNum(target)}` : ''} ${unit}`}><i style={{ width: `${pct}%` }} /></div>
     </div>
   );
 }
