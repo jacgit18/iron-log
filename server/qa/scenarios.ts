@@ -2265,7 +2265,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-182', feature: 'Goes with', title: 'A recipe goes with at most three, and a sauce is not offered', persona: 'recipe-collector', brief: 'recipes-goes-with', edge: true,
     steps: [
-      'Open a recipe and add three recipes in Goes with. Look for a fourth.',
+      'Open a recipe and add three recipes in Goes with. Look for a fourth. (This account already has Chicken and rice bowl and Baked salmon each going with Tuna salad: open Tuna salad and read its Goes with first.)',
       'Press Remove on one and add a different one. Look at the choices for a recipe you categorised as Sauces.',
     ],
     expected: [
@@ -2281,7 +2281,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The four saved meals (Usual breakfast, Chicken bowl, Post-workout, Quick dinner) are meals in Recipes with the numbers they had.',
-      'After a reload each is still there once, not twice.',
+      'Usual breakfast lists Egg and spinach scramble and Overnight oats as linked parts (it was made from those two recipes); the other three list their foods by name with their saved totals. After a reload each is still there once, not twice.',
     ],
   },
   {
@@ -2291,7 +2291,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Look for a Manage button, then open Recipes and rename the meal there.',
     ],
     expected: [
-      'The row lists the Recipes meals ("Usual breakfast · 2 foods · …" or one entry with its total for a meal with no linked foods). One tap adds its foods as entries on the day shown.',
+      'The row lists the four meals. "Usual breakfast" reads "· 2 foods ·" and one tap adds two entries (the scramble and the oats). The other three read "· 1 food ·" and one tap adds one entry with the meal\'s total, because they were made of hand-typed foods.',
       'There is no Manage button; a note says to rename or edit a meal in Recipes. The new name shows in Quick add.',
     ],
   },
@@ -2312,10 +2312,12 @@ export const SCENARIOS: readonly Scenario[] = [
       'Open + New, Write a recipe, set the category to Protein and read Counts as on a plate. Press Veg.',
       'Save, open it again with Edit, then press Back to automatic.',
       'On + New, Add a food by hand, type 30 g protein and read Counts as.',
+      'Open Lentil soup (this account has it set by hand) and press Edit.',
     ],
     expected: [
       'Protein is on to begin with. Pressing Veg adds it and a dashed Back to automatic chip appears. Your choice is still there after Save and Edit.',
       'Back to automatic returns to Protein only. A food with 30 g protein counts as Protein, and the last chip cannot be turned off.',
+      'Lentil soup opens with Protein and Carb on and the dashed Back to automatic chip showing (a hand-set choice).',
     ],
   },
   {
