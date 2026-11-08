@@ -343,7 +343,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
             l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents;
             if (l.cents == null) l.unpriced = true; else delete l.unpriced; // bought with no price: a price the item gets later must not price this month
           }
-        } else { delete l.got; delete l.unpriced; }
+        } else { delete l.got; delete l.unpriced; delete l.rc; }
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
       return true;
@@ -611,6 +611,11 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       });
     },
     // Puts one month line back exactly as it was (null: it had none), for Undo after a receipt is applied (brief receipt-scan).
+    // The receipt's Apply calls this for each item it ticks, so a later receipt knows who ticked it (brief receipt-earlier-items). Undo puts the whole line back, so it needs no step of its own.
+    markGroceryFromReceipt(month, id) {
+      if (!MONTH_RE.test(month) || get().blocked()) return;
+      mutateMonth(month, m => { const l = m.lines[id]; if (l?.got && !l.rc) m.lines[id] = { ...l, rc: true }; });
+    },
     restoreGroceryLine(month, id, line) {
       if (!MONTH_RE.test(month) || get().blocked() || !get().grocery.items.some(i => i.id === id)) return; // blocked: sync is loading, so an Undo does not write
       mutateMonth(month, m => { if (line && Object.keys(line).length) m.lines[id] = line; else delete m.lines[id]; });

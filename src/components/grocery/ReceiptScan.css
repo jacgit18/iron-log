@@ -273,13 +273,24 @@
 }
 .rcmiss li {
   display: grid;
-  grid-template: "what what" auto "box state" auto / minmax(0, 1fr) auto;
+  grid-template: "what box" auto "state state" auto / minmax(0, 1fr) auto;
   gap: 0 var(--sp-10);
   align-items: center;
   border-top: 1px solid var(--line);
 }
 .rcmiss li:first-child {
   border-top: 0;
+}
+.rcmissmore summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.rcearlier {
+  margin: 0;
 }
 .rcuntick {
   grid-area: box;
@@ -304,7 +315,7 @@
 }
 .rcmissstate {
   grid-area: state;
-  justify-self: end;
+  justify-self: start;
   font-size: var(--fs-sm);
   font-weight: 600;
 }

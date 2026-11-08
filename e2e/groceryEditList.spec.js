@@ -112,7 +112,7 @@ test('no axe violations, 44 px targets and no sideways scroll at 320 px', async 
   await open(page);
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => v.id)).toEqual([]);
-  const small = await page.evaluate(() => [...document.querySelectorAll('.gstorechip, .gfold, .gall')].filter(e => e.offsetParent).filter(e => e.getBoundingClientRect().height < 43.5).length);
+  const small = await page.evaluate(() => [...document.querySelectorAll('.gstorechip, .gfold, .glistsum .btn')].filter(e => e.offsetParent).filter(e => e.getBoundingClientRect().height < 43.5).length);
   expect(small).toBe(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

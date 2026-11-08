@@ -106,8 +106,7 @@ test('row details start open on a computer and closed on a phone, and the More m
   await expect(page.getByLabel('Count of Chicken')).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByLabel('Count of Chicken')).toHaveCount(0);
-  await page.click('#groc-toolmore');
-  await page.click('#groc-details-all'); // Show details on all rows
+  await page.click('#groc-details-all'); // Show details on all rows (the button above the list)
   await expect(page.getByLabel('Count of Chicken')).toBeVisible();
   await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
   await expect(page.getByLabel('Count of Chicken')).toBeVisible(); // remembered on this device
@@ -139,11 +138,9 @@ test('moving a row to another store while a chip is on switches to All and keeps
 test('the More menu can go back to details by screen size after a choice', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
-  await page.click('#groc-toolmore');
   await page.click('#groc-details-all');
   await expect(page.getByLabel('Count of Chicken')).toBeVisible();
-  await page.click('#groc-toolmore'); // the menu closed when the row opened? press again to be sure it is open
-  if (!(await page.locator('#groc-details-auto').isVisible())) await page.click('#groc-toolmore');
+  await page.click('#groc-toolmore');
   await page.click('#groc-details-auto');
   await expect(page.getByLabel('Count of Chicken')).toHaveCount(0); // a phone is closed again
   await page.setViewportSize({ width: 1280, height: 900 });

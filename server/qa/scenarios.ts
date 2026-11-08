@@ -1215,14 +1215,14 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-91', feature: 'Receipt reconcile', title: 'An item marked bought that is not on the receipt is listed, stays bought, or moves back to to-get', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
     steps: [
       'On a phone, on Shopping, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
-      'Find "Marked bought, but not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
-      'Scan again, tick the "Move back to to-get" box on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
+      'Find "Already bought, not on this receipt" under the lines, press "Review these" and read the row for Milk. Press Apply without touching it and look at Milk.',
+      'Scan again, open the list, tick "Move back" on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
       'Scan a receipt that has none of your ticked items.',
     ],
     expected: [
-      'Milk is listed with what it holds now ("Marked bought: 1 × $3.79") and "Stays bought"; applying leaves Milk ticked with its price.',
-      'With the box ticked, the row says "Will move back to to-get", the footer says "1 will move back to to-get.", Apply puts Milk back to get with the notice "1 item moved back to to-get.", and Undo ticks it again with its price.',
-      'When none of your marked-bought items are on the receipt, the list opens with "None of the items you marked bought are on this receipt. Is this the right one?"',
+      'Milk is listed with what it holds now ("Bought: 1 × $3.79"); applying leaves Milk ticked with its price.',
+      'With the box ticked, the row says "Will move back to Shopping", the footer says "1 will move back to Shopping.", Apply puts Milk back on Shopping with the notice "1 item moved back to Shopping.", and Undo ticks it again with its price.',
+      'When nothing on the receipt matches your list, the text above the list starts with "None of the items on your list match this receipt. Is this the right one?"',
     ],
   },
   {
@@ -2133,6 +2133,17 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The second Milk is added with no "already in this store\'s list" message and shows on Shopping.',
+    ],
+  },
+  {
+    id: 'S-172', feature: 'Receipt reconcile', title: 'A second receipt at the same store does not list what the first receipt bought', persona: 'grocery-shopper', brief: 'receipt-earlier-items', device: true,
+    steps: [
+      'On a phone, tick Milk by hand on Shopping. Scan a receipt from a store, press Apply. Scan a second receipt from the same store with different items.',
+      'Read the text under the lines and open "Review these" if it is there.',
+    ],
+    expected: [
+      'The second sheet says how many items from an earlier receipt are not listed, and lists only Milk (ticked by hand) under "Already bought, not on this receipt", folded until you press Review.',
+      'It does not say "Is this the right one?" because some of this receipt\'s lines match your list.',
     ],
   },
 ];

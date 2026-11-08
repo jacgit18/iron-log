@@ -5,6 +5,7 @@ import { itemHistory, lastBoughtText } from '../../lib/itemHistory.js';
 import { DEFAULT_GROCERY_SORT, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { hasSharing } from '../../lib/grocerySettle.js';
 import { isCollapsed, toggleFolded, unfoldGrown } from '../../lib/groceryCollapse.js';
+import { editSummaryText } from '../../lib/groceryListSummary.js';
 import { ALL_CHIP, chipGroups, chipsOf, haveCount, itemsText, resolveChip, showChips } from '../../lib/groceryChips.js';
 import { dailyFix } from '../../lib/route.js';
 import EmptyTiles from '../EmptyTiles.js';
@@ -20,7 +21,7 @@ import { useSortChoice } from '../useSortChoice.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
 import EditDock from './EditDock.js';
 import EditRow from './EditRow.js';
-import ExpandAll from './ExpandAll.js';
+import ListSummary from './ListSummary.js';
 import HomeRow from './HomeRow.js';
 import Stores from './StoresPanel.js';
 import useIdSet from './useIdSet.js';
@@ -95,6 +96,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
       {g.items.length > 0 && (editing ? <GroceryBar q={q} onQ={setQ} /> : <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />)}
       {!!q.trim() && !listed.length && <NoMatch q={q} />}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
+      {editing && listed.length > 0 && <ListSummary text={editSummaryText(listed.reduce((n, grp) => n + grp.items.length, 0), listed.reduce((n, grp) => n + haveCount(grp.items, hasIt), 0))} all={listed.every(grp => grp.items.every(i => openEdit.has(i.id)))} onToggle={on => setEdits(listed.flatMap(grp => grp.items.map(i => i.id)), on)} />}
       <div className={`gshoplist${chip !== ALL_CHIP && !editing ? ' gcompact' : ''}`}>
       {listed.map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
@@ -106,7 +108,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
               {grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}
             </h3>
             {editing
-              ? <span className="gstoremeta"><span className="note">{grp.items.length} {grp.items.length === 1 ? 'item' : 'items'}</span>{!isCollapsed(folded, grp.store, q) && <ExpandAll label={grp.label} all={grp.items.every(i => openEdit.has(i.id))} onToggle={on => setEdits(grp.items.map(i => i.id), on)} />}</span>
+              ? null
               : <span className="gstoremeta"><span className="note">{itemsText(grp.items.length, haveCount(grp.items, hasIt))}</span></span>}
           </div>
           {editing && hasSharing(g) && !isCollapsed(folded, grp.store, q) && (
