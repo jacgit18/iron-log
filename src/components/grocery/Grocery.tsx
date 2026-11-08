@@ -40,7 +40,7 @@ import './PriceHistory.css';
 // Inventory is every item you buy, ticked while you have it (a new month keeps last month's ticks). A bought item counts as had. A new month starts with last month’s ticks (ADR 079).
 type View = 'shopping' | 'bought' | 'inventory';
 const VIEWS: readonly string[] = ['shopping', 'bought', 'inventory'];
-const SUBTITLE: Record<View | 'history', string> = { shopping: 'What is left to buy this month, by store.', bought: 'Bought this month. These count as in your inventory. Tap a box to put one back on Shopping.', inventory: 'Your usual items. Tick what you already have.', history: 'What you spent by month and store.' };
+const SUBTITLE: Record<View | 'history', string> = { shopping: 'What is left to buy this month, by store.', bought: 'Bought this month. These count as in your inventory. Tap a box to put one back on Shopping.', inventory: 'Everything you usually buy. Tick what you have; the rest is on Shopping.', history: 'What you spent by month and store.' };
 
 export default function Grocery() {
   const g = useAppStore(s => s.grocery);
