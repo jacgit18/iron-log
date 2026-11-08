@@ -12,10 +12,10 @@ const seed = async (page, names) => {
   await openRecipes(page);
 };
 
-test('the ready-made form needs a Type, starting on Ready to eat, and saves the one picked', async ({ page }) => {
+test('the ready-made form needs a Used as, starting on Ready to eat, and saves the one picked', async ({ page }) => {
   await openRecipes(page);
   await startFood(page);
-  const type = page.getByRole('group', { name: 'Type' });
+  const type = page.getByRole('group', { name: 'Used as' });
   await expect(type.getByRole('button', { name: 'Ready to eat' })).toHaveAttribute('aria-pressed', 'true');
   await type.getByRole('button', { name: 'Drink' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Goat kefir');
@@ -26,7 +26,7 @@ test('the ready-made form needs a Type, starting on Ready to eat, and saves the 
   await expect(page.getByText(/needs? a type/)).toHaveCount(0); // it is typed, so no banner
   await page.locator('.rc-row', { hasText: /Goat kefir/ }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
-  await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: 'Used as' }).getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('untyped foods show a banner; Review types suggests from the name, a changed row wins, Looks right saves, Undo restores', async ({ page }) => {
