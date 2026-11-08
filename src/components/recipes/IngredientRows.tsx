@@ -57,7 +57,7 @@ export default function IngredientRows({ rows, options, sauces, foods, meals, pa
             <div className="rc-qline" role="group" aria-label={`Amount of ${x.n}`}>
               <button type="button" className="btn sm" aria-label={`Less ${x.n}`} disabled={x.q <= STEP} onClick={() => onSet(i, { q: Math.max(STEP, Math.round((x.q! - STEP) * 100) / 100) })}>−</button>
               <output aria-live="polite">{amountText(x.q, partOf(x.rid))}</output>
-              <button type="button" className="btn sm" aria-label={`More ${x.n}`} disabled={x.q >= MAX_Q} onClick={() => onSet(i, { q: Math.min(MAX_Q, Math.round((x.q! + STEP) * 100) / 100) })}>+</button>
+              <button type="button" id={`rc-more-${i}`} className="btn sm" aria-label={`More ${x.n}`} disabled={x.q >= MAX_Q} onClick={() => onSet(i, { q: Math.min(MAX_Q, Math.round((x.q! + STEP) * 100) / 100) })}>+</button>
               <span className="note">Linked to your {partOf(x.rid)?.cat === 'ready' ? 'food' : 'meal'}.</span>
             </div>
           )}
@@ -72,7 +72,7 @@ export default function IngredientRows({ rows, options, sauces, foods, meals, pa
         <button type="button" id="rc-food-open" className="btn sm" aria-expanded={food} onClick={() => { setFood(!food); setBrowse(false); }}>+ Food or meal</button>
         <button type="button" id="rc-sauce-open" className="btn sm" aria-expanded={browse} onClick={() => { setBrowse(!browse); setFood(false); }}>+ Sauce or seasoning</button>
       </div>
-      {food && <FoodPicker foods={foods} meals={meals} full={rows.length >= MAX_INGREDIENTS && !!rows[rows.length - 1]?.n.trim()} onPick={p => { const e = onAddFood(p); if (!e) { setFood(false); } return e; }} onClose={() => { setFood(false); focus('rc-food-open'); }} />}
+      {food && <FoodPicker foods={foods} meals={meals} full={rows.length >= MAX_INGREDIENTS && !!rows[rows.length - 1]?.n.trim()} onPick={p => { const e = onAddFood(p); if (!e) { setFood(false); setTimeout(() => [...document.querySelectorAll<HTMLElement>('[id^="rc-more-"]')].pop()?.focus(), 0); } return e; }} onClose={() => { setFood(false); focus('rc-food-open'); }} />}
       {browse && <SauceSeasoningPicker sauces={sauces} full={rows.length >= MAX_INGREDIENTS && !!rows[rows.length - 1]?.n.trim()} onPick={s => { const at = onAddSauce(s); if (at < 0) return; setBrowse(false); focus(`rc-amt-${at}`); }} onClose={() => { setBrowse(false); focus('rc-sauce-open'); }} />}
     </>
   );

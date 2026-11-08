@@ -90,11 +90,14 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const list = get().recipes; const i = list.findIndex(r => r.id === id);
     if (i < 0) return;
     const gone = list[i]!;
-    set({ recipes: settleMeals(list.filter(r => r.id !== id)) }); // a meal that used it keeps the line as plain text and recounts
+    const after = settleMeals(list.filter(r => r.id !== id)); // a meal that used it keeps the line as plain text and recounts
+    const before = new Map(list.map(r => [r.id, r])), moved = after.filter(r => before.get(r.id) !== r); // the meals the delete changed: Undo gives them back as they were
+    set({ recipes: after });
     get().saveRecipes();
     get().noteRemoved('recipes', gone.n, () => {
       if (get().blocked() || get().recipes.some(r => r.id === id)) return false;
-      const l = [...get().recipes]; l.splice(Math.min(i, l.length), 0, gone); set({ recipes: normRecipes(l) }); get().saveRecipes(); return true;
+      const back = new Map(moved.filter(m => get().recipes.find(r => r.id === m.id) === m).map(m => [m.id, before.get(m.id)!])); // only a meal not edited since
+      const l = get().recipes.map(r => back.get(r.id) ?? r); l.splice(Math.min(i, l.length), 0, gone); set({ recipes: normRecipes(l) }); get().saveRecipes(); return true;
     });
   },
 

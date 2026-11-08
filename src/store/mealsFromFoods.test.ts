@@ -47,6 +47,16 @@ describe('meals from foods', () => {
     expect(meal.kcal).toBe(225);
   });
 
+  it('Undo after deleting a food gives the meals that used it their links, amounts and numbers back', () => {
+    setup(); st().saveRecipe(bowl());
+    const before = JSON.stringify(byName('Cereal bowl'));
+    st().removeRecipe(byName('Whole milk').id);
+    expect(byName('Cereal bowl').ing[1]).toEqual({ n: 'Whole milk' });
+    expect(st().removed!.restore()).toBe(true);
+    expect(JSON.stringify(byName('Cereal bowl'))).toBe(before);
+    expect(byName('Whole milk')).toBeDefined();
+  });
+
   it('refuses a loop and a meal that holds itself', () => {
     setup(); st().saveRecipe(bowl());
     const meal = byName('Cereal bowl');
