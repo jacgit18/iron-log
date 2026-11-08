@@ -10,7 +10,9 @@ import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../l
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
+import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
+import type { Recipe, RecipeCategory, RecipeIngredient, RecipeUse } from '../../types.ts';
+import UsedAsChips from './UsedAsChips.js';
 import IngredientList from './IngredientList.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
@@ -32,6 +34,10 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const { foods, meals } = useMemo(() => foodCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the foods and meals a line can link to, with an amount
   const [n, setN] = useState(recipe?.n ?? start?.title ?? '');
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
+  const [uses, setUsesNow] = useState<RecipeUse[]>(() => (recipe ? usesOf(recipe) : defaultUsesFor('other'))); // brief recipes-used-as-ingredients-tab: follows the category until one is pressed
+  const [usesPicked, setUsesPicked] = useState(!!recipe?.uses);
+  const pickUses = (next: RecipeUse[]) => { setUsesNow(next); setUsesPicked(true); };
+  const pickCat = (c: RecipeCategory) => { setCat(c); if (!usesPicked) setUsesNow(defaultUsesFor(c)); };
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
   const [serving, setServing] = useState(recipe?.serving ?? '');
@@ -122,7 +128,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -218,13 +224,14 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
           </fieldset>
           <div className="rc-meta">
             <label>Category
-              <select value={cat} onChange={e => setCat(e.target.value as RecipeCategory)}>
+              <select value={cat} onChange={e => pickCat(e.target.value as RecipeCategory)}>
                 {RECIPE_CATEGORIES.filter(c => c !== 'ready').map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
               </select>
             </label>
             <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
             <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
           </div>
+          <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
           <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
           <div className="rc-nut">
             <div className="rc-nuthead">

@@ -21,16 +21,19 @@ const hash = page => page.evaluate(() => location.hash);
 test('the tabs filter by type with counts, search works across them, and an empty tab says what to do', async ({ page }) => {
   await open(page);
   await expect(page.locator('#recipes-tab-all')).toHaveText('All7');
-  await expect(page.locator('#recipes-tab-foods')).toHaveText('Foods2');
+  await expect(page.locator('#recipes-tab-foods')).toHaveText('Foods1'); // Eggs is typed Ingredient, so it is in Ingredients now (brief recipes-used-as-ingredients-tab)
   await expect(page.locator('#recipes-tab-meals')).toHaveText('Meals3');
+  await expect(page.locator('#recipes-tab-ingredients')).toHaveText('Ingredients3'); // Lentil soup and Chicken bowl (Protein: Meal + Ingredient) and Eggs
   await expect(page.locator('#recipes-tab-drinks')).toHaveText('Drinks2');
   await page.click('#recipes-tab-foods');
-  expect((await titles(page)).sort()).toEqual(['Eggs', 'Protein bar']);
+  expect((await titles(page)).sort()).toEqual(['Protein bar']);
+  await page.click('#recipes-tab-ingredients');
+  expect((await titles(page)).sort()).toEqual(['Chicken bowl', 'Eggs', 'Lentil soup']);
   await page.click('#recipes-tab-drinks');
   expect((await titles(page)).sort()).toEqual(['Lemonade', 'Oat milk']);
   await expect(page.locator('.rc-cards li', { hasText: 'Oat milk' }).locator('.rc-typetag')).toHaveText('Drink');
   await page.click('#recipes-tab-all');
-  await expect(page.locator('.rc-cards li', { hasText: 'Lentil soup' }).locator('.rc-typetag')).toHaveText('Meal');
+  await expect(page.locator('.rc-cards li', { hasText: 'Lentil soup' }).locator('.rc-typetag')).toHaveText('Meal + Ingredient');
   await page.getByLabel('Search recipes').fill('lem');
   expect((await titles(page)).sort()).toEqual(['Lemon cake', 'Lemonade']);
   await expect(page.locator('#recipes-tab-all')).toHaveText('All2'); // the counts follow the search
