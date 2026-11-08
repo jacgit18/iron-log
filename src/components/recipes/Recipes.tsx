@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
+import FoodTypeReview from './FoodTypeReview.js';
 import RecipeDetail from './RecipeDetail.js';
 import ReadyMadeForm from './ReadyMadeForm.js';
 import RecipeForm from './RecipeForm.js';
 import './Recipes.css';
+import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, haveBadge, librarySortedBy, recipeMeta, sortRecipes } from '../../lib/recipeList.js';
@@ -16,6 +18,7 @@ import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
+import Notice, { UNDO_MS } from '../Notice.js';
 import EmptyTiles from '../EmptyTiles.js';
 import { goUp, navigate, useRoutePath } from '../useRoute.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
@@ -24,7 +27,7 @@ import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
 
 // Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
 // ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
-type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string; ready?: boolean; start?: { title: string; url: string } | null };
+type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'types' } | { kind: 'form'; id?: string; ready?: boolean; start?: { title: string; url: string } | null };
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
 
 export default function Recipes() {
@@ -90,12 +93,15 @@ export default function Recipes() {
   };
 
   const back = () => setView({ kind: 'list' });
+  const [typesUndo, setTypesUndo] = useState<(() => boolean) | null>(null); // Undo for the last "Looks right"; it belongs to this visit of the list
+  const banner = untypedBanner(recipes);
   const backFromSauce = () => goUp('daily/recipes/mine'); // the address change shows the recipe it was opened from (effect above)
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
   if (view.kind === 'form') {
     const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => { if (id) setView({ kind: 'mine', id }); else back(); };
     return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
   }
+  if (view.kind === 'types') return <FoodTypeReview onDone={undo => { setTypesUndo(() => undo); back(); }} onBack={back} />;
   if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={view.from && recipes.some(r => r.id === view.from) ? backFromSauce : back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} onOpen={id => openLinked(id, mineRecipe.id)} />;
   if (view.kind === 'library') {
     if (libCopy) return <RecipeDetail key={libCopy.id} recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
@@ -158,6 +164,14 @@ export default function Recipes() {
         </div>
       </div>
       <RemovedNotice scope="recipes" />
+      {typesUndo && (
+        <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setTypesUndo(null) }} actions={[{ label: 'Undo', onClick: () => { typesUndo(); setTypesUndo(null); } }, { label: 'Dismiss', onClick: () => setTypesUndo(null), ghost: true }]}>
+          Food types saved.
+        </Notice>
+      )}
+      {src === 'mine' && banner && (
+        <Notice kind="suggestion" actions={[{ label: 'Review types', onClick: () => setView({ kind: 'types' }) }]}>{banner}</Notice>
+      )}
 
       {src === 'mine' && (
         <>

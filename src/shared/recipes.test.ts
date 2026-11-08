@@ -173,3 +173,28 @@ describe('usual amount and unit name (ready-made foods)', () => {
     expect(validRecipe({ ...food, usual: 2.3 })).toBe(false);
   });
 });
+
+describe('food type (ready-made foods)', () => {
+  const food = { id: 'milk', n: 'Whole milk', cat: 'ready', ing: [], steps: [], kcal: 150, p: 8 };
+  it('keeps a valid type on a ready-made food and round-trips it', () => {
+    for (const type of ['ingredient', 'ready', 'drink']) {
+      const r = { ...food, type };
+      expect(normRecipe(r)).toEqual(r);
+      expect(validRecipe(r)).toBe(true);
+    }
+  });
+  it('drops an unknown type, and a type on a recipe that is not ready-made', () => {
+    expect(normRecipe({ ...food, type: 'soup' })).toEqual(food);
+    expect(validRecipe({ ...food, type: 'soup' })).toBe(false);
+    expect(normRecipe({ ...base, type: 'drink' })).toEqual(base);
+  });
+  it('keeps a food that an older app build loaded: with the type field stripped it is still a valid, untyped ready-made food', () => {
+    const { type: _t, ...old } = { ...food, type: 'drink' };
+    expect(normRecipe(old)).toEqual(old);
+    expect(validRecipe(old)).toBe(true);
+  });
+  it('leaves an untyped food untyped', () => {
+    expect(normRecipe(food)).not.toHaveProperty('type');
+    expect(normRecipes([food, { ...food, id: 'k', n: 'Kefir', type: 'drink' }]).map(r => r.type)).toEqual([undefined, 'drink']);
+  });
+});

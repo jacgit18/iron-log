@@ -23,6 +23,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await openRecipes(page);
   await page.getByRole('button', { name: 'New ready-made food' }).click();
   await expect(page).toHaveURL(/#\/daily\/recipes\/form$/);
+  await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Ready to eat' })).toHaveAttribute('aria-pressed', 'true'); // brief food-type-and-migration: required, starts on Ready to eat
   await page.getByRole('button', { name: 'Save food' }).click();
   await expect(page.getByRole('alert')).toHaveText('Give the food a name.');
   await page.getByLabel('Name', { exact: true }).fill('Frozen lasagna');

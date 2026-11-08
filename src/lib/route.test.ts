@@ -18,6 +18,9 @@ describe('parseRoute', () => {
   it('gives null for nothing known, an empty hash, or an anchor that is not ours', () => {
     for (const h of ['', '#', '#/', '#view', '#/nope', '#/nope/progress']) expect(parseRoute(h)).toBeNull();
   });
+  it('has a screen for the food type review, opened from the Recipes banner', () => {
+    expect(parseRoute('#/daily/recipes/types')).toEqual({ tab: 'daily', path: 'daily/recipes/types' });
+  });
   it('ignores case, a trailing slash and a query', () => {
     expect(parseRoute('#/Progress/Trends/')).toEqual({ tab: 'progress', path: 'progress/trends' });
     expect(parseRoute('#/program?x=1')).toEqual({ tab: 'program', path: 'program' });

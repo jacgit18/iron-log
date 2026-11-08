@@ -53,13 +53,14 @@ export type ScenarioFeature =
   | 'Security headers'
   | 'Price history'
   | 'Program desktop layout'
-  | 'Groceries views';
+  | 'Groceries views'
+  | 'Food type';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type',
 ];
 
 export interface Scenario {
@@ -1878,11 +1879,41 @@ export const SCENARIOS: readonly Scenario[] = [
       'The chip switches to All, the cursor stays on the item\'s Store box, and the item shows under its new store. On a wide screen the Stores panel sits in the right rail; on a narrower one it sits under the list.',
     ],
   },
+  // ---- Food type ----
+  {
+    id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new ready-made food', persona: 'diet-fresh', brief: 'food-type-and-migration',
+    steps: [
+      'Open Recipes and press New ready-made food. Look at the Type buttons, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
+      'Open the food and press Edit.',
+    ],
+    expected: [
+      'Type starts on Ready to eat. The food saves with no banner about types.',
+      'The form opens with Drink picked.',
+    ],
+  },
+  {
+    id: 'S-149', feature: 'Food type', title: 'Review types: suggestions, one change, Looks right, Undo', persona: 'recipe-collector', brief: 'food-type-and-migration',
+    steps: [
+      'Make three ready-made foods without a Type (an older account that has them; or on a test account add them in an older build): Whole milk, Eggs large, Frozen lasagna. Open Recipes.',
+      'Read the banner and press Review types. Change Frozen lasagna to Drink, then press Looks right.',
+      'Press Undo on the notice.',
+    ],
+    expected: [
+      'The banner says "3 foods need a type." The review page lists each food with its suggestion: Whole milk Drink, Eggs large Ingredient, Frozen lasagna Ready to eat.',
+      'The list shows "Food types saved." and the banner is gone.',
+      'The banner returns with "3 foods need a type."; Back from the review page returns to the list, and a reload on it shows the list.',
+    ],
+  },
+  {
+    id: 'S-150', feature: 'Food type', title: 'Nothing to review, and a food edited later', persona: 'diet-fresh', brief: 'food-type-and-migration', edge: true,
+    steps: [
+      'With no ready-made foods open Recipes. Then add one food and, from its Edit form, change its Type from Ready to eat to Ingredient and save.',
+    ],
+    expected: [
+      'There is no banner and no Review types button. The edited food keeps Ingredient when it is opened again.',
+    ],
+  },
 ];
-
-
-
-
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
 /** The scenarios a persona runs (retired ones left out), in id order. */
