@@ -143,6 +143,8 @@ export interface Cfg extends ProgramCfg {
   exPh: Record<string, PhaseKey | null>;
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
+  /** The monthly grocery budget in cents (brief grocery-budget); absent means none is set. */
+  groceryBudget?: number;
   /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
   diet?: DietCfg;
   liftGoals?: Record<string, Record<string, LiftGoal>>;

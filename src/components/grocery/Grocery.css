@@ -20,6 +20,9 @@
   /* At a large text size the three views wrap to a second row instead of running past the page edge. */
   flex-wrap: wrap;
   max-width: 100%;
+  /* On its own row under the heading, centred. */
+  flex: 1 1 100%;
+  justify-content: center;
 }
 .groc .gtop .seg button {
   min-height: 44px;

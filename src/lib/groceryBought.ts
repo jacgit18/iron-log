@@ -1,17 +1,11 @@
-import type { Grocery, GroceryItem, GroceryMonth } from '../types.ts';
-import { inMonth, lineOf, onList } from './grocery.js';
+import type { GroceryItem, GroceryMonth } from '../types.ts';
+import { lineOf } from './grocery.js';
 
-// The Bought view (brief groceries-shopping-bought-inventory): what is ticked bought in a month, the counts on the view switch, and which rows "Select all" takes.
+// The Bought view (brief groceries-shopping-bought-inventory): what is ticked bought in a month, and which rows "Select all" takes.
 // Pure; the page keeps the state (what is picked, which month).
 
 export const boughtRows = (list: GroceryItem[], m: GroceryMonth): GroceryItem[] => list.filter(i => lineOf(i, m).got);
 
-/** The counts on the Shopping and Bought segments for a month: the rows still to get, and the rows ticked bought. */
-export function viewCounts(g: Grocery, m: GroceryMonth): { shopping: number; bought: number } {
-  const list = inMonth(g, onList(g, m, true), m);
-  const bought = boughtRows(list, m).length;
-  return { shopping: list.length - bought, bought };
-}
 
 type Group = { store: string; items: GroceryItem[] };
 
