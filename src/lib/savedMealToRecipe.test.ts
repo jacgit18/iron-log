@@ -40,6 +40,30 @@ describe('savedMealToRecipe', () => {
   });
 });
 
+describe('savedMealToRecipe numbers and names', () => {
+  const full = (id: string, n: string, kcal: number, p: number, c: number, f: number): Recipe => ({ ...rec(id, n, kcal, p), c, f });
+  const one = (item: SavedMeal['items'][number], list: Recipe[]) => savedMealToRecipe({ id: 'm', n: 'A', items: [item] }, list);
+  it('keeps the saved totals when carbs or fat no longer agree, and links when they do', () => {
+    const r = full('rice', 'Rice', 200, 4, 44, 1);
+    expect(one({ n: 'Rice', kcal: 200, p: 4, c: 44, f: 1, from: 'rice' }, [r]).ing[0]).toMatchObject({ rid: 'rice', q: 1 });
+    expect(one({ n: 'Rice', kcal: 200, p: 4, c: 30, f: 1, from: 'rice' }, [r]).ing[0]).not.toHaveProperty('rid'); // carbs changed since
+    expect(one({ n: 'Rice', kcal: 200, p: 4, c: 44, from: 'rice' }, [rec('rice', 'Rice', 200, 4)]).ing[0]).not.toHaveProperty('rid'); // the recipe lost its carbs
+    expect(one({ n: 'Rice', kcal: 200, p: 4, from: 'rice' }, [r]).ing[0]).toMatchObject({ rid: 'rice' }); // saved without carbs: the recipe's only add
+  });
+  it('links a recipe with 0 protein (a drink) while its numbers agree', () => {
+    const juice = rec('juice', 'Juice', 110, 0, 'drinks');
+    expect(one({ n: 'Juice', kcal: 220, p: 0, from: 'juice' }, [juice]).ing[0]).toMatchObject({ rid: 'juice', q: 2 });
+    expect(one({ n: 'Juice', kcal: 220, p: 8, from: 'juice' }, [juice]).ing[0]).not.toHaveProperty('rid');
+  });
+  it('numbers a repeated clash and keeps the suffix on a long name', () => {
+    const m = (n: string) => savedMealToRecipe({ id: 'm', n, items: [{ n: 'x', kcal: 1, p: 0 }] }, [rec('1', 'Dinner', 1, 1), rec('2', 'Dinner (saved)', 1, 1), rec('3', 'y'.repeat(80), 1, 1)]);
+    expect(m('Dinner').n).toBe('Dinner (saved 2)');
+    const long = m('y'.repeat(80)).n;
+    expect(long.length).toBe(80);
+    expect(long.endsWith(' (saved)')).toBe(true);
+  });
+});
+
 describe('mealsMoved', () => {
   it('keeps text ids, drops the rest and caps the count', () => {
     expect(normMealsMoved({ a: 'r1', b: 5, '': 'x', c: '' })).toEqual({ a: 'r1' });
