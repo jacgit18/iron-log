@@ -13,10 +13,12 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 export const DEFAULT_MODEL = 'claude-haiku-5-5';
 export const BODY_LIMIT = '2mb';
-export const DEFAULT_DAILY_MAX = 30;
+export const DEFAULT_DAILY_MAX = 150;
+export const DEFAULT_USER_DAILY_MAX = 15; // one person's labels a day, so one account cannot use up the server-wide ceiling above for everyone
 export const DEFAULT_RECEIPT_MODEL = 'claude-sonnet-5-5';
 export const RECEIPT_BODY_LIMIT = '5mb';
-export const DEFAULT_RECEIPT_DAILY_MAX = 20;
+export const DEFAULT_RECEIPT_DAILY_MAX = 100;
+export const DEFAULT_RECEIPT_USER_DAILY_MAX = 5; // one person's receipts a day
 const TIMEOUT_MS = 30_000;
 const UNAVAILABLE = 'label scan is not available right now';
 const RECEIPT_UNAVAILABLE = 'receipt scan is not available right now';
@@ -48,12 +50,16 @@ export interface ScanDeps {
   key?: string;
   /** SCAN_MODEL. Unset: DEFAULT_MODEL. */
   model?: string;
-  /** SCAN_DAILY_MAX: label calls a day for the whole server (one instance's memory). */
+  /** SCAN_DAILY_MAX: label calls a day for the whole server, over every account (one instance's memory). */
   dailyMax?: number;
   /** SCAN_RECEIPT_MODEL. Unset: DEFAULT_RECEIPT_MODEL (a receipt is dense text with discount lines, so it gets the larger model). */
   receiptModel?: string;
   /** SCAN_RECEIPT_DAILY_MAX: receipt calls a day for the whole server, counted apart from labels. */
   receiptDailyMax?: number;
+  /** One signed-in person's label calls a day (no env var; the server-wide dailyMax stays the ceiling over everyone). */
+  userDailyMax?: number;
+  /** One signed-in person's receipt calls a day. */
+  receiptUserDailyMax?: number;
   fetch?: typeof fetch;
   now?: () => number;
 }
@@ -89,7 +95,7 @@ export async function readReceipt(ask: typeof fetch, key: string, model: string,
   return receiptFromReply(await askModel(ask, key, model, image, { system: RECEIPT_SYSTEM, text, maxTokens: 3000 }), new Set(items.map(i => i.id)));
 }
 
-export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAILY_MAX, receiptModel = DEFAULT_RECEIPT_MODEL, receiptDailyMax = DEFAULT_RECEIPT_DAILY_MAX, fetch: ask = fetch, now = Date.now }: ScanDeps = {}): Router {
+export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAILY_MAX, receiptModel = DEFAULT_RECEIPT_MODEL, receiptDailyMax = DEFAULT_RECEIPT_DAILY_MAX, userDailyMax = DEFAULT_USER_DAILY_MAX, receiptUserDailyMax = DEFAULT_RECEIPT_USER_DAILY_MAX, fetch: ask = fetch, now = Date.now }: ScanDeps = {}): Router {
   const router = Router();
   const daily = dayCap(now);
   if (key) console.warn(JSON.stringify({ msg: 'label scan is on', note: 'the daily cap is per instance and restarts with it; the spend limit set on the key in the Anthropic console is the real ceiling' }));
@@ -102,12 +108,15 @@ export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAIL
       if (!saidNoKey) { saidNoKey = true; console.warn(JSON.stringify({ msg: 'label scan is off: ANTHROPIC_API_KEY is not set' })); }
       return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
     }
-    // A daily ceiling for the whole server, counted before the call so a loop cannot run past it (dayCap.ts: per instance, so the spend limit on the key is the real ceiling).
+    // Two daily ceilings, counted before the call so a loop cannot run past them: one per person (so one account cannot use up everyone's), then one for the whole server (dayCap.ts: per instance, so the spend limit on the key is the real ceiling).
+    const who = `label:${String(res.locals.userId)}`;
+    const mine = daily.take(who, userDailyMax);
+    if (!mine.ok) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'cap', retryAfterSec: mine.retryAfterSec });
     const taken = daily.take('all', dailyMax);
     if (!taken.ok) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'cap', retryAfterSec: taken.retryAfterSec });
     try {
       const result = await readLabel(ask, key, model, image);
-      res.json({ ok: true, result, left: daily.left('all', dailyMax), max: dailyMax }); // the shared count, so the sheet can say how many are left (brief barcode-miss-ladder)
+      res.json({ ok: true, result, left: Math.min(daily.left(who, userDailyMax), daily.left('all', dailyMax)), max: userDailyMax }); // this person's count (or the server's when that is lower), so the sheet can say how many are left (brief barcode-miss-ladder)
     } catch (err) {
       // Never log the photo, the key or the reply: the error name or status is enough.
       console.warn(JSON.stringify({ msg: 'label scan failed', reason: err instanceof Error ? (err.name === 'Error' ? err.message : err.name) : 'unknown' }));
@@ -125,7 +134,7 @@ export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAIL
       if (!saidNoKey) { saidNoKey = true; console.warn(JSON.stringify({ msg: 'scan is off: ANTHROPIC_API_KEY is not set' })); }
       return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'no-key' });
     }
-    if (!daily.take('receipt', receiptDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap' });
+    if (!daily.take(`receipt:${String(res.locals.userId)}`, receiptUserDailyMax).ok || !daily.take('receipt', receiptDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap' }); // this person's allowance, then the server's
     try {
       res.json({ ok: true, result: await readReceipt(ask, key, receiptModel, body!.image as string, items) });
     } catch (err) {
