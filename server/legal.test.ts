@@ -148,6 +148,9 @@ describe('the policy and the system agree', () => {
     expect(text).toContain('artificial intelligence (AI)');
     expect(text).toContain('Scan label');
     expect(text).toContain('Scan receipt');
+    // the per-account scan count (brief: scans open to everyone, PR 804): the policy says it is open to every signed-in account and the count is in memory only.
+    expect(text).toContain('open to every signed-in account');
+    expect(text).toContain('never written to the database');
     // "we do not keep a label photo": the scan route's own header promises the photo is never written, logged or cached.
     expect(scan).toMatch(/never written to disk or the database, never logged, never cached/);
     expect(text).toContain('we do not keep a label photo');
