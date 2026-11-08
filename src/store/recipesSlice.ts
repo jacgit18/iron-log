@@ -68,18 +68,18 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     get().mutateCfg(c => { if (chips) c.recipeChips = chips; else delete c.recipeChips; });
   },
 
-  setFoodTypes(choices) {
+  setFoodTypes(choices, uses = {}) {
     const list = get().recipes;
     const hit = list.filter(r => r.cat === 'ready' && !r.type && choices[r.id]);
     if (!hit.length) return { changed: 0, undo: () => false };
     const ids = new Set(hit.map(r => r.id));
-    set({ recipes: list.map(r => (ids.has(r.id) ? { ...r, type: choices[r.id]! } : r)) });
+    set({ recipes: list.map(r => (ids.has(r.id) ? { ...r, type: choices[r.id]!, ...(uses[r.id]?.length ? { uses: uses[r.id]! } : {}) } : r)) });
     get().saveRecipes();
     const undo = () => {
       if (get().blocked()) return false;
       const now = get().recipes;
       if (!now.some(r => ids.has(r.id) && r.type === choices[r.id])) return false;
-      set({ recipes: now.map(r => { if (!ids.has(r.id) || r.type !== choices[r.id]) return r; const { type: _t, ...rest } = r; return rest; }) });
+      set({ recipes: now.map(r => { if (!ids.has(r.id) || r.type !== choices[r.id]) return r; const { type: _t, uses: _u, ...rest } = r; return rest; }) });
       get().saveRecipes();
       return true;
     };

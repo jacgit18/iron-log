@@ -1,5 +1,5 @@
 import { FOOD_TYPES } from '../shared/recipes.js';
-import type { FoodType, Recipe } from '../types.ts';
+import type { FoodType, Recipe, RecipeUse } from '../types.ts';
 
 /* ---------- Food type (brief food-type-and-migration): Ingredient, Ready to eat or Drink on a ready-made food. Pure; the form, the review screen and the store call this. ---------- */
 
@@ -41,7 +41,20 @@ export function foodTypeOf(r: Recipe): FoodType | null {
   return r.cat === 'drinks' ? 'drink' : null;
 }
 
-/** What "Looks right" saves: every untyped food with the Type its name suggests, overridden by any row the person changed (`picked`, by id). */
-export function reviewChoices(recipes: readonly Recipe[], picked: Readonly<Record<string, FoodType>> = {}): Record<string, FoodType> {
-  return Object.fromEntries(untypedFoods(recipes).map(r => [r.id, picked[r.id] ?? suggestFoodType(r.n)]));
+// Foods that are an ingredient and also fine to eat as they are: the review suggests both labels for these (the person can turn either off).
+const EATEN_AS_IS = ['egg', 'eggs', 'banana', 'bananas', 'apple', 'apples', 'oats', 'oat', 'honey'];
+
+/** The labels the name suggests (brief recipes-used-as-ingredients-tab): a drink word alone; an ingredient word, with Ready to eat added for one eaten as it is (eggs, bananas); else Ready to eat. */
+export function suggestUses(name: string): RecipeUse[] {
+  const type = suggestFoodType(name);
+  if (type === 'ingredient' && EATEN_AS_IS.some(w => hasWord(words(name), w))) return ['ingredient', 'ready'];
+  return [type];
+}
+
+/** The labels a food is saved with: the one shown first is its Type (the field a ready-made food always had), and `uses` is written only when there is more than one. */
+export const savedFromUses = (uses: readonly RecipeUse[]): { type: FoodType; uses?: RecipeUse[] } => ({ type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses: [...uses] } : {}) });
+
+/** What "Looks right" saves: every untyped food with the labels its name suggests, overridden by any row the person changed (`picked`, by id). */
+export function reviewUses(recipes: readonly Recipe[], picked: Readonly<Record<string, readonly RecipeUse[]>> = {}): Record<string, RecipeUse[]> {
+  return Object.fromEntries(untypedFoods(recipes).map(r => [r.id, [...(picked[r.id] ?? suggestUses(r.n))]]));
 }

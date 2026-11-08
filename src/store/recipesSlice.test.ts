@@ -238,6 +238,15 @@ describe('setFoodTypes (the Review types screen)', () => {
     expect(r.changed).toBe(3);
     expect(st().recipes.map(x => x.type)).toEqual(['drink', 'ingredient', 'ready', undefined]); // the protein recipe never gets a type
   });
+  it('saves several labels as `uses` beside the Type, and Undo takes both back', () => {
+    seed();
+    const i = ids();
+    const r = st().setFoodTypes({ [i['Egg']!]: 'ingredient', [i['Whole milk']!]: 'drink' }, { [i['Egg']!]: ['ingredient', 'ready'] });
+    expect(st().recipes.find(x => x.n === 'Egg')).toMatchObject({ type: 'ingredient', uses: ['ingredient', 'ready'] });
+    expect(st().recipes.find(x => x.n === 'Whole milk')!.uses).toBeUndefined();
+    expect(r.undo()).toBe(true);
+    expect(st().recipes.some(x => 'uses' in x || 'type' in x)).toBe(false);
+  });
   it('does not overwrite a food that already has a type', () => {
     seed();
     const i = ids();
