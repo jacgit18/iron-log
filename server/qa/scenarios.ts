@@ -1950,6 +1950,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
       'The stars are still on after the reload. The chips above the list show the starred recipes first and open the one pressed.',
       'With no stars and nothing logged or opened the row is not shown.',
+    ],
+  },
   // ---- Nutrition quick log ----
   {
     id: 'S-154', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',

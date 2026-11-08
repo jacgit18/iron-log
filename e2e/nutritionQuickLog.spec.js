@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startFood } from './recipesNav.js';
 
 // Logging from the Nutrition tab (brief nutrition-quick-log). The rules (the chips, the numbers, the day check) are node tests (dietRecent.test.ts, dietLog.test.ts);
 // this covers the wiring: the strip, the portion sheet with its Undo, the Log button in Recipes, and a scanned food created and logged once. The reader, the camera and the route
@@ -10,7 +11,7 @@ const openRecipes = async page => { await page.click('#tab-daily'); await page.c
 const openDiet = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const make = async (page, name = 'Boiled egg', kcal = '70', protein = '6') => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await startFood(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Calories per serving').fill(kcal);
   await page.getByLabel('Protein per serving (g)').fill(protein);
@@ -89,8 +90,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await expect(diet(page).getByText('Saved Almond milk (Silk) as drink and logged it.')).toBeVisible();
   await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
   await openRecipes(page);
-  await expect(page.getByRole('button', { name: /Almond milk \(Silk\)/ }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Almond milk \(Silk\)/ })).toHaveCount(1);
+  await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
   await openDiet(page); // the same product scanned again is logged under the saved food, not saved twice
   await page.getByRole('button', { name: 'Scan a food' }).click();
   await page.getByLabel('Barcode photo').setInputFiles(photo);
@@ -98,5 +98,5 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await expect(diet(page).getByText('Logged Almond milk (Silk), a food you already had.')).toBeVisible();
   await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
   await openRecipes(page);
-  await expect(page.getByRole('button', { name: /^Almond milk \(Silk\)/ })).toHaveCount(1);
+  await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
 });
