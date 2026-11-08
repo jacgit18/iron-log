@@ -124,6 +124,28 @@ describe('rid: a link to one of your sauces or seasonings', () => {
   });
 });
 
+describe('q and own: a meal built from linked foods (brief meals-from-foods)', () => {
+  const meal = { ...base, ing: [{ n: 'Oat cereal', amt: '1 cup', rid: 'oat-cereal', q: 1.5 }, { n: 'Whole milk', rid: 'whole-milk', q: 0.5 }], own: true as const };
+  it('keeps q beside rid and own, and accepts them as valid (the API takes what the app writes)', () => {
+    expect(normRecipe(meal)).toEqual(meal);
+    expect(validRecipe(meal)).toBe(true);
+  });
+  it('drops a q that is out of range, not a number or has no link; the line stays', () => {
+    const r = normRecipe({ ...base, ing: [{ n: 'A', rid: 'a', q: 0 }, { n: 'B', rid: 'b', q: 101 }, { n: 'C', rid: 'c', q: '2' }, { n: 'D', q: 2 }, { n: 'E', rid: 'e', q: 0.1 }, { n: 'F', rid: 'f', q: 100 }] })!;
+    expect(r.ing).toEqual([{ n: 'A', rid: 'a' }, { n: 'B', rid: 'b' }, { n: 'C', rid: 'c' }, { n: 'D' }, { n: 'E', rid: 'e', q: 0.1 }, { n: 'F', rid: 'f', q: 100 }]);
+  });
+  it('rounds q to two decimals and drops own unless it is exactly true', () => {
+    expect(normRecipe({ ...base, ing: [{ n: 'A', rid: 'a', q: 1.3333 }] })!.ing[0]!.q).toBe(1.33);
+    expect(normRecipe({ ...base, own: 'yes' })).not.toHaveProperty('own');
+    expect(validRecipe({ ...base, ing: [{ n: 'A', rid: 'a', q: 1.3333 }] })).toBe(false);
+  });
+  it('reads a recipe saved before q and own byte for byte, and survives a JSON round trip (backup, sync)', () => {
+    const old = { ...base, ing: [{ n: 'Taco seasoning', amt: '2 tbsp', rid: 'taco-seasoning' }, { n: 'Beef' }], kcal: 400, p: 30 };
+    expect(JSON.stringify(normRecipe(old))).toBe(JSON.stringify(old));
+    expect(normRecipe(JSON.parse(JSON.stringify(meal)))).toEqual(meal);
+  });
+});
+
 describe('recipe tags', () => {
   it('keeps clean tags and drops the field when there are none', () => {
     const r = { ...base, tags: ['weeknight', 'Meal prep'] };
