@@ -1,4 +1,5 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
+import { linkError, settleMeals } from '../lib/mealRollup.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
@@ -23,11 +24,12 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const id = d.id ?? newRecipeId(list.map(r => r.id), d.n);
     const limit = tagLimitError(others, normTags(d.tags));
     if (limit) return limit;
+    for (const i of d.ing) { const loop = i.rid && i.q !== undefined ? linkError(list, d.id, i.rid) : null; if (loop) return loop; } // a meal inside a meal: no loop, three levels at most
     const kept = d.id ? list.find(r => r.id === d.id) : undefined; // the star belongs to the recipe, not to the form
     const made = normRecipe({ ...d, ...(kept?.fav && d.fav === undefined ? { fav: true } : {}), id, n: clean(d.n) });
     if (!made) return 'That recipe can’t be saved.';
     const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
-    set({ recipes: d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item] });
+    set({ recipes: settleMeals(d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item]) }); // meals built from this one follow its numbers and name
     get().saveRecipes();
     return null;
   },
@@ -88,7 +90,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const list = get().recipes; const i = list.findIndex(r => r.id === id);
     if (i < 0) return;
     const gone = list[i]!;
-    set({ recipes: list.filter(r => r.id !== id) });
+    set({ recipes: settleMeals(list.filter(r => r.id !== id)) }); // a meal that used it keeps the line as plain text and recounts
     get().saveRecipes();
     get().noteRemoved('recipes', gone.n, () => {
       if (get().blocked() || get().recipes.some(r => r.id === id)) return false;
