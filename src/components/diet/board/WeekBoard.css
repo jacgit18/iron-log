@@ -1,0 +1,255 @@
+@layer base, components;
+@layer components {
+/* The week board (WeekBoard.tsx): day columns of four meals, three labelled bars per day, cards, plate marks and fixes. Every tap target is 44px. */
+.wb {
+  --wb-kcal: var(--accent-fill);
+  --wb-prot: #1f6f78;
+  --wb-fat: #8a4f7d;
+  --wb-over: #9a3412;
+  --wb-ok: #2f6b3a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wb {
+    --wb-prot: #5cc0cc;
+    --wb-fat: #d08bc2;
+    --wb-over: #f08a5d;
+    --wb-ok: #7fcf8f;
+  }
+}
+:root[data-theme="dark"] .wb {
+  --wb-prot: #5cc0cc;
+  --wb-fat: #d08bc2;
+  --wb-over: #f08a5d;
+  --wb-ok: #7fcf8f;
+}
+.wb-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--sp-8);
+  align-items: start;
+}
+.wb-col {
+  display: grid;
+  gap: var(--sp-8);
+  min-width: 0;
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+.wb-col.today {
+  border-color: var(--accent);
+}
+.wb-colhd {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-6);
+}
+.wb-colhd span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.wb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-12);
+  margin: var(--sp-4) 0 var(--sp-8);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.wb-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-inline-end: var(--sp-4);
+  border-radius: 2px;
+}
+.wb-legend .kcal, .wb-meter.kcal i {
+  background: var(--wb-kcal);
+}
+.wb-legend .prot, .wb-meter.prot i {
+  background: var(--wb-prot);
+}
+.wb-legend .fat, .wb-meter.fat i {
+  background: var(--wb-fat);
+}
+.wb-legend .over, .wb-meter.over i {
+  background: var(--wb-over);
+}
+.wb-bars {
+  display: grid;
+  gap: var(--sp-6);
+}
+.wb-barl {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-6);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wb-barl b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.wb-meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line);
+}
+.wb-meter i {
+  display: block;
+  height: 100%;
+}
+.wb-meter.part i {
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--surface) 3px 5px);
+}
+.wb-fatnote {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.wb-slot {
+  display: grid;
+  gap: var(--sp-4);
+  padding-top: var(--sp-6);
+  border-top: 1px solid var(--line);
+}
+.wb-slothd {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  align-items: baseline;
+}
+.wb-slothd b {
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.wb-slothd span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wb-plate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+.wb-mk {
+  padding: 1px var(--sp-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+.wb-mk.on {
+  border-color: var(--wb-ok);
+  color: var(--wb-ok);
+}
+.wb-card {
+  display: grid;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-6) var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+}
+.wb-card.open {
+  border-color: var(--accent);
+}
+.wb-ct {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.wb-cm {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wb-acts, .wb-move {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+.wb-movegrp {
+  width: 100%;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wb-fix, .wb-add {
+  min-height: 44px;
+  padding: var(--sp-4) var(--sp-8);
+  border-radius: var(--r-md);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.wb-fix {
+  border: 1px dashed var(--accent);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.wb-add {
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.wb-find {
+  display: grid;
+  gap: var(--sp-4);
+}
+.wb-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wb-tray {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+  margin-bottom: var(--sp-8);
+}
+.wb-trayl {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.wb-chip {
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: grab;
+}
+.wb-daytabs {
+  display: flex;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-8);
+  overflow-x: auto;
+}
+.wb-daytabs .btn {
+  flex: none;
+}
+}
