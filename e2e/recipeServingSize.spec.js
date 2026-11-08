@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { newRecipe } from './recipesNav.js';
 
 // Recipe serving size (brief recipe-serving-size). The estimate rules and the cleaner are node tests (recipeServing.test.ts, recipes.test.ts); this covers the form
 // wiring and the detail line: the two boxes save and come back, Estimate from ingredients fills the grams and says what it left out, and the detail shows the size.
@@ -10,7 +11,7 @@ const setAmount = async (page, i, text) => {
 };
 const start = async page => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Bread');
   await page.getByLabel('Servings', { exact: true }).fill('4');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('flour');
@@ -39,7 +40,7 @@ test('Estimate from ingredients fills the grams and names what it left out; savi
 
 test('with no amount in grams the estimate says so and fills nothing, and a bad grams value blocks Save', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
   await setAmount(page, 0, '2 cups');
@@ -53,7 +54,7 @@ test('with no amount in grams the estimate says so and fills nothing, and a bad 
 
 test('a recipe with no serving size shows no extra line', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Plain');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -63,7 +64,7 @@ test('a recipe with no serving size shows no extra line', async ({ page }) => {
 
 test('Estimate reads the list text while the ingredients are typed as a list', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Loaf');
   await page.getByLabel('Servings', { exact: true }).fill('4');
   await page.getByRole('button', { name: 'Type a list' }).click();

@@ -1,12 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { newRecipe } from './recipesNav.js';
 
 // Editable recipe filters (brief recipe-filter-editing). The rules (tag cleaning, rename and merge, delete, chip order, the AND filter) are node tests
 // (recipeTags.test.ts, recipeList.test.ts, recipesSlice.test.ts); this covers what they cannot see: the tags field in the form, the chips on the
 // list, the Manage filters sheet and Back closing it, and a reload keeping the setting.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, cat, tags = []) => {
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Category').selectOption({ label: cat });
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
@@ -39,7 +40,7 @@ test('a tag typed in the form shows as a chip, and a category plus tags show onl
 test('the form offers tags in use and a typed tag is kept without pressing Add', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein', ['weeknight']);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
   await page.getByRole('button', { name: 'Use weeknight' }).click();

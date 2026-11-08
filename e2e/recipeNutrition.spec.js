@@ -1,12 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { newRecipe } from './recipesNav.js';
 
 // Recipe nutrition badges and filters (brief recipe-nutrition-badges). The rules (badge text, the 30 g and 500 kcal thresholds, the AND filter, which
 // starter tags are offered) are node tests (recipeNutrition.test.ts, recipeTags.test.ts); this covers what they cannot see: the badge on a Mine row, the
 // two chips narrowing the list beside a category and a tag chip, and a starter tag picked in the real form being saved and then listed as a tag chip.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, cat, { kcal, p, tags = [] } = {}) => {
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Category').selectOption({ label: cat });
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
@@ -49,13 +50,13 @@ test('a badge shows on rows with numbers, and the two chips narrow the list besi
 
 test('starter tags are offered in the form, saved like any tag, and then listed with the tags in use', async ({ page }) => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   const starters = page.getByRole('group', { name: 'Suggested tags' });
   await expect(starters.getByRole('button')).toHaveText(['Use Breakfast', 'Use Lunch', 'Use Dinner', 'Use Snack']);
   await page.getByRole('button', { name: 'Cancel' }).click();
   await make(page, 'Oats', 'Other', { tags: ['Breakfast'] });
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['Breakfast']);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await expect(page.getByRole('group', { name: 'Suggested tags' }).getByRole('button')).toHaveText(['Use Lunch', 'Use Dinner', 'Use Snack']); // Breakfast now shows under tags in use
   await expect(page.getByRole('group', { name: 'Tags you use' }).getByRole('button')).toHaveText(['Use Breakfast']);
 });

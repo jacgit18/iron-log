@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { newFood } from './recipesNav.js';
 
 // Whole pack (brief whole-pack). The pack-size rules and the stepper top are node tests (readyMade.test.ts, dietLog.test.ts, labelFill.test.ts); this covers the
 // wiring a unit test cannot: the Servings per pack box saving and coming back, the detail line, Whole pack setting the stepper past 10, and a food with no pack size
@@ -6,7 +7,7 @@ import { test, expect } from './fixtures.js';
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, pack) => {
   await openRecipes(page);
-  await page.getByRole('button', { name: 'New ready-made food' }).click();
+  await newFood(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Calories per serving').fill('210');
   await page.getByLabel('Protein per serving (g)').fill('6');

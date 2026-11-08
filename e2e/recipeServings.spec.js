@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { newRecipe } from './recipesNav.js';
 
 // Servings scale a recipe's amounts (brief recipe-servings-scaling). Every amount shape is a node test (recipeScale.test.ts); this covers
 // the wiring: the Servings field rewriting the amount fields, the note, what Save keeps, and the view-only "Scale for tonight" stepper.
@@ -14,7 +15,7 @@ const expectAmount = (page, i, text) => expect(amountBtn(page, i)).toHaveText(te
 // A recipe saved with no servings, opened to change: the case where entering Servings only says what the amounts are for.
 const soupWithoutServings = async page => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Servings', { exact: true }).fill('');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
@@ -24,7 +25,7 @@ const soupWithoutServings = async page => {
 };
 const make = async page => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Pancakes');
   await page.getByLabel('Servings', { exact: true }).fill('4');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('flour');

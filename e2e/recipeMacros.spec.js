@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { newRecipe } from './recipesNav.js';
 
 // Recipe macros from ingredients (brief recipe-ingredient-macros). The rules (grams from an amount, the sums, per serving, what is left out) are node tests
 // in recipeMacros.test.ts; this covers the wiring with the food route stubbed: the panel, a lookup per row, a Grams box for an amount in cups, the Servings
@@ -24,7 +25,7 @@ const setAmount = async (page, i, text) => {
 const editNutrition = page => page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
 const start = async (page, servings = '2') => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Chicken and rice');
   await page.getByLabel('Servings', { exact: true }).fill(servings);
   await page.getByLabel('Ingredient 1', { exact: true }).fill('chicken breast');
@@ -92,7 +93,7 @@ test('changing Servings keeps the per-serving numbers for gram amounts, and Clos
 test('a food with no carbs or fat leaves those two as typed, and says so', async ({ page }) => {
   await stub(page);
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Plain');
   await page.getByLabel('Servings', { exact: true }).fill(''); // servings start at 1; emptied, the totals say they assumed 1
   await page.getByLabel('Ingredient 1', { exact: true }).fill('seasoning');
@@ -110,7 +111,7 @@ test('a food with no carbs or fat leaves those two as typed, and says so', async
 
 test('with no ingredients the button is off, and a lookup that is down says so while the rest works', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await expect(page.getByRole('button', { name: 'Calculate from ingredients' })).toBeDisabled();
   await expect(page.getByText('Add ingredients first.')).toBeVisible();
   await page.route('**/api/foods/search*', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'x' }) }));

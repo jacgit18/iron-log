@@ -198,3 +198,12 @@ describe('food type (ready-made foods)', () => {
     expect(normRecipes([food, { ...food, id: 'k', n: 'Kefir', type: 'drink' }]).map(r => r.type)).toEqual([undefined, 'drink']);
   });
 });
+
+describe('fav (brief recipes-find-type-tabs)', () => {
+  const base = { id: 'a', n: 'Soup', cat: 'protein', ing: [], steps: [] };
+  it('keeps fav true and round-trips it, and drops anything else', () => {
+    expect(normRecipe({ ...base, fav: true })).toMatchObject({ fav: true });
+    expect(validRecipe(normRecipe({ ...base, fav: true }))).toBe(true);
+    for (const v of [false, 'yes', 1, null]) expect(normRecipe({ ...base, fav: v })).not.toHaveProperty('fav');
+  });
+});

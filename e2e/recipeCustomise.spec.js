@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { newRecipe } from './recipesNav.js';
 
 // Customising a recipe (brief recipe-customise, form laid out again in recipe-form-mobile-desktop): an Alternative for what you use, a skip saved earlier, and ingredient names from
 // your Groceries items. The rules are node tests (recipePantry, recipeSuggest); this covers the form fields, the crossed-out and
@@ -14,7 +15,7 @@ const atHome = async (page, name) => {
 };
 const newRecipe = async (page, name) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await newRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
 };
 
