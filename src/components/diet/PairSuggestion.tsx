@@ -26,7 +26,7 @@ export default function PairSuggestion({ recipe, day, today }: { recipe: Recipe;
       {partners.map(p => added[p.id] ? (
         <span key={p.id} className="note" role="status">Logged {amountText(usualStart(p), p)} of {p.n}. <button type="button" className="btn sm ghost" aria-label={`Undo ${p.n}`} onClick={() => undo(p)}>Undo</button></span>
       ) : (
-        <button type="button" key={p.id} className="btn sm" aria-label={`Also log ${p.n}`} title={entryText({ kcal: p.kcal!, p: p.p!, c: p.c, f: p.f })} onClick={() => add(p)}>+ {p.n}</button>
+        <button type="button" key={p.id} className="btn sm" aria-label={`+ ${p.n}, also log it`} title={entryText({ kcal: p.kcal!, p: p.p!, c: p.c, f: p.f })} onClick={() => add(p)}>+ {p.n}</button>
       ))}
       {err && <p className="note" role="alert">{err}</p>}
     </div>

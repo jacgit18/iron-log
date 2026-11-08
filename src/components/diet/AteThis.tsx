@@ -43,10 +43,10 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
       </div>
       {pack !== null && pack > max && <p className="note">A whole pack ({pack} servings) is more than one entry can hold. Log it in parts, up to {max} portions at a time.</p>}
       {err && <p className="note" role="alert">{err}</p>}
-      {done && <PairSuggestion recipe={recipe} day={day} today={today} />}
       {done && (
         <p className="note" role="status">{done.text} <button type="button" className="btn sm ghost" onClick={() => { useAppStore.getState().removeDietEntry(done.id, false); setDone(null); }}>Undo</button></p>
       )}
+      {done && <PairSuggestion key={done.id} recipe={recipe} day={day} today={today} />}
     </div>
   );
 }

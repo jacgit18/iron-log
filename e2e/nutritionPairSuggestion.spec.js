@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // The suggestion after logging (brief recipes-goes-with, part 3). Which partners are offered is a node test (pairSuggestions.test.ts); this covers the
@@ -16,12 +17,12 @@ test('after Log it, the partner with numbers is offered, one tap logs it, Undo r
   await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click();
   await page.getByRole('button', { name: 'Log it' }).click();
   const offer = page.getByRole('group', { name: 'Goes with it' });
-  await expect(offer.getByRole('button', { name: 'Also log Rice' })).toBeVisible();
-  await expect(offer.getByRole('button', { name: 'Also log Plain' })).toHaveCount(0); // no numbers, so it cannot be logged
-  await offer.getByRole('button', { name: 'Also log Rice' }).click();
+  await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
+  await expect(offer.getByRole('button', { name: '+ Plain, also log it' })).toHaveCount(0); // no numbers, so it cannot be logged
+  await offer.getByRole('button', { name: '+ Rice, also log it' }).click();
   await expect(offer.getByText(/Logged .* of Rice/)).toBeVisible();
   await offer.getByRole('button', { name: 'Undo Rice' }).click();
-  await expect(offer.getByRole('button', { name: 'Also log Rice' })).toBeVisible();
+  await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
   await expect(page.getByText(/Logged .* to today/)).toBeVisible(); // the chili entry is still there
 });
 
@@ -29,5 +30,33 @@ test('Ate this on the recipe page offers it too, and a recipe with no pairing of
   await seed(page);
   await row(page, 'Chili').click();
   await page.getByRole('button', { name: 'Ate this' }).click();
-  await expect(page.getByRole('group', { name: 'Goes with it' }).getByRole('button', { name: 'Also log Rice' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Goes with it' }).getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
+});
+
+test('Ate this twice offers the partner again after the second log', async ({ page }) => {
+  await seed(page);
+  await row(page, 'Chili').click();
+  await page.getByRole('button', { name: 'Ate this' }).click();
+  const offer = page.getByRole('group', { name: 'Goes with it' });
+  await offer.getByRole('button', { name: '+ Rice, also log it' }).click();
+  await expect(offer.getByText(/Logged .* of Rice/)).toBeVisible();
+  await page.getByRole('button', { name: 'Ate this' }).click(); // a second log of the chili is a new log: Rice is on offer again
+  await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
+});
+
+test('the Goes with it row has no accessibility violations and 44 px targets on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seed(page);
+  await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click();
+  await page.getByRole('button', { name: 'Log it' }).click();
+  const offer = page.getByRole('group', { name: 'Goes with it' });
+  await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
+  const axe = await new AxeBuilder({ page }).include('.dt-pair').analyze();
+  expect(axe.violations).toEqual([]);
+  for (const b of await offer.getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(43.5);
+  await offer.getByRole('button', { name: '+ Rice, also log it' }).click();
+  await expect(offer.getByRole('button', { name: 'Undo Rice' })).toBeVisible();
+  const axe2 = await new AxeBuilder({ page }).include('.dt-pair').analyze();
+  expect(axe2.violations).toEqual([]);
+  for (const b of await offer.getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(43.5);
 });

@@ -52,7 +52,7 @@ export default function PortionSheet() {
       {done && (
         <p className="note" role="status">{done.text} <button type="button" className="btn sm ghost" onClick={() => { useAppStore.getState().removeDietEntry(done.id, false); setDone(null); }}>Undo</button></p>
       )}
-      {done && <PairSuggestion recipe={recipe} day={day} today={today} />}
+      {done && <PairSuggestion key={done.id} recipe={recipe} day={day} today={today} />}
       <div className="actions">
         <button type="button" className="btn" onClick={closeModal}>{done ? 'Done' : 'Cancel'}</button>
         {!done && <button type="button" className="btn primary" onClick={log}>Log it</button>}
