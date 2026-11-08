@@ -3,6 +3,7 @@ import { findMatches, type Resolved } from '../../../lib/dietPlan.js';
 import { MARK_LABEL, SLOT_LABEL, boardDay, type BoardDay, type BoardSlot } from '../../../lib/weekBoard.js';
 import { quickMeals } from '../../../lib/quickMeals.js';
 import { parseDate } from '../../../shared/dates.js';
+import { planItemKey } from '../../../shared/diet.js';
 import type { Targets } from '../../../lib/dietTarget.js';
 import { useAppStore } from '../../../store/useAppStore.js';
 import type { PlanSlot } from '../../../types.ts';
@@ -50,7 +51,7 @@ export default function WeekBoard({ days, today, targets, onLog, onMsg }: { days
           </div>
         )}
         {s.items.map(x => {
-          const ck = `${v.day}:${x.index}`;
+          const ck = `${v.day}:${planItemKey(x.r.item)}`; // the item, not its place, so a move never leaves another card open
           return <BoardCard key={ck} item={x} day={v.day} today={today} days={dayList} open={open === ck} moving={moving === ck} onOpen={() => { setOpen(open === ck ? null : ck); setMoving(null); }} onMoveOpen={() => setMoving(moving === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
         })}
         {s.slot && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => add(v.day, f.recipe.id, s.slot!)}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}

@@ -50,7 +50,7 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
     const here = rows.filter(x => (x.r.item.s ?? null) === slot);
     if (slot === null && here.length === 0) continue;
     const foodsHere = here.flatMap(x => (x.r.recipe ? [x.r.recipe] : []));
-    const chk = slot ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };
+    const chk = slot && !here.some(x => x.r.meal) ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };
     const fixes = chk.missing.flatMap(mark => { const f = fixFor(mark, foodsHere, recipes); return f ? [{ mark, ...f }] : []; });
     slots.push({ slot, items: here, kcal: Math.round(here.reduce((a, x) => a + (x.r.gone ? 0 : x.r.kcal ?? 0), 0)), share: slot && kcalTarget ? Math.round(kcalTarget * SLOT_SHARE[slot]) : null, need: chk.need, have: chk.have, fixes });
   }
@@ -70,7 +70,7 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   const { s: _old, ...rest } = it;
   const moved: PlanItem = { ...rest, ...(slot ? { s: slot } : {}) };
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
-  if (target.some(x => x.k === moved.k && x.id === moved.id && x.s === moved.s)) return { plan: null, error: 'That is already in that meal.' };
+  if (target.some(x => x.k === moved.k && x.id === moved.id)) return { plan: null, error: 'That is already on this day.' }; // the same rule as addItem: once a day, whatever the meal
   if (toDay !== fromDay && target.length >= MAX_PLAN_ITEMS) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };
   const from = (plan[fromDay] ?? []).filter((_, i) => i !== index);
   const next: Plan = { ...plan };

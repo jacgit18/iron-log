@@ -48,6 +48,13 @@ describe('fixFor', () => {
   });
 });
 
+describe('boardDay with a saved meal', () => {
+  it('does not judge the plate of a meal that holds a saved meal', () => {
+    const d = boardDay({ [D]: [{ k: 'm', id: 'm1', s: 'lunch' }] }, D, recipes, [{ id: 'm1', n: 'Bowl', items: [] }], 2775);
+    expect(d.slots.find(s => s.slot === 'lunch')).toMatchObject({ need: [], have: [], fixes: [] });
+  });
+});
+
 describe('moveItem', () => {
   const plan = { [D]: [pi('chili', 'dinner'), pi('rice', 'dinner')], [D2]: [pi('rice', 'lunch')] };
   it('changes only the meal on the same day', () => {
@@ -58,8 +65,9 @@ describe('moveItem', () => {
     const r = moveItem({ [D]: [pi('chili', 'dinner')] }, D, 0, D2, 'dinner', TODAY);
     expect(r.plan).toEqual({ [D2]: [{ k: 'r', id: 'chili', s: 'dinner' }] });
   });
-  it('refuses a repeat in the same meal, a full day and a day outside the window', () => {
-    expect(moveItem(plan, D, 1, D2, 'lunch', TODAY).error).toMatch(/already in that meal/);
+  it('refuses a repeat on the day (any meal), a full day and a day outside the window', () => {
+    expect(moveItem(plan, D, 1, D2, 'lunch', TODAY).error).toMatch(/already on this day/);
+    expect(moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'dinner')] }, D, 0, D2, 'lunch', TODAY).error).toMatch(/already on this day/);
     const full = { [D]: [pi('chili')], [D2]: Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `r${i}` })) };
     expect(moveItem(full, D, 0, D2, 'dinner', TODAY).error).toMatch(/hold 8/);
     expect(moveItem(plan, D, 0, '2099-03-01', 'dinner', TODAY).error).toMatch(/two weeks/);
