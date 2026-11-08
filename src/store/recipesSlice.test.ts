@@ -264,3 +264,24 @@ describe('setFoodTypes (the Review types screen)', () => {
     expect(st().recipes[0]).toMatchObject({ type: 'drink', kcal: 120 });
   });
 });
+
+describe('toggleRecipeFav (brief recipes-find-type-tabs)', () => {
+  it('stars and unstars a recipe, and an edit keeps the star', () => {
+    st().saveRecipe(draft);
+    const id = st().recipes[0]!.id;
+    st().toggleRecipeFav(id);
+    expect(st().recipes[0]!.fav).toBe(true);
+    expect(st().saveRecipe({ ...draft, id, n: 'Chili 2' })).toBeNull();
+    expect(st().recipes[0]).toMatchObject({ n: 'Chili 2', fav: true });
+    st().toggleRecipeFav(id);
+    expect(st().recipes[0]).not.toHaveProperty('fav');
+    st().toggleRecipeFav('nope'); // an unknown id changes nothing
+    expect(st().recipes).toHaveLength(1);
+  });
+  it('does not mark a library copy Edited when only the star changes', () => {
+    st().copyCatalogRecipe(lib);
+    st().toggleRecipeFav(st().recipes[0]!.id);
+    expect(st().recipes[0]!.fav).toBe(true);
+    expect(st().recipes[0]!.edited).toBeUndefined();
+  });
+});

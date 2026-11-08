@@ -23,12 +23,20 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const id = d.id ?? newRecipeId(list.map(r => r.id), d.n);
     const limit = tagLimitError(others, normTags(d.tags));
     if (limit) return limit;
-    const made = normRecipe({ ...d, id, n: clean(d.n) });
+    const kept = d.id ? list.find(r => r.id === d.id) : undefined; // the star belongs to the recipe, not to the form
+    const made = normRecipe({ ...d, ...(kept?.fav && d.fav === undefined ? { fav: true } : {}), id, n: clean(d.n) });
     if (!made) return 'That recipe can’t be saved.';
     const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
     set({ recipes: d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item] });
     get().saveRecipes();
     return null;
+  },
+
+  toggleRecipeFav(id) {
+    const list = get().recipes;
+    if (!list.some(r => r.id === id)) return;
+    set({ recipes: list.map(r => { if (r.id !== id) return r; const { fav: _f, ...rest } = r; return r.fav ? rest : { ...rest, fav: true as const }; }) });
+    get().saveRecipes();
   },
 
   copyCatalogRecipe(item: CatalogItem, servings?: number) {

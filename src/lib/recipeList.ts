@@ -1,4 +1,6 @@
+import { FOOD_TYPE_LABEL } from '../shared/recipes.js';
 import type { Recipe, RecipeCategory } from '../types.ts';
+import { foodTypeOf } from './foodType.js';
 import { nameWords } from './recipePantry.js';
 import { matchesNutrition, type NutritionKey } from './recipeNutrition.js';
 import { hasTags } from './recipeTags.js';
@@ -7,16 +9,44 @@ import type { SortOption } from './sortChoice.js';
 
 /* ---------- Which of your recipes the list shows (ADR 084): pure, so a rule here is a node test, not a browser test ---------- */
 
-export interface RecipeFilter { q: string; cat: RecipeCategory | null; canMake: boolean; tags?: readonly string[]; nutrition?: readonly NutritionKey[] }
+export interface RecipeFilter { q: string; cat: RecipeCategory | null; canMake: boolean; tags?: readonly string[]; nutrition?: readonly NutritionKey[]; tab?: RecipeTab }
 
 const textWords = (s: string) => s.toLowerCase().replace(/['’]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+/* ---------- The type tabs (brief recipes-find-type-tabs) ---------- */
+
+/** All, Foods (ready-made foods typed Ingredient or Ready to eat), Drinks (typed Drink, or a recipe in the Drinks category) and Meals (every other recipe). */
+export const RECIPE_TABS = [{ key: 'all', label: 'All' }, { key: 'foods', label: 'Foods' }, { key: 'meals', label: 'Meals' }, { key: 'drinks', label: 'Drinks' }] as const;
+export type RecipeTab = typeof RECIPE_TABS[number]['key'];
+
+/** The tab a recipe belongs to (never `all`). */
+export function tabOf(r: Recipe): Exclude<RecipeTab, 'all'> {
+  const t = foodTypeOf(r);
+  return t === 'drink' ? 'drinks' : t === null ? 'meals' : 'foods';
+}
+
+/** The small tag on a row: the food's type (Ingredient, Ready to eat, Drink) or Meal. */
+export const typeTag = (r: Recipe): string => { const t = foodTypeOf(r); return t ? FOOD_TYPE_LABEL[t] : 'Meal'; };
+
+/** How many recipes each tab holds in `list` (pass the list the other filters and the search already narrowed). */
+export function tabCounts(list: readonly Recipe[]): Record<RecipeTab, number> {
+  const n: Record<RecipeTab, number> = { all: list.length, foods: 0, meals: 0, drinks: 0 };
+  for (const r of list) n[tabOf(r)]++;
+  return n;
+}
+
+/** What an empty tab says to do. */
+export const emptyTabNote = (tab: RecipeTab, searching: boolean): string =>
+  tab === 'all' ? 'No recipe matches. Clear the search or the filters.'
+    : searching ? 'Nothing in this tab matches. Clear the search, the filters or pick another tab.'
+      : tab === 'foods' ? 'No foods yet. Use + New, then Scan a food.' : tab === 'drinks' ? 'No drinks yet. Use + New, then Write a recipe in the Drinks category, or scan a drink.' : 'No meals yet. Use + New, then Build a meal.';
 
 /** Your recipes matching the typed words (every word in the name or an ingredient, as a word start), the category AND every selected tag AND every nutrition filter, and "can make"
  *  (`makeable`: ids of recipes with every ingredient at home), by name. */
 export function filterRecipes(list: Recipe[], f: RecipeFilter, makeable: ReadonlySet<string>): Recipe[] {
   const words = textWords(f.q);
   return list
-    .filter(r => (!f.cat || r.cat === f.cat) && (!f.tags?.length || hasTags(r, f.tags)) && (!f.nutrition?.length || matchesNutrition(r, f.nutrition)) && (!f.canMake || makeable.has(r.id)))
+    .filter(r => (!f.tab || f.tab === 'all' || tabOf(r) === f.tab) && (!f.cat || r.cat === f.cat) && (!f.tags?.length || hasTags(r, f.tags)) && (!f.nutrition?.length || matchesNutrition(r, f.nutrition)) && (!f.canMake || makeable.has(r.id)))
     .filter(r => {
       if (!words.length) return true;
       const hay = ` ${textWords(`${r.n} ${r.ing.map(i => `${i.n} ${i.sub ?? ''}`).join(' ')}`).join(' ')}`;

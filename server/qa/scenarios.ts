@@ -55,13 +55,14 @@ export type ScenarioFeature =
   | 'Program desktop layout'
   | 'Groceries views'
   | 'Food type'
+  | 'Recipes find'
   | 'Nutrition quick log';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Nutrition quick log',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log',
 ];
 
 export interface Scenario {
@@ -331,7 +332,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-20', feature: 'Recipe-first log', title: 'New ready-made food', persona: 'diet-fresh', brief: 'recipe-first-diet-log',
     steps: [
-      'Open Recipes and press New ready-made food.',
+      'Open Recipes and press + New, then Add a food by hand.',
       'Save it with only a name; then add 250 kcal and 20 g protein and save.',
       'Find it under the Ready-made chip, open it and press Ate this.',
       'Edit the food to 300 kcal and look at the entry already logged.',
@@ -694,7 +695,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
+      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
@@ -707,7 +708,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a non-admin account', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
     steps: [
       'On a phone as an admin, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
-      'Sign in as a test account that is not an admin and open New ready-made food.',
+      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
       'The form stays empty and says it could not read the numbers (or that the label shows per 100 g only); you can still type the numbers and save.',
@@ -718,7 +719,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
     steps: [
-      'On Recipes press New ready-made food, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
+      'On Recipes press + New, then Add a food by hand, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
       'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
       'Press Whole pack (12) again, press Ate this, then press Undo.',
     ],
@@ -730,7 +731,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-52', feature: 'Whole pack', title: 'A wrong pack size is refused', persona: 'diet-fresh', brief: 'whole-pack', edge: true,
     steps: [
-      'On New ready-made food fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
+      'On the new ready-made food form fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
       'Change it to 8, save, then edit the food and clear the box.',
     ],
     expected: [
@@ -768,7 +769,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-55', feature: 'Usual amount', title: 'Log 4 eggs in two taps', persona: 'diet-on-target', brief: 'usual-amount-and-unit',
     steps: [
-      'On Recipes press New ready-made food, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
+      'On Recipes press + New, then Add a food by hand, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
       'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
       'Press Ate this, look at today\'s Diet log, then press Undo.',
     ],
@@ -992,7 +993,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
     steps: [
-      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan barcode and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
       'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
       'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
@@ -1006,9 +1007,9 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account still sees the scan', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
     steps: [
-      'Open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Open + New, then Add a food by hand, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
-      'Sign in as a test account that is not an admin and open New ready-made food.',
+      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
       'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
@@ -1172,7 +1173,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
       'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
       'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
       'Scan a product USDA does know (oatmeal) and read the same place.',
@@ -1186,7 +1187,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
     steps: [
-      'On a phone, as an admin, open New ready-made food, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'On a phone, as an admin, open + New, then Add a food by hand, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
       'Read the sheet, then press Photo the label.',
       'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
     ],
@@ -1884,7 +1885,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new ready-made food', persona: 'diet-fresh', brief: 'food-type-and-migration',
     steps: [
-      'Open Recipes and press New ready-made food. Look at the Type buttons, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
+      'Open Recipes and press + New, then Add a food by hand. Look at the Type buttons, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
       'Open the food and press Edit.',
     ],
     expected: [
@@ -1914,6 +1915,41 @@ export const SCENARIOS: readonly Scenario[] = [
       'There is no banner and no Review types button. The edited food keeps Ingredient when it is opened again.',
     ],
   },
+  {
+    id: 'S-151', feature: 'Recipes find', title: 'Type tabs: counts, search inside a tab, rows tagged', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'Open Recipes. Read the four tabs (All, Foods, Meals, Drinks) and their counts, then press Foods, Meals and Drinks in turn.',
+      'Press All, type a word from one recipe name in the search box, then press each tab.',
+      'Press Filters, pick a category chip, and read the counts again.',
+    ],
+    expected: [
+      'Each count is the number of rows that tab shows, and All is the sum of the other three. Every row carries a small tag: Meal, Ingredient, Ready to eat or Drink.',
+      'The search narrows every tab, and the counts follow it.',
+      'The counts follow the category too. A tab with nothing in it says what to do instead of showing a blank list.',
+    ],
+  },
+  {
+    id: 'S-152', feature: 'Recipes find', title: 'List beside its detail on a wide screen, a page on a phone', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'On a desktop browser 1280 px wide or more open Recipes and press three different rows.',
+      'Narrow the window to a phone width (or open the app on a phone) and press a row, then press Back.',
+    ],
+    expected: [
+      'The list stays on the left and the pressed recipe shows on the right, in place, with no Back to recipes bar.',
+      'The recipe opens as its own page and Back returns to the list.',
+    ],
+  },
+  {
+    id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
+      'Press the star on two rows, reload the page, then press a starred chip above the list.',
+      'Unstar both.',
+    ],
+    expected: [
+      'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
+      'The stars are still on after the reload. The chips above the list show the starred recipes first and open the one pressed.',
+      'With no stars and nothing logged or opened the row is not shown.',
   // ---- Nutrition quick log ----
   {
     id: 'S-154', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',

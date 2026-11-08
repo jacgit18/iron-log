@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // Customising a recipe (brief recipe-customise, form laid out again in recipe-form-mobile-desktop): an Alternative for what you use, a skip saved earlier, and ingredient names from
 // your Groceries items. The rules are node tests (recipePantry, recipeSuggest); this covers the form fields, the crossed-out and
@@ -14,7 +15,7 @@ const atHome = async (page, name) => {
 };
 const newRecipe = async (page, name) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
 };
 
@@ -33,7 +34,7 @@ test('an ingredient with an Alternative stays itself and counts as at home when 
   // and it survives a reload, with the form still holding it
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chimichurri/ }).click();
+  await page.locator('.rc-row', { hasText: /Chimichurri/ }).click();
   await expect(page.getByText('(or apple cider vinegar)')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Alternative for ingredient 1')).toHaveValue('apple cider vinegar');
@@ -47,7 +48,7 @@ test('an ingredient skipped before still shows Skipped, has no Skip checkbox, an
   });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chimichurri/ }).click();
+  await page.locator('.rc-row', { hasText: /Chimichurri/ }).click();
   await expect(page.locator('.rc-ing', { has: page.getByText('parsley') }).locator('.rc-state')).toHaveText('Skipped');
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel(/^Skip ingredient/)).toHaveCount(0);
