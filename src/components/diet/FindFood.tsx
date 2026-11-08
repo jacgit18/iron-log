@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
 import { findFoods, scaleFood, type Food } from '../../lib/foodMacros.js';
+import { foodTypeOf } from '../../lib/foodType.js';
+import { FOOD_TYPE_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import FoodSearch, { type FoodFill } from './FoodSearch.js';
 import './Diet.css';
@@ -29,7 +31,16 @@ export default function FindFood({ day, onAdded, onFood }: { day: string; onAdde
       </label>
       {found.length > 0 && (
         <ul className="dt-recents" aria-label="Matches">
-          {found.map(f => <li key={f.n}><button type="button" className="btn sm" onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{f.from ? ' (recipe)' : ''} · {entryText(f)}</button></li>)}
+          {found.map(f => {
+            const rec = f.from ? recipes.find(r => r.id === f.from) : undefined;
+            const type = rec ? foodTypeOf(rec) : null;
+            return (
+              <li key={f.n}>
+                <button type="button" className="btn sm" onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
+                {rec && <button type="button" className="btn sm" aria-label={`Log ${f.n}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: rec.id, day })}>Log</button>}
+              </li>
+            );
+          })}
         </ul>
       )}
       {q.trim() !== '' && !picked && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}

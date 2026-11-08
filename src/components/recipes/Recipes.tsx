@@ -16,6 +16,7 @@ import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { pageOf } from '../../lib/route.js';
 import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { hasMacros } from '../../lib/dietLog.js';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
 import Notice, { UNDO_MS } from '../Notice.js';
@@ -111,7 +112,7 @@ export default function Recipes() {
     }} />;
   }
 
-  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null) => (
+  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null, logId?: string) => (
     <li key={key}>
       <button type="button" className="rc-row" onClick={open}>
         <span className="rc-main">
@@ -120,6 +121,7 @@ export default function Recipes() {
         </span>
         {badge && <span className="rc-badge">{badge}</span>}
       </button>
+      {logId && <button type="button" className="btn sm rc-log" aria-label={`Log ${title}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: logId })}>Log</button>}
     </li>
   );
 
@@ -186,7 +188,7 @@ export default function Recipes() {
           <ul className="rc-list rc-cards">
             {shown.map((r: Recipe) => {
               const have = haveBadge(status.get(r.id)!);
-              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r));
+              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r), hasMacros(r) ? r.id : undefined);
             })}
           </ul>
         </>

@@ -324,7 +324,7 @@ export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?
 export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
 /** What a ready-made food is (brief food-type-and-migration): a base ingredient, something you only heat or open, or a drink. Only meaningful when `cat` is `ready`. */
 export type FoodType = 'ingredient' | 'ready' | 'drink';
-export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; fav?: true }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

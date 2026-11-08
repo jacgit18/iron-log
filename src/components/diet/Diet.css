@@ -223,4 +223,18 @@
   align-items: center;
   gap: var(--sp-8);
 }
+/* Recent and favorites, the scan step and the portion sheet (brief nutrition-quick-log). */
+.dt-quick {
+  margin: var(--sp-8) 0;
+}
+.dt-recents .dt-fav {
+  border-color: var(--accent);
+}
+.dt-quick .btn,
+.portionsheet .btn {
+  min-height: 44px;
+}
+.portionsheet .actions {
+  margin-top: var(--sp-12);
+}
 }

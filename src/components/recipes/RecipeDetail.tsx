@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.js';
 import { videoLabel } from '../../lib/data.js';
-import { packServings } from '../../lib/dietLog.js';
+import { hasMacros, packServings } from '../../lib/dietLog.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey } from '../../lib/grocery.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
@@ -101,6 +101,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
 const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
 const MineActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => (
   <>
+    {hasMacros(recipe) && <button type="button" className="btn" aria-label={`Log ${recipe.n}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id })}>Log</button>}
     <button type="button" className="btn" onClick={onEdit}>Edit</button>
     <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the ${noun} ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
   </>
