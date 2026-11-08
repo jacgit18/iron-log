@@ -160,6 +160,7 @@ export function checkText(c: Check): { ok: boolean; text: string } {
 export interface GroceryApi {
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   setGroceryGot(month: string, id: string, on: boolean): boolean;
+  markGroceryFromReceipt?(month: string, id: string): void; // the line says a receipt ticked it, so a later receipt does not list it as missing
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
@@ -193,6 +194,7 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
   for (const s of plan.steps) {
     if (s.kind === 'tax') { api.setGroceryTax(month, s.store, s.cents); continue; }
     if (!api.setGroceryGot(month, s.id, true)) continue; // false: nothing changed (sync still loading)
+    api.markGroceryFromReceipt?.(month, s.id);
     const move = plan.moves.find(m => m.id === s.id);
     if (move) api.setGroceryLineStore(month, s.id, move.to);
     if (s.kind === 'single') { api.setGroceryQty(month, s.id, s.qty); api.setGroceryCents(month, s.id, s.cents); } else api.setGroceryPrices(month, s.id, s.prices);
