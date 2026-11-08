@@ -39,18 +39,15 @@ test('every row\'s arrow closes it again: this month, next month and two months 
   }
 });
 
-test('Show details then Hide details closes every row of each store (0, 1 and 2 months ahead)', async ({ page }) => {
+test('Show details then Hide details closes every row (0, 1 and 2 months ahead)', async ({ page }) => {
   for (const nexts of [0, 1, 2]) {
     await seedCatalogue(page);
     for (let i = 0; i < nexts; i++) await page.tap('#groc-next');
-    const buttons = page.getByRole('button', { name: /^(Show|Hide) details in / });
-    const n = await buttons.count();
-    expect(n, `${nexts} months ahead has stores`).toBeGreaterThan(0);
-    for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Show details in / }).first().click();
+    await expect(page.locator('#groc-details-all'), `${nexts} months ahead has rows`).toBeVisible();
+    await page.locator('#groc-details-all').click();
     await expect(page.locator('.gqty[aria-expanded="false"]')).toHaveCount(0);
-    for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Hide details in / }).first().click();
+    await page.locator('#groc-details-all').click();
     await expect(page.locator('.gqty[aria-expanded="true"]'), `${nexts} months ahead: every row closed again`).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^Hide details in / })).toHaveCount(0);
   }
 });
 

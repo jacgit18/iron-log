@@ -6,6 +6,7 @@ import { hasSharing } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { allIds, allPicked, boughtRows, storeIds } from '../../lib/groceryBought.js';
 import { ALL_CHIP, DETAILS_CHOICES, chipGroups, chipsOf, detailsStartOpen, hasNoPrice, resolveChip, showChips } from '../../lib/groceryChips.js';
+import { boughtSummaryText, getSummaryText } from '../../lib/groceryListSummary.js';
 import { quickAddNotice } from '../../lib/groceryQuickAdd.js';
 import ArmedButton from '../ArmedButton.jsx';
 import BulkShare, { SelectButton } from './BulkShare.js';
@@ -29,7 +30,7 @@ import StoreTax from './StoreTax.js';
 import { StoreMoney } from './StoreMoney.js';
 import { useSortChoice } from '../useSortChoice.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
-import ExpandAll from './ExpandAll.js';
+import ListSummary from './ListSummary.js';
 import GetRow from './GetRow.js';
 import useIdSet from './useIdSet.js';
 
@@ -128,7 +129,6 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const selectBtn = <SelectButton g={g} canSelect={shown.length > 0} selecting={selecting} onSelecting={setSelect} />;
   const detailsBtns = (
     <>
-      <button type="button" className="btn sm ghost" id="groc-details-all" onClick={() => { clearToggled(); setDetailsChoice(defaultOpen ? 'closed' : 'open'); }}>{defaultOpen ? 'Hide details on all rows' : 'Show details on all rows'}</button>
       {detailsChoice !== 'auto' && <button type="button" className="btn sm ghost" id="groc-details-auto" onClick={() => { clearToggled(); setDetailsChoice('auto'); }}>Details by screen size</button>}
     </>
   );
@@ -136,6 +136,12 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
     <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip the ${todo.length} left: every item still to get this month`} label={`Skip the ${todo.length} left`} armedLabel={`Tap again to skip ${todo.length}`}
       onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
   );
+  const sum = shown.reduce((a, grp) => { // what is on screen, a bought-then-removed item still counted in its store (as in the old store headings)
+    const gt = tally(grp.items, month); const gone = removed[grp.store];
+    if (gone && (onBought || !current)) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
+    return { count: a.count + gt.count, got: a.got + gt.got, cents: a.cents + gt.planned };
+  }, { count: 0, got: 0, cents: 0 });
+  const summaryText = onBought ? boughtSummaryText(sum.count, sum.cents) : current ? getSummaryText(sum.count, sum.cents) : `${sum.got}/${sum.count} bought${sum.cents ? ` · ${money(sum.cents)}` : ''}`;
   const main = (
     <div className="gmain">
       {onBought && split && <SplitSection g={g} month={month} mk={mk} open={splitOpen === mk} onToggle={on => setSplitOpen(on ? mk : null)} />}
@@ -165,6 +171,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
       )}
       {withChips && <GroceryStoreChips chips={chips} value={chip} onChange={setChipPick} />}
       {!onBought && current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought. See it under <b>Bought</b>.</p>}
+      {shown.length > 0 && <ListSummary text={summaryText} all={shown.every(grp => storeRows(grp).every(i => isOpen(i.id)))} onToggle={on => { clearToggled(); setDetailsChoice(on ? 'open' : 'closed'); }} />}
       <div className={`gshoplist${chip !== ALL_CHIP ? ' gcompact' : ''}`}>
       {shown.map((grp, gi) => {
         const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
@@ -174,11 +181,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
           <section key={grp.store || '_'} className={`gstore${!current && gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
             <div className="gstorehead">
               <h3 id={`groc-h-${gi}`}>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3>
-              <span className="gstoremeta">
-                <span className="note">{onBought ? `${gt.count} bought` : current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
-                {selecting && <button type="button" className="btn sm ghost gpickall" onClick={() => pickSome(ids, !allPicked(ids, picked))}>{allPicked(ids, picked) ? `Clear ${grp.label}` : `Select all in ${grp.label}`}</button>}
-                <ExpandAll label={grp.label} all={storeRows(grp).every(i => isOpen(i.id))} onToggle={on => setOpen(storeRows(grp).map(i => i.id), on)} />
-              </span>
+              {selecting && <span className="gstoremeta"><button type="button" className="btn sm ghost gpickall" onClick={() => pickSome(ids, !allPicked(ids, picked))}>{allPicked(ids, picked) ? `Clear ${grp.label}` : `Select all in ${grp.label}`}</button></span>}
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
