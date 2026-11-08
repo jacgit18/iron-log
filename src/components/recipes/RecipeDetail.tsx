@@ -5,6 +5,7 @@ import { videoLabel } from '../../lib/data.js';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey } from '../../lib/grocery.js';
+import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
@@ -29,6 +30,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const month = monthKey(new Date());
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes), [recipe, grocery, months, month, recipes]);
   const credit = attribution(recipe, mine);
+  const roll = useMemo(() => (hasParts(recipe) ? mealRollup(recipe, recipes) : null), [recipe, recipes]); // a meal built from linked foods: what its parts add up to
+  const rollText = roll && roll.counted > 0 ? [`${roll.per.kcal} kcal`, `${roll.per.p} g protein`, roll.per.c !== undefined && `${roll.per.c} g carbs`, roll.per.f !== undefined && `${roll.per.f} g fat`].filter(Boolean).join(' · ') : '';
   const missing = missingParts(status);
   const toAdd = missing.add.length;
   const maybes = mine ? suggestionPins(status).length : 0;
@@ -55,13 +58,14 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
+      {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. The parts add up to ${rollText || 'no numbers yet'}.` : `Per serving, from the parts: ${rollText || 'no numbers yet'}.`} {countedNote(roll)}.</p>}
       <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
       {maybes > 0 && <div className="rc-actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().acceptSuggestions(recipe.id, month)}>Accept all suggestions</button></div>}
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
-            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : ''}{(() => { const s = mine && onOpen ? linkedRecipe(l.ing, recipes, recipe.id) : undefined; return s ? <button type="button" className="rc-link" aria-label={`Open ${s.n}, ${s.cat === 'seasonings' ? 'seasoning' : 'sauce'}`} onClick={() => onOpen!(s.id)}>{s.n}</button> : ingredientName(l.ing); })()}{l.ing.sub && <span className="rc-instead"> (or {l.ing.sub})</span>}</span>
+            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : l.ing.q !== undefined && l.ing.rid ? `${amountText(recipe.servings && shown ? Math.round(l.ing.q * shown / recipe.servings * 100) / 100 : l.ing.q, recipes.find(r => r.id === l.ing.rid))} ` : ''}{(() => { const s = mine && onOpen ? linkedRecipe(l.ing, recipes, recipe.id) : undefined; return s ? <button type="button" className="rc-link" aria-label={`Open ${s.n}, ${s.cat === 'seasonings' ? 'seasoning' : s.cat === 'sauces' ? 'sauce' : s.cat === 'ready' ? 'food' : 'meal'}`} onClick={() => onOpen!(s.id)}>{s.n}</button> : ingredientName(l.ing); })()}{l.ing.sub && <span className="rc-instead"> (or {l.ing.sub})</span>}</span>
             <span className="rc-states">
               <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : l.partial ? 'part' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : l.partial ? 'Have some' : 'Missing'}</span>
               {onToGet(l) && <span className="rc-state onlist">On your list</span>}
