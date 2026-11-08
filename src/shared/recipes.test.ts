@@ -4,6 +4,11 @@ import { MAX_INGREDIENTS, MAX_RECIPE_ID, MAX_STEPS, MAX_TAG, MAX_TAGS, MAX_TAGS_
 const base = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans', amt: '2 cans' }], steps: ['Simmer.'] };
 
 describe('normRecipe', () => {
+  it('keeps fav: true and drops any other value (brief nutrition-quick-log)', () => {
+    expect(normRecipe({ ...base, fav: true })).toEqual({ ...base, fav: true });
+    expect(normRecipe({ ...base, fav: 'yes' })).toEqual(base);
+    expect(validRecipe({ ...base, fav: true })).toBe(true);
+  });
   it('keeps a clean recipe as it is', () => {
     expect(normRecipe(base)).toEqual(base);
     expect(validRecipe(base)).toBe(true);
