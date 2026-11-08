@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { newRecipe } from './recipesNav.js';
+import { startRecipe } from './recipesNav.js';
 
 // A link shared from another Android app (manifest share_target, brief share-target). The address reading is a node test (shareTarget.test.ts);
 // this covers the wiring: the manifest entry, the sheet opening over the board, the address cleaned, Back closing it, and each way of saving the link.
@@ -50,7 +50,7 @@ test('Exercise: the link becomes the exercise video link; a different one asks b
 
 test('Recipe: add the link to one of yours, or start a new recipe with it', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await newRecipe(page);
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('onion');
   await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -68,7 +68,7 @@ test('Recipe: add the link to one of yours, or start a new recipe with it', asyn
 
 test('Recipe: a recipe that already has a different link asks before it is replaced', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await newRecipe(page);
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('onion');
   await page.getByLabel('Video link (optional)').fill('https://vimeo.com/1');

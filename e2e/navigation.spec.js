@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { newRecipe, newMenuVisible } from './recipesNav.js';
+import { startRecipe, newMenuVisible } from './recipesNav.js';
 
 // Progress here is the hub with drill-in pages, which is what a window under 1280px shows (progressOnePage.spec.js covers the wide page).
 test.use({ viewport: { width: 1100, height: 900 } });
@@ -85,7 +85,7 @@ test('the Daily section and the Grocery view are in the address', async ({ page 
 test('a recipe form adds a Back step; a reload on it shows the list', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-recipes');
-  await newRecipe(page);
+  await startRecipe(page);
   await expect.poll(() => hash(page)).toBe('#/daily/recipes/form');
   await page.goBack();
   await newMenuVisible(page);

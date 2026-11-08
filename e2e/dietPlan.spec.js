@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { newRecipe } from './recipesNav.js';
+import { startRecipe } from './recipesNav.js';
 
 // The meal planner (brief diet-meal-planner). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
 // this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today, a day with no Log button, and the missing ingredients on Shopping.
@@ -15,7 +15,7 @@ const logFood = async (page, name, kcal, p) => {
 };
 const newRecipe = async (page, name, kcal, p, ing) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await newRecipe(page);
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill(String(kcal));

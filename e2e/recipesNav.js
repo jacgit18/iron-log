@@ -5,6 +5,6 @@ const choose = async (page, name) => {
   await page.locator('#recipes-new').click();
   await page.locator('#recipes-new-list').getByRole('button', { name }).click();
 };
-export const newRecipe = page => choose(page, 'Write a recipe');
-export const newFood = page => choose(page, 'Add a food by hand');
+export const startRecipe = page => choose(page, 'Write a recipe');
+export const startFood = page => choose(page, 'Add a food by hand');
 export const newMenuVisible = page => expect(page.locator('#recipes-new')).toBeVisible();

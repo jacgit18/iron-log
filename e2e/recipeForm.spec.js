@@ -1,11 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { newRecipe } from './recipesNav.js';
+import { startRecipe } from './recipesNav.js';
 
 // The recipe form (brief recipe-form-mobile-desktop): the amount picker, the typed list, Alternative, the folded Nutrition card, servings starting at
 // 1, and the phone and wide layouts. The rules (composing an amount, reading a list) are node tests (amountPicker.test.ts, ingredientList.test.ts);
 // this covers the wiring and the layout, which a node test cannot see.
-const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); await newRecipe(page); };
+const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); await startRecipe(page); };
 const amountBtn = (page, i) => page.getByRole('button', { name: new RegExp(`^Amount for ingredient ${i + 1}:`) });
 const noViolations = async page => {
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

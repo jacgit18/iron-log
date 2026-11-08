@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { newRecipe } from './recipesNav.js';
+import { startRecipe } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086), the first box on that screen: the daily calorie, protein, carbs and fat targets, and a food log a day at a time. The rules (the target numbers, totals,
 // caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, quick add, "Ate this" on
@@ -104,7 +104,7 @@ test('a bad number is refused with the limit stated and nothing is added', async
 
 test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and a recipe without macros asks for them', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await newRecipe(page);
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Chili');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('beans');
   await page.getByRole('button', { name: 'Save recipe' }).click();

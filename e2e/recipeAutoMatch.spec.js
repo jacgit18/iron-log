@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { newRecipe } from './recipesNav.js';
+import { startRecipe } from './recipesNav.js';
 
 // Matching a recipe's ingredients to Inventory without picking each by hand (brief recipe-auto-match): water counts as Have, an ingredient with a
 // close but unsure item offers "Maybe: <item>" (one tap pins it), and "Accept all suggestions" pins every one. The rules are node tests
@@ -13,7 +13,7 @@ const addHome = async (page, names) => {
 };
 const newRecipe = async (page, name, ingredients) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await newRecipe(page);
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   for (let i = 0; i < ingredients.length; i++) {
     if (i > 0) await page.getByRole('button', { name: 'Add ingredient' }).click();

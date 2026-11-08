@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { newFood } from './recipesNav.js';
+import { startFood } from './recipesNav.js';
 
 // Food type and the Review types screen (brief food-type-and-migration). The name rules, the cleaner and the store action are node tests
 // (foodType.test.ts, recipes.test.ts, recipesSlice.test.ts); this covers what they cannot: the Type buttons on the real form, the banner, the
@@ -14,7 +14,7 @@ const seed = async (page, names) => {
 
 test('the ready-made form needs a Type, starting on Ready to eat, and saves the one picked', async ({ page }) => {
   await openRecipes(page);
-  await newFood(page);
+  await startFood(page);
   const type = page.getByRole('group', { name: 'Type' });
   await expect(type.getByRole('button', { name: 'Ready to eat' })).toHaveAttribute('aria-pressed', 'true');
   await type.getByRole('button', { name: 'Drink' }).click();

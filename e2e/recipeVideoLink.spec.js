@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures.js';
-import { newRecipe } from './recipesNav.js';
+import { startRecipe } from './recipesNav.js';
 
 // Recipe video link (brief recipe-video-link). The address rule is a node test (recipes.test.ts); this covers the wiring: the field saves, the link shows
 // on the recipe and opens in a new tab, a bad address is refused, and clearing the field removes the link.
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const start = async (page, url) => {
   await open(page);
-  await newRecipe(page);
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('onion');
   if (url !== undefined) await page.getByLabel('Video link (optional)').fill(url);
