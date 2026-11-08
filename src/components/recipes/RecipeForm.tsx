@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { VIDEO_ERR, isVideoUrl } from '../../lib/data.js';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
-import { amountText } from '../../lib/foodUnit.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { countedNote, foodCandidates, hasParts, linkError, mealRollup } from '../../lib/mealRollup.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
@@ -138,7 +137,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setIng(r.rows); setLastServings(v);
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
   };
-  const useNumbers = (per: PerServing) => {
+  const adoptNumbers = (per: PerServing) => {
     setKcal(String(per.kcal)); setProtein(String(per.p));
     if (per.c !== undefined) setCarbs(String(per.c));
     if (per.f !== undefined) setFat(String(per.f));
@@ -170,9 +169,9 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setIng(fill ? [...ing.slice(0, -1), row] : [...ing, row]); setErr('');
     return null;
   };
-  const useOwn = (on: boolean) => {
+  const chooseOwn = (on: boolean) => {
     setOwn(on);
-    if (on && roll && roll.counted > 0 && !kcal.trim() && !protein.trim()) useNumbers(roll.per); // nothing typed yet: start from the parts
+    if (on && roll && roll.counted > 0 && !kcal.trim() && !protein.trim()) adoptNumbers(roll.per); // nothing typed yet: start from the parts
   };
   const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id), sauces), [activeText, items, recipes, recipe?.id, sauces]);
@@ -234,14 +233,14 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
               <div className="rc-roll">
                 <p role="status">{own ? `From the parts: ${rollText || 'no numbers yet'}` : `Per serving, from the parts: ${rollText || 'no numbers yet'}`}</p>
                 <p className="note">{countedNote(roll)}</p>
-                <label className="rc-own"><input type="checkbox" checked={own} onChange={e => useOwn(e.target.checked)} /> Use my own numbers</label>
+                <label className="rc-own"><input type="checkbox" checked={own} onChange={e => chooseOwn(e.target.checked)} /> Use my own numbers</label>
               </div>
             )}
             <div className="rc-calcbar">
               <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
               {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
             </div>
-            {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={useNumbers} />}
+            {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={adoptNumbers} />}
             {nutOpen && !fromParts && (
               <div className="rc-nutfields">
                 <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
