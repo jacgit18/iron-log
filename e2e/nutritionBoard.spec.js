@@ -70,6 +70,25 @@ test('the add sheet pre-picks the meal from the time (Dinner at 18:30), remember
   await expect(meter(todayCol(page), 'Protein')).toHaveAttribute('aria-label', /20/);
 });
 
+test('editing an eaten food keeps its carbs and fat', async ({ page }) => {
+  // A node test cannot catch it: the edit form is opened with the entry's numbers by the component.
+  await openNutrition(page);
+  const sheet = await openAdd(page, 'One-off food');
+  await sheet.locator('#dt-add-n').fill('Rice');
+  await sheet.locator('#dt-add-k').fill('300');
+  await sheet.locator('#dt-add-p').fill('20');
+  await sheet.locator('#dt-add-c').fill('40');
+  await sheet.locator('#dt-add-f').fill('5');
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+  await closeSheet(page);
+  await expect(meter(todayCol(page), 'Fat')).toHaveAttribute('aria-label', /: 5 /);
+  await todayCol(page).getByRole('button', { name: 'Edit Rice' }).click();
+  await todayCol(page).locator('.nb-eat input[id$="-n"]').fill('Brown rice');
+  await todayCol(page).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(todayCol(page).locator('.nb-eat')).toContainText('Brown rice');
+  await expect(meter(todayCol(page), 'Fat')).toHaveAttribute('aria-label', /: 5 /);
+});
+
 test('empty meals say Nothing planned and have no button; an empty Snack is hidden', async ({ page }) => {
   await openNutrition(page);
   const c = todayCol(page);

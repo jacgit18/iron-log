@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
+import { shortDay } from '../../lib/nutritionBoard.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import EntryForm from '../diet/EntryForm.js';
 
@@ -10,11 +11,11 @@ export default function EatenList({ day, entries, editable, note }: { day: strin
     <div className="wb-slot nb-eaten">
       <div className="wb-slothd"><b>Eaten</b><span>{entries.length ? `${entries.length} logged` : ''}</span></div>
       {entries.length === 0 && <span className="nb-empty">Nothing logged</span>}
-      <ul className="nb-eatlist" aria-label={`Eaten on ${day}`}>
+      <ul className="nb-eatlist" aria-label={`Eaten on ${shortDay(day)}`}>
         {entries.map(e => (
           <li key={e.id} className="nb-eat">
             {editId === e.id ? (
-              <EntryForm idp={`nb-e-${e.id}`} initial={{ n: e.n, kcal: e.kcal, p: e.p }} submitLabel="Save" onCancel={() => setEditId(null)}
+              <EntryForm idp={`nb-e-${e.id}`} initial={{ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}) }} submitLabel="Save" onCancel={() => setEditId(null)}
                 onSubmit={v => { const err = useAppStore.getState().updateDietEntry(e.id, v); if (!err) setEditId(null); return err; }} />
             ) : (
               <>
