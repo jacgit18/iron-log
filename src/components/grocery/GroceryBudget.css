@@ -58,6 +58,10 @@ form.gbudget,
 .gbwarn {
   color: var(--str);
 }
+.gbnote {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
 .gbudget-near .gbstate {
   color: var(--warn-ink);
   font-weight: 600;

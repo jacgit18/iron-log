@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { budgetStatus } from './groceryBudget.js';
+import { budgetListNote, budgetStatus } from './groceryBudget.js';
 import { validGroceryBudget } from '../shared/validate.js';
 import { normConfig } from '../shared/config.js';
 
@@ -17,6 +17,15 @@ describe('budgetStatus', () => {
   });
   it('warns when the plan is over while spending is still inside', () => {
     expect(budgetStatus(40000, 10000, 52000).plannedOver).toBe(12000);
+  });
+});
+
+describe('budgetListNote', () => {
+  it('says what is left to spend, without the list total', () => {
+    expect(budgetListNote(21700)).toBe('You still have $217.00 left in your budget to spend.');
+  });
+  it('says the budget is used up instead of $0.00 left', () => {
+    expect(budgetListNote(0)).toBe('Your budget is used up.');
   });
 });
 
