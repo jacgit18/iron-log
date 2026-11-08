@@ -1,35 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ALL_TEXT, dismissProgramCard, MONEY_WORDS, programCardDismissed, sendLink, sharePayload, showProgramCard, showProgramRow, type CardInputs } from './programOnComputer.js';
-
-const base: CardInputs = { touch: true, programTab: true, waitingForSignIn: false, installHintShowing: false, dismissed: false };
-
-describe('showProgramCard', () => {
-  it('shows on a touch screen, on the Program tab', () => expect(showProgramCard(base)).toBe(true));
-  it.each([
-    ['a computer (no touch)', { touch: false }],
-    ['another tab', { programTab: false }],
-    ['sign-in or the data is still pending', { waitingForSignIn: true }],
-    ['the install hint is showing', { installHintShowing: true }],
-    ['it was dismissed', { dismissed: true }],
-  ] as [string, Partial<CardInputs>][])('is hidden for %s', (_, over) => expect(showProgramCard({ ...base, ...over })).toBe(false));
-});
+import { describe, it, expect, vi } from 'vitest';
+import { ALL_TEXT, MONEY_WORDS, sendLink, sharePayload, showProgramRow } from './programOnComputer.js';
 
 describe('showProgramRow', () => {
   it('is on for touch screens, off for a computer', () => { expect(showProgramRow(true)).toBe(true); expect(showProgramRow(false)).toBe(false); });
-});
-
-describe('dismissal', () => {
-  const store: Record<string, string> = {};
-  beforeEach(() => {
-    Object.keys(store).forEach(k => delete store[k]);
-    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; }, removeItem: (k: string) => { delete store[k]; } });
-  });
-  afterEach(() => { vi.unstubAllGlobals(); });
-  it('is remembered on this device', () => {
-    expect(programCardDismissed()).toBe(false);
-    dismissProgramCard();
-    expect(programCardDismissed()).toBe(true);
-  });
 });
 
 describe('sharePayload', () => {

@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // The meal planner (brief diet-meal-planner). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
-// this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today, a day with no Log button, and the missing ingredients on To get.
+// this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today, a day with no Log button, and the missing ingredients on Shopping.
 const diet = page => page.getByRole('region', { name: 'Diet' });
 const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const plan = page => diet(page).locator('.dt-plan');
@@ -14,7 +15,7 @@ const logFood = async (page, name, kcal, p) => {
 };
 const newRecipe = async (page, name, kcal, p, ing) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill(String(kcal));
@@ -52,7 +53,7 @@ test('plan a saved meal on a day, see the totals, and Log it only on today', asy
   await expect(plan(page).getByRole('button', { name: /planned/ })).toHaveCount(2);
 });
 
-test('a recipe has a portion stepper, and the plan sends its missing ingredients to To get', async ({ page }) => {
+test('a recipe has a portion stepper, and the plan sends its missing ingredients to Shopping', async ({ page }) => {
   await newRecipe(page, 'Chili', 600, 40, ['Kidney beans', 'Chili powder']);
   await nutrition(page);
   await plan(page).getByRole('button', { name: 'Add to plan' }).click();
@@ -60,8 +61,8 @@ test('a recipe has a portion stepper, and the plan sends its missing ingredients
   await expect(plan(page).getByText(/^Planned 600 kcal · 40 g protein/)).toBeVisible();
   await plan(page).getByRole('button', { name: 'More Chili' }).click();
   await expect(plan(page).getByText(/^Planned 900 kcal · 60 g protein/)).toBeVisible();
-  await plan(page).getByRole('button', { name: 'Add missing ingredients to To get' }).click();
-  await expect(plan(page).getByRole('status')).toContainText('Added 2 to To get.');
+  await plan(page).getByRole('button', { name: 'Add missing ingredients to Shopping' }).click();
+  await expect(plan(page).getByRole('status')).toContainText('Added 2 to Shopping.');
   await page.click('#daily-grocery');
   await expect(page.getByText('Kidney beans').first()).toBeVisible();
 });

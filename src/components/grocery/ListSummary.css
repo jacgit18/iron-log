@@ -1,0 +1,14 @@
+@layer base, components;
+@layer components {
+.glistsum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+}
+.glistsum .btn {
+  min-height: 44px;
+}
+}

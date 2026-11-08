@@ -3,9 +3,9 @@ import { expect, newPhone, server, test } from './stack.js';
 // ADR 039: the grocery list is stored in the account. The whole stack, nothing mocked. The clock is fixed in September 2026.
 const MONTH = '2026-09';
 const openGroceries = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); await expect(page.locator('#groc-h')).toBeVisible(); };
-// Adds an item from At home's Edit mode, then leaves Edit mode.
+// Adds an item from Inventory's Edit mode, then leaves Edit mode.
 const addItem = async (page, n, store) => {
-  await page.click('#groc-view-home');
+  await page.click('#groc-view-inventory');
   await page.click('#groc-edit');
   if (!(await page.locator('#groc-store').count())) await page.click('#groc-more'); // store, count and price sit under More
   await page.fill('#groc-name', n); await page.fill('#groc-store', store); await page.fill('#groc-qty', '1'); await page.fill('#groc-price', '');
@@ -25,8 +25,8 @@ test('an item and a tick made on one phone reach the account, show on a second p
   const page = await a.open();
   await openGroceries(page);
   await addItem(page, 'Kale', 'Aldi', true);
-  await page.click('#groc-view-get');
-  await page.locator('#groc-kale').check();
+  await page.click('#groc-view-shopping');
+  await page.locator('#groc-kale').click();
   await expect.poll(() => server.grocery(user), { message: 'the item, its store and the tick reach the database' })
     .toEqual({ items: ['kale'], stores: ['Aldi'], months: { [MONTH]: { lines: { kale: { got: true, qty: 1, unpriced: true } }, pulled: [] } } }); // kale has no price, so its tick says it was bought unpriced (audit M-01)
 
@@ -34,24 +34,24 @@ test('an item and a tick made on one phone reach the account, show on a second p
   const b = await newPhone(browser, user);
   const second = await b.open();
   await openGroceries(second);
-  await second.click('#groc-view-get');
+  await second.click('#groc-view-bought'); // ticked rows are on Bought
   await expect(second.locator('#groc-kale')).toBeChecked();
 
   // The second phone adds an item and ticks it; the first phone picks both up and keeps its own tick.
   await addItem(second, 'Rice', 'Aldi', true);
-  await second.click('#groc-view-get');
-  await second.locator('#groc-rice').check();
+  await second.click('#groc-view-shopping');
+  await second.locator('#groc-rice').click();
   await expect.poll(async () => (await server.grocery(user)).months[MONTH]?.lines).toEqual({ kale: { got: true, qty: 1, unpriced: true }, rice: { got: true, qty: 1, unpriced: true } });
   await reload(page);
   await openGroceries(page);
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-bought'); // ticked rows are on Bought
   await expect(page.locator('#groc-kale')).toBeChecked();
   await expect(page.locator('#groc-rice')).toBeChecked();
 
   // Reloaded, the second phone shows what the account holds, not a list of its own.
   await reload(second);
   await openGroceries(second);
-  await second.click('#groc-view-get');
+  await second.click('#groc-view-bought'); // ticked rows are on Bought
   await expect(second.locator('#groc-kale')).toBeChecked();
   await expect(second.locator('#groc-rice')).toBeChecked();
   expect(await second.evaluate(() => localStorage.getItem('ironlog:grocery/main'))).toBeNull(); // kept in the account, not this browser
@@ -78,7 +78,7 @@ test('the list a phone held before syncing is added to an account that already h
   await expect.poll(() => server.grocery(user), { message: 'the device list is added to the account' })
     .toEqual({ items: ['kale', 'salt'], stores: ['Aldi'], months: { [MONTH]: { lines: { salt: { got: true, qty: 1 } }, pulled: [] } } });
   await openGroceries(page);
-  await page.click('#groc-view-home');
+  await page.click('#groc-view-inventory');
   await expect(page.getByRole('region', { name: 'Aldi' })).toContainText('Kale');
   await expect(page.getByText('Salt')).toHaveCount(1);
 
@@ -90,7 +90,7 @@ test('the list a phone held before syncing is added to an account that already h
   await expect.poll(async () => (await server.grocery(user)).items).toEqual(['kale']);
   await reload(page);
   await openGroceries(page);
-  await page.click('#groc-view-home');
+  await page.click('#groc-view-inventory');
   await expect(page.getByRole('region', { name: 'Aldi' })).toContainText('Kale');
   expect((await server.grocery(user)).items).toEqual(['kale']);
   expect(await page.evaluate(() => localStorage.getItem('ironlog:grocery/main'))).toContain('Salt'); // the old copy stays on the device, unused
@@ -110,7 +110,7 @@ test('an empty account takes the device list with the one-time upload of everyth
   await expect(card).toHaveCount(0);
   await expect.poll(() => server.grocery(user)).toEqual({ items: ['kale', 'salt'], stores: [], months: { [MONTH]: { lines: { kale: { got: true } }, pulled: [] } } });
   await openGroceries(page);
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-bought'); // ticked rows are on Bought
   await expect(page.locator('#groc-kale')).toBeChecked();
   await a.close();
 });

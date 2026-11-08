@@ -249,11 +249,11 @@ describe('suggestions for what matches nothing', () => {
 
 describe('addMissingMessage', () => {
   it.each([
-    [{ added: 2, already: 0, refused: null }, 'Added 2 to To get.'],
-    [{ added: 0, already: 1, refused: null }, '1 is on To get already.'],
-    [{ added: 1, already: 3, refused: null }, 'Added 1 to To get. 3 are on To get already.'],
+    [{ added: 2, already: 0, refused: null }, 'Added 2 to Shopping.'],
+    [{ added: 0, already: 1, refused: null }, '1 is on Shopping already.'],
+    [{ added: 1, already: 3, refused: null }, 'Added 1 to Shopping. 3 are on Shopping already.'],
     [{ added: 0, already: 0, refused: null }, 'Everything is at home.'],
-    [{ added: 1, already: 0, refused: 'Too many items.' }, 'Added 1 to To get. Too many items.'],
+    [{ added: 1, already: 0, refused: 'Too many items.' }, 'Added 1 to Shopping. Too many items.'],
     [{ added: 0, already: 0, refused: 'Too many items.' }, 'Too many items.'],
   ])('%j', (r, text) => expect(addMissingMessage(r)).toBe(text));
 });

@@ -1,0 +1,34 @@
+@layer base, components;
+@layer components {
+/* Review types (FoodTypeReview.tsx) and the Type buttons of the ready-made form: a name over three buttons, each 44px tall. */
+.ftr-list {
+  display: grid;
+  gap: var(--sp-12);
+  margin: var(--sp-12) 0;
+  padding: 0;
+  list-style: none;
+}
+.ftr-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.ftr-row b {
+  overflow-wrap: anywhere;
+}
+.ftr-row .seg,
+.rc-type .seg {
+  margin-left: 0;
+}
+.rc-type {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.rc-type .seg {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+}

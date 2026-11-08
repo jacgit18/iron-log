@@ -2,7 +2,7 @@ import { DEFAULT_CFG } from '../lib/logic.js';
 import type { Cfg, WarmupItem } from '../types.ts';
 import { normDietCfg } from './diet.js';
 import { normRecipeChips } from './recipes.js';
-import { LIMITS, validBodyLb, validDate, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
+import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
 
 /* ---------- Config shape ----------
    normConfig takes anything (a stored doc, a file, a database snapshot) and returns the keys that can be used.
@@ -34,6 +34,7 @@ export function normConfig(c: any): Partial<Cfg> {
   // hideKg is only ever true: absent means the kg figures are shown, so a false (or anything else) is dropped.
   if ('hideKg' in out && out.hideKg !== true) delete out.hideKg;
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
+  if ('groceryBudget' in out && !validGroceryBudget(out.groceryBudget)) delete out.groceryBudget;
   if ('diet' in out) { const d = normDietCfg(out.diet); if (d) out.diet = d; else delete out.diet; }
   if ('recipeChips' in out) { const rc = normRecipeChips(out.recipeChips); if (rc) out.recipeChips = rc; else delete out.recipeChips; }
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
@@ -50,7 +51,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'groceryBudget', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 

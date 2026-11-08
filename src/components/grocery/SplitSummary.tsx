@@ -31,7 +31,7 @@ export default function SplitSummary({ g, month, mk }: { g: Grocery; month: Groc
   };
   return (
     <section className="gsplit" aria-labelledby={`groc-split-h-${mk}`}>
-      <h3 id={`groc-split-h-${mk}`}>Splitting this month</h3>
+      <h3 id={`groc-split-h-${mk}`}>Who owes who</h3>
       <dl className="gsplitsum">
         <div><dt>Paid</dt><dd>{money(paid)}</dd></div>
         <div><dt>Your share</dt><dd>{money(yours)}</dd></div>

@@ -82,7 +82,7 @@ export const linkedRecipe = (ing: RecipeIngredient, recipes: Recipe[], selfId?: 
 /** A line as the form should show it: the link kept with the sauce's current name, or dropped when the sauce is gone. */
 export function refreshLink<T extends RecipeIngredient>(ing: T, recipes: Recipe[], selfId?: string): T {
   if (!ing.rid) return ing;
-  const { rid: _rid, ...rest } = ing;
+  const { rid: _rid, q: _q, ...rest } = ing; // an amount of a linked food goes with its link
   const r = linkedRecipe(ing, recipes, selfId);
-  return r ? { ...rest, n: r.n, rid: r.id } as T : rest as T;
+  return r ? { ...rest, n: r.n, rid: r.id, ...(ing.q !== undefined ? { q: ing.q } : {}) } as T : rest as T;
 }

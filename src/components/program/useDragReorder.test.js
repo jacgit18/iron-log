@@ -44,3 +44,12 @@ describe('edgeSpeed', () => {
     expect(edgeSpeed(1200, 800)).toBe(900);
   });
 });
+
+describe('shiftOf with different room each way', () => {
+  it('slides rows up by size going down and down by sizeUp going up (a box header sits between rows)', () => {
+    const down = { from: 0, to: 2, dy: 0, size: 130, sizeUp: 100 };
+    expect([1, 2, 3].map(i => shiftOf(down, i))).toEqual([-130, -130, 0]);
+    const up = { from: 3, to: 1, dy: 0, size: 130, sizeUp: 100 };
+    expect([0, 1, 2].map(i => shiftOf(up, i))).toEqual([0, 100, 100]);
+  });
+});

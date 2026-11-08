@@ -11,7 +11,7 @@ const setup = async page => {
   await page.click('#groc-edit');
   await add(page, 'Eggs'); await add(page, 'Olive oil'); await add(page, 'Rice');
   await page.click('#groc-done');
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-shopping');
 };
 // The answer is built from the item ids the app sent, so the test needs no ids of its own.
 const answer = (page, build) => page.route('**/api/scan/receipt', async route => {
@@ -51,23 +51,23 @@ test.describe('as an admin', () => {
     await sheet.getByLabel('Item for ZEVIA SODA 12PK').selectOption({ label: 'Rice' });
     await expect(sheet.getByRole('button', { name: 'Apply 3 items' })).toBeEnabled();
     await sheet.getByLabel('Item for ZEVIA SODA 12PK').selectOption({ label: 'Not on your list' });
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 3'); // nothing is written before Apply
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3'); // nothing is written before Apply
     await sheet.getByRole('button', { name: 'Apply 2 items' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('#groc-summary')).toContainText('Got 2 of 3');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 2 of 3');
     await expect(page.locator('#groc-summary')).toContainText('Spent $32.98'); // 26.98 + 6.00; "BJ'S" is not a store on this list, so no tax is set
     await expect(page.getByText('Applied 2 items for September 2026.')).toBeVisible();
     await page.getByRole('button', { name: 'Undo' }).click();
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 3');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });
 
   test('Cancel changes nothing, and a receipt dated another month says so', async ({ page }) => {
     await answer(page, id => { const r = good(id); r.receipt.date = '2026-08-30'; return r; });
     await page.getByLabel('Receipt photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'dated August 2026' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 3');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });
 
   test('an unreadable photo and a failed call say so and leave the list alone', async ({ page }) => {
@@ -78,10 +78,10 @@ test.describe('as an admin', () => {
     await page.route('**/api/scan/receipt', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, why: 'cap' }) }));
     await page.getByLabel('Receipt photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'Scan is not available right now' })).toBeVisible();
-    await expect(page.locator('#groc-summary')).toContainText('Got 0 of 3');
+    await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });
 
-  test('Scan receipt opens the camera and Choose photo opens the library', async ({ page }) => {
+  test('Scan receipt opens the camera and Pick from photos opens the library', async ({ page }) => {
     await expect(page.getByLabel('Receipt camera')).toHaveAttribute('capture', 'environment');
     await expect(page.getByLabel('Receipt photo')).not.toHaveAttribute('capture');
     await expect(page.locator('#groc-scan-pick')).toBeVisible();

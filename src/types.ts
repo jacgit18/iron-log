@@ -143,6 +143,8 @@ export interface Cfg extends ProgramCfg {
   exPh: Record<string, PhaseKey | null>;
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
+  /** The monthly grocery budget in cents (brief grocery-budget); absent means none is set. */
+  groceryBudget?: number;
   /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
   diet?: DietCfg;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
@@ -254,7 +256,9 @@ export interface GroceryShare { with: string[]; notMine?: true }
  *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list).
  *  `note` is an optional short comment ("the green ones"), left out when empty. `unit` is set for things sold by weight (meat, produce):
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare }
+/** `aliases`: receipt texts the person renamed to this item (brief receipt-rename-memory), kept as printed (spaces collapsed); a scan line whose text matches one (`aliasKey`) is mapped to the item before any model guess. At most MAX_ALIASES of up to MAX_ALIAS characters, one per key. */
+/** `oneTime`: the month it was made one-time in (`YYYY-MM`, brief quickadd-one-time-items): a quick-added item, or any item the person ticked One-time item on. Bought in that month or a later one, it is hidden from Inventory and from every later month's list, but stays in the catalogue so the month it was bought in, Spending and price history read as before. Purchases from before that month do not count. Older data has `once` (an occasional item) instead of `every`; that is a different thing. */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare; aliases?: string[]; oneTime?: string }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
 /** `retired`: stores that were removed while a past month still uses them (a purchase pinned to the store, its tax, who paid): hidden from every list and picker, but their name stays valid so those months read as they did; adding a store with the same name brings it back (ADR 063). */
 export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[]; retired?: string[] }
@@ -264,7 +268,8 @@ export interface GroceryStore { id: string; n: string; retired?: true }
  *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
 /** `store`: where the item was bought this month when that is not its usual store (Move to on To get); '' is Anywhere, absent is the item's own store. */
 /** `unpriced`: bought with no price at all (the item had none and none was typed), so a price given to the item later does not reach back and price this month's purchase. */
-export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
+/** `rc`: this bought tick was written by a scanned receipt's Apply (brief receipt-earlier-items); cleared when the item is unticked. A later receipt does not list the item as "bought but not on this receipt". */
+export interface GroceryLine { got?: true; rc?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
@@ -315,13 +320,19 @@ export type RecipeCategory = 'protein' | 'carbs' | 'sides' | 'sauces' | 'seasoni
 /** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
  *  of the At home item the person linked it to by hand. `sub` is an Alternative to use if they do not have `n` (it never replaces `n`: the ingredient is at home when either is); `skip` marks an
  *  ingredient they leave out (listed, but not counted and never added to To get). `rid` is the id of one of the person's own Sauces or Seasonings recipes the
- *  line links to (`n` stays as the fallback text). */
-export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; sub?: string; skip?: true }
+ *  line links to (`n` stays as the fallback text). `q` is how many of the linked food's own unit this line uses (0.1 to 100, only with `rid`; brief meals-from-foods):
+ *  a meal's numbers are the sum of its linked lines times `q`. */
+export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; q?: number; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
 /** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
 export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
-export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
+/** What a ready-made food is (brief food-type-and-migration): a base ingredient, something you only heat or open, or a drink. Only meaningful when `cat` is `ready`. */
+export type FoodType = 'ingredient' | 'ready' | 'drink';
+/** What a recipe is used as (brief recipes-used-as-ingredients-tab): one or more. Left out, the labels are worked out from its category and `type` (`lib/recipeUses.ts`). */
+export type RecipeUse = 'meal' | 'ingredient' | 'ready' | 'drink';
+/** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

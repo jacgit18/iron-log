@@ -1,25 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFeature } from '../../features.js';
+import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
+import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
+import { usesOf } from '../../lib/recipeUses.js';
 import { readyMadeValues } from '../../lib/readyMade.js';
 import { planFill } from '../../lib/labelFill.js';
 import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
 import { MAX_RECIPE_NAME } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import FoodSearch, { type FoodFill } from '../diet/FoodSearch.js';
-import type { Recipe } from '../../types.ts';
+import UsedAsChips from './UsedAsChips.js';
+import type { Recipe, RecipeUse } from '../../types.ts';
 
+const FOOD_USES: readonly RecipeUse[] = ['ingredient', 'ready', 'drink'];
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 
 // A ready-made food (brief recipe-first-diet-log): something bought or frozen that you only heat up. It is a recipe in the Ready-made category with
 // no ingredients or steps, so it is listed, searched, logged with Ate this and planned like any recipe. Numbers are per serving, typed from the
 // label or filled from the food lookup (still editable).
-export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onDone: (savedId: string | null) => void }) {
+export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: Recipe; onDone: (savedId: string | null) => void; scanFirst?: boolean }) {
   const [n, setN] = useState(recipe?.n ?? '');
   const [kcal, setKcal] = useState(str(recipe?.kcal));
   const [protein, setProtein] = useState(str(recipe?.p));
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
+  const [uses, setUses] = useState<RecipeUse[]>(() => (recipe ? usesOf(recipe) : [DEFAULT_FOOD_TYPE])); // brief recipes-used-as-ingredients-tab: one or more of Ingredient, Ready to eat, Drink; starts on Ready to eat // brief food-type-and-migration: required, starts on Ready to eat (a food saved before types existed saves with its first Type too)
   const [note, setNote] = useState(recipe?.note ?? '');
   const [pack, setPack] = useState(str(recipe?.servings));
   const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many Ate this opens at, and what one serving is called
@@ -55,7 +61,7 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
   const save = () => {
     const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack, usual, unit, plural });
     if ('error' in v) { setErr(v.error); return; }
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', ing: [], steps: [], ...v, note });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses } : {}), ing: [], steps: [], ...v, note });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null);
@@ -64,7 +70,7 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
     <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New ready-made food'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit ready-made food' : 'New ready-made food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
-        <FoodSearch onUse={fillFrom} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
+        <FoodSearch onUse={fillFrom} {...(scanFirst ? { scanFirst } : {})} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
       </div>
       {canScan && (
         <div className="rc-scan">
@@ -81,6 +87,7 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
       <label>Name
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
+      <UsedAsChips value={uses} options={FOOD_USES} onChange={setUses} />
       <div className="rc-nutfields">
         <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => { setKcal(e.target.value); setErr(''); }} /></label>
         <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => { setProtein(e.target.value); setErr(''); }} /></label>

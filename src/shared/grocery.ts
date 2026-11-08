@@ -8,6 +8,7 @@ import { str } from './stretchWeek.js';
 
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999, MAX_PRICES = 50;
 export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120, MAX_PAID = 600;
+export const MAX_ALIASES = 20, MAX_ALIAS = 60; // receipt names per item (brief receipt-rename-memory); a receipt line's text is at most 60 characters
 export const MAX_GROUPS = 10, MAX_PEOPLE = 10, MAX_PERSON = 40;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -48,6 +49,21 @@ export function validShare(v: unknown): v is GroceryShare {
   return !!c && !!o && Object.keys(o).every(k => k === 'with' || k === 'notMine') && c.with.length === (o.with as unknown[]).length && c.with.every((id, i) => id === (o.with as unknown[])[i]) && c.notMine === o.notMine;
 }
 
+/** The key a receipt text is matched by: lowercase, trimmed, spaces collapsed. */
+export const aliasKey = (s: string): string => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** A list of receipt names cleaned: text spaces collapsed, cut to MAX_ALIAS, one per key (the first wins), at most MAX_ALIASES. Null when there is none to keep. */
+export function cleanAliases(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const seen = new Set<string>(); const out: string[] = [];
+  for (const x of v) {
+    const t = typeof x === 'string' ? x.replace(/\s+/g, ' ').trim().slice(0, MAX_ALIAS).trim() : '';
+    if (!t || seen.has(aliasKey(t)) || out.length >= MAX_ALIASES) continue;
+    seen.add(aliasKey(t)); out.push(t);
+  }
+  return out.length ? out : null;
+}
+
 /** One catalogue item, cleaned. Older data has `once` (an occasional item) instead of `every`: it becomes a When-out item that is
  *  not out, which is how it behaved (ADR 038). */
 export function normGroceryItem(x: unknown): GroceryItem | null {
@@ -57,8 +73,8 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
   if (!id || !n || reservedId(id)) return null;
   const every = o.every === true || (o.every === undefined && o.once !== true);
   const qty = cleanQty(o.qty);
-  const note = str(o.note, MAX_NOTE); const unit = cleanUnit(o.unit); const share = cleanShare(o.share);
-  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}), ...(unit ? { unit } : {}), ...(share ? { share } : {}) };
+  const note = str(o.note, MAX_NOTE); const unit = cleanUnit(o.unit); const share = cleanShare(o.share); const aliases = cleanAliases(o.aliases);
+  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}), ...(unit ? { unit } : {}), ...(share ? { share } : {}), ...(aliases ? { aliases } : {}), ...(typeof o.oneTime === 'string' && MONTH_RE.test(o.oneTime) ? { oneTime: o.oneTime } : {}) };
 }
 
 /** One store, as a row of its own: the name is its id. */
@@ -110,6 +126,8 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
   if (o.note !== undefined && !exact(o.note, MAX_NOTE)) return false;
   if (o.unit !== undefined && cleanUnit(o.unit) === null) return false;
   if (o.share !== undefined && !validShare(o.share)) return false;
+  if (o.aliases !== undefined) { const c = cleanAliases(o.aliases); const raw = o.aliases as unknown[]; if (!c || !Array.isArray(raw) || c.length !== raw.length || c.some((a, i) => a !== raw[i])) return false; }
+  if (o.oneTime !== undefined && !(typeof o.oneTime === 'string' && MONTH_RE.test(o.oneTime))) return false; // `once` is older data (an occasional item); `oneTime` is the quick-add item that leaves after it is bought
   if (typeof o.every !== 'boolean' || typeof o.out !== 'boolean' || (o.every && o.out)) return false;
   return true;
 }
@@ -131,6 +149,7 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
       const line: GroceryLine = {};
       if (o.got === true) line.got = true;
       if (o.have === true && !line.got) line.have = true;
+      if (o.rc === true && line.got) line.rc = true; // a bought tick that a scanned receipt wrote
       const qty = cleanQty(o.qty); if (qty != null) line.qty = qty;
       const cents = cleanCents(o.cents); if (cents != null) line.cents = cents;
       const prices = cleanPrices(o.prices); if (prices) line.prices = prices;

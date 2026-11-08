@@ -10,6 +10,11 @@
 .rcscan .btn {
   min-height: 44px;
 }
+/* On a phone Scan receipt is the one full-width button of the row (brief groceries-spending-buttons-quick-add); the other receipt buttons are in More. */
+.rcphone .btn {
+  flex: 1 1 100%;
+  min-height: 48px;
+}
 .rcsheet {
   max-width: 860px;
   container-type: inline-size;
@@ -67,7 +72,7 @@
 .rclines {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 var(--sp-16);
   display: grid;
 }
 .rcrow {
@@ -78,7 +83,8 @@
   padding: var(--sp-6) 0;
   border-bottom: 1px solid var(--line);
 }
-.rcrow.rcoff {
+/* A skipped row fades its text but not its controls: a faded select fails the colour-contrast check (brief receipt-apply-footer). */
+.rcrow.rcoff > :not(select, .rctick, .rclink, .rcname) {
   opacity: .65;
 }
 .rctext {
@@ -102,6 +108,8 @@
 .rcaddbtn,
 .rcunstage {
   min-height: 44px;
+  justify-self: start;
+  text-align: left;
 }
 .rcnew {
   grid-column: 1 / -1;
@@ -163,11 +171,37 @@
   display: block;
   color: var(--muted);
 }
+/* brief receipt-apply-footer: Close sits in the header, the bar holds a summary and one wide Apply, and the list ends with space so no row sits under the bar. */
+.rctop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-10);
+}
+.rctop h2 {
+  margin: 0;
+}
+.rcclose {
+  min-height: 44px;
+}
 .rcfoot {
   position: sticky;
   bottom: 0;
-  padding-top: var(--sp-10);
+  margin-top: var(--sp-16);
+  padding: var(--sp-10) 0 max(var(--sp-10), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
   background: var(--surface);
+}
+.rcsum {
+  margin: 0 0 var(--sp-8);
+  text-align: center;
+}
+.rcsumbad {
+  color: var(--warn-ink);
+}
+.rcapply {
+  width: 100%;
+  min-height: 48px;
 }
 @container (max-width: 640px) {
   .rchead {
@@ -239,15 +273,27 @@
 }
 .rcmiss li {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--sp-10);
+  grid-template: "what box" auto "state state" auto / minmax(0, 1fr) auto;
+  gap: 0 var(--sp-10);
   align-items: center;
   border-top: 1px solid var(--line);
 }
 .rcmiss li:first-child {
   border-top: 0;
 }
+.rcmissmore summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.rcearlier {
+  margin: 0;
+}
 .rcuntick {
+  grid-area: box;
   display: inline-flex;
   align-items: center;
   gap: var(--sp-8);
@@ -259,11 +305,17 @@
   height: 24px;
   margin: 0;
 }
+.rcmisswhat {
+  grid-area: what;
+  padding-top: var(--sp-8);
+}
 .rcmisswhat small {
   display: block;
   color: var(--muted);
 }
 .rcmissstate {
+  grid-area: state;
+  justify-self: start;
   font-size: var(--fs-sm);
   font-weight: 600;
 }

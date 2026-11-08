@@ -40,6 +40,7 @@ export type ScenarioFeature =
   | 'Program compare'
   | 'Polish pass'
   | 'Program on phones'
+  | 'Program tab clarity'
   | 'Stale page guard'
   | 'Barcode scan'
   | 'Custom 404'
@@ -49,13 +50,21 @@ export type ScenarioFeature =
   | 'Link previews'
   | 'Moved-card tag'
   | 'Search hiding'
-  | 'Security headers';
+  | 'Security headers'
+  | 'Price history'
+  | 'Program desktop layout'
+  | 'Groceries views'
+  | 'Food type'
+  | 'Recipes find'
+  | 'Nutrition quick log'
+  | 'Meals from foods'
+  | 'Grocery budget';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag', 'Ideas to try',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget',
 ];
 
 export interface Scenario {
@@ -192,7 +201,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-09', feature: 'Meal planner', title: 'Plan to Groceries adds each missing ingredient once', persona: 'meal-planner', brief: 'diet-meal-planner',
     steps: [
       'In the planner press the grocery button for the shown week.',
-      'Open Groceries and look at To get.',
+      'Open Groceries and look at Shopping.',
       'Return to the planner and press the grocery button again.',
     ],
     expected: [
@@ -325,7 +334,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-20', feature: 'Recipe-first log', title: 'New ready-made food', persona: 'diet-fresh', brief: 'recipe-first-diet-log',
     steps: [
-      'Open Recipes and press New ready-made food.',
+      'Open Recipes and press + New, then Add a food by hand.',
       'Save it with only a name; then add 250 kcal and 20 g protein and save.',
       'Find it under the Ready-made chip, open it and press Ate this.',
       'Edit the food to 300 kcal and look at the entry already logged.',
@@ -443,14 +452,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-29', feature: 'Recipe auto-match', title: 'Maybe matches and Accept all', persona: 'recipe-collector', brief: 'recipe-auto-match', edge: true,
     steps: [
-      'Open "Chicken and rice bowl" (ingredient "Chicken breast") while At home holds a "Chicken thighs" item.',
+      'Open "Chicken and rice bowl" (ingredient "Chicken breast") while Inventory holds a "Chicken thighs" item.',
       'Choose the item from the "Maybe: <item>" dropdown, then undo the pin by hand.',
       'Open another recipe with several Maybe lines and press Accept all suggestions.',
     ],
     expected: [
       'A close but inexact name shows "Maybe: <item>" as a dropdown choice and is not counted as a match until chosen.',
       'Choosing it pins it; Accept all pins every suggestion in one action and the button disappears when none are left.',
-      'Press Reset on the account first: anything added to the grocery list since the seed changes which recipes show Maybe. The seeded names decide which recipes show Maybe; if none does, record that and add an At home item with a shared word.',
+      'Press Reset on the account first: anything added to the grocery list since the seed changes which recipes show Maybe. The seeded names decide which recipes show Maybe; if none does, record that and add an Inventory item with a shared word.',
     ],
   },
 
@@ -572,7 +581,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-39', feature: 'Wide layouts', title: 'Exercise library in two columns', persona: 'superset-builder', brief: 'library-two-columns',
     steps: [
-      'Open Program, then Exercise library (`#/program/exercises`), at 1920 px and at 1024 px. The heading reads "Exercise library" and the search box "Search 46 exercises" (the account\'s two programs use 46; if it says 0, press Reset on the account).',
+      'Open Program, then Exercises (`#/program/exercises`), at 1920 px and at 1024 px. The heading reads "Exercises" and the search box "Search 46 exercises" (the account\'s two programs use 46; if it says 0, press Reset on the account).',
       'Use Search and an Equipment chip at 1920 px.',
     ],
     expected: [
@@ -688,7 +697,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Choose photo and pick a saved photo of a label.',
+      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
@@ -701,7 +710,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a non-admin account', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
     steps: [
       'On a phone as an admin, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
-      'Sign in as a test account that is not an admin and open New ready-made food.',
+      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
       'The form stays empty and says it could not read the numbers (or that the label shows per 100 g only); you can still type the numbers and save.',
@@ -712,7 +721,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
     steps: [
-      'On Recipes press New ready-made food, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
+      'On Recipes press + New, then Add a food by hand, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
       'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
       'Press Whole pack (12) again, press Ate this, then press Undo.',
     ],
@@ -724,7 +733,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-52', feature: 'Whole pack', title: 'A wrong pack size is refused', persona: 'diet-fresh', brief: 'whole-pack', edge: true,
     steps: [
-      'On New ready-made food fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
+      'On the new ready-made food form fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
       'Change it to 8, save, then edit the food and clear the box.',
     ],
     expected: [
@@ -736,7 +745,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-53', feature: 'Receipt scan', title: 'Scan a BJ\'s receipt and apply it', persona: 'grocery-shopper', brief: 'receipt-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account with items like the ones on your receipt. On Groceries, To get, press Scan receipt and photograph a BJ\'s receipt.',
+      'On a phone, sign in as an admin account with items like the ones on your receipt. On Groceries, Shopping, press Scan receipt and photograph a BJ\'s receipt.',
       'In the sheet, compare each line with the paper: the item it matched, the quantity and the price after the instant savings. Change one match and untick one line.',
       'Check the Total check line, pick the store for the tax if it asks, then press Apply and look at the list; then press Undo.',
     ],
@@ -762,7 +771,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-55', feature: 'Usual amount', title: 'Log 4 eggs in two taps', persona: 'diet-on-target', brief: 'usual-amount-and-unit',
     steps: [
-      'On Recipes press New ready-made food, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
+      'On Recipes press + New, then Add a food by hand, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
       'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
       'Press Ate this, look at today\'s Diet log, then press Undo.',
     ],
@@ -788,7 +797,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On a phone as an admin, scan a BJ\'s receipt that has a line your list does not have (for example a soda).',
       'On that line press Add to list. Check the name, store, count and price the form filled in, then press Add item.',
-      'Look at the row and the footer, then press Apply and open the To get list and Bought this month. Then press Undo.',
+      'Look at the row and the footer, then press Apply and open the Shopping list and Bought this month. Then press Undo.',
     ],
     expected: [
       'The form starts with the receipt text tidied (Zevia soda 12pk), the receipt\'s store (or Anywhere), the count and the price after any savings; Add item marks the row New and the footer says 1 new item will be added, with nothing yet on the list.',
@@ -796,13 +805,13 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-58', feature: 'Receipt scan', title: 'Cancel, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
+    id: 'S-58', feature: 'Receipt scan', title: 'Close, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
     steps: [
-      'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Cancel on the sheet.',
+      'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Close at the top of the sheet.',
       'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs), then press Add item. Empty the name and press Add item.',
     ],
     expected: [
-      'Not now, Remove and Cancel each leave the list exactly as it was.',
+      'Not now, Remove and Close each leave the list exactly as it was.',
       'A name already in that store says it is already in the list and to pick it instead; an empty name says to give the item a name; neither adds anything to the row.',
     ],
   },
@@ -867,7 +876,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
     steps: [
-      'Open Program, Exercise library and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
+      'Open Program, Exercises and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
       'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
       'Open the exercise again and tap the lit 10 chip once more, then save.',
     ],
@@ -879,7 +888,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-65', feature: 'Weight step', title: 'A step that is not allowed is refused', persona: 'heavy-logger', brief: 'progression-step-per-exercise', edge: true,
     steps: [
-      'In Program, Exercise library, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
+      'In Program, Exercises, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
       'Type 7.5 and save, then open it again. Press Save with the box showing 60 once more.',
     ],
     expected: [
@@ -947,9 +956,9 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-71', feature: 'Recipe auto-match', title: 'A missing ingredient already on the list says On your list', persona: 'recipe-collector', brief: 'feature-map',
     steps: [
-      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, To get (add one with the ingredient\'s name if there is none).',
+      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, Shopping (add one with the ingredient\'s name if there is none).',
       'Look at that line, then press Add missing to Groceries.',
-      'Open Groceries, To get and check how many times the item appears.',
+      'Open Groceries, Shopping and check how many times the item appears.',
     ],
     expected: [
       'The line shows Missing with a small "On your list" mark beside it; an ingredient that is at home, skipped or "Always at home" (water) never shows it.',
@@ -958,14 +967,14 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program on phones ----
   {
-    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map',
+    id: 'S-72', feature: 'Program on phones', title: 'The header card has the A and B switch and no Create button; + New program floats above the tab bar', persona: 'new-user', brief: 'program-tab-clarity',
     steps: [
       'On a phone (or a 375 px wide window), open the Program tab.',
-      'Look at the row holding Create a program and the program switch.',
+      'Look at the card under the three section buttons, and at the bottom right corner.',
     ],
     expected: [
-      'Create a program starts at the left edge of the screen and is not pushed off to the right or cut off.',
-      'The switch shows only A and B (no other labels), and the row does not scroll sideways.',
+      'The card says "You are editing" and the program name, with the switch showing only Program A and Program B (no other labels), and it does not scroll sideways.',
+      'There is no Create a program button in the card; a gold + New program pill floats at the bottom right above the tab bar.',
     ],
   },
   // ---- Stale page guard ----
@@ -986,7 +995,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan barcode and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
       'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
       'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
@@ -998,16 +1007,16 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account still sees the scan', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
     steps: [
-      'As an admin, open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Open + New, then Add a food by hand, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
-      'Sign in as a test account that is not an admin and open New ready-made food.',
+      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
       'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
       'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
-      'The non-admin account sees no Scan barcode button.',
+      'The non-admin account sees the Scan barcode button and it works; the Photo the label offer (the AI scan) is not shown to it.',
     ],
   },
   {
@@ -1047,28 +1056,31 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-79', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
     steps: [
-      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, At home, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
-      'On To get press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
+      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, Inventory, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
+      'On Shopping press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
       'In the sheet read the rows and the line under the list, then press Apply.',
-      'Open To get and At home, then press Undo on the notice.',
+      'Open Shopping and Inventory, then press Undo on the notice.',
     ],
     expected: [
       'Every ticked item that is not already at the receipt\'s store says "Bought at Costco (usually ...)" and a line says how many items will be marked bought at Costco this month; nothing is saved before Apply.',
-      'After Apply To get shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and At home still lists each item under its old store.',
+      'After Apply Shopping shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and Inventory still lists each item under its old store.',
       'Undo puts every item back to its old store and unticks it.',
     ],
   },
   {
     id: 'S-80', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
     steps: [
-      'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
+      'As an admin, add an item named Oats to Costco on Inventory (Edit), and make sure another item named Oats is under Trader Joe\'s.',
       'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
-      'In the sheet tick "Also make Costco the usual store for these items" and press Apply.',
-      'Look at the notice and At home, then press Undo.',
+      'In the sheet read the line under the Also make Costco box (it starts unticked because the items already have usual stores), then tick "Also make Costco the usual store for these items" and press Apply.',
+      'Look at the notice and Inventory, then press Undo.',
+      'Scan a Costco receipt where every matched item is under Anywhere on Inventory (no usual store). Read the box and the line under it before pressing Apply.',
     ],
     expected: [
-      'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
+      'The second item moves to Costco on Inventory; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
       'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
+      'Before you tick the box the line reads "Inventory stays as it is. Tick the box to list these under Costco there."; ticked, it reads "Inventory will list these under Costco."',
+      'When every item that moves is under Anywhere, "Also make Costco the usual store for these items" starts ticked and the line reads "Inventory will list these under Costco."; when any of them already has a usual store it starts unticked.',
     ],
   },
   {
@@ -1076,7 +1088,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin scan a receipt from a store that is not on your list (for example Walmart).',
       'Check the sheet: no row says Bought at, and "Store for this receipt" is set to Do not set the store or the tax. Pick Costco in it.',
-      'Close the sheet. On At home > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
+      'Close the sheet. On Inventory > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
     ],
     expected: [
       'With no store picked nothing moves and no row says Bought at; picking Costco adds the Bought at notes and the "will be marked bought at Costco" line.',
@@ -1088,7 +1100,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin, on your phone, photograph and scan a Costco receipt where the same item (for example eggs) is printed on two lines with the same price.',
       'In the sheet find that item. Tick it, pick the matching item from the list, and press Apply.',
-      'On To get look at the item, then press Undo.',
+      'On Shopping look at the item, then press Undo.',
     ],
     expected: [
       'The sheet shows ONE row for the two lines, with one checkbox, one item picker, a count of 2 and "$X each" under the price; the total check and the Apply count are unchanged by the merge.',
@@ -1100,11 +1112,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'As an admin, on your phone, photograph and scan a receipt that has the same meat (for example chuck roast) on two lines at different prices, such as $14.12 and $17.86, with no match on your list.',
       'Press Add to list once on the merged row and check the count and price in the form, then Add item and Apply.',
-      'Look at At home and at the month on To get, then press Undo.',
+      'Look at Inventory and at the month on Shopping, then press Undo.',
     ],
     expected: [
       'One row with a note "2 packs, each at its own price: $14.12 + $17.86"; the form starts with Count 2 and the average price, both editable.',
-      'At home gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
+      'Inventory gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
     ],
   },
   {
@@ -1123,47 +1135,47 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-85', feature: 'Bulk share', title: 'Select all in Costco, share with one person, and Undo', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
-      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
+      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, Shopping.',
       'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
-      'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
+      'Press "Select all in Costco", then Change who shares In the sheet tick Sam only and press Apply.',
       'Look at the Costco rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
     ],
     expected: [
-      'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
+      'Nothing changes until Apply; the bar counts the Costco items and Change who shares is off while nothing is selected.',
       'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select button.',
       'Undo puts every row back to "Me +2".',
     ],
   },
   {
-    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes At home, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes Inventory, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
-      'On To get, Select two Costco items and press Share... Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
-      'Open At home, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to To get, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
-      'Open At home again and look at the same items\' split.',
+      'On Shopping, Select two Costco items and press Change who shares Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
+      'Open Inventory, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to Shopping, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'Open Inventory again and look at the same items\' split.',
     ],
     expected: [
-      'After the first Apply To get shows the new split but At home still shows the store\'s split for those items (this month only).',
-      'After the second Apply At home shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
+      'After the first Apply Shopping shows the new split but Inventory still shows the store\'s split for those items (this month only).',
+      'After the second Apply Inventory shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
     ],
   },
   {
     id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
     steps: [
-      'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
-      'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
+      'On Shopping open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
+      'Press Select, tick that item and one other, press Change who shares, and read the sheet. Tick Alex and press Apply.',
       'Open the pack-priced item and look at both packs; press Undo on the notice within about 10 seconds (it goes away by itself).',
-      'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, To get. New user does not prove it, because its list is empty.',
+      'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, Shopping. New user does not prove it, because its list is empty.',
     ],
     expected: [
       'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
       'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
-      'An account that has items but no sharing group has no Select button on To get.',
+      'An account that has items but no sharing group has no Select button on Shopping.',
     ],
   },
   {
     id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
       'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
       'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
       'Scan a product USDA does know (oatmeal) and read the same place.',
@@ -1177,7 +1189,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
     steps: [
-      'On a phone, as an admin, open New ready-made food, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'On a phone, as an admin, open + New, then Add a food by hand, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
       'Read the sheet, then press Photo the label.',
       'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
     ],
@@ -1190,7 +1202,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-90', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Groceries, To get, tick three items as if you were in the store without typing a price (or with an old one).',
+      'On a phone, sign in as an admin account. On Groceries, Shopping, tick three items as if you were in the store without typing a price (or with an old one).',
       'Later, press Scan receipt and photograph a receipt that has those three items, and read the note under each of their rows.',
       'Press Apply and look at the three items; then press Undo.',
     ],
@@ -1200,17 +1212,17 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-91', feature: 'Receipt reconcile', title: 'A ticked item that is not on the receipt is listed, kept, or unticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    id: 'S-91', feature: 'Receipt reconcile', title: 'An item marked bought that is not on the receipt is listed, stays bought, or moves back to to-get', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
     steps: [
-      'On a phone, on To get, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
-      'Find "Ticked, not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
-      'Scan again, tick Untick on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
+      'On a phone, on Shopping, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
+      'Find "Already bought, not on this receipt" under the lines, press "Review these" and read the row for Milk. Press Apply without touching it and look at Milk.',
+      'Scan again, open the list, tick "Move back" on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
       'Scan a receipt that has none of your ticked items.',
     ],
     expected: [
-      'Milk is listed with what it holds now ("Ticked now: 1 × $3.79") and "Kept"; applying leaves Milk ticked with its price.',
-      'With Untick on, the row says "Will be unticked", the footer says "1 will be unticked.", Apply puts Milk back to get with the notice "1 item unticked.", and Undo ticks it again with its price.',
-      'When none of your ticked items are on the receipt, the list opens with "None of your ticked items are on this receipt. Is this the right one?"',
+      'Milk is listed with what it holds now ("Bought: 1 × $3.79"); applying leaves Milk ticked with its price.',
+      'With the box ticked, the row says "Will move back to Shopping", the footer says "1 will move back to Shopping.", Apply puts Milk back on Shopping with the notice "1 item moved back to Shopping.", and Undo ticks it again with its price.',
+      'When nothing on the receipt matches your list, the text above the list starts with "None of the items on your list match this receipt. Is this the right one?"',
     ],
   },
   {
@@ -1253,7 +1265,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-95', feature: 'Sharing done', title: 'Done closes the Sharing panel and adds what you typed', persona: 'grocery-shopper', brief: 'sharing-done-button',
     steps: [
-      'Open Daily, Groceries, At home, press Sharing and look at the bottom of the panel.',
+      'Open Daily, Groceries, Inventory, press Sharing and look at the bottom of the panel.',
       'In the Home group type Jo in Add a person without pressing Add person, then press Done.',
       'Press Sharing again and look at the Home group.',
     ],
@@ -1434,14 +1446,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'grocery-shopper', brief: 'receipt-add-store', device: true,
     steps: [
-      'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, At home, Edit and check the list does not have the store on your receipt (for example Safeway, which Grocery shopper does not have); other stores may stay.',
-      'On To get press Scan receipt and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
+      'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, Inventory, Edit and check the list does not have the store on your receipt (for example Safeway, which Grocery shopper does not have); other stores may stay.',
+      'On Shopping press Scan receipt and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
       'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
-      'Press Apply, then open To get and At home, then press Undo on the notice.',
+      'Press Apply, then open Shopping and Inventory, then press Undo on the notice.',
     ],
     expected: [
       'A ticked box says "Add this store to your stores" with a tidy name in the box (SAFEWAY #123 reads Safeway); the line under the list says how many items will be marked bought at it this month. Nothing is added before Apply.',
-      'After Apply the store exists, the notice says "Added the store Safeway.", and To get lists the matched items under Safeway, ticked and priced.',
+      'After Apply the store exists, the notice says "Added the store Safeway.", and Shopping lists the matched items under Safeway, ticked and priced.',
       'Undo removes the store again and puts the items back and unticked.',
     ],
   },
@@ -1452,18 +1464,689 @@ export const SCENARIOS: readonly Scenario[] = [
       'Change the name in the box to something else, and press Apply. Press Undo.',
       'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
       'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
+      'With the receipt\'s store still not on the list and the box ticked, scan a receipt that has a line your list does not have. On that line press Add to list, read the Store choice, add the item, then untick "Add this store to your stores" and press Apply.',
     ],
     expected: [
       'The store is added under the name you typed, and Undo removes it.',
       'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
       'When the list already has the store there is no box and the items are marked bought at it as before.',
+      'The Store choice lists the new store (for example "Safeway (new)") after Anywhere and starts on it; you can still pick Anywhere or another store. Unticking the box moves the item to Anywhere, and no store is added.',
+    ],
+  },
+  {
+    id: 'S-112', feature: 'Price history', title: 'An Inventory item shows its last price and store, and the line opens its history', persona: 'grocery-shopper', brief: 'grocery-price-history',
+    steps: [
+      'On Shopping, tick an item bought (give it a price) under a store; do the same for another item. Open Inventory.',
+      'Find the ticked item. Under its name read the small underlined line, then tap it.',
+      'In the sheet read the average, the store it is most often bought at and the list of months, then press Close.',
+    ],
+    expected: [
+      'The line reads "Last: $X at Store, Mon" with the price you gave and this month; an item never bought has no line.',
+      'The sheet lists this month with its price and store; with two or more priced months the lowest is tagged Cheapest.',
+      'Close puts you back on Inventory with focus on the line you tapped.',
+    ],
+  },
+  {
+    id: 'S-113', feature: 'Price history', title: 'Packs at two prices, a purchase with no price, and an item never bought', persona: 'grocery-shopper', brief: 'grocery-price-history', edge: true,
+    steps: [
+      'On Shopping, tick an item bought and give it two pack prices (Add price twice, for example $2.50 and $3.00). Tick another item bought and leave its price empty.',
+      'On Inventory tap the Last: line of the pack item, then of the item with no price.',
+      'Find an item you have never ticked bought and look under its name.',
+    ],
+    expected: [
+      'The pack item reads "Last: $2.75 at ..." and its sheet row says "$2.50 + $3.00 (2 packs)".',
+      'The item with no price reads "Last: no price at ..." and its sheet row says "No price saved" and is left out of Cheapest and the average.',
+      'The item never bought has no line under it.',
+    ],
+  },
+  // ---- Program tab clarity ----
+  {
+    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the three sections', persona: 'new-user', brief: 'program-tab-clarity',
+    steps: [
+      'On a computer open the Program tab for the first time on this browser (clear the site data first if you have been here).',
+      'Read the guide card at the top, then the three section buttons and the card under them.',
+      'Press Open help, close it, then press Got it and reload the page.',
+    ],
+    expected: [
+      'The guide has four steps; step 4 has a Send me the link button. The sections read Programs, Exercises and Stretches, each with a one-line description. The card says "You are editing", Program A, an "On your Board" pill and "N exercises across 7 days", with the A | B switch and Create a program.',
+      'Open help shows the Help sheet. Got it hides the guide, and after the reload it stays hidden.',
+    ],
+  },
+  {
+    id: 'S-115', feature: 'Program tab clarity', title: 'Rows say what they hold; a superset sits in one box; Day at a glance folds', persona: 'superset-builder', brief: 'program-tab-clarity',
+    steps: [
+      'On a computer open Program, Day 1.',
+      'Look at a Main lift row, a superset and an either/or row, and the section labels.',
+      'Look at Day at a glance, then press See the full breakdown.',
+    ],
+    expected: [
+      'Each row shows the name, a pill (Main lift, Accessory or Optional), sets and weight and a coloured phase pill; a superset card shows a line per exercise; consecutive superset cards share one box labelled Superset. Optional, Regular and Supersets explain themselves; a section you named yourself shows as you typed it.',
+      'Day at a glance shows the exercise and set counts and one sentence; the phase, muscles and equipment breakdown appears only after the fold is opened. Edit and the more-actions button still open their sheets.',
+    ],
+  },
+  {
+    id: 'S-116', feature: 'Program tab clarity', title: 'Saved programs: save a copy, edit it, put it on the Board', persona: 'new-user', brief: 'program-tab-clarity',
+    steps: [
+      'On Program, scroll to Saved programs and read its text.',
+      'Save Program A as "Kept copy" with Save a copy, then switch the card to Program B.',
+      'Press Put on Board on Kept copy, read the button, press it again.',
+    ],
+    expected: [
+      'The panel is called Saved programs (not Program library) and says what saving and putting on the Board do.',
+      'The first press changes nothing and the button asks "Tap to replace Program B"; the second makes the card say Kept copy. Edit, Archive, Delete and Compare programs still work.',
+    ],
+  },
+  {
+    id: 'S-117', feature: 'Program tab clarity', title: 'On a phone the first exercise shows on the first screen and the compact top works', persona: 'new-user', brief: 'program-tab-clarity',
+    steps: [
+      'On a phone (or a 375 x 812 window) open Program with the guide dismissed.',
+      'Look at the top of the editor: + Add exercise and the two small buttons under it.',
+      'Press Add a day label, type a label and press Enter. Press Copy day..., choose another day and press Copy.',
+      'Press + New program.',
+    ],
+    expected: [
+      'The first exercise row is on the first screen. + Add exercise is full width, with Add a day label and Copy day... under it.',
+      'The label is saved and the field then stays; Copy shows the Copied notice. + New program opens the Create a program sheet and the pill hides while it is open.',
+    ],
+  },
+  {
+    id: 'S-118', feature: 'Program tab clarity', title: 'The pill hides while the rest timer runs; a long program name wraps', persona: 'new-user', brief: 'program-tab-clarity', edge: true,
+    steps: [
+      'On a phone start the Rest timer on the Board, then open Program.',
+      'Stop the timer.',
+      'Rename Program A to a 60 character name (Settings) and look at the header card.',
+    ],
+    expected: [
+      'While the timer bar shows, there is no + New program pill; after Stop it comes back.',
+      'The long name wraps inside the header card, the page does not scroll sideways and the A | B switch stays on screen.',
+    ],
+  },
+  {
+    id: 'S-119', feature: 'Program desktop layout', title: 'On a computer, Add exercise and Copy day sit in the day heading and the days are one row of tabs', persona: 'superset-builder', brief: 'program-tab-desktop-layout',
+    steps: [
+      'On a computer (a window at least 1280 px wide), open Program. Look at the day heading "Program A · Day 1" and the row under the header card.',
+      'Press Copy day…, pick another day and press Copy. Then press Undo on the notice.',
+      'Press a different day tab, then press + Add exercise.',
+    ],
+    expected: [
+      'One row of tabs Day 1 to Day 7 sits under the header card, each with its exercise count (or "rest"); there is no arrow or dropdown. The Day label field is under the heading, and Copy day… and + Add exercise are normal-height buttons at the right of the heading.',
+      'Copy day… opens the day picker under the Day label (the picker stays open for that day); Copy shows the Copied notice and Undo takes it back.',
+      'The day tab you pressed is highlighted and the heading names that day; + Add exercise opens the same add sheet as before.',
+    ],
+  },
+  {
+    id: 'S-120', feature: 'Program desktop layout', title: 'On a computer, Saved and Compare are their own tabs with addresses', persona: 'superset-builder', brief: 'program-tab-desktop-layout', edge: true,
+    steps: [
+      'On a computer open Program and read the tab strip. Scroll to the bottom of Programs.',
+      'Press Saved. Type a name in "Save Program A as" and press Save a copy; do it twice with different names; then type part of one name in the search box and clear it.',
+      'Press Compare, then press Back, then reload the page on the Compare tab.',
+    ],
+    expected: [
+      'The tabs read Programs, Exercises, Stretches, Saved, Compare, each with a short line under it. Programs ends after the day and its note: no Saved programs and no Compare strip below it.',
+      'Saved shows the Save a copy form on top, the search and sort, and one row per program with Put on Board, Edit, Archive and Delete; the search keeps only names that contain what you typed and says "No saved program matches" when none does. The address reads #/program/saved.',
+      'Compare opens full width with the two program pickers and no toggle, its address is #/program/compare, Back returns to Saved, and a reload stays on Compare.',
+    ],
+  },
+  {
+    id: 'S-121', feature: 'Program desktop layout', title: 'On a phone Program keeps its three tabs and day stepper, and Compare sits above Saved programs', persona: 'superset-builder', brief: 'program-tab-desktop-layout', edge: true,
+    steps: [
+      'On a phone (or a window under 700 px wide) open Program and read the tab strip and the day control.',
+      'Scroll to the end of Programs and read the order of the last two sections.',
+      'Type #/program/saved at the end of the address and open it.',
+    ],
+    expected: [
+      'The tabs read Programs, Exercises, Stretches. The A | B switch is two equal halves. The day control is the arrows and the "Day N of 7" dropdown, as before; there are no Day tabs and + Add exercise is full width.',
+      'Compare programs (a collapsed strip) comes before Saved programs.',
+      'The address opens Programs, since a phone has no Saved tab.',
+    ],
+  },
+  // ---- Groceries views ----
+  {
+    id: 'S-122', feature: 'Groceries views', title: 'A tick on Shopping moves the item to Bought, and the box on Bought puts it back', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory',
+    steps: [
+      'Sign in as Grocery shopper and open Groceries. Read the four views and the counts beside Shopping and Bought.',
+      'Tick the box of one item on Shopping. Look at the counts and the notice, then open Bought.',
+      'On Bought, tick the same item\'s box. Then reload the page.',
+    ],
+    expected: [
+      'The views read Shopping, Bought, Inventory, Spending. The address is #/daily/grocery/shopping.',
+      'The item leaves Shopping, the Shopping count goes down by one and the Bought count up by one, and a notice says "Bought <item>." with Undo. Bought lists it under its store.',
+      'The item is back on Shopping and the counts return. After the reload the same view is open (the address names it).',
+    ],
+  },
+  {
+    id: 'S-123', feature: 'Groceries views', title: 'On Bought, select all in a store, change who shares, and Undo', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory',
+    steps: [
+      'Tick two Costco items on Shopping, then open Bought.',
+      'Press Select items, then "Select all in Costco", then "Change who shares". In the sheet tick Sam only and press Apply.',
+      'Look at the two rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
+    ],
+    expected: [
+      'The bar says "2 selected" and nothing changes until Apply.',
+      'Both rows say "Me +1" and the notice reads "Shared 2 items: Me +1."',
+      'Undo puts both rows back to their earlier split.',
+    ],
+  },
+  {
+    id: 'S-124', feature: 'Groceries views', title: 'The old To get and At home addresses open Shopping and Inventory', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory', edge: true,
+    steps: [
+      'With Groceries open, replace the end of the address with #/daily/grocery/home and press Enter.',
+      'Replace it with #/daily/grocery/get and press Enter.',
+    ],
+    expected: [
+      'The first address opens Inventory (the list you tick Have on).',
+      'The second opens Shopping.',
+    ],
+  },
+  {
+    id: 'S-125', feature: 'Groceries views', title: 'On a phone at large text the four views wrap and nothing scrolls sideways', persona: 'grocery-shopper', brief: 'groceries-shopping-bought-inventory', device: true, edge: true,
+    steps: [
+      'On a phone set the text size to its largest and open Groceries.',
+      'Look at the four views, then open Inventory and look at the Sharing groups and Edit buttons.',
+    ],
+    expected: [
+      'The four views wrap onto more than one row; every one can be tapped and the page does not scroll sideways.',
+      'Sharing groups and Edit wrap under each other instead of running off the edge.',
+    ],
+  },
+  {
+    id: 'S-126', feature: 'Receipt scan', title: 'Apply the receipt with one wide button, and Close never applies', persona: 'grocery-shopper', brief: 'receipt-apply-footer', device: true,
+    steps: [
+      'On a phone as an admin, scan a BJ\'s receipt whose lines add up to its total. Read the bar at the bottom and the top corner of the sheet.',
+      'Press Close in the top corner. Scan again, scroll the sheet up and down with your thumb near the bottom edge, then press the wide Apply button once.',
+    ],
+    expected: [
+      'The top corner has Close and the bottom bar has one wide button that says what it will do, such as "Apply 5 items, $40.69", with a line above it counting the items and tax; there is no Cancel beside it.',
+      'Close changes nothing on the list; scrolling never applies anything; one tap on Apply applies, and the Undo notice stays for 10 seconds.',
+    ],
+  },
+  {
+    id: 'S-127', feature: 'Receipt scan', title: 'A receipt that does not add up needs a second tap to apply', persona: 'grocery-shopper', brief: 'receipt-apply-footer', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt with the bottom cut off so a line is missing and the Total check says the lines differ.',
+      'Press Apply anyway once, then tap somewhere else on the sheet. Press Apply anyway, then Tap again to apply anyway.',
+    ],
+    expected: [
+      'The summary line says the lines and tax do not match the receipt total, and the button reads "Apply anyway".',
+      'The first tap only changes the button to "Tap again to apply anyway" and applies nothing; tapping elsewhere puts it back; the second tap applies and Undo is offered.',
+    ],
+  },
+  {
+    id: 'S-128', feature: 'Receipt scan', title: 'The last receipt row clears the bar and the row links are easy to hit', persona: 'grocery-shopper', brief: 'receipt-apply-footer', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a long receipt with at least one line that is not on your list, and scroll to the end of the sheet.',
+      'Tap Add to list on that line, add the item, then tap Remove on its row.',
+    ],
+    expected: [
+      'The last row ends above the bottom bar with clear space, and the bar stays above the phone\'s bottom edge.',
+      'Add to list and Remove are text links with room around them; each takes one tap and neither lands on the bar.',
+    ],
+  },
+  {
+    id: 'S-129', feature: 'Groceries views', title: 'Store chips filter Shopping, and All is one column with no empty blocks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
+    steps: [
+      'Sign in as Grocery shopper and open Groceries, Shopping. Read the chips above the list (All and one per store, each with a count).',
+      'Press a store chip, then look at the list. Press All.',
+      'Make the window about 1900 px wide, then about 390 px wide, and look at the list each time.',
+    ],
+    expected: [
+      'The chips read All n, then each store with how many items are still to get.',
+      'A store chip shows only that store, with taller rows and no split tags; All shows every store, one under the other.',
+      'At both widths the stores are in one column with no empty block beside a short store. At 1100 px and wider a rail on the right shows the summary and a Stores list that also picks the chip.',
+    ],
+  },
+  {
+    id: 'S-130', feature: 'Groceries views', title: 'Who owes who is the first row on Bought and is gone from Shopping', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
+    steps: [
+      'Tick two Costco items on Shopping. Look for Who owes who on Shopping.',
+      'Open Bought and look at the top of the page. Press the Who owes who row.',
+    ],
+    expected: [
+      'Shopping has no Who owes who row and no money line over the list.',
+      'Bought starts with a closed Who owes who row that says what is outstanding; pressing it opens the split card in place.',
+    ],
+  },
+  {
+    id: 'S-131', feature: 'Groceries views', title: 'Row details start open on a computer and closed on a phone, and the More menu choice sticks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', device: true, edge: true,
+    steps: [
+      'On a computer open Shopping and look at the rows. Then open the same page on a phone.',
+      'On the phone press the ... menu and choose "Show details on all rows". Reload the page.',
+    ],
+    expected: [
+      'On the computer every row shows its count, price, Move to and Shared with. On the phone every row is closed.',
+      'After the choice every row on the phone is open, and it is still open after the reload (the choice is kept on that phone only).',
+    ],
+  },
+  {
+    id: 'S-132', feature: 'Groceries views', title: 'A ticked item with no price offers Add price, and Bought shows an Add price chip', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', edge: true,
+    steps: [
+      'On Shopping tick an item that has no price (its count says "no price").',
+      'Press Add price in the notice. Then look at the item on Bought.',
+    ],
+    expected: [
+      'The notice reads "Bought <item>. It has no price yet." with Undo, Add price and Dismiss.',
+      'Add price opens Bought with that item\'s price field open. A bought item with no price shows an Add price chip in place of its count and price.',
+    ],
+  },
+  {
+    id: 'S-133', feature: 'Receipt scan', title: 'Rename a matched receipt line and apply', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt. Find a line that matched an item and look at its name field and the area under it.',
+      'Type a different name in that line’s name field, leave the field, and look under it. Leave Remember this name ticked and press Apply.',
+    ],
+    expected: [
+      'Every line has a name field. A match you have not touched shows no Remember tick.',
+      'Remember this name appears once the name changed, ticked. After Apply the item has the new name and the notice says "Remembered 1 receipt name."; Undo puts the old name back.',
+    ],
+  },
+  {
+    id: 'S-134', feature: 'Receipt scan', title: 'Scan again and see the saved name matched', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt that has the same printed line text as the one you renamed.',
+      'Look at that line’s item and the chip beside its name.',
+    ],
+    expected: [
+      'The line is already set to your item, with the chip "Matched your earlier rename", whatever the scan guessed.',
+      'Changing the item on that line removes the chip.',
+    ],
+  },
+  {
+    id: 'S-135', feature: 'Receipt scan', title: 'Name a line that is not on your list', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt with a line that matched nothing. Type a name in its name field and leave the field.',
+      'Press Apply, then scan the same text again.',
+    ],
+    expected: [
+      'The line shows New with that name and a Remember tick; Apply creates the item bought with the receipt price.',
+      'The second scan sets that line to the new item with the "Matched your earlier rename" chip.',
+    ],
+  },
+  {
+    id: 'S-136', feature: 'Receipt scan', title: 'A receipt text saved for another item moves', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt, pick an item that already holds a receipt name on a line with that text, choose a different item for the line, and read under the name field.',
+      'Press Apply, then open the first item’s edit row in Inventory.',
+    ],
+    expected: [
+      'A note says the text is saved for the first item and that remembering it moves it here.',
+      'The text is now listed under the new item and no longer under the first.',
+    ],
+  },
+  {
+    id: 'S-137', feature: 'Receipt scan', title: 'Forget a receipt name from an item and Undo', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
+    steps: [
+      'On a phone, in Inventory press Edit and open an item that has receipt names. Press Forget beside one.',
+      'Press Undo in the Removed notice, then scan a receipt with that text.',
+    ],
+    expected: [
+      'The name is gone from the list and a Removed notice with Undo appears; the Forget buttons are easy to hit.',
+      'The name is back after Undo. After Forget (without Undo) a scan with that text no longer matches.',
+    ],
+  },
+  {
+    id: 'S-138', feature: 'Groceries views', title: 'Spending history is inside Bought, and the old Spending address opens it', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    steps: [
+      'Open Groceries. Look at the three views, then open Bought.',
+      'Press Spending history, then reload the page. Then open the address ending /daily/grocery/spend.',
+    ],
+    expected: [
+      'The views read Shopping, Bought and Inventory. Bought has This month and Spending history under its title.',
+      'Spending history shows the chart, the 6 mo and 12 mo buttons and the text lines. The reload and the old address both open it.',
+    ],
+  },
+  {
+    id: 'S-139', feature: 'Groceries views', title: 'On a phone Shopping has Scan receipt, a search box and Sort, Select items, More in one row', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', device: true,
+    steps: [
+      'On a phone open Shopping.',
+      'Look at the buttons under the month row, then press More.',
+    ],
+    expected: [
+      'Scan receipt and the search box are full width. Sort, Select items and More are three equal buttons in one row.',
+      'More holds Pick from photos, Saved receipts, Show details on all rows and Skip the N left. A computer keeps its own toolbar.',
+    ],
+  },
+  {
+    id: 'S-140', feature: 'Groceries views', title: 'Quick add puts an item on Shopping with an honest notice, and Undo works', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add',
+    steps: [
+      'On Shopping press + Add one-time item to a store, type a name and press Enter.',
+      'Add another item and press Undo in the notice.',
+    ],
+    expected: [
+      'The item shows under that store and in Inventory. The notice says it is on this month\'s list and stays in Inventory, and has no Make it every month button.',
+      'Undo takes the second item away.',
+    ],
+  },
+  {
+    id: 'S-141', feature: 'Groceries views', title: 'Quick add refuses a name already in that store and an empty name', persona: 'grocery-shopper', brief: 'groceries-spending-buttons-quick-add', edge: true,
+    steps: [
+      'On Shopping press + Add one-time item to a store and press Enter with nothing typed.',
+      'Type the name of an item already in that store and press Enter.',
+    ],
+    expected: [
+      'A message says to give the item a name, and the field stays open.',
+      'A message says the item is already in this store\'s list, and nothing is added.',
+    ],
+  },
+  {
+    id: 'S-142', feature: 'Groceries views', title: 'Bought has one Who owes who row and no money line under the month switcher', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists',
+    steps: [
+      'Open Groceries, then Bought (This month). Look at what sits above the store sections, then press the Who owes who row.',
+    ],
+    expected: [
+      'Who owes who is the first row, closed, above the month switcher. There is no line reading Paid, Your share and Owed to you under the switcher. Opening the row shows Paid, Your share and Still owed to you.',
+    ],
+  },
+  {
+    id: 'S-143', feature: 'Groceries views', title: 'Store chips filter Bought and Inventory, one column with no empty block', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists',
+    steps: [
+      'On Bought press one store chip, then All. Press the Spending history switch and back to This month.',
+      'Open Inventory. Press a store chip, tick a Have box inside it, then press Edit.',
+    ],
+    expected: [
+      'A chip shows only that store; All shows every store in one column with no gap beside a short store. Spending history opens and This month comes back.',
+      'Each store header reads "n items · m you have" and the count goes up with the tick. Edit shows no chips and keeps its columns; Done brings the chips back.',
+    ],
+  },
+  {
+    id: 'S-144', feature: 'Groceries views', title: 'On a wide screen the right rail lists the stores and picks the chip on Bought and Inventory', persona: 'grocery-shopper', brief: 'groceries-bought-inventory-lists', edge: true,
+    steps: [
+      'On a computer at 1280 px or wider open Bought, then Inventory. Press a store in the rail on each, then make the window narrower than 1100 px.',
+    ],
+    expected: [
+      'The rail lists the stores with counts; on Inventory it also says "m of n items this month". Pressing a store picks that chip. Under 1100 px there is no rail and the chips still work.',
+    ],
+  },
+  {
+    id: 'S-145', feature: 'Groceries views', title: 'Edit on Inventory shows store chips and one list; a chip shows one store; stores fold', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list',
+    steps: [
+      'Open Inventory with two or more stores and press Edit. Press a store chip, then Done, then Edit again. Press a store\'s name to fold it, then press it again.',
+    ],
+    expected: [
+      'Chips with counts show above one list of stores (no columns). A chip shows one store and stays across Done and Edit. A folded store shows only its name and count; opening it brings the rows back. There is no Sort in Edit mode.',
+    ],
+  },
+  {
+    id: 'S-146', feature: 'Groceries views', title: 'Search in Edit mode filters by name and opens folded stores', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list',
+    steps: [
+      'In Edit mode fold a store, then type part of one of its item names in the search box. Then type a name that matches nothing.',
+    ],
+    expected: [
+      'The folded store opens and shows the matching row. The second search says "No items match" and the Add item, More and Done buttons stay at the bottom.',
+    ],
+  },
+  {
+    id: 'S-147', feature: 'Groceries views', title: 'Moving an item to another store under a chip switches the chip to All', persona: 'grocery-shopper', brief: 'groceries-inventory-edit-list', edge: true,
+    steps: [
+      'In Edit mode press one store\'s chip, open an item there and change its store to another one. On a computer 1100 px or wider look at the right side.',
+    ],
+    expected: [
+      'The chip switches to All, the cursor stays on the item\'s Store box, and the item shows under its new store. On a wide screen the Stores panel sits in the right rail; on a narrower one it sits under the list.',
+    ],
+  },
+  // ---- Food type ----
+  {
+    id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new ready-made food', persona: 'diet-fresh', brief: 'food-type-and-migration',
+    steps: [
+      'Open Recipes and press + New, then Add a food by hand. Look at the Type buttons, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
+      'Open the food and press Edit.',
+    ],
+    expected: [
+      'Type starts on Ready to eat. The food saves with no banner about types.',
+      'The form opens with Drink picked.',
+    ],
+  },
+  {
+    id: 'S-149', feature: 'Food type', title: 'Review types: suggestions, one change, Looks right, Undo', persona: 'recipe-collector', brief: 'food-type-and-migration',
+    steps: [
+      'Make three ready-made foods without a Type (an older account that has them; or on a test account add them in an older build): Whole milk, Eggs large, Frozen lasagna. Open Recipes.',
+      'Read the banner and press Review types. Change Frozen lasagna to Drink, then press Looks right.',
+      'Press Undo on the notice.',
+    ],
+    expected: [
+      'The banner says "3 foods need a type." The review page lists each food with its suggestion: Whole milk Drink, Eggs large Ingredient, Frozen lasagna Ready to eat.',
+      'The list shows "Food types saved." and the banner is gone.',
+      'The banner returns with "3 foods need a type."; Back from the review page returns to the list, and a reload on it shows the list.',
+    ],
+  },
+  {
+    id: 'S-150', feature: 'Food type', title: 'Nothing to review, and a food edited later', persona: 'diet-fresh', brief: 'food-type-and-migration', edge: true,
+    steps: [
+      'With no ready-made foods open Recipes. Then add one food and, from its Edit form, change its Type from Ready to eat to Ingredient and save.',
+    ],
+    expected: [
+      'There is no banner and no Review types button. The edited food keeps Ingredient when it is opened again.',
+    ],
+  },
+  {
+    id: 'S-151', feature: 'Recipes find', title: 'Type tabs: counts, search inside a tab, rows tagged', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'Open Recipes. Read the four tabs (All, Foods, Meals, Drinks) and their counts, then press Foods, Meals and Drinks in turn.',
+      'Press All, type a word from one recipe name in the search box, then press each tab.',
+      'Press Filters, pick a category chip, and read the counts again.',
+    ],
+    expected: [
+      'Each count is the number of rows that tab shows, and All is the sum of the other three. Every row carries a small tag: Meal, Ingredient, Ready to eat or Drink.',
+      'The search narrows every tab, and the counts follow it.',
+      'The counts follow the category too. A tab with nothing in it says what to do instead of showing a blank list.',
+    ],
+  },
+  {
+    id: 'S-152', feature: 'Recipes find', title: 'List beside its detail on a wide screen, a page on a phone', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'On a desktop browser 1280 px wide or more open Recipes and press three different rows.',
+      'Narrow the window to a phone width (or open the app on a phone) and press a row, then press Back.',
+    ],
+    expected: [
+      'The list stays on the left and the pressed recipe shows on the right, in place, with no Back to recipes bar.',
+      'The recipe opens as its own page and Back returns to the list.',
+    ],
+  },
+  {
+    id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
+    steps: [
+      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
+      'Press the star on two rows, reload the page, then press a starred chip above the list.',
+      'Unstar both.',
+    ],
+    expected: [
+      'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
+      'The stars are still on after the reload. The chips above the list show the starred recipes first and open the one pressed.',
+      'With no stars and nothing logged or opened the row is not shown.',
+    ],
+  },
+  // ---- Nutrition quick log ----
+  {
+    id: 'S-154', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',
+    steps: [
+      'Open a recipe that has calories and protein, press Ate this once, then open Daily, Nutrition and look under Quick add. Press the food in Recent and favorites, press Less once, then Log it, and press Undo.',
+    ],
+    expected: [
+      'Recent and favorites lists the food. The sheet opens at the usual amount (1 portion if none is set), Less lowers it by a half and the numbers change with it. Log it says Logged ... to today with an Undo, and Undo removes only that entry.',
+    ],
+  },
+  {
+    id: 'S-155', feature: 'Nutrition quick log', title: 'Scan a food from Quick add: pick its Type and it is saved and logged once', persona: 'diet-fresh', brief: 'nutrition-quick-log',
+    steps: [
+      'On the Nutrition tab press Scan a food, scan a packaged product (or use the photo of a barcode), press Drink, set the grams and press Save and log it. Then open Recipes.',
+    ],
+    expected: [
+      'The food shows once in the day\'s list and once in Recipes as a Drink, and one entry is logged however many times Save and log it was tapped. Scanning on a phone needs a camera: try it on a real phone.',
+    ],
+  },
+  {
+    id: 'S-156', feature: 'Nutrition quick log', title: 'The sheet refuses a day ahead and a day too far back, and a full day says so', persona: 'recipe-collector', brief: 'nutrition-quick-log', edge: true,
+    steps: [
+      'Open the portion sheet from a Recipes row (the Log button), set Day to tomorrow and press Log it, then set a day more than 400 days back and press Log it. Then fill one day with 20 entries and open the sheet again.',
+    ],
+    expected: [
+      'A day ahead says Pick today or an earlier day, and a day too far back says entries are kept for 400 days. A day with 20 entries says that is the limit and logs nothing more.',
+    ],
+  },
+  {
+    id: 'S-157', feature: 'Meals from foods', title: 'Build a cereal bowl from two foods and see its numbers add up', persona: 'recipe-collector', brief: 'meals-from-foods',
+    steps: [
+      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Write a recipe, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
+    ],
+    expected: [
+      'While you build it the form says Per serving, from the parts: 375 kcal and 15.5 g protein, with 2 of 2 ingredients counted. After Save the recipe\'s page says the same, lists 1.5 portions Oat cereal and 1 portion Whole milk, and Log offers those numbers.',
+    ],
+  },
+  {
+    id: 'S-158', feature: 'Meals from foods', title: 'Build a shake from foods, then change one food and the shake follows', persona: 'recipe-collector', brief: 'meals-from-foods',
+    steps: [
+      'Make a Kefir drink, a Banana food and a Whey food with their calories and protein, then a recipe Shake that links all three with + Food or meal. Open Whey, press Edit, raise its calories and Save, then open Shake again.',
+    ],
+    expected: [
+      'The shake\'s numbers per serving include the new Whey calories without editing the shake, and Log opens at the new numbers. A day already logged keeps the numbers it had.',
+    ],
+  },
+  {
+    id: 'S-159', feature: 'Meals from foods', title: 'A meal inside a meal rolls up through both, and a loop is refused', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Put the Cereal bowl into a new recipe Lunch box with + Food or meal (it is listed under Meals), and check the numbers. Then edit Cereal bowl, press + Food or meal and pick Lunch box.',
+    ],
+    expected: [
+      'Lunch box shows the bowl\'s numbers through both levels. Picking Lunch box inside Cereal bowl says it already contains this meal, so that would loop, and adds nothing. A chain more than 3 levels deep says meals can hold other meals up to 3 levels deep.',
+    ],
+  },
+  {
+    id: 'S-160', feature: 'Meals from foods', title: 'Use my own numbers keeps typed numbers; turning it off adopts the roll-up', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Edit Cereal bowl, tick Use my own numbers, press Edit under Nutrition per serving, type 700 calories and Save. Open the page, then edit again and untick Use my own numbers and Save.',
+    ],
+    expected: [
+      'With the switch on the page says Your own numbers are used and shows what the parts add up to as a hint; 700 stays. With it off the page says Per serving, from the parts and the numbers come from the foods again.',
+    ],
+  },
+  {
+    id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
+    steps: [
+      'Rename Whole milk to Milk and open Cereal bowl. Then add a food with no numbers by hand (just a name), link it to the bowl, and look at the counted line. Finally delete Milk from Recipes and open the bowl.',
+    ],
+    expected: [
+      'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
+    ],
+  },
+  // ---- Grocery budget ----
+  {
+    id: 'S-162', feature: 'Grocery budget', title: 'Set a monthly budget and read spent of budget', persona: 'grocery-shopper', brief: 'grocery-budget',
+    steps: [
+      'Open Groceries, Shopping. Under the summary press Set a budget.',
+      'Type 400 and press Save. Then open Bought.',
+    ],
+    expected: [
+      'The card reads "Budget", then "<this month\'s spent> of $400.00" and "<amount> left", with a bar filled to the share spent and an Edit button.',
+      'Bought shows the same card with the same figures (spent includes tax, as the summary does).',
+    ],
+  },
+  {
+    id: 'S-163', feature: 'Grocery budget', title: 'The bar turns amber near the budget and red when over', persona: 'grocery-shopper', brief: 'grocery-budget',
+    steps: [
+      'Press Edit and set the budget to about 1.1 times what this month has spent, so spent is over 80% of it. Save.',
+      'Press Edit again and set a budget a little below what has been spent. Save.',
+    ],
+    expected: [
+      'From 80% of the budget the bar and card turn amber and the text still says how much is left.',
+      'When spent is above the budget the bar is full and red and the text reads "<amount> over budget".',
+    ],
+  },
+  {
+    id: 'S-164', feature: 'Grocery budget', title: 'Edit the budget, then remove it', persona: 'grocery-shopper', brief: 'grocery-budget',
+    steps: [
+      'Press Edit, change the amount to 600 and press Save.',
+      'Press Edit again, press Remove, then reload the page.',
+    ],
+    expected: [
+      'The card shows "of $600.00" and the bar shrinks to match.',
+      'The card goes back to Monthly budget with Set a budget, and stays that way after the reload. The budget is kept in your settings, so it also shows on another device you are signed in on.',
+    ],
+  },
+  {
+    id: 'S-165', feature: 'Grocery budget', title: 'An invalid amount is refused', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    steps: [
+      'Press Set a budget (or Edit), type "abc", and press Save.',
+      'Clear the box, press Save, then type 0 and press Save.',
+      'Type 425.50 and press Save.',
+    ],
+    expected: [
+      'Each bad try keeps the box open and says "Enter an amount in dollars, like 400 or 425.50."; nothing is saved.',
+      '425.50 saves and the card reads "of $425.50".',
+    ],
+  },
+  {
+    id: 'S-166', feature: 'Grocery budget', title: 'A list that costs more than the budget says what is left to spend', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    steps: [
+      'Set the budget to a small amount, such as 10, so this month\'s priced to-get items add up to more than it.',
+      'Look at the card on Shopping.',
+    ],
+    expected: [
+      'A note under the bar, in amber, reads "You still have <amount> left in your budget to spend." and the "<amount> left" on the line above is hidden, so the figure shows once.',
+      'Raising the budget above the plan removes the note.',
+    ],
+  },
+  {
+    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    steps: [
+      'Open Groceries on a computer and look at the Shopping and Bought buttons.',
+    ],
+    expected: [
+      'The two buttons show only their names, with no numbers, and sit centered on a row of their own.',
+    ],
+  },
+  {
+    id: 'S-168', feature: 'Groceries views', title: 'A quick-added item leaves Inventory after it is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items',
+    steps: [
+      'On Shopping press + Add one-time item to a store, type Milk and press Enter. The notice says it is a one-time item.',
+      'Tick Milk on Shopping. Open Inventory, then Bought.',
+    ],
+    expected: [
+      'The notice says Milk leaves Inventory and next month\'s list after you buy it.',
+      'Milk is not in Inventory any more, and it shows on Bought for this month.',
+    ],
+  },
+  {
+    id: 'S-169', feature: 'Groceries views', title: 'The One-time item box in Edit makes any item leave after it is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items',
+    steps: [
+      'Open Inventory, press Edit, open an item and tick One-time item.',
+      'Press Done, tick that item on Shopping, then open Inventory.',
+    ],
+    expected: [
+      'The box stays ticked after you reopen the row.',
+      'The item is gone from Inventory and shows on Bought.',
+    ],
+  },
+  {
+    id: 'S-170', feature: 'Groceries views', title: 'Unticking a bought one-time item brings it back', persona: 'grocery-shopper', brief: 'quickadd-one-time-items', edge: true,
+    steps: [
+      'Quick add Milk and tick it on Shopping.',
+      'Open Bought and untick Milk, then open Inventory.',
+    ],
+    expected: [
+      'Milk goes back to Shopping.',
+      'Milk is in Inventory again, with its one-time box still ticked.',
+    ],
+  },
+  {
+    id: 'S-171', feature: 'Groceries views', title: 'The same name can be quick-added again after the first one is bought', persona: 'grocery-shopper', brief: 'quickadd-one-time-items', edge: true,
+    steps: [
+      'Quick add Milk, tick it, then quick add Milk in the same store again.',
+    ],
+    expected: [
+      'The second Milk is added with no "already in this store\'s list" message and shows on Shopping.',
+    ],
+  },
+  {
+    id: 'S-172', feature: 'Receipt reconcile', title: 'A second receipt at the same store does not list what the first receipt bought', persona: 'grocery-shopper', brief: 'receipt-earlier-items', device: true,
+    steps: [
+      'On a phone, tick Milk by hand on Shopping. Scan a receipt from a store, press Apply. Scan a second receipt from the same store with different items.',
+      'Read the text under the lines and open "Review these" if it is there.',
+    ],
+    expected: [
+      'The second sheet says how many items from an earlier receipt are not listed, and lists only Milk (ticked by hand) under "Already bought, not on this receipt", folded until you press Review.',
+      'It does not say "Is this the right one?" because some of this receipt\'s lines match your list.',
     ],
   },
 ];
-
-
-
-
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
 /** The scenarios a persona runs (retired ones left out), in id order. */
