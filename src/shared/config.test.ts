@@ -46,3 +46,16 @@ describe('normConfig hideKg', () => {
     expect(normConfigDoc({ hideKg: true })?.hideKg).toBe(true);
   });
 });
+
+describe('profile (brief recommendations-by-age-sex)', () => {
+  it('keeps a valid birth year and sex, and drops what is not usable', () => {
+    expect(normConfig({ profile: { birthYear: 1985, sex: 'female', junk: 1 } }).profile).toEqual({ birthYear: 1985, sex: 'female' });
+    expect(normConfig({ profile: { birthYear: 1985.5, sex: 'other' } }).profile).toBeUndefined();
+    expect(normConfig({ profile: { birthYear: 1800 } }).profile).toBeUndefined();
+    expect(normConfig({ profile: { birthYear: 3000, sex: 'male' } }).profile).toEqual({ sex: 'male' });
+    expect(normConfig({ profile: 'x' }).profile).toBeUndefined();
+  });
+  it('is part of the stored config document', () => {
+    expect(normConfigDoc({ profile: { birthYear: 1985, sex: 'male' } })).toEqual({ profile: { birthYear: 1985, sex: 'male' } });
+  });
+});

@@ -2,6 +2,8 @@
    (shared/validate) returns one of these; anything outside them is cleaned away. Dates are 'YYYY-MM-DD' strings; `updatedAt` is an ISO date-time. */
 
 import type { IssueStatus } from './shared/issues.ts';
+import type { Micro } from './shared/foodMicro.ts';
+import type { Profile } from './shared/profile.ts';
 import type { NutrientKey, NutrientUnit } from './shared/nutrientKeys.ts';
 export type PhaseKey = 'strength' | 'iso' | 'hyp' | 'exp' | 'mob';
 export type SlotType = 'single' | 'superset' | 'either';
@@ -148,6 +150,8 @@ export interface Cfg extends ProgramCfg {
   groceryBudget?: number;
   /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
   diet?: DietCfg;
+  /** Optional birth year and sex, used only to pick the recommended amounts in the Totals sheet (brief recommendations-by-age-sex). */
+  profile?: Profile;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   /** Equipment the user added: id (`x:` and a slug) to its name. */
   equipment?: Record<string, string>;
@@ -340,7 +344,7 @@ export type RecipeUse = 'meal' | 'ingredient' | 'ready' | 'drink';
 /** What a recipe covers on a plate (brief week-board): derived from its category and numbers until the person sets it. */
 export type PlateMark = 'protein' | 'carb' | 'veg';
 /** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; /** Vitamins and minerals per serving (brief recipes-vitamins-minerals), beside kcal, p, c and f. */ micro?: Micro }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
@@ -357,7 +361,7 @@ export interface PlanItem { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }
 /** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
 export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]> }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
-export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number }
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

@@ -1,5 +1,7 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { scaleMicro, withMicro } from '../shared/foodMicro.js';
+import type { Micro } from '../shared/foodMicro.js';
 import { isEatable } from './recipeUses.js';
 
 /* ---------- Less typing for a meal (brief diet-auto-macros): calories from macros, foods you ate before, a portion of one. Pure; the form and the log call these. ---------- */
@@ -11,7 +13,7 @@ export function kcalFromMacros(p: number | null, c: number | null, f: number | n
   return cleanKcal(4 * p + 4 * c + 9 * f);
 }
 
-export interface Food { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
+export interface Food { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }
 
 /** Foods to offer for `query` (case-blind, a name that starts with it first, then one that contains it): what you logged before (one per name, newest day first, a recipe you logged counts under its recipe) and your own recipes that have calories and protein. An empty query offers nothing. */
 export function findFoods(entries: DietEntry[], recipes: Recipe[], query: string, limit = 6): Food[] {
@@ -19,12 +21,12 @@ export function findFoods(entries: DietEntry[], recipes: Recipe[], query: string
   if (!q) return [];
   const seen = new Set<string>(), all: Food[] = [];
   const add = (x: Food) => { const k = x.n.toLowerCase(); if (!seen.has(k)) { seen.add(k); all.push(x); } };
-  recipes.filter(r => r.kcal !== undefined && r.p !== undefined && !r.from?.startsWith('c:') && isEatable(r)).forEach(r => add({ n: r.n, kcal: r.kcal!, p: r.p!, ...(r.c !== undefined ? { c: r.c } : {}), ...(r.f !== undefined ? { f: r.f } : {}), from: r.id }));
+  recipes.filter(r => r.kcal !== undefined && r.p !== undefined && !r.from?.startsWith('c:') && isEatable(r)).forEach(r => add({ n: r.n, kcal: r.kcal!, p: r.p!, ...(r.c !== undefined ? { c: r.c } : {}), ...(r.f !== undefined ? { f: r.f } : {}), from: r.id, ...withMicro(r.micro) }));
   const byDay = [...entries].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)); // a stable sort: the list's own order breaks ties inside one day, and a synced list need not be in log order
   for (let i = byDay.length - 1; i >= 0; i--) {
     const e = byDay[i]!;
     if (e.from) continue; // logged from a recipe: the recipe itself is offered
-    add({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}) });
+    add({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}), ...withMicro(e.micro) });
   }
   const starts = all.filter(x => x.n.toLowerCase().startsWith(q)), has = all.filter(x => !x.n.toLowerCase().startsWith(q) && x.n.toLowerCase().includes(q));
   return [...starts, ...has].slice(0, limit);
@@ -36,5 +38,5 @@ export function scaleFood(food: Food, portion: number): Food | null {
   const kcal = cleanKcal(food.kcal * portion), p = cleanProtein(food.p * portion);
   if (kcal === null || p === null) return null;
   const c = food.c === undefined ? null : cleanGrams(food.c * portion), f = food.f === undefined ? null : cleanGrams(food.f * portion);
-  return { n: food.n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(food.from ? { from: food.from } : {}) };
+  return { n: food.n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(food.from ? { from: food.from } : {}), ...withMicro(scaleMicro(food.micro, portion)) };
 }

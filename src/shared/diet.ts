@@ -1,5 +1,6 @@
 import type { DietCfg, DietEntry, PlanItem, PlanSlot, SavedItem, SavedMeal } from '../types.ts';
 import { addDays, parseDate, ymd } from './dates.js';
+import { cleanMicro } from './foodMicro.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
 import { validDate } from './validate.js';
@@ -120,7 +121,8 @@ export function normDietEntry(x: unknown): DietEntry | null {
   if (!id || !n || !validDate(o.d) || kcal === null || p === null) return null;
   const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f); // optional: an unusable one is left out
   const t = cleanHour(o.t); // optional too
-  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}) };
+  const micro = cleanMicro(o.micro); // vitamins and minerals as eaten; unusable keys are dropped, none left means no field
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */

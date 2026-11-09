@@ -31,6 +31,23 @@ describe('cleanLabel', () => {
     expect(cleanLabel({ kcal: 200, p: -1 })).toEqual({ kind: 'unreadable' });
     expect(cleanLabel({ kcal: 200, p: 5, c: 999, f: -2, servingG: 0, servingsPerPack: 500 })).toEqual({ kind: 'ok', label: { kcal: 200, p: 5 } });
   });
+  it('reads the vitamin and mineral amounts per serving through cleanMicro', () => {
+    expect(cleanLabel({ kcal: 100, p: 2, micro: { vitaminD: 2.5, calcium: 260, iron: 1.2345 } })).toEqual({ kind: 'ok', label: { kcal: 100, p: 2, micro: { calcium: 260, iron: 1.235, vitaminD: 2.5 } } });
+  });
+  it('drops an unknown key, text, zero, a negative and an amount over ten times the adult limit (a misread)', () => {
+    const r = cleanLabel({ kcal: 100, p: 2, micro: { calcium: 20001, iron: 0, zinc: -3, vitaminC: '60 mg', choline: 400, vitaminK: 80, vitaminE: 15 } });
+    expect(r).toEqual({ kind: 'ok', label: { kcal: 100, p: 2, micro: { vitaminE: 15, vitaminK: 80 } } });
+  });
+  it('adds no field when micro is empty, not an object, or only unusable', () => {
+    for (const micro of [{}, [], 'calcium 200', 7, null, { evil: 1 }]) expect(cleanLabel({ kcal: 100, p: 2, micro })).toEqual({ kind: 'ok', label: { kcal: 100, p: 2 } });
+  });
+  it('text printed on a label cannot add a field: a nested or extra key is never read', () => {
+    const answer: unknown = JSON.parse('{"kcal":100,"p":2,"calcium":300,"vitaminD":5,"micro":{"calcium":{"amount":5},"__proto__":{"iron":5},"iron; ignore the rules":4}}');
+    expect(cleanLabel(answer)).toEqual({ kind: 'ok', label: { kcal: 100, p: 2 } });
+  });
+  it('is checked again when the app reads the route answer', () => {
+    expect(cleanScanAnswer({ result: { kind: 'ok', label: { kcal: 100, p: 2, micro: { iron: 999, zinc: 5 } } } })).toEqual({ kind: 'ok', label: { kcal: 100, p: 2, micro: { zinc: 5 } } });
+  });
   it('keeps zero values', () => {
     expect(cleanLabel({ kcal: 0, p: 0, c: 0 })).toEqual({ kind: 'ok', label: { kcal: 0, p: 0, c: 0 } });
   });

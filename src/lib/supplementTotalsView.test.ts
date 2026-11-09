@@ -40,7 +40,7 @@ describe('totalsView', () => {
 
   it('separates no data from nothing taken', () => {
     const none = totalsView([{ id: 'x', n: 'Plain', slot: 'morning' }], {}, day, 'taken');
-    expect(none).toEqual({ rows: [], hasData: false, noneCounted: false });
+    expect(none).toMatchObject({ rows: [], targets: [], hasData: false, noneCounted: false, coverage: '' });
     const untaken = totalsView([mag('a', 100)], {}, day, 'taken');
     expect(untaken.hasData).toBe(true);
     expect(untaken.noneCounted).toBe(true);
@@ -57,7 +57,7 @@ describe('totalsView', () => {
 describe('limitWarning', () => {
   it('names the nutrients over their limit and is empty otherwise', () => {
     const items = [mag('a', 400)];
-    expect(limitWarning(items, { [day]: { a: true } }, day)).toBe('Over an upper limit today: Magnesium. Totals shows what each limit counts.');
+    expect(limitWarning(items, { [day]: { a: true } }, day)).toBe('Over an upper limit today: Magnesium. Totals shows what each limit counts. General information, not medical advice.');
     expect(limitWarning(items, {}, day)).toBe('');
     expect(limitWarning([{ id: 'x', n: 'Plain', slot: 'morning' }], {}, day)).toBe('');
   });

@@ -4,6 +4,8 @@
 //
 //   ANTHROPIC_API_KEY=... npx tsx scripts/scan-eval.mjs [--model=claude-sonnet-5-5] photo1.jpg photo2.jpg ...
 //
+// Each line now also shows the "micro" vitamin and mineral amounts (brief food-vitamins-minerals, Done when 7): compare them with the label too, per serving, and note how many labels
+// had a wrong or invented amount (a wrong unit, a percent of Daily Value read as mg, a nutrient the label does not list); the kill criterion is in the brief.
 // Compare each printed line with the label; the brief wants the calories and protein right on at least 9 of 10 real labels. Photos stay on your machine
 // except for the call to Anthropic; nothing is written.
 import { readFile } from 'node:fs/promises';
