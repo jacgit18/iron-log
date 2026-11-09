@@ -1,4 +1,4 @@
-import { LIMIT_KEYS, NUTRIENT_UNITS } from '../../shared/nutrientKeys.js';
+import { NUTRIENT_KEYS, NUTRIENT_UNITS } from '../../shared/nutrientKeys.js';
 import type { NutrientKey, NutrientUnit } from '../../shared/nutrientKeys.js';
 import { nutrientLabel, nutrientUnit } from '../../lib/nutrientInfo.js';
 import { duplicateRowNotes, type NutrientRowDraft } from '../../lib/nutrientRowIssues.js';
@@ -6,8 +6,7 @@ import './NutrientRows.css';
 
 // "What is in one serving" on the supplement sheet (brief supplement-nutrient-totals): nutrient, amount, unit per row. Amounts stay text while typing; the sheet turns them into numbers on save.
 export type NutrientDraft = NutrientRowDraft;
-// The form offers the 15 nutrients with a limit until the Totals sheet can show the others (brief nutrients-without-upper-limit, PR 2): a row the sheet cannot show would be confusing.
-const FORM_KEYS = LIMIT_KEYS;
+const FORM_KEYS = NUTRIENT_KEYS; // all 20: the 15 with a limit, then the 5 without (the Totals sheet shows both)
 const label = nutrientLabel;
 const NEXT_FREE = (rows: NutrientDraft[]): NutrientKey | undefined => FORM_KEYS.find(k => !rows.some(r => r.key === k));
 
