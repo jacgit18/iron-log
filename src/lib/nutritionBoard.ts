@@ -3,6 +3,7 @@ import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { parseDate } from '../shared/dates.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum } from './dietLog.js';
 import type { Plan } from './dietPlan.js';
+import { portionTag } from './supplementPortion.js';
 import { SLOTS, scheduleOf, slotTally } from './supplements.js';
 import { boardDay, type BoardDay } from './weekBoard.js';
 import { HOT_OZ, TRAIN_OZ_PER_30, fmtOz, goalFor, sumOz } from './water.js';
@@ -155,12 +156,12 @@ export function hydrationView(day: string, today: string, supp: Supplements, bod
 
 export { HOT_OZ, TRAIN_OZ_PER_30 };
 
-export interface SupplementDay { done: number; total: number; text: string; slots: { slot: string; label: string; items: { id: string; n: string; dose: string; taken: boolean }[] }[] }
+export interface SupplementDay { done: number; total: number; text: string; slots: { slot: string; label: string; items: { id: string; n: string; dose: string; taken: boolean; /** "1 capsule" when taken at other than one serving (brief supplement-portions); empty otherwise. */ tag: string }[] }[] }
 
 /** A day's supplements as Morning, Noon and Night with each tick, and "x of n taken". Ticking works on any day. */
 export function supplementDay(supp: Supplements, day: string): SupplementDay {
   const by = scheduleOf(supp.items);
-  const slots = SLOTS.map(([slot, label]) => ({ slot, label, items: (by[slot] ?? []).map(i => ({ id: i.id, n: i.n, dose: i.dose ?? '', taken: !!supp.taken[day]?.[i.id] })) }));
+  const slots = SLOTS.map(([slot, label]) => ({ slot, label, items: (by[slot] ?? []).map(i => ({ id: i.id, n: i.n, dose: i.dose ?? '', taken: !!supp.taken[day]?.[i.id], tag: portionTag(i) })) }));
   const total = slots.reduce((a, s) => a + s.items.length, 0);
   const done = slots.reduce((a, s) => a + slotTally(supp.items, supp.taken, day, s.slot).done, 0);
   return { done, total, text: total ? `${done} of ${total} taken` : 'Nothing scheduled', slots };

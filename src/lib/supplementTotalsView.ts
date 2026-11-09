@@ -8,6 +8,7 @@ import { limitOf } from './nutrientLimits.js';
 import { foodCoverage, limitFor, limitStatus, overLimit, supplementNutrientTotals, targetPosition, targetTotals } from './supplementNutrients.js';
 import { targetOf } from './nutrientTargets.js';
 import type { LimitStatus, TotalsBasis } from './supplementNutrients.js';
+import { portionTag } from './supplementPortion.js';
 import { scheduled } from './supplements.js';
 
 /* ---------- What the Totals sheet and the day's warning line say ----------
@@ -69,6 +70,9 @@ export interface TotalsView {
   profileNote: string;
 }
 
+/** " (1 capsule)" after a product's name when it is taken at other than one serving, so a total that counted half or double says so; empty otherwise. */
+const tagOf = (items: readonly SupplementItem[], id: string): string => { const i = items.find(x => x.id === id); const t = i ? portionTag(i) : ''; return t ? ` (${t})` : ''; };
+
 /** 1250 becomes "1,250"; at most two decimals, none when whole. */
 export const fmtAmount = (n: number): string => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 
@@ -122,7 +126,7 @@ function targetRows(items: SupplementItem[], taken: Taken, date: string, basis: 
     return {
       key: t.key, label: target.label, figure: `${fmtAmount(t.total)} ${t.unit}`, percent: Math.max(0, Math.min(100, pct)), statusText,
       foodLine: t.fromFood > 0 ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : '',
-      products: t.products.map(p => `${p.name} ${fmtAmount(p.amount)} ${t.unit}`), recommendedText, averageText: averageLine(avg?.targets.get(t.key), t.unit), scopeNote: target.scopeNote,
+      products: t.products.map(p => `${p.name}${tagOf(items, p.itemId)} ${fmtAmount(p.amount)} ${t.unit}`), recommendedText, averageText: averageLine(avg?.targets.get(t.key), t.unit), scopeNote: target.scopeNote,
       notAdded: t.notAdded.map(n => `${n.name}: ${fmtAmount(n.amount)} ${n.unit} not added. ${n.reason}`),
     };
   });
@@ -148,7 +152,7 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
       status: s.status,
       statusText: s.status === 'over' ? `Over the limit${g ? ` for ${g.ages}` : ''} by ${fmtAmount(s.over)} ${t.unit}` : s.status === 'close' ? `Close to the limit (${s.percent}%)` : `${s.percent}% of the limit`,
       foodLine: t.fromFood <= 0 ? '' : t.foodCounted ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : `Food ${fmtAmount(t.fromFood)} ${t.unit} is not added: ${NOT_ADDED[limit.scope === 'supplements' ? 'supplements' : 'form']}.`,
-      products: t.products.map(p => `${p.name} ${fmtAmount(p.amount)} ${t.unit}`),
+      products: t.products.map(p => `${p.name}${tagOf(items, p.itemId)} ${fmtAmount(p.amount)} ${t.unit}`),
       recommendedText: g ? `Recommended for ${g.group}: ${fmtAmount(g.recommended)} ${t.unit} a day${UNIT_NOTE[t.key] ?? ''}. ${GENERAL_INFO}` : `Recommended ${rangeText(rec.min, rec.max)} ${t.unit} a day (${limit.recommendedNote}). ${GENERAL_INFO}`,
       targetText: !tc || tc.status === 'none' ? '' : tc.status === 'below' ? `Below the recommended amount (${tc.percent}%)` : tc.status === 'meets' ? 'Meets the recommended amount' : 'Above the recommended amount',
       averageText: averageLine(avg?.limits.get(t.key), t.unit, !t.foodCounted),

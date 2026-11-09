@@ -233,7 +233,7 @@ export interface LiftGoal { w: number; start?: number; by?: string; bw?: number;
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
 /** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[] }
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[]; /** Servings taken each time, left out when it is 1 (brief supplement-portions): the nutrient rows are per serving, so the amount counted is row x portion. */ portion?: number }
 /** What is in one serving, typed by the person (supplement nutrient totals). `amount` is per serving; ticking the item on a day counts one serving. */
 export interface SupplementNutrient { key: NutrientKey; amount: number; unit: NutrientUnit }
 /** `units`: how many capsules, tablets or scoops make one serving; `form`: Capsule, Powder, ... */

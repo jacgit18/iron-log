@@ -6,10 +6,11 @@ import { CLOSE_FRACTION } from './intakeChecks.js';
 import { upperFor } from './nutrientGroups.js';
 import { limitOf } from './nutrientLimits.js';
 import { targetOf } from './nutrientTargets.js';
+import { portionOf } from './supplementPortion.js';
 import { scheduled } from './supplements.js';
 
 /* ---------- A day's nutrient totals from supplements ----------
-   Each nutrient row on a supplement is the amount in ONE serving; ticking the item on a day counts one serving.
+   Each nutrient row on a supplement is the amount in ONE serving; ticking the item on a day counts the servings it is taken at each time (`portion`, one serving when absent: brief supplement-portions).
    'taken' sums the ticked scheduled items, 'scheduled' sums every scheduled item. Units convert only where a standard factor exists
    (mg, mcg and g to the limit's unit; vitamin D IU to mcg at 40 IU per mcg, NIH ODS); anything else (vitamin A and E in IU, which depend on the
    form) is listed in `notAdded`, never guessed. `fromFood` is the day's eaten foods that list the nutrient (brief food-vitamins-minerals): it joins `total` only where the limit counts food (`scope: 'total'`), because the supplements-only limit (magnesium) and the one-form limits (folate, niacin, vitamin A, vitamin E) cover something a food label does not separate, so adding food would overstate. */
@@ -67,8 +68,9 @@ export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, 
       const limit = limitOf(row.key);
       if (!limit) continue;
       const t = entryFor(row.key);
-      const c = toLimitUnit(row.key, row.amount, row.unit, limit.unit);
-      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: row.amount, unit: row.unit, reason: c.reason }); continue; }
+      const eachTime = round3(row.amount * portionOf(item)); // the amount in what is taken each time (not `taken`, the day's ticks)
+      const c = toLimitUnit(row.key, eachTime, row.unit, limit.unit);
+      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: eachTime, unit: row.unit, reason: c.reason }); continue; }
       t.fromSupplements = round3(t.fromSupplements + c.value);
       t.products.push({ itemId: item.id, name: item.n, amount: c.value });
     }
@@ -127,8 +129,9 @@ export function targetTotals(items: SupplementItem[], taken: Taken, date: string
       const target = targetOf(row.key);
       if (!target) continue;
       const t = entryFor(target.key);
-      const c = toLimitUnit(row.key, row.amount, row.unit, target.unit);
-      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: row.amount, unit: row.unit, reason: c.reason }); continue; }
+      const eachTime = round3(row.amount * portionOf(item)); // the amount in what is taken each time (not `taken`, the day's ticks)
+      const c = toLimitUnit(row.key, eachTime, row.unit, target.unit);
+      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: eachTime, unit: row.unit, reason: c.reason }); continue; }
       t.fromSupplements = round3(t.fromSupplements + c.value);
       t.products.push({ itemId: item.id, name: item.n, amount: c.value });
     }
