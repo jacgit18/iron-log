@@ -1,3 +1,5 @@
+import type { NutrientLimit } from './nutrientLimits.js';
+
 /* ---------- Two separate checks of intake against a reference (brief intake-target-and-safety-checks, PR 1) ----------
    For one nutrient the app answers two questions and never merges them: (a) the target check, is the total intake at the recommended amount; (b) the safety check, is the amount the
    limit counts under the upper limit. The limit's `scope` (`nutrientLimits.ts`) says what it counts: 'total' food and supplements, 'supplements' supplements only, 'form' the listed form only
@@ -10,7 +12,7 @@ export const CLOSE_FRACTION = 0.8;
 export const INTAKE_DISCLAIMER = 'Intake compared to recommended amounts and limits, for general information only. It does not account for pregnancy, breastfeeding, medicines or health conditions, and it is not medical advice.';
 
 export interface IntakeAmounts { fromFood: number; fromSupplements: number }
-export type LimitScope = 'total' | 'supplements' | 'form';
+export type LimitScope = NutrientLimit['scope']; // one definition: the limits table's own
 
 export type SafetyStatus = 'under' | 'approaching' | 'over' | 'none';
 export interface SafetyResult {
