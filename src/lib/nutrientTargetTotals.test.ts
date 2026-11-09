@@ -43,6 +43,7 @@ describe('the "No upper limit" rows', () => {
     expect(row('potassium')).toMatchObject({ figure: '2,000 mg', statusText: 'Below the recommended range' });
     expect(row('potassium').recommendedText).toBe(`Recommended 2,600 to 3,400 mg a day (Adequate Intake for adults 19 and over: 3,400 mg for men, 2,600 mg for women). ${GENERAL_INFO}`);
     expect(row('vitaminB12')).toMatchObject({ statusText: '50% of the recommended amount', percent: 50 });
+    expect(totalsView([item([{ key: 'vitaminB12', amount: 500, unit: 'mcg' }])], taken, day, 'taken').targets[0]!.statusText).toBe('20,833% of the recommended amount'); // a common supplement dose reads with separators, still no warning
     expect(row('fiber')).toMatchObject({ figure: '40 g', statusText: 'Above the recommended range', percent: 100 });
   });
   it('reads sodium against the level to stay under, neutral either side of it', () => {

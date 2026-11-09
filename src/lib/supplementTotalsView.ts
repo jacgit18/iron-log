@@ -82,8 +82,8 @@ function targetRows(items: SupplementItem[], taken: Taken, date: string, basis: 
     const ref = target.stayUnder ?? max; // the bar is read against the level to stay under (sodium) or the highest recommended amount
     const pct = Math.round((t.total / ref) * 100);
     let statusText: string;
-    if (target.stayUnder !== undefined) statusText = t.total > target.stayUnder ? `Above the ${fmtAmount(target.stayUnder)} ${t.unit} level to stay under by ${fmtAmount(Math.round((t.total - target.stayUnder) * 1000) / 1000)} ${t.unit}` : `${pct}% of the ${fmtAmount(target.stayUnder)} ${t.unit} level to stay under`;
-    else if (min === max) statusText = `${pct}% of the recommended amount`;
+    if (target.stayUnder !== undefined) statusText = t.total > target.stayUnder ? `Above the ${fmtAmount(target.stayUnder)} ${t.unit} level to stay under by ${fmtAmount(Math.round((t.total - target.stayUnder) * 1000) / 1000)} ${t.unit}` : `${fmtAmount(pct)}% of the ${fmtAmount(target.stayUnder)} ${t.unit} level to stay under`;
+    else if (min === max) statusText = `${fmtAmount(pct)}% of the recommended amount`;
     else statusText = { below: 'Below the recommended range', within: 'Within the recommended range', above: 'Above the recommended range' }[targetPosition(t)];
     const recommendedText = target.stayUnder !== undefined
       ? `${target.basis === 'AI' ? 'Adequate Intake' : 'Recommended'} ${rangeText(min, max)} ${t.unit} a day (${target.recommendedNote}). Level to stay under: ${fmtAmount(target.stayUnder)} ${t.unit} a day. ${GENERAL_INFO}`
