@@ -228,13 +228,13 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: title row with short buttons, week switcher full width, Add food over three equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: short Targets and Manage buttons, week switcher full width, Add food over three equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
-      const title = await box('#nb-h'), targets = await box('#nb-targets'), manage = await box('#nb-manage'), week = await box('.nb-weeksw');
+      const targets = await box('#nb-targets'), manage = await box('#nb-manage'), week = await box('.nb-weeksw');
       expect(await page.locator('#nb-targets').evaluate(e => e.innerText)).toBe('Targets'); // the short name on a phone; the accessible name stays Targets and goal
-      expect(Math.abs(targets.y - title.y)).toBeLessThan(30); // same row as the title
+      expect(await page.locator('#nb-h').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // the Nutrition heading stays for screen readers but is not drawn: the tab already says it
       expect(manage.r).toBeGreaterThan(width - 24); // buttons sit at the right
       expect(week.y).toBeGreaterThan(targets.b - 1); // switcher below
       expect(week.w).toBeGreaterThan(width - 40); // and full width
