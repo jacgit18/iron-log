@@ -94,6 +94,15 @@ describe('updateDietEntry and removeDietEntry', () => {
     expect(st().updateDietEntry(id, { kcal: rice.kcal + 50 })).toBeNull();
     expect('micro' in st().diet[0]!).toBe(false);
   });
+  it('takes an explicit micro from the typed rows: it replaces the amounts even when calories change, and null clears them (brief type-food-amounts)', () => {
+    const id = st().addDietEntry({ ...rice, micro: { calcium: 120, iron: 2 } }).id!;
+    expect(st().updateDietEntry(id, { kcal: rice.kcal + 50, micro: { zinc: 1.5 } })).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: rice.kcal + 50, micro: { zinc: 1.5 } });
+    expect(st().updateDietEntry(id, { micro: null })).toBeNull();
+    expect('micro' in st().diet[0]!).toBe(false);
+    expect(st().updateDietEntry(id, { micro: { iron: 99999 } })).toBeNull(); // over the cap: cleaned away, the entry still saves
+    expect('micro' in st().diet[0]!).toBe(false);
+  });
   it('removes with an Undo that puts the entry back in place', () => {
     const a = st().addDietEntry(rice).id!; const b = st().addDietEntry({ ...rice, n: 'Toast' }).id!;
     st().removeDietEntry(a);
