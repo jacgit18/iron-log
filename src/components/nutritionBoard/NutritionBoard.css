@@ -149,6 +149,9 @@
   .nb-weeksw button {
     flex: 1;
     min-height: 44px;
+    min-width: 0;
+    padding-inline: var(--sp-4);
+    white-space: normal;
   }
   .nb-long {
     display: none;
@@ -158,7 +161,7 @@
   }
   .nb-tbtns {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr)); /* three across at normal text, fewer as text grows (the rem scales with it), so large text wraps instead of scrolling sideways */
     flex: 1 0 100%;
   }
   .nb-tbtns #nb-add {
@@ -168,6 +171,8 @@
   .nb-tbtns .btn {
     min-height: 44px;
     padding-inline: var(--sp-4);
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 }
 .nb-empty {

@@ -176,7 +176,7 @@ test('the food log follows the board: today is a separate day from yesterday (re
 test('the Nutrition screen is the week board with Targets and goal and Manage in its header; Supplements and Hydration sit inside each day and there is no second date bar', async ({ page }) => {
   await nutrition(page);
   const y = async loc => (await loc.boundingBox()).y;
-  await expect(todayCol(page).getByText('Supplements', { exact: true })).toBeVisible();
+  await expect(todayCol(page).getByRole('group', { name: 'Supplements' })).toBeVisible(); // the Supplements section (the meter above it has the same word)
   await expect(todayCol(page).getByText('Hydration', { exact: true })).toBeVisible();
   await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block is no longer under the board
   expect(await y(page.locator('#nb-targets'))).toBeLessThan(await y(todayCol(page)));
