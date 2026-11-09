@@ -1,6 +1,8 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
 import { parseDate, ymd } from '../shared/dates.js';
+import { withMicro } from '../shared/foodMicro.js';
+import type { Micro } from '../shared/foodMicro.js';
 
 /* ---------- Food log helpers (ADR 086): what a day adds up to, what is offered again, what is kept. Pure; the store and the view call these. ---------- */
 
@@ -63,6 +65,10 @@ export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f'>,
   if (bad) return { error: bad };
   return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id } };
 }
+
+/** The entry to add for a food on `day`: its numbers, the recipe it came from, and its vitamins and minerals when it has them (one place, so a copied or re-logged food keeps them). */
+export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): Omit<DietEntry, 'id'> =>
+  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro) });
 
 /** The most portions Ate this, the planner and Find food offer. */
 export const PORTION_MAX = 10;

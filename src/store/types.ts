@@ -7,6 +7,7 @@ import type {
   BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
+import type { Micro } from '../shared/foodMicro.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
@@ -300,7 +301,7 @@ export interface RemovedSlice {
 export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
-  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
   updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null }): string | null; // an error text, or null when saved
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
