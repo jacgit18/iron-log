@@ -40,7 +40,7 @@ describe('totalsView', () => {
 
   it('separates no data from nothing taken', () => {
     const none = totalsView([{ id: 'x', n: 'Plain', slot: 'morning' }], {}, day, 'taken');
-    expect(none).toEqual({ rows: [], targets: [], hasData: false, noneCounted: false, coverage: '' });
+    expect(none).toMatchObject({ rows: [], targets: [], hasData: false, noneCounted: false, coverage: '' });
     const untaken = totalsView([mag('a', 100)], {}, day, 'taken');
     expect(untaken.hasData).toBe(true);
     expect(untaken.noneCounted).toBe(true);

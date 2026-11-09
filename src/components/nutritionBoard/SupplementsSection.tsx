@@ -11,10 +11,11 @@ import './SupplementTotals.css';
 export default function SupplementsSection({ day }: { day: string }) {
   const supp = useAppStore(s => s.supp);
   const diet = useAppStore(s => s.diet);
+  const profile = useAppStore(s => s.cfg.profile);
   const v = supplementDay(supp, day);
   const eaten = entriesOn(diet, day);
   const totalsOn = useFeature('supplementTotals');
-  const warn = totalsOn ? limitWarning(supp.items, supp.taken, day, eaten) : '';
+  const warn = totalsOn ? limitWarning(supp.items, supp.taken, day, eaten, profile) : '';
   return (
     <div className="wb-slot nb-supps" role="group" aria-labelledby={`nb-supp-h-${day}`}>
       <div className="wb-slothd"><b id={`nb-supp-h-${day}`}>Supplements</b><span>{v.total ? v.text : ''}</span></div>

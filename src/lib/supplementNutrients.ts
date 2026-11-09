@@ -1,6 +1,8 @@
 import { NUTRIENT_KEYS, TARGET_KEYS } from '../shared/nutrientKeys.js';
 import type { NutrientKey, NutrientUnit, TargetKey } from '../shared/nutrientKeys.js';
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
+import type { Profile } from '../shared/profile.js';
+import { upperFor } from './nutrientGroups.js';
 import { limitOf } from './nutrientLimits.js';
 import { targetOf } from './nutrientTargets.js';
 import { scheduled } from './supplements.js';
@@ -82,16 +84,20 @@ export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, 
   return [...by.values()].map(t => ({ ...t, total: round3(t.fromSupplements + (t.foodCounted ? t.fromFood : 0)), products: t.products.sort((a, b) => b.amount - a.amount) })).sort((a, b) => order(a.key) - order(b.key));
 }
 
-/** under the limit, close (80% or more of it) or over (above it; exactly the limit is not over). */
-export function limitStatus(t: Pick<NutrientTotal, 'key' | 'total'>): { status: LimitStatus; percent: number; over: number } {
+/** The upper limit to judge a nutrient against: the person's own band when a profile gives one (calcium from 51, phosphorus from 71), else the strictest adult limit in the table (brief recommendations-by-age-sex). */
+export const limitFor = (key: NutrientKey, profile?: Profile, date?: string): number | undefined => (profile && date ? upperFor(key, profile, date) : undefined) ?? limitOf(key)?.upper;
+
+/** under the limit, close (80% or more of it) or over (above it; exactly the limit is not over). `upper` is the person's own limit when there is one. */
+export function limitStatus(t: Pick<NutrientTotal, 'key' | 'total'>, upper?: number): { status: LimitStatus; percent: number; over: number } {
   const limit = limitOf(t.key);
   if (!limit) return { status: 'under', percent: 0, over: 0 };
-  const percent = Math.round((t.total / limit.upper) * 100);
-  const over = t.total > limit.upper ? round3(t.total - limit.upper) : 0;
-  return { status: over > 0 ? 'over' : t.total >= limit.upper * 0.8 ? 'close' : 'under', percent, over };
+  const top = upper ?? limit.upper;
+  const percent = Math.round((t.total / top) * 100);
+  const over = t.total > top ? round3(t.total - top) : 0;
+  return { status: over > 0 ? 'over' : t.total >= top * 0.8 ? 'close' : 'under', percent, over };
 }
 
-export const overLimit = (totals: NutrientTotal[]): NutrientTotal[] => totals.filter(t => limitStatus(t).status === 'over');
+export const overLimit = (totals: NutrientTotal[], profile?: Profile, date?: string): NutrientTotal[] => totals.filter(t => limitStatus(t, limitFor(t.key, profile, date)).status === 'over');
 
 /* ---------- Nutrients with no upper limit (brief nutrients-without-upper-limit, ADR 108) ----------
    Potassium, vitamin K, vitamin B12, fiber and sodium: a day's amount from supplements and from eaten foods, both counted in full (there is no one-form limit to separate), against the recommended amount in

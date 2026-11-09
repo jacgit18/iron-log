@@ -89,6 +89,8 @@ export interface GroupFigures {
   upper?: number;
   /** The group the figures are for, in words: "women ages 31 to 50". */
   group: string;
+  /** Just the ages, for a limit that does not change with sex: "ages 51 to 70". */
+  ages: string;
   basis: 'AI' | 'RDA';
 }
 
@@ -103,6 +105,7 @@ export function groupFor(key: NutrientKey, profile: Profile | undefined, today: 
     recommended: band[profile.sex],
     ...(band.ul !== undefined ? { upper: band.ul } : {}),
     group: `${profile.sex === 'female' ? 'women' : 'men'} ${bandText(band)}`,
+    ages: bandText(band),
     basis: row.basis,
   };
 }

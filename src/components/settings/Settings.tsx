@@ -6,6 +6,7 @@ import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
 import ExportUpload from './ExportUpload.js';
+import ProfileRow from './ProfileRow.js';
 import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
@@ -491,6 +492,7 @@ export default function Settings() {
               <TextSpacingPanel />
               <RestAlertPanel />
               <PushPanel />
+              <ProfileRow />
             </div>
             <div className="scol">
               <ProgramOnComputerRow />
