@@ -24,6 +24,7 @@ async function lookUpAndFill(page) {
 
 test('a looked-up food saved on the Ready-made form keeps its amounts, and logging it twice from the board puts twice the amounts on the entry', async ({ page }) => {
   await lookUpAndFill(page);
+  await expect(page.getByText(/Vitamins and minerals from the lookup or photo/)).toContainText('Calcium 100 mg, Iron 2 mg'); // each amount named, to check against the label
   await page.getByRole('button', { name: 'Save food' }).click();
   await expect.poll(async () => (await recipes(page)).length).toBe(1);
   expect((await recipes(page))[0].micro).toEqual({ calcium: 100, iron: 2 });
@@ -43,6 +44,7 @@ test('a looked-up food saved on the Ready-made form keeps its amounts, and loggi
 test('changing the calories on the form before saving drops the amounts, so a food never carries amounts that disagree with its calories', async ({ page }) => {
   await lookUpAndFill(page);
   await page.getByLabel('Calories per serving').fill('150');
+  await expect(page.getByText(/Vitamins and minerals from the lookup or photo/)).toHaveCount(0); // the line follows the calories
   await page.getByRole('button', { name: 'Save food' }).click();
   await expect.poll(async () => (await recipes(page)).length).toBe(1);
   const [r] = await recipes(page);

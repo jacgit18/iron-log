@@ -10,7 +10,7 @@ import { totals } from './recipeMacros.js';
 
 // Brief recipes-vitamins-minerals: vitamins and minerals per serving on a recipe, filled by a scan, the ingredient calculator or a meal's roll-up, and carried into the food log.
 const food = (id: string, micro?: Recipe['micro'], over: Partial<Recipe> = {}): Recipe => ({ id, n: `Food ${id}`, cat: 'ready', ing: [], steps: [], kcal: 100, p: 5, ...(micro ? { micro } : {}), ...over });
-const meal = (ing: { rid: string; q: number }[], over: Partial<Recipe> = {}): Recipe => ({ id: 'm', n: 'Meal', cat: 'mains', ing: ing.map(i => ({ n: i.rid, rid: i.rid, q: i.q })), steps: [], ...over });
+const meal = (ing: { rid: string; q: number }[], over: Partial<Recipe> = {}): Recipe => ({ id: 'm', n: 'Meal', cat: 'other', ing: ing.map(i => ({ n: i.rid, rid: i.rid, q: i.q })), steps: [], ...over });
 
 describe('the recipe carries them', () => {
   it('the normaliser keeps cleaned amounts, drops bad ones, and a clean recipe is valid as written', () => {

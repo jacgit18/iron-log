@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
 import { microKept } from '../../lib/foodMicroKept.js';
+import { microText } from '../../lib/labelFill.js';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
 import { marksOf } from '../../lib/plate.js';
 import { usesOf } from '../../lib/recipeUses.js';
@@ -68,6 +69,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     setScanNote(plan.message);
   };
   const autoMarks = marksOf({ id: recipe?.id ?? '', n, cat: 'ready', ing: [], steps: [], ...(protein.trim() && Number.isFinite(Number(protein)) ? { p: Number(protein) } : {}) });
+  const keptMicro = microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, Number(kcal)); // what a save would keep: only while calories are still the number they came with
   const save = () => {
     const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack, usual, unit, plural });
     if ('error' in v) { setErr(v.error); return; }
@@ -105,6 +107,9 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
         <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => { setCarbs(e.target.value); setErr(''); }} /></label>
         <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => { setFat(e.target.value); setErr(''); }} /></label>
       </div>
+      {keptMicro && Object.keys(keptMicro).length > 0 && (
+        <p className="note" role="status">Vitamins and minerals from the lookup or photo, check them against the label: {microText(keptMicro)}. <button type="button" className="btn sm" onClick={() => setMicro(undefined)}>Remove</button></p>
+      )}
       <label>Servings per pack, optional
         <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
       </label>
