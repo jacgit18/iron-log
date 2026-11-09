@@ -9,10 +9,14 @@ import type { Persona } from './personas.ts';
 export interface SeedLog { clientId: string; exerciseId: string; d: string; wk: string; phase: string; weightLb: number; setsCount: number; reps: number }
 export interface SeedBody { wk: string; d: string; weightLb: number }
 export interface SeedGrocery { clientId: string; position: number; data: { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean } }
-export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number } }
-export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f: number; pairs?: string[]; counts?: string[] } }
+export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number; micro?: Record<string, number> } }
+export interface SeedSupplement { clientId: string; position: number; data: { id: string; n: string; slot: 'morning' | 'noon' | 'night'; dose?: string; serving?: { units: number; form: string }; nutrients?: { key: string; amount: number; unit: string }[]; portion?: number } }
+export interface SeedSupplementDay { day: string; taken: Record<string, true> }
+export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f: number; pairs?: string[]; counts?: string[]; micro?: Record<string, number> } }
 export interface PersonaRows {
   dietEntries: SeedDiet[];
+  supplements: SeedSupplement[];
+  supplementDays: SeedSupplementDay[];
   recipes: SeedRecipe[];
   /** The config row's document, or null when the account has no settings. */
   config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string }> } | null;
@@ -109,7 +113,8 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
   }
   const dietEntries = buildDiet(persona, t);
   const recipes = buildRecipes(persona);
-  return { logs, body, groceryItems, groceryStores, groceryGroups, dietEntries, recipes, config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
+  const { supplements, supplementDays } = buildVitamins(persona, t);
+  return { logs, body, groceryItems, groceryStores, groceryGroups, dietEntries, supplements, supplementDays, recipes, config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
 }
 
 /** The diet log: `pastDays` full days, then today up to its share of the targets (the first foods in order, or every food scaled up when over). */
@@ -121,7 +126,8 @@ function buildDiet(persona: Persona, today: Date): SeedDiet[] {
   const add = (day: Date, i: number, share: number, proteinScale: number) => {
     const d = iso(day);
     const id = `qa-${persona.id}-${d.replaceAll('-', '')}-${i + 1}`;
-    out.push({ clientId: id, position: dietPosition(d), data: { id, d, n: DIET_FOODS[i]![0], kcal: Math.round(DIET_TARGETS.kcal * share), p: Math.round(DIET_TARGETS.protein * share * proteinScale), c: Math.round(DIET_TARGETS.carbs * share), f: Math.round(DIET_TARGETS.fat * share), t: DIET_FOODS[i]![2] } });
+    const micro = persona.data.vitamins ? VITAMIN_FOODS[DIET_FOODS[i]![0]] : undefined;
+    out.push({ clientId: id, position: dietPosition(d), data: { id, d, n: DIET_FOODS[i]![0], kcal: Math.round(DIET_TARGETS.kcal * share), p: Math.round(DIET_TARGETS.protein * share * proteinScale), c: Math.round(DIET_TARGETS.carbs * share), f: Math.round(DIET_TARGETS.fat * share), t: DIET_FOODS[i]![2], ...(micro ? { micro: { ...micro } } : {}) } });
   };
   for (let back = diet.pastDays; back >= 1; back--) {
     const scale = 0.95 + rand() * 0.1;
@@ -135,6 +141,44 @@ function buildDiet(persona: Persona, today: Date): SeedDiet[] {
     });
   }
   return out;
+}
+
+/* ---------- Vitamins and minerals (QA data for the vitamin and mineral features): the 'vitamin-tracker' persona ----------
+   Amounts are chosen so the Totals sheet shows each state at once on today: Vitamin D over its 100 mcg limit (125 mcg), zinc close to its 40 mg limit (30 mg supplement + 6 mg food, food counts for zinc),
+   magnesium on its supplements-only limit (200 mg from the Morning capsules; the Night intake is at half a serving and unticked), calcium and the rest well under, and B12 and fiber in the No upper limit rows.
+   The foods carry amounts per entry as eaten; 'Greek yogurt' and 'Almonds and fruit' carry none, so today's coverage line reads 2 of 3 foods (today is the first three foods). */
+const VITAMIN_SUPPLEMENTS: readonly SeedSupplement['data'][] = [
+  { id: 'mag-am', n: 'Magnesium glycinate', slot: 'morning', serving: { units: 2, form: 'Capsule' }, nutrients: [{ key: 'magnesium', amount: 200, unit: 'mg' }] },
+  { id: 'calcium', n: 'Calcium citrate', slot: 'morning', nutrients: [{ key: 'calcium', amount: 500, unit: 'mg' }] },
+  { id: 'b12-fiber', n: 'B12 and fiber', slot: 'morning', nutrients: [{ key: 'vitaminB12', amount: 500, unit: 'mcg' }, { key: 'fiber', amount: 3, unit: 'g' }] },
+  { id: 'd3', n: 'Vitamin D3', slot: 'noon', dose: '5000 IU', serving: { units: 1, form: 'Softgel' }, nutrients: [{ key: 'vitaminD', amount: 125, unit: 'mcg' }] },
+  { id: 'zinc', n: 'Zinc picolinate', slot: 'noon', nutrients: [{ key: 'zinc', amount: 30, unit: 'mg' }] },
+  { id: 'fish-oil', n: 'Fish oil', slot: 'noon' },
+  { id: 'mag-pm', n: 'Magnesium glycinate', slot: 'night', serving: { units: 2, form: 'Capsule' }, nutrients: [{ key: 'magnesium', amount: 200, unit: 'mg' }], portion: 0.5 },
+];
+/** Which supplements were ticked, by days back from today (a day not listed has no record, so the 7-day average skips it). */
+const VITAMIN_TICKS: readonly (readonly [number, readonly string[]])[] = [
+  [0, ['mag-am', 'calcium', 'b12-fiber', 'd3', 'zinc', 'fish-oil']],
+  [1, ['mag-am', 'mag-pm', 'calcium', 'b12-fiber', 'd3', 'zinc']],
+  [2, ['mag-am', 'calcium', 'zinc']],
+  [3, ['mag-am', 'mag-pm', 'd3']],
+  [5, ['mag-am', 'b12-fiber']],
+];
+/** Vitamin and mineral amounts of each food as eaten, by name (see the note above); a food not listed carries none. */
+const VITAMIN_FOODS: Readonly<Record<string, Record<string, number>>> = {
+  'Oatmeal with berries': { magnesium: 60, iron: 2.5, fiber: 6, potassium: 350, calcium: 320, zinc: 1.2, vitaminB12: 0.8, sodium: 70 },
+  'Chicken and rice bowl': { zinc: 4.8, magnesium: 70, niacin: 14, potassium: 600, sodium: 640, vitaminB6: 0.9 },
+  'Salmon with potatoes': { vitaminD: 8, vitaminB12: 3.2, potassium: 900, sodium: 420, selenium: 45 },
+};
+/** The ready-made food of the vitamin persona: a Recipes card that carries amounts per serving (the same figures as the label-scan spec). */
+const VITAMIN_READY_MADE = { n: 'Fortified cereal', kcal: 120, p: 3, c: 26, f: 1, micro: { iron: 4.5, vitaminD: 2, calcium: 130, zinc: 1.2 } };
+
+function buildVitamins(persona: Persona, today: Date): { supplements: SeedSupplement[]; supplementDays: SeedSupplementDay[] } {
+  if (!persona.data.vitamins) return { supplements: [], supplementDays: [] };
+  const id = (k: string) => `qa-${persona.id}-${k}`;
+  const supplements = VITAMIN_SUPPLEMENTS.map((s, position): SeedSupplement => ({ clientId: id(s.id), position, data: { ...s, id: id(s.id) } }));
+  const supplementDays = VITAMIN_TICKS.map(([back, ids]) => ({ day: iso(addDays(today, -back)), taken: Object.fromEntries(ids.map(k => [id(k), true as const])) }));
+  return { supplements, supplementDays };
 }
 
 function buildRecipes(persona: Persona): SeedRecipe[] {
@@ -151,6 +195,10 @@ function buildRecipes(persona: Persona): SeedRecipe[] {
       steps: ['Prep the ingredients.', 'Cook until done.', 'Serve warm.'], servings, minutes: 10 + Math.floor(rand() * 12) * 5,
       kcal: 250 + Math.floor(rand() * 40) * 10, p: 12 + Math.floor(rand() * 30), c: 20 + Math.floor(rand() * 50), f: 5 + Math.floor(rand() * 25),
     } });
+  }
+  if (persona.data.vitamins) {
+    const r = VITAMIN_READY_MADE; const rid = `qa-${persona.id}-ready`;
+    out.push({ clientId: rid, position: out.length, data: { id: rid, n: r.n, cat: 'ready', ing: [], steps: [], servings: 1, minutes: 0, kcal: r.kcal, p: r.p, c: r.c, f: r.f, micro: { ...r.micro } } });
   }
   return withPairing(out);
 }

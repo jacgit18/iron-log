@@ -45,6 +45,8 @@ export async function seedPersona(client: Pick<pg.PoolClient, 'query'>, crypto: 
     for (const x of rows.groceryGroups) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'grocery_group', $4, $5)`, [u.id, ++seq, x.clientId, x.position, JSON.stringify(x.data)]);
     for (const g of rows.groceryItems) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'grocery_item', $4, $5)`, [u.id, ++seq, g.clientId, g.position, JSON.stringify(g.data)]);
     for (const e of rows.dietEntries) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'diet_entry', $4, $5)`, [u.id, ++seq, e.clientId, e.position, JSON.stringify(e.data)]);
+    for (const x of rows.supplements) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'supplement_item', $4, $5)`, [u.id, ++seq, x.clientId, x.position, JSON.stringify(x.data)]);
+    for (const d of rows.supplementDays) await client.query(`insert into supplement_days (user_id, seq, day, water, boost, taken) values ($1, $2, $3, '[]', null, $4)`, [u.id, ++seq, d.day, JSON.stringify(d.taken)]);
     for (const r of rows.recipes) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'recipe', $4, $5)`, [u.id, ++seq, r.clientId, r.position, JSON.stringify(r.data)]);
     if (rows.config) await client.query('insert into config (user_id, seq, data) values ($1, $2, $3)', [u.id, ++seq, JSON.stringify(rows.config)]);
     await client.query('update users set change_seq = $2 where id = $1', [u.id, seq]);
