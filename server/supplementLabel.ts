@@ -16,8 +16,9 @@ const CATALOG_ID = /^c:dsld:(\d{1,9})$/;
 export interface SupplementLabelDeps { fetch?: typeof fetch; now?: () => number }
 
 /** The label of one DSLD product, null when NIH has none (404, or a record with no ingredient rows). Throws on a timeout, a refusal or a body that is not a label record. */
-export async function askDsld(dsldId: string, { fetch: ask = fetch, timeoutMs = TIMEOUT_MS }: { fetch?: typeof fetch; timeoutMs?: number } = {}): Promise<SupplementLabel | null> {
-  const r = await ask(`${DSLD_URL}/${dsldId}`, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json' } });
+export async function askDsld(dsldId: number, { fetch: ask = fetch, timeoutMs = TIMEOUT_MS }: { fetch?: typeof fetch; timeoutMs?: number } = {}): Promise<SupplementLabel | null> {
+  if (!Number.isSafeInteger(dsldId) || dsldId < 0) throw new Error('bad id'); // only a whole number reaches the address
+  const r = await ask(`${DSLD_URL}/${String(dsldId)}`, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json' } });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`upstream ${r.status}`);
   const body: unknown = await r.json(); // junk throws here: "could not ask", not "not there"
@@ -42,7 +43,7 @@ export function supplementLabelRoutes({ fetch: ask = fetch, now = Date.now }: Su
     const t = now(), old = held.get(id);
     if (old && t - old.at < HOLD_MS) return void res.json({ ok: true, label: old.label });
     try {
-      const label = await askDsld(m[1], { fetch: ask });
+      const label = await askDsld(Number(m[1]), { fetch: ask });
       if (!label) return void res.status(404).json({ ok: false, error: 'no label found for this product', why: 'not-found' });
       if (held.size >= HOLD_MAX) held.delete(held.keys().next().value as string); // oldest first out
       held.set(id, { at: t, label });
