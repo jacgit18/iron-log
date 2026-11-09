@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogItem, Grocery, Recipe } from '../types.ts';
-import { LIBRARY_TABS, inLibraryTab, inMine, libraryHave } from './libraryRows.js';
+import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave } from './libraryRows.js';
 
 const item = (id: string, name: string, cat: Recipe['cat'], ing: string[]): CatalogItem => ({ id, name, data: { recipe: { cat, ing, steps: ['Cook.'] } } } as unknown as CatalogItem);
 const sauce = item('c:1', 'Salsa', 'sauces', ['tomato']), stew = item('c:2', 'Stew', 'protein', ['beef', 'carrot']), tea = item('c:3', 'Iced tea', 'drinks', ['tea']), cake = item('c:4', 'Cake', 'dessert', ['flour']);
@@ -31,5 +31,19 @@ describe('Library at-home badge and In Mine', () => {
   it('knows an item is already in Mine from the copy it made', () => {
     expect(inMine(stew, [{ id: 'stew', n: 'Stew', cat: 'protein', ing: [], steps: [], from: 'c:2' }])).toBe(true);
     expect(inMine(stew, [])).toBe(false);
+  });
+});
+
+describe('the line under an empty Library tab', () => {
+  it('names the tab in the plural, with no "recipe" after it', () => {
+    expect(libraryEmptyNote('ingredients', false)).toBe('No ingredients among these.');
+    expect(libraryEmptyNote('meals', false)).toBe('No meals among these.');
+    expect(libraryEmptyNote('drinks', false)).toBe('No drinks among these.');
+  });
+  it('offers Show more only when more can be loaded', () => {
+    expect(libraryEmptyNote('ingredients', true)).toBe('No ingredients among these. Show more to load others.');
+  });
+  it('says Nothing for All, which has no name to put after "No"', () => {
+    expect(libraryEmptyNote('all', false)).toBe('Nothing among these.');
   });
 });

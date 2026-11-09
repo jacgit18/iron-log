@@ -14,7 +14,7 @@ import './RecipeFind.css';
 import { hasMacros } from '../../lib/dietLog.js';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
-import { LIBRARY_TABS, inLibraryTab, inMine, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
+import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, haveBadge, inTab, librarySortedBy, recipeMeta, sortRecipes, tabCounts, typeTag, type RecipeTab } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
@@ -259,7 +259,7 @@ export default function Recipes() {
           {syncing && lib.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
           {syncing && lib.status === 'failed' && <p className="note gerr" role="alert">{lib.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
           {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
-          {syncing && lib.status === 'ready' && lib.items.length > 0 && !libShown.length && <p className="note">No {LIBRARY_TABS.find(t => t.key === libTab)?.label.toLowerCase()} recipe among these{lib.more ? '. Show more to load others' : ''}.</p>}
+          {syncing && lib.status === 'ready' && lib.items.length > 0 && !libShown.length && <p className="note">{libraryEmptyNote(libTab, lib.more)}</p>}
           {syncing && lib.status === 'ready' && (
             <>
               <ul className="rc-list rc-cards">
