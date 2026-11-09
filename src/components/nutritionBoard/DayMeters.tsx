@@ -16,12 +16,12 @@ export default function DayMeters({ v }: { v: DayView }) {
         const pct = m.target ? Math.min(100, Math.round((m.value / m.target) * 100)) : 0;
         return (
           <Fragment key={m.key}>
-          {supps}
-          <div className="wb-bar">
-            <div className="wb-barl"><span>{m.label}</span><b>{m.text}</b></div>
-            <div className={`wb-meter nb-${m.key}${m.key === 'fat' && m.note ? ' part' : ''}${m.over ? ' over' : ''}`} role="img" aria-label={meterLabel(m, v.basis, v.kind)}><i style={{ width: `${pct}%` }} /></div>
-            {m.note && <p className="wb-fatnote">{m.note}</p>}
-          </div>
+            {supps}
+            <div className="wb-bar">
+              <div className="wb-barl"><span>{m.label}</span><b>{m.text}</b></div>
+              <div className={`wb-meter nb-${m.key}${m.key === 'fat' && m.note ? ' part' : ''}${m.over ? ' over' : ''}`} role="img" aria-label={meterLabel(m, v.basis, v.kind)}><i style={{ width: `${pct}%` }} /></div>
+              {m.note && <p className="wb-fatnote">{m.note}</p>}
+            </div>
           </Fragment>
         );
       })}
