@@ -2322,7 +2322,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-187', feature: 'Week board', title: 'Plan opens as the Board on a wide screen and the List on a phone', persona: 'meal-planner', brief: 'week-board', retired: true,
+    id: 'S-187', feature: 'Week board', title: 'Plan opens as the Board on a wide screen and the List on a phone (retired 2026-11-09: the Plan List and Board switch was removed by the Nutrition board)', persona: 'meal-planner', brief: 'week-board', retired: true,
     steps: [
       'On a desktop browser open Nutrition and find Plan. Press List, then Board.',
       'On a phone open Nutrition, Plan. Press Board.',
@@ -2473,7 +2473,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-199', feature: 'Nutrition board', title: 'The add sheet picks the meal from the time, and remembers your pick', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'In the browser\'s DevTools, Application, Local Storage, delete the key nb-last-meal (so no meal is remembered), then open Nutrition and press + Add food.',
+      'Use a private window (or a browser that has never opened the add sheet), sign in as this account, open Nutrition and press + Add food. The meal pick is remembered per browser.',
       'Read which button under Which meal? is pressed. Press a different one and press Done.',
       'Press + Add food again.',
     ],
@@ -2544,7 +2544,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Scan a code neither source knows and read the buttons after the miss.',
     ],
     expected: [
-      'The camera sheet closes and the Add food sheet is back on Find food with the product picked (name, calories per 100 g, grams at its serving); you do not have to open the add sheet again.',
+      'The camera sheet closes and the Add food sheet should come back on Find food with the product picked (name, calories per 100 g, grams at its serving); you should not have to open the add sheet again. (Expected from the code; not yet walked on a phone, so record what you see.)',
       'Use fills the One-off food form; Add says "Added <name>." and the food is in today\'s Eaten list and meters.',
       'After a miss, Type the name and Photo the label are offered, as in S-93.',
     ],
@@ -2575,7 +2575,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-207', feature: 'Nutrition board', title: 'A day ahead plans recipes and saved meals; it never logs', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Press Next week and read the first day: its Breakfast, Lunch and Dinner and whether it has a Snack. (Next week has nothing planned yet.)',
+      'Press Next week and pick a day whose Breakfast, Lunch and Dinner all say "Nothing planned" (the seed plans seven days from today, so days later than that are empty). Note whether it has a Snack.',
       'Tap that day\'s name, press + Add food, pick Snack, press Recipes. Read the buttons beside each recipe.',
       'Press Plan on Overnight oats. Press Done.',
       'Press This week and tap today\'s name; press + Add food and Recipes.',
@@ -2686,7 +2686,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Open Manage, Supplements and library, then press Back.',
     ],
     expected: [
-      'Each sheet closes on one Back step and you stay on Nutrition; the address never gains a day or a sheet name.',
+      'Each sheet closes on one Back step and you stay on Nutrition; the address never gains a day or a sheet name. (Expected from the code and the e2e spec; not yet walked by hand.)',
       'Back from a sheet does not leave the Nutrition tab, and a reload reopens Nutrition.',
     ],
   },
@@ -2728,7 +2728,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The rows read Supplements and library, Saved meals and foods and Water reminder, each with a one-line note.',
       'The editor shows the Morning, Noon and Night editor and the whole library; the new supplement appears on every day\'s Supplements.',
-      'Saved meals and foods closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either returns to Nutrition.',
+      'Saved meals and foods closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
     ],
   },
 ];
