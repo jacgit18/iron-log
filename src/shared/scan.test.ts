@@ -35,8 +35,8 @@ describe('cleanLabel', () => {
     expect(cleanLabel({ kcal: 100, p: 2, micro: { vitaminD: 2.5, calcium: 260, iron: 1.2345 } })).toEqual({ kind: 'ok', label: { kcal: 100, p: 2, micro: { calcium: 260, iron: 1.235, vitaminD: 2.5 } } });
   });
   it('drops an unknown key, text, zero, a negative and an amount over ten times the adult limit (a misread)', () => {
-    const r = cleanLabel({ kcal: 100, p: 2, micro: { calcium: 20001, iron: 0, zinc: -3, vitaminC: '60 mg', potassium: 400, vitaminK: 80, vitaminE: 15 } });
-    expect(r).toEqual({ kind: 'ok', label: { kcal: 100, p: 2, micro: { vitaminE: 15 } } });
+    const r = cleanLabel({ kcal: 100, p: 2, micro: { calcium: 20001, iron: 0, zinc: -3, vitaminC: '60 mg', choline: 400, vitaminK: 80, vitaminE: 15 } });
+    expect(r).toEqual({ kind: 'ok', label: { kcal: 100, p: 2, micro: { vitaminE: 15, vitaminK: 80 } } });
   });
   it('adds no field when micro is empty, not an object, or only unusable', () => {
     for (const micro of [{}, [], 'calcium 200', 7, null, { evil: 1 }]) expect(cleanLabel({ kcal: 100, p: 2, micro })).toEqual({ kind: 'ok', label: { kcal: 100, p: 2 } });

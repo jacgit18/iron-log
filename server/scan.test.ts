@@ -51,7 +51,7 @@ describe('POST /api/scan/label', () => {
   });
 
   it('answers with the checked amounts and drops what the model made up', async () => {
-    const post = await start({ key: 'k', fetch: (async () => model('{"kcal":120,"p":3,"micro":{"iron":4.5,"vitaminD":2,"potassium":300,"zinc":99999}}')) as unknown as typeof fetch });
+    const post = await start({ key: 'k', fetch: (async () => model('{"kcal":120,"p":3,"micro":{"iron":4.5,"vitaminD":2,"choline":300,"zinc":99999}}')) as unknown as typeof fetch });
     expect(((await (await post({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'ok', label: { kcal: 120, p: 3, micro: { iron: 4.5, vitaminD: 2 } } });
   });
 
