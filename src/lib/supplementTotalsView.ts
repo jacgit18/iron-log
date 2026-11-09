@@ -99,7 +99,7 @@ export function profileNote(profile: Profile | undefined, date: string): string 
 }
 
 /** "7-day average: 190 mg (4 days with data)". */
-const averageLine = (a: { average: number; days: number } | undefined, unit: string): string => (a ? `7-day average: ${fmtAmount(a.average)} ${unit} (${a.days} ${a.days === 1 ? 'day' : 'days'} with data)` : '');
+const averageLine = (a: { average: number; days: number } | undefined, unit: string, suppsOnly = false): string => (a ? `7-day average: ${fmtAmount(a.average)} ${unit}${suppsOnly ? ' from supplements' : ''} (${a.days} ${a.days === 1 ? 'day' : 'days'} with data)` : ''); // a limit that does not count food averages the same figure the row shows, so it says so
 
 const rangeText = (min: number, max: number): string => (min === max ? fmtAmount(min) : `${fmtAmount(min)} to ${fmtAmount(max)}`);
 
@@ -151,7 +151,7 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
       products: t.products.map(p => `${p.name} ${fmtAmount(p.amount)} ${t.unit}`),
       recommendedText: g ? `Recommended for ${g.group}: ${fmtAmount(g.recommended)} ${t.unit} a day${UNIT_NOTE[t.key] ?? ''}. ${GENERAL_INFO}` : `Recommended ${rangeText(rec.min, rec.max)} ${t.unit} a day (${limit.recommendedNote}). ${GENERAL_INFO}`,
       targetText: !tc || tc.status === 'none' ? '' : tc.status === 'below' ? `Below the recommended amount (${tc.percent}%)` : tc.status === 'meets' ? 'Meets the recommended amount' : 'Above the recommended amount',
-      averageText: averageLine(avg?.limits.get(t.key), t.unit),
+      averageText: averageLine(avg?.limits.get(t.key), t.unit, !t.foodCounted),
       scopeNote: limit.scopeNote,
       notAdded: t.notAdded.map(n => `${n.name}: ${fmtAmount(n.amount)} ${n.unit} not added. ${n.reason}`),
     };

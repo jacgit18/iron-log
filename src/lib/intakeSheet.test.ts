@@ -59,6 +59,12 @@ describe('7-day average', () => {
     const one = weekAverages(items, took(items, [day]), day, 'taken', []);
     expect(row(totalsView(items, took(items, [day]), day, 'taken', [], undefined, one), 'zinc').averageText).toBe('7-day average: 10 mg (1 day with data)');
   });
+  it('a limit that counts supplements only says its average is from supplements, as its row figure does', () => {
+    const m = [mag(100)];
+    const taken = took(m, [day]);
+    const avg = weekAverages(m, taken, day, 'taken', [food(day, { magnesium: 400 })]);
+    expect(row(totalsView(m, taken, day, 'taken', [food(day, { magnesium: 400 })], undefined, avg), 'magnesium').averageText).toBe('7-day average: 100 mg from supplements (1 day with data)');
+  });
   it('no averages given means no line, and the five without a limit get one too', () => {
     expect(row(totalsView(items, took(items, [day]), day, 'taken', []), 'zinc').averageText).toBe('');
     const k: SupplementItem = { id: 'k', n: 'K', slot: 'morning', nutrients: [{ key: 'potassium', amount: 1000, unit: 'mg' }] };
