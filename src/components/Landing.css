@@ -48,6 +48,11 @@
   max-width: 38rem;
   margin: 0 0 var(--sp-8);
 }
+.landing-terms {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0 0;
+}
 .landing-cta {
   display: flex;
   flex-direction: column;
@@ -55,7 +60,7 @@
   gap: var(--sp-12);
   width: 100%;
   max-width: 20rem;
-  margin: 24px 0 var(--sp-12);
+  margin: var(--sp-12) 0;
 }
 .landing-cta .btn {
   width: 100%;
