@@ -2896,7 +2896,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-232', feature: 'Typed amounts', title: 'Typed rows survive a calorie change, filled rows do not, and a silly amount is refused in words', persona: 'diet-fresh', brief: 'type-food-amounts', edge: true,
     steps: [
-      'Press Add food, Find food, pick a food from the results and press Use. Press "+ Add a nutrient" and type Zinc 1.5. Then change the calories.',
+      'Press Add food, Find food, pick a food from the results and press Use. Press "+ Add a nutrient", choose Zinc in the new row (Copper if the food already lists zinc) and type 1.5. Then change the calories.',
       'On a fresh One-off form open the section, add Vitamin B12 with 1 and unit mg, then add Zinc twice (5 mg, then 2000 mcg). Read the lines under the rows.',
       'Press Add, then Edit the food in Eaten and change only its name.',
     ],
@@ -2931,7 +2931,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-235', feature: 'Age and sex amounts', title: 'A bad year, "Prefer not to say" and Clear', persona: 'vitamin-tracker', brief: 'recommendations-by-age-sex', edge: true,
     steps: [
-      'In Settings > Recommended amounts type 85, then 2012 (with Female chosen), then press Totals on today.',
+      'In Settings > Recommended amounts choose Female, then type 85, then replace it with 2012, then press Totals on today.',
       'Type 1974, choose "Prefer not to say", and open Totals again. Then press Clear and open Totals once more.',
     ],
     expected: [
