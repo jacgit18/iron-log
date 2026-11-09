@@ -17,13 +17,16 @@ const scan = async (page, result) => {
   return sheet;
 };
 const line = sheet => sheet.getByText(/Vitamins and minerals read from the photo/);
+const asAdmin = async page => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 
-test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); });
+// Admins (the Totals feature) see the amounts as rows (brief type-food-amounts) in place of the line; everyone else keeps the line and its Remove button, tested last.
+test.describe('admin: rows', () => {
+test.beforeEach(async ({ page }) => asAdmin(page));
 
 test('a photo with vitamin lines shows the count in the One-off form and the saved food has them', async ({ page }) => {
   const sheet = await scan(page, LABEL);
   await expect(sheet.locator('#dt-add-k')).toHaveValue('120');
-  await expect(line(sheet)).toContainText('Calcium 130 mg, Iron 4.5 mg, Vitamin D 2 mcg, Zinc 1.2 mg'); // each amount named, to check against the label
+  for (const [i, v] of ['130', '4.5', '2', '1.2'].entries()) await expect(sheet.getByLabel(`Amount ${i + 1}`)).toHaveValue(v); // calcium, iron, vitamin D, zinc: each amount a row, to check against the label
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   await expect(todayCol(page).locator('.nb-eat')).toContainText(['Fortified cereal']);
@@ -31,10 +34,10 @@ test('a photo with vitamin lines shows the count in the One-off form and the sav
   expect(e.micro).toEqual({ calcium: 130, iron: 4.5, vitaminD: 2, zinc: 1.2 });
 });
 
-test('Remove drops the amounts and the line, and the food is saved without them', async ({ page }) => {
+test('removing every row drops the amounts, and the food is saved without them', async ({ page }) => {
   const sheet = await scan(page, LABEL);
-  await sheet.getByRole('button', { name: 'Remove' }).click();
-  await expect(line(sheet)).toHaveCount(0);
+  for (const n of ['Calcium', 'Iron', 'Vitamin D', 'Zinc']) await sheet.getByRole('button', { name: `Remove ${n} row` }).click();
+  await expect(sheet.getByLabel('Amount 1')).toHaveCount(0);
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   const [e] = await stored(page);
@@ -42,10 +45,11 @@ test('Remove drops the amounts and the line, and the food is saved without them'
   expect('micro' in e).toBe(false);
 });
 
-test('changing the calories drops the amounts and the line, because the portion no longer matches the label', async ({ page }) => {
+test('changing the calories drops the rows, because the portion no longer matches the label', async ({ page }) => {
   const sheet = await scan(page, LABEL);
   await sheet.locator('#dt-add-k').fill('240');
-  await expect(line(sheet)).toHaveCount(0);
+  await expect(sheet.getByLabel('Amount 1')).toHaveCount(0);
+  await expect(sheet.getByText('Calories changed: amounts you did not retype were cleared.')).toBeVisible();
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   const [e] = await stored(page);
@@ -53,12 +57,26 @@ test('changing the calories drops the amounts and the line, because the portion 
   expect('micro' in e).toBe(false);
 });
 
-test('a label with no vitamin lines shows no line and saves as before', async ({ page }) => {
+test('a label with no vitamin lines shows no rows and saves as before', async ({ page }) => {
   const sheet = await scan(page, { kind: 'ok', label: { name: 'Rice cake', kcal: 35, p: 1 } });
-  await expect(line(sheet)).toHaveCount(0);
+  await expect(sheet.getByLabel('Amount 1')).toHaveCount(0);
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   const [e] = await stored(page);
   expect(e.n).toBe('Rice cake');
   expect('micro' in e).toBe(false);
+});
+});
+
+test.describe('everyone else: the line', () => {
+  test('a photo with vitamin lines shows the line with each amount, Remove drops it, and the food is saved without them', async ({ page }) => {
+    const sheet = await scan(page, LABEL);
+    await expect(sheet.getByRole('button', { name: /Vitamins and minerals/ })).toHaveCount(0);
+    await expect(line(sheet)).toContainText('Calcium 130 mg, Iron 4.5 mg, Vitamin D 2 mcg, Zinc 1.2 mg');
+    await sheet.getByRole('button', { name: 'Remove' }).click();
+    await expect(line(sheet)).toHaveCount(0);
+    await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+    await closeSheet(page);
+    expect('micro' in (await stored(page))[0]).toBe(false);
+  });
 });
