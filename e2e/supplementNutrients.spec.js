@@ -60,7 +60,7 @@ test('ticking supplements adds up what is in them, warns past the limit and the 
   await expect(s).toContainText('not medical advice');
   await s.getByRole('button', { name: 'Done' }).click();
   await col.getByLabel('Mag B', { exact: false }).first().check();
-  await expect(col.locator('.nb-suppwarn')).toHaveText('Over the upper limit today: Magnesium');
+  await expect(col.locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts.');
 });
 
 test('Totals sheet has no axe violations (light and dark) and does not scroll sideways at 375 px', async ({ page }) => {

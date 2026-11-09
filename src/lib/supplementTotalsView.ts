@@ -60,8 +60,8 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
   return { rows, hasData, noneCounted: hasData && rows.length === 0 };
 }
 
-/** The line under a day's supplements when a total passes its limit; empty when none does or no data exists. */
+/** The line under a day's supplements when a total passes its limit; empty when none does or no data exists. It names no figure: the limit a person has depends on age (calcium, phosphorus), which only the sheet explains. */
 export function limitWarning(items: SupplementItem[], taken: Taken, date: string): string {
   const over = overLimit(supplementNutrientTotals(items, taken, date, 'taken')).map(t => limitOf(t.key)!.label);
-  return over.length ? `Over the upper limit today: ${over.join(', ')}` : '';
+  return over.length ? `Over an upper limit today: ${over.join(', ')}. Totals shows what each limit counts.` : '';
 }

@@ -1,4 +1,4 @@
-import { supplementDay } from '../../lib/nutritionBoard.js';
+import { shortDay, supplementDay } from '../../lib/nutritionBoard.js';
 import { limitWarning } from '../../lib/supplementTotalsView.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import './SupplementTotals.css';
@@ -25,7 +25,7 @@ export default function SupplementsSection({ day }: { day: string }) {
         </div>
       ))}
       {warn && <p className="nb-suppwarn" role="status">{warn}</p>}
-      {v.total > 0 && <div className="nb-suppact"><button type="button" className="btn sm" id={`nb-supp-totals-${day}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>Totals</button></div>}
+      {v.total > 0 && <div className="nb-suppact"><button type="button" className="btn sm" id={`nb-supp-totals-${day}`} aria-label={`Totals for ${shortDay(day)}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>Totals</button></div>}
     </div>
   );
 }
