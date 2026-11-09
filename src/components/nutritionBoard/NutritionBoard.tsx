@@ -71,7 +71,7 @@ export default function NutritionBoard() {
   return (
     <section className="wb nb" aria-labelledby="nb-h">
       <div className="nb-head">
-        <h2 id="nb-h" className="cond">Nutrition</h2>
+        <h2 id="nb-h" className="cond vh">Nutrition</h2>
         <div className="seg nb-weeksw" role="group" aria-label="Week">
           {WEEK_OFFSETS.map(o => <button key={o} type="button" aria-pressed={o === offset} onClick={() => goWeek(o)}>{WEEK_NAME[o]}</button>)}
         </div>
