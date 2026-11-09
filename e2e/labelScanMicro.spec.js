@@ -16,12 +16,9 @@ const scan = async (page, result) => {
   await sheet.getByRole('button', { name: 'Use', exact: true }).click(); // the AI preview, then the One-off form
   return sheet;
 };
-const line = sheet => sheet.getByText(/Vitamins and minerals read from the photo/);
-const asAdmin = async page => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 
-// Admins (the Totals feature) see the amounts as rows (brief type-food-amounts) in place of the line; everyone else keeps the line and its Remove button, tested last.
-test.describe('admin: rows', () => {
-test.beforeEach(async ({ page }) => asAdmin(page));
+// Everyone sees the amounts as rows (brief type-food-amounts, released 2026-11-09); the old line and its single Remove button are gone.
+test.describe('rows', () => {
 
 test('a photo with vitamin lines shows the count in the One-off form and the saved food has them', async ({ page }) => {
   const sheet = await scan(page, LABEL);
@@ -66,17 +63,4 @@ test('a label with no vitamin lines shows no rows and saves as before', async ({
   expect(e.n).toBe('Rice cake');
   expect('micro' in e).toBe(false);
 });
-});
-
-test.describe('everyone else: the line', () => {
-  test('a photo with vitamin lines shows the line with each amount, Remove drops it, and the food is saved without them', async ({ page }) => {
-    const sheet = await scan(page, LABEL);
-    await expect(sheet.getByRole('button', { name: /Vitamins and minerals/ })).toHaveCount(0);
-    await expect(line(sheet)).toContainText('Calcium 130 mg, Iron 4.5 mg, Vitamin D 2 mcg, Zinc 1.2 mg');
-    await sheet.getByRole('button', { name: 'Remove' }).click();
-    await expect(line(sheet)).toHaveCount(0);
-    await sheet.getByRole('button', { name: 'Add', exact: true }).click();
-    await closeSheet(page);
-    expect('micro' in (await stored(page))[0]).toBe(false);
-  });
 });

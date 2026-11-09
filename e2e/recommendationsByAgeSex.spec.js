@@ -4,7 +4,7 @@ import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } 
 
 // Brief recommendations-by-age-sex, PR 2: the optional birth year and sex in Settings pick the person's own limit and recommended amount in the Totals sheet. The table, the bands and every fallback
 // are node tests (lib/nutrientGroups.test.ts, lib/supplementTotalsProfile.test.ts, lib/profileEdit.test.ts); this covers the wiring a node test cannot: the Settings row, what the real sheet and the
-// warning line say with and without a profile, a reload keeping it, Clear, and axe at 375 px in both themes. Admin-only with the sheet (`supplementTotals`). The fixed clock is Thursday 2026-09-24.
+// warning line say with and without a profile, a reload keeping it, Clear, and axe at 375 px in both themes. Open to everyone since 2026-11-09 (the `supplementTotals` flag is gone). The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
 const profile = page => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('ironlog:config/main') || '{}').profile ?? null; } catch { return null; } });
 
@@ -95,7 +95,7 @@ test.describe('admin session', () => {
   }
 });
 
-test('a person without the feature sees no profile row in Settings', async ({ page }) => {
+test('a person who is not an admin sees the profile row like everyone (released 2026-11-09)', async ({ page }) => {
   await page.locator('#tab-settings, #account-badge').first().click();
-  await expect(page.locator('#pr-year')).toHaveCount(0);
+  await expect(page.locator('#pr-year')).toBeVisible();
 });

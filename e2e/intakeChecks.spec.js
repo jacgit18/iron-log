@@ -3,7 +3,7 @@ import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSuppleme
 
 // Brief intake-target-and-safety-checks, PR 2: the Totals sheet's separate target line, the 7-day average, the disclaimer and the form hint. Every rule (below, meets and above, scope, the average's
 // days, the banned words) is a node test (lib/intakeChecks.test.ts, lib/intakeSheet.test.ts); this covers the wiring a node test cannot: the lines on the real sheet, a food logged through the real sheets
-// moving the target line from absent to present, and the hint on the supplement form. Admin-only with the sheet (`supplementTotals`). The fixed clock is Thursday 2026-09-24.
+// moving the target line from absent to present, and the hint on the supplement form. Open to everyone since 2026-11-09 (the `supplementTotals` flag is gone). The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
 const FOOD = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5, f: 1, micro: { zinc: 5 } }] };
 

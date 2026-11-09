@@ -4,7 +4,7 @@ import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSuppleme
 
 // Brief nutrients-without-upper-limit, PR 2 (ADR 108): the five nutrients without an upper limit in the Totals sheet and the supplement form. The sums, the position words and the "never a warning" rule are
 // node tests (nutrientTargetTotals.test.ts); this covers the wiring a node test cannot: the form offering the five, a supplement and a food found by name adding up in a "No upper limit" section, sodium's
-// wording, no warning line and no over-limit colour however high, and axe at phone width in both themes. Admin-only for now (src/features.ts `supplementTotals`). The fixed clock is Thursday 2026-09-24.
+// wording, no warning line and no over-limit colour however high, and axe at phone width in both themes. Open to everyone since 2026-11-09 (the `supplementTotals` flag is gone). The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
 const FOOD = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5, f: 1, micro: { potassium: 500, sodium: 3000, fiber: 2.2 } }] };
 

@@ -4,7 +4,7 @@ import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSuppleme
 
 // Brief food-vitamins-minerals, PR B: food joins the vitamin and mineral totals. The sums, the scope rule (food added only where the limit counts food), the coverage count and the warning are node
 // tests (foodTotals.test.ts, supplementNutrients.test.ts); this covers the wiring a node test cannot: a food found by name logged through the real sheets, the Totals link on a day with no scheduled
-// supplement, the rows and words in the sheet, the warning under the ticks, and axe at phone width in both themes. Admin-only for now (src/features.ts `supplementTotals`). The fixed clock is Thursday 2026-09-24.
+// supplement, the rows and words in the sheet, the warning under the ticks, and axe at phone width in both themes. Open to everyone since 2026-11-09 (the `supplementTotals` flag is gone). The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
 const FOOD = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5, f: 1, micro: { zinc: 5, magnesium: 120 } }] };
 
