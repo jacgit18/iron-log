@@ -68,9 +68,9 @@ export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, 
       const limit = limitOf(row.key);
       if (!limit) continue;
       const t = entryFor(row.key);
-      const taken = round3(row.amount * portionOf(item));
-      const c = toLimitUnit(row.key, taken, row.unit, limit.unit);
-      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: taken, unit: row.unit, reason: c.reason }); continue; }
+      const eachTime = round3(row.amount * portionOf(item)); // the amount in what is taken each time (not `taken`, the day's ticks)
+      const c = toLimitUnit(row.key, eachTime, row.unit, limit.unit);
+      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: eachTime, unit: row.unit, reason: c.reason }); continue; }
       t.fromSupplements = round3(t.fromSupplements + c.value);
       t.products.push({ itemId: item.id, name: item.n, amount: c.value });
     }
@@ -129,9 +129,9 @@ export function targetTotals(items: SupplementItem[], taken: Taken, date: string
       const target = targetOf(row.key);
       if (!target) continue;
       const t = entryFor(target.key);
-      const taken = round3(row.amount * portionOf(item));
-      const c = toLimitUnit(row.key, taken, row.unit, target.unit);
-      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: taken, unit: row.unit, reason: c.reason }); continue; }
+      const eachTime = round3(row.amount * portionOf(item)); // the amount in what is taken each time (not `taken`, the day's ticks)
+      const c = toLimitUnit(row.key, eachTime, row.unit, target.unit);
+      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: eachTime, unit: row.unit, reason: c.reason }); continue; }
       t.fromSupplements = round3(t.fromSupplements + c.value);
       t.products.push({ itemId: item.id, name: item.n, amount: c.value });
     }

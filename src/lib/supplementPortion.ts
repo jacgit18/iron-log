@@ -1,6 +1,6 @@
 import type { SupplementItem, SupplementNutrient, SupplementServing } from '../types.ts';
 
-/* ---------- How much of a serving you take each time (brief supplement-portions, ADR 109) ----------
+/* ---------- How much of a serving you take each time (brief supplement-portions, ADR 114) ----------
    Each nutrient row on a supplement is the amount in ONE label serving. `portion` is the servings taken per intake, stored in servings (1 capsule of a
    2-capsule serving is 0.5) so a later change to the serving size keeps its meaning; absent means exactly one serving. Amount taken = row amount x portion.
    Pure: the sheet's stepper, the day's tag and the totals read these. */

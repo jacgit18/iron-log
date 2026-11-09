@@ -2733,7 +2733,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Saved meals and foods closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
     ],
   },
-  // ---- Supplement portions (brief supplement-portions, ADR 109). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----
+  // ---- Supplement portions (brief supplement-portions, ADR 114). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----
   {
     id: 'S-219', feature: 'Supplement portions', title: 'Say how many capsules you take and see the amount', persona: 'meal-planner', brief: 'supplement-portions',
     steps: [
@@ -2742,7 +2742,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'On today\'s Supplements tick it, then press Totals.',
     ],
     expected: [
-      'The stepper starts at "2 capsules" with "400 mg magnesium"; − gives "1 capsule" and "200 mg magnesium"; + twice gives "3 capsules" and "600 mg magnesium", each with the working under it ("3 × 100 mg per capsule = 300 mg" style).',
+      'The stepper starts at "2 capsules" with "200 mg magnesium" (the row is the amount in one label serving, which is 2 capsules); − gives "1 capsule" and "100 mg magnesium"; + twice gives "3 capsules" and "300 mg magnesium", each with the working under it ("3 × 100 mg per capsule = 300 mg" style).',
       'After saving, today\'s row reads "Magnesium glycinate 3 capsules" next to its tick, and Totals counts the amount you chose, naming "(3 capsules)" beside the product.',
     ],
   },
