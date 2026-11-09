@@ -2,6 +2,7 @@
    (shared/validate) returns one of these; anything outside them is cleaned away. Dates are 'YYYY-MM-DD' strings; `updatedAt` is an ISO date-time. */
 
 import type { IssueStatus } from './shared/issues.ts';
+import type { NutrientKey, NutrientUnit } from './shared/nutrientKeys.ts';
 export type PhaseKey = 'strength' | 'iso' | 'hyp' | 'exp' | 'mob';
 export type SlotType = 'single' | 'superset' | 'either';
 
@@ -228,7 +229,12 @@ export interface LiftGoal { w: number; start?: number; by?: string; bw?: number;
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
 /** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string }
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[] }
+/** What is in one serving, typed by the person (supplement nutrient totals). `amount` is per serving; ticking the item on a day counts one serving. */
+export interface SupplementNutrient { key: NutrientKey; amount: number; unit: NutrientUnit }
+/** `units`: how many capsules, tablets or scoops make one serving; `form`: Capsule, Powder, ... */
+export interface SupplementServing { units: number; form?: string }
+export type { NutrientKey, NutrientUnit };
 /** What was ticked off on each day: {"YYYY-MM-DD": {<id>: true}}. */
 export type Taken = Record<string, Record<string, true>>;
 export interface Boost { hot?: true; mins?: number }
