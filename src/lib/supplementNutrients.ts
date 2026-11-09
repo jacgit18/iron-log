@@ -1,7 +1,8 @@
-import { LIMIT_KEYS, NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
-import type { NutrientKey, NutrientUnit } from '../shared/nutrientKeys.js';
+import { NUTRIENT_KEYS, TARGET_KEYS } from '../shared/nutrientKeys.js';
+import type { NutrientKey, NutrientUnit, TargetKey } from '../shared/nutrientKeys.js';
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
 import { limitOf } from './nutrientLimits.js';
+import { targetOf } from './nutrientTargets.js';
 import { scheduled } from './supplements.js';
 
 /* ---------- A day's nutrient totals from supplements ----------
@@ -33,13 +34,13 @@ const IU_PER_MCG_D = 40;
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
 /** The amount in the limit's unit, or a reason it cannot be converted. */
-export function toLimitUnit(key: NutrientKey, amount: number, unit: NutrientUnit, to: 'mg' | 'mcg'): { value: number } | { reason: string } {
+export function toLimitUnit(key: NutrientKey, amount: number, unit: NutrientUnit, to: 'mg' | 'mcg' | 'g'): { value: number } | { reason: string } {
   if (unit === 'IU') {
     if (key === 'vitaminD') return { value: round3(to === 'mcg' ? amount / IU_PER_MCG_D : amount / IU_PER_MCG_D / 1000) };
     return { reason: 'IU depends on the form (natural or synthetic, retinol or beta-carotene); enter mg or mcg to count it' };
   }
   const mg = unit === 'g' ? amount * 1000 : unit === 'mcg' ? amount / 1000 : amount;
-  return { value: round3(to === 'mg' ? mg : mg * 1000) };
+  return { value: round3(to === 'mg' ? mg : to === 'mcg' ? mg * 1000 : mg / 1000) };
 }
 
 export const countedItems = (items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis): SupplementItem[] => {
@@ -48,9 +49,7 @@ export const countedItems = (items: SupplementItem[], taken: Taken, date: string
 };
 
 /** The foods of a day that list at least one vitamin or mineral, and how many were eaten in all: the sheet says so, because a food with no data adds nothing and the total can be low. */
-// Only the nutrients the sheet can show count (those with a limit, LIMIT_KEYS) until the sheet has a section for the others (brief nutrients-without-upper-limit, PR 2): a food that lists only sodium or fiber
-// would otherwise open Totals to an empty sheet and be counted as having data.
-export const foodCoverage = (eaten: readonly DietEntry[]): { eaten: number; withData: number } => ({ eaten: eaten.length, withData: eaten.filter(e => LIMIT_KEYS.some(k => e.micro?.[k] !== undefined)).length });
+export const foodCoverage = (eaten: readonly DietEntry[]): { eaten: number; withData: number } => ({ eaten: eaten.length, withData: eaten.filter(e => NUTRIENT_KEYS.some(k => e.micro?.[k] !== undefined)).length });
 
 /** One entry per nutrient that a counted supplement or an eaten food lists, in the order of the limits table. `eaten` is the day's diet entries. */
 export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis = 'taken', eaten: readonly DietEntry[] = []): NutrientTotal[] {
@@ -93,3 +92,53 @@ export function limitStatus(t: Pick<NutrientTotal, 'key' | 'total'>): { status: 
 }
 
 export const overLimit = (totals: NutrientTotal[]): NutrientTotal[] => totals.filter(t => limitStatus(t).status === 'over');
+
+/* ---------- Nutrients with no upper limit (brief nutrients-without-upper-limit, ADR 108) ----------
+   Potassium, vitamin K, vitamin B12, fiber and sodium: a day's amount from supplements and from eaten foods, both counted in full (there is no one-form limit to separate), against the recommended amount in
+   `nutrientTargets.ts`. These are targets, never limits: nothing here has an "over" status, and nothing here reaches the day's over-the-limit line. */
+
+export interface TargetTotal {
+  key: TargetKey;
+  unit: 'mg' | 'mcg' | 'g';
+  fromSupplements: number;
+  fromFood: number;
+  total: number;
+  products: { itemId: string; name: string; amount: number }[];
+  notAdded: NotAdded[];
+}
+export type TargetPosition = 'below' | 'within' | 'above';
+
+export function targetTotals(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis = 'taken', eaten: readonly DietEntry[] = []): TargetTotal[] {
+  const by = new Map<TargetKey, TargetTotal>();
+  const entryFor = (key: TargetKey): TargetTotal => {
+    let t = by.get(key);
+    if (!t) { t = { key, unit: targetOf(key)!.unit, fromSupplements: 0, fromFood: 0, total: 0, products: [], notAdded: [] }; by.set(key, t); }
+    return t;
+  };
+  for (const item of countedItems(items, taken, date, basis)) {
+    for (const row of item.nutrients || []) {
+      const target = targetOf(row.key);
+      if (!target) continue;
+      const t = entryFor(target.key);
+      const c = toLimitUnit(row.key, row.amount, row.unit, target.unit);
+      if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: row.amount, unit: row.unit, reason: c.reason }); continue; }
+      t.fromSupplements = round3(t.fromSupplements + c.value);
+      t.products.push({ itemId: item.id, name: item.n, amount: c.value });
+    }
+  }
+  for (const e of eaten) {
+    for (const k of TARGET_KEYS) {
+      const a = e.micro?.[k];
+      if (a !== undefined) { const t = entryFor(k); t.fromFood = round3(t.fromFood + a); }
+    }
+  }
+  const order = (k: TargetKey) => TARGET_KEYS.indexOf(k);
+  return [...by.values()].map(t => ({ ...t, total: round3(t.fromSupplements + t.fromFood), products: t.products.sort((a, b) => b.amount - a.amount) })).sort((a, b) => order(a.key) - order(b.key));
+}
+
+/** Where a total sits against the recommended range: below its lowest figure, within the range, or above its highest. Sodium is read against its stay-under level by the view, not here. */
+export function targetPosition(t: Pick<TargetTotal, 'key' | 'total'>): TargetPosition {
+  const target = targetOf(t.key);
+  if (!target) return 'within';
+  return t.total < target.recommended.min ? 'below' : t.total > target.recommended.max ? 'above' : 'within';
+}

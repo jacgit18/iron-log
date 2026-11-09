@@ -19,7 +19,7 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
   return (
     <Sheet className="nbsheet" aria-label="Vitamin and mineral totals">
       <h2 className="cond" id="stt-h">Vitamin and mineral totals</h2>
-      <p className="note">{shortDay(day)}. Adds up what is in each supplement you listed and the foods you logged that list vitamins or minerals, against the upper limit for adults.</p>
+      <p className="note">{shortDay(day)}. Adds up what is in each supplement you listed and the foods you logged that list vitamins or minerals, against the upper limit for adults, or the recommended amount where there is none.</p>
       <div className="seg" role="group" aria-label="What to count">
         <button type="button" id="stt-taken" aria-pressed={basis === 'taken'} className={basis === 'taken' ? 'on' : ''} onClick={() => setBasis('taken')}>What I took</button>
         <button type="button" id="stt-sched" aria-pressed={basis === 'scheduled'} className={basis === 'scheduled' ? 'on' : ''} onClick={() => setBasis('scheduled')}>Everything scheduled</button>
@@ -46,7 +46,27 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
           </li>
         ))}
       </ul>
-      <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan or Find food; Quick add, typed foods, recipes and saved meals add nothing), so a total can be low, and a total under a limit is not proof of safety. A supplement you also log as a food counts twice. General information, not medical advice; your needs depend on age, sex and health.</p>
+      {v.targets.length > 0 && (
+        <section aria-labelledby="stt-targets-h">
+          <h3 className="stt-sect" id="stt-targets-h">No upper limit</h3>
+          <p className="note">These have no upper limit, so they are shown against the recommended amount and nothing here is a warning. Supplements and food both count in full.</p>
+          <ul className="stt-list" id="stt-targets">
+            {v.targets.map(r => (
+              <li key={r.key} className="stt-row target" id={`stt-${r.key}`}>
+                <div className="stt-hd"><b>{r.label}</b><span className="stt-fig">{r.figure}</span></div>
+                <div className="stt-bar" role="img" aria-label={`${r.label}: ${r.figure}. ${r.statusText}`}><i style={{ width: `${r.percent}%` }} /></div>
+                <div className="stt-st"><b>{r.statusText}</b></div>
+                {r.foodLine && <p className="note stt-food">{r.foodLine}</p>}
+                <p className="note">From supplements: {r.products.length ? r.products.join(', ') : 'none'}</p>
+                {r.notAdded.map(n => <p key={n} className="note">{n}</p>)}
+                <p className="note">{r.recommendedText}</p>
+                <p className="note">{r.scopeNote}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan, Find food, a label photo, or a recipe, ready-made food or meal built from those; Quick add and foods typed by hand add nothing), so a total can be low, and a total under a limit is not proof of safety. A supplement you also log as a food counts twice. General information, not medical advice; your needs depend on age, sex and health.</p>
       <div className="actions"><button type="button" className="btn primary" id="stt-done" onClick={() => st().closeModal()}>Done</button></div>
     </Sheet>
   );
