@@ -64,7 +64,7 @@ test('ticking supplements adds up what is in them, warns past the limit and the 
   await expect(s).toContainText('not medical advice');
   await s.getByRole('button', { name: 'Done' }).click();
   await col.getByLabel('Mag B', { exact: false }).first().check();
-  await expect(col.locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts.');
+  await expect(col.locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts. General information, not medical advice.');
 });
 
 test('Totals sheet has no axe violations (light and dark) and does not scroll sideways at 375 px', async ({ page }) => {
@@ -114,5 +114,5 @@ test('a person who is not an admin sees no nutrient rows, no Totals button and n
   await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true'));
   await page.reload();
   await openNutrition(page);
-  await expect(todayCol(page).locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts.');
+  await expect(todayCol(page).locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts. General information, not medical advice.');
 });

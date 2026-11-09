@@ -46,7 +46,7 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
           </li>
         ))}
       </ul>
-      <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan or Find food); the rest add nothing, so a total can be low, and a total under a limit is not proof of safety. General information, not medical advice; your needs depend on age, sex and health.</p>
+      <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan or Find food; Quick add, typed foods, recipes and saved meals add nothing), so a total can be low, and a total under a limit is not proof of safety. A supplement you also log as a food counts twice. General information, not medical advice; your needs depend on age, sex and health.</p>
       <div className="actions"><button type="button" className="btn primary" id="stt-done" onClick={() => st().closeModal()}>Done</button></div>
     </Sheet>
   );

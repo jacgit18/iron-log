@@ -48,6 +48,8 @@ describe('the sheet rows and the warning with food', () => {
     const v = totalsView([item([{ key: 'zinc', amount: 20, unit: 'mg' }, { key: 'magnesium', amount: 100, unit: 'mg' }])], taken, day, 'taken', [food('1', { zinc: 5, magnesium: 80 })]);
     expect(v.rows.find(r => r.key === 'zinc')!.foodLine).toBe('Supplements 20 mg, food 5 mg.');
     expect(v.rows.find(r => r.key === 'magnesium')!.foodLine).toBe('Food 80 mg is not added: this limit counts supplements only.');
+    expect(v.rows.find(r => r.key === 'magnesium')!.figure).toBe('100 mg from supplements'); // food is shown beside it but not added, so the figure says what it is
+    expect(v.rows.find(r => r.key === 'zinc')!.figure).toBe('25 mg'); // food is added to this one
     expect(totalsView([item([{ key: 'zinc', amount: 20, unit: 'mg' }])], taken, day, 'taken').rows[0]!.foodLine).toBe('');
   });
   it('has data from food alone, and the empty state only when neither source lists any', () => {
@@ -57,6 +59,6 @@ describe('the sheet rows and the warning with food', () => {
   it('warns when supplements plus food pass a limit that counts food, but not for food beside a supplements-only limit', () => {
     const items = [item([{ key: 'zinc', amount: 38, unit: 'mg' }, { key: 'magnesium', amount: 340, unit: 'mg' }])];
     expect(limitWarning(items, taken, day, [])).toBe('');
-    expect(limitWarning(items, taken, day, [food('1', { zinc: 5, magnesium: 400 })])).toBe('Over an upper limit today: Zinc. Totals shows what each limit counts.');
+    expect(limitWarning(items, taken, day, [food('1', { zinc: 5, magnesium: 400 })])).toBe('Over an upper limit today: Zinc. Totals shows what each limit counts. General information, not medical advice.');
   });
 });

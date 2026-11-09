@@ -62,7 +62,7 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
     return {
       key: t.key,
       label: limit.label,
-      figure: `${fmtAmount(t.total)} ${t.unit}`,
+      figure: `${fmtAmount(t.total)} ${t.unit}${t.fromFood > 0 && !t.foodCounted ? ' from supplements' : ''}`, // food shown beside the row but not added: say what the figure is, so 0 is not read as none
       limitText: `Limit ${fmtAmount(limit.upper)} ${t.unit}`,
       percent: Math.min(100, s.percent),
       status: s.status,
@@ -80,5 +80,5 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
 /** The line under a day's supplements when a total passes its limit; empty when none does or no data exists. It names no figure: the limit a person has depends on age (calcium, phosphorus), which only the sheet explains. */
 export function limitWarning(items: SupplementItem[], taken: Taken, date: string, eaten: readonly DietEntry[] = []): string {
   const over = overLimit(supplementNutrientTotals(items, taken, date, 'taken', eaten)).map(t => limitOf(t.key)!.label);
-  return over.length ? `Over an upper limit today: ${over.join(', ')}. Totals shows what each limit counts.` : '';
+  return over.length ? `Over an upper limit today: ${over.join(', ')}. Totals shows what each limit counts. General information, not medical advice.` : '';
 }
