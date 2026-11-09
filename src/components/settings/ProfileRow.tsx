@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import './ProfileRow.css';
 
-// Settings, App group: the optional birth year and sex that pick the recommended amounts in the Totals sheet (brief recommendations-by-age-sex). Admin-only with the sheet. Stored in `cfg.profile`, never sent anywhere.
+// Settings, App group: the optional birth year and sex that pick the recommended amounts in the Totals sheet (brief recommendations-by-age-sex). Admin-only with the sheet. Stored in `cfg.profile`, part of the settings document: it syncs with the rest of the account's settings and goes with delete-my-data and the export, and nothing else reads it.
 export default function ProfileRow() {
   const on = useFeature('supplementTotals');
   const profile = useAppStore(s => s.cfg.profile);

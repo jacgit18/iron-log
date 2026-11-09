@@ -85,6 +85,7 @@ const UNIT_NOTE: Partial<Record<string, string>> = { folate: ' (mcg DFE, dietary
 export function profileNote(profile: Profile | undefined, date: string): string {
   if (profileAge(profile, date) !== undefined && profile?.sex) return 'Recommended amounts and limits are for the age and sex you gave in Settings. They do not cover pregnancy or breastfeeding; ask a doctor or dietitian.';
   if (profile?.birthYear !== undefined && profileAge(profile, date) === undefined) return 'Amounts for your age are not shown. The adult range is used.';
+  if (profile?.birthYear !== undefined || profile?.sex) return 'Your own amounts need both a birth year and a sex, so the adult range is shown. You can change this in Settings.';
   return 'Add your birth year and sex in Settings to see your own amounts. Until then the adult range is shown.';
 }
 

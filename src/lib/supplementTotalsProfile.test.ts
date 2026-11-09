@@ -64,7 +64,8 @@ describe('profileNote', () => {
   const note = (p?: Parameters<typeof totalsView>[5]) => totalsView(plain, taken, day, 'taken', [], p).profileNote;
   it('asks for a profile, says the age is not shown, or says whose amounts these are and what they leave out', () => {
     expect(note()).toBe('Add your birth year and sex in Settings to see your own amounts. Until then the adult range is shown.');
-    expect(note({ sex: 'female' })).toContain('Add your birth year and sex');
+    expect(note({ sex: 'female' })).toContain('need both a birth year and a sex'); // one field given, or "Prefer not to say": no nagging, just why the range is shown
+    expect(note(woman(2010))).not.toContain('Add your');
     expect(note(woman(2010))).toBe('Amounts for your age are not shown. The adult range is used.');
     expect(note(woman(1990))).toContain('do not cover pregnancy or breastfeeding');
   });
