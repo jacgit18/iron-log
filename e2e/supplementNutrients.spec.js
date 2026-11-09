@@ -40,7 +40,7 @@ test('a day with no nutrient data has a Totals sheet that says what to do and no
   const col = todayCol(page);
   await expect(col.locator('.nb-suppwarn')).toHaveCount(0);
   await col.getByRole('button', { name: 'Totals' }).click();
-  await expect(dialog(page)).toContainText('Add what is in a supplement to see totals.');
+  await expect(dialog(page)).toContainText('Add what is in a supplement, or log a food with a barcode scan or Find food, to see totals.');
   await dialog(page).getByRole('button', { name: 'Add to Plain' }).click();
   await expect(page.locator('#supp-add-nutrient')).toBeVisible(); // the item's own sheet, with the nutrient rows
 });
@@ -60,7 +60,7 @@ test('ticking supplements adds up what is in them, warns past the limit and the 
   await expect(s.locator('#stt-magnesium')).toContainText('Over the limit by 50 mg');
   await expect(s.locator('#stt-magnesium')).toContainText('Mag B 200 mg');
   await expect(s.locator('#stt-vitaminD')).toContainText('100 mcg'); // 4,000 IU at 40 IU per mcg
-  await expect(s).toContainText('Supplements only: food is not counted');
+  await expect(s).toContainText('Food counts only where the foods you logged list vitamins or minerals');
   await expect(s).toContainText('not medical advice');
   await s.getByRole('button', { name: 'Done' }).click();
   await col.getByLabel('Mag B', { exact: false }).first().check();
