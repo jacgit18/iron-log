@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
-# Builds the Google Play bundle for the Android wrapper (a Trusted Web Activity; android/README.md, ops/play-release-runbook.md) in one command:
-# raises the version, fetches the upload-key password from Secret Manager, runs Bubblewrap, and checks what it made. Run it by hand on your machine.
+# Builds the Google Play bundle for the Android wrapper (a Trusted Web Activity; android/README.md, ops/play-release-runbook.md) and sends it to a
+# Play track through the Google Play Developer API, with no Play Console clicks. Run it by hand on your machine.
 #
 # Usage:  scripts/play-release.sh <command>      (or: npm run play:release -- <command>)
 #   build [--code N]  raise appVersionCode by one (or set it to N), set appVersion and appVersionName to match, then `bubblewrap update --skipVersionUpgrade`
 #                     and `bubblewrap build` in android/ with the passwords supplied. Writes app-release-bundle.aab (upload to Play) and
 #                     app-release-signed.apk (sideload to test). If anything fails, twa-manifest.json is put back as it was.
+#   upload [--track T] [--notes TEXT | --notes-file F] [--draft] [--yes]
+#                     send android/app-release-bundle.aab to track T (or $PLAY_TRACK) with release notes, then commit it for Google's review. Shows what it
+#                     will send and asks first (--yes skips the question; required when there is no terminal). --draft leaves it a draft in Play
+#                     Console instead of rolling it out. Refuses a bundle whose version code is not the manifest's. Sideload-test the .apk first.
+#   release [--code N] [upload options]   build, then upload (checks the track and the sign-in first, so a typo costs no build)
+#   tracks            lists the app's tracks and their latest releases (read-only): the way to find your closed test's track name.
 #   check             says whether the stored password can be read and how long it is, never what it is. Changes nothing.
 #   store-password    asks for the keystore password (hidden, with a length check) and stores it in Secret Manager as the secret named below
 #                     (a new version if it exists). Once, and again if the password ever changes.
@@ -13,6 +19,11 @@
 # The password: BUBBLEWRAP_KEYSTORE_PASSWORD from your shell if set, else Secret Manager ($SECRET in project $PROJECT_ID, signed in with gcloud),
 # else a hidden prompt. The key password is the same one (alias android). It is passed to Bubblewrap through its environment for that one run
 # and never printed or written to a file. The keystore file itself (android/android.keystore) stays on this machine and is gitignored: back it up.
+#
+# The Play API: PLAY_SERVICE_ACCOUNT (the email of a service account invited in Play Console with release rights) and your gcloud sign-in, which must be
+# allowed to create tokens for it (roles/iam.serviceAccountTokenCreator). A short-lived token is made for each run; there is no key file. PLAY_ACCESS_TOKEN
+# (a token you made yourself) wins if set. The token goes to curl through its config on stdin, never on the command line. One-time setup:
+# ops/play-release-runbook.md, "Releasing through the API".
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -21,6 +32,10 @@ SECRET="${PLAY_KEYSTORE_SECRET:-iron-log-play-upload-keystore-password}"
 ANDROID_DIR="${ANDROID_DIR:-android}"          # overridable for tests
 BUBBLEWRAP="${BUBBLEWRAP:-bubblewrap}"
 GCLOUD="${GCLOUD:-gcloud}"
+CURL="${CURL:-curl}"                            # overridable for tests
+NODE="${NODE:-node}"
+PLAY_API="${PLAY_API:-https://androidpublisher.googleapis.com}"
+PLAY_SERVICE_ACCOUNT="${PLAY_SERVICE_ACCOUNT:-}"
 MANIFEST="$ANDROID_DIR/twa-manifest.json"
 
 usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//' >&2; exit 2; }
@@ -119,19 +134,135 @@ cmd_build() {
   local min; min="$(grep -oE '"minSdkVersion": *[0-9]+' "$MANIFEST" | grep -oE '[0-9]+$' || true)"
   [ "${min:-0}" -ge 24 ] || echo "WARNING: minSdkVersion is '${min:-missing}'; the build needs 24 or higher." >&2
 
-  ok=true
+  ok=true; rm -f "$backup" "$stamp"; trap - EXIT
   echo
   echo "Built version $new:"
   ls -l "$ANDROID_DIR/app-release-bundle.aab" "$ANDROID_DIR/app-release-signed.apk"
   echo
-  echo "Next: sideload the .apk and check sign-in, the Today and Daily shortcuts and no Billing in Settings; upload the .aab in Play Console"
-  echo "(Test and release, Closed testing, Create new release); then commit $MANIFEST on a branch."
+  echo "Next: sideload the .apk and check sign-in, the Today and Daily shortcuts and no Billing in Settings; then"
+  echo "scripts/play-release.sh upload --track <track> (or upload in Play Console); then commit $MANIFEST on a branch."
+}
+
+# ---- Play API --------------------------------------------------------------------------------------------------------------------------------
+
+# json_get a.b: one value from JSON on stdin ("" when missing or not JSON).
+json_get() { $NODE -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const v=process.argv[1].split(".").reduce((o,k)=>o[k],JSON.parse(s));if(v!==undefined&&v!==null)process.stdout.write(String(v))}catch{}})' "$1"; }
+
+package_id() { grep -oE '"packageId": *"[^"]+"' "$MANIFEST" | sed -E 's/.*: *"([^"]+)"/\1/'; }
+
+# A token for the Play API: PLAY_ACCESS_TOKEN, else one made for the service account from your gcloud sign-in (IAM Credentials API).
+play_token() {
+  if [ -n "${PLAY_ACCESS_TOKEN:-}" ]; then printf '%s' "$PLAY_ACCESS_TOKEN"; return; fi
+  [ -n "$PLAY_SERVICE_ACCOUNT" ] || die "set PLAY_SERVICE_ACCOUNT to the service account's email (one-time setup: ops/play-release-runbook.md, 'Releasing through the API')"
+  local user resp tok
+  user="$($GCLOUD auth print-access-token </dev/null 2>/dev/null || true)"
+  [ -n "$user" ] || die "gcloud is signed out: run 'gcloud auth login'"
+  resp="$(printf 'header = "Authorization: Bearer %s"\n' "$user" | $CURL -sS -X POST -K - -H 'Content-Type: application/json' \
+    -d '{"scope":["https://www.googleapis.com/auth/androidpublisher"]}' \
+    "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$PLAY_SERVICE_ACCOUNT:generateAccessToken" || true)"
+  tok="$(printf '%s' "$resp" | json_get accessToken)"
+  [ -n "$tok" ] || die "could not get a token for $PLAY_SERVICE_ACCOUNT: $(printf '%s' "$resp" | json_get error.message). Your account needs roles/iam.serviceAccountTokenCreator on it, and the IAM Credentials API enabled."
+  printf '%s' "$tok"
+}
+
+# api METHOD URL [curl args]: prints the JSON answer; dies with Google's own message on a non-2xx. The token reaches curl on stdin, not argv.
+api() {
+  local method="$1" url="$2"; shift 2
+  local out status body
+  out="$(printf 'header = "Authorization: Bearer %s"\n' "$TOKEN" | $CURL -sS -X "$method" -K - -w $'\n%{http_code}' "$@" "$url")" || die "request failed: $method ${url%%\?*}"
+  status="${out##*$'\n'}"; body="${out%$'\n'*}"
+  case "$status" in
+    2??) printf '%s' "$body" ;;
+    *) die "Google answered $status for $method ${url%%\?*}: $(printf '%s' "$body" | json_get error.message)" ;;
+  esac
+}
+
+# An edit that is not committed changes nothing in Play, but delete it so none are left open after a failure.
+cleanup_edit() { if [ -n "${EDIT_ID:-}" ]; then ( api DELETE "$EDIT_URL/$EDIT_ID" ) >/dev/null 2>&1 || true; fi; }
+
+open_edit() {
+  TOKEN="$(play_token)"
+  PKG="$(package_id)"; [ -n "$PKG" ] || die "no packageId in $MANIFEST"
+  EDIT_URL="$PLAY_API/androidpublisher/v3/applications/$PKG/edits"
+  EDIT_ID="$(api POST "$EDIT_URL" -H 'Content-Type: application/json' -d '{}' | json_get id)"
+  [ -n "$EDIT_ID" ] || die "Google gave no edit id"
+  trap cleanup_edit EXIT
+}
+
+cmd_tracks() {
+  open_edit
+  echo "Tracks of $PKG (track name, then each release's status and version codes):"
+  api GET "$EDIT_URL/$EDIT_ID/tracks" | $NODE -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{for(const t of (JSON.parse(s).tracks||[]))console.log(`  ${t.track}\t`+((t.releases||[]).map(r=>`${r.status} ${(r.versionCodes||[]).join(",")}`).join("; ")||"(no releases)"))})'
+}
+
+cmd_upload() {
+  local track="${PLAY_TRACK:-}" notes="" notes_file="" status=completed yes=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --track) track="${2:?--track needs a name}"; shift 2 ;;
+      --notes) notes="${2:?--notes needs text}"; shift 2 ;;
+      --notes-file) notes_file="${2:?--notes-file needs a path}"; shift 2 ;;
+      --draft) status=draft; shift ;;
+      --yes) yes=true; shift ;;
+      *) usage ;;
+    esac
+  done
+  [ -n "$track" ] || die "no track: pass --track NAME or set PLAY_TRACK. Run 'tracks' to see the names (a closed test is 'alpha' unless you named it)."
+  local aab="$ANDROID_DIR/app-release-bundle.aab" code
+  [ -f "$aab" ] || die "$aab not found: run 'build' first"
+  code="$(manifest_code)"; [ -n "$code" ] || die "no appVersionCode in $MANIFEST"
+  if [ -n "$notes_file" ]; then [ -f "$notes_file" ] || die "$notes_file not found"; notes="$(cat "$notes_file")"; fi
+  [ -n "$notes" ] || notes="Loadbearer app update (version $code)."
+  [ "${#notes}" -le 500 ] || die "release notes are ${#notes} characters; Play allows 500"
+
+  echo "About to send to Google Play:"
+  echo "  app:     $(package_id)"
+  echo "  bundle:  $aab ($(du -h "$aab" | cut -f1), modified $(date -r "$aab" '+%Y-%m-%d %H:%M'))"
+  echo "  version: $code"
+  echo "  track:   $track ($status)"
+  echo "  notes:   $notes"
+  if [ "$yes" != true ]; then
+    [ -t 0 ] || die "no terminal to ask on: pass --yes to send without asking"
+    local answer; read -rp "Send it? Sideload-test the .apk first if you have not. [y/N] " answer
+    case "$answer" in y|Y|yes) ;; *) die "cancelled; nothing was sent" ;; esac
+  fi
+
+  open_edit
+  local up got body
+  up="$(api POST "${PLAY_API}/upload/androidpublisher/v3/applications/$PKG/edits/$EDIT_ID/bundles?uploadType=media" \
+    -H 'Content-Type: application/octet-stream' --max-time 900 --data-binary @"$aab")"
+  got="$(printf '%s' "$up" | json_get versionCode)"
+  [ "$got" = "$code" ] || die "Google read versionCode '$got' from the bundle but the manifest says $code; nothing was released (the edit is discarded). Rebuild with 'build'."
+  body="$($NODE -e 'const [track,status,code,notes,lang]=process.argv.slice(1);console.log(JSON.stringify({track,releases:[{name:code,versionCodes:[code],status,releaseNotes:[{language:lang,text:notes}]}]}))' "$track" "$status" "$code" "$notes" "${PLAY_NOTES_LANG:-en-US}")"
+  api PUT "$EDIT_URL/$EDIT_ID/tracks/$track" -H 'Content-Type: application/json' -d "$body" >/dev/null
+  api POST "$EDIT_URL/$EDIT_ID:commit" -d '' >/dev/null
+  EDIT_ID=""; trap - EXIT
+  echo "Sent version $code to the '$track' track ($status). Google reviews it next; Play Console, Publishing overview, shows where it is."
+}
+
+cmd_release() {
+  local build_args=() upload_args=() track="${PLAY_TRACK:-}"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --code) build_args+=(--code "${2:?--code needs a number}"); shift 2 ;;
+      --track) track="${2:?--track needs a name}"; upload_args+=(--track "$track"); shift 2 ;;
+      *) upload_args+=("$1"); shift ;;
+    esac
+  done
+  # Fail before the build, not after it, when the upload could not work anyway.
+  [ -n "$track" ] || die "no track: pass --track NAME or set PLAY_TRACK (run 'tracks' to see the names)"
+  TOKEN="$(play_token)"; unset TOKEN
+  cmd_build ${build_args[@]+"${build_args[@]}"}
+  cmd_upload ${upload_args[@]+"${upload_args[@]}"}
 }
 
 cmd="${1:-}"; [ -n "$cmd" ] || usage
 shift
 case "$cmd" in
   build) cmd_build "$@" ;;
+  upload) cmd_upload "$@" ;;
+  release) cmd_release "$@" ;;
+  tracks) cmd_tracks ;;
   check) cmd_check ;;
   store-password) cmd_store_password ;;
   *) usage ;;

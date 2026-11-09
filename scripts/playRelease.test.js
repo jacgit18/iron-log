@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -102,5 +102,130 @@ describe('play-release.sh check', () => {
     const r = run(['check'], { gcloud: 'exit 1' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('store-password');
+  });
+});
+
+// The Play API half: `curl` is replaced by a stub that answers like Google and records every call, so nothing is sent anywhere.
+describe('play-release.sh upload, release and tracks', () => {
+  const TOKEN = 'play-token-not-real';
+  let calls, argv, bodies;
+
+  const curlStub = () => stub('curl', `
+cfg="$(cat)"
+method=GET; body=""; url=""; args=("$@")
+for ((i=0; i<\${#args[@]}; i++)); do case "\${args[$i]}" in -X) method="\${args[$((i+1))]}";; -d) body="\${args[$((i+1))]}";; esac; done
+url="\${args[\${#args[@]}-1]}"
+echo "$method \${url%%\\?*}" >> "${calls}"
+echo "$*" >> "${argv}"
+echo "$cfg" >> "${argv}"
+[ -n "$body" ] && echo "$method $body" >> "${bodies}"
+all=" $* "
+reply() { case "$all" in *" -w "*) printf '%s\\n%s' "$1" "\${2:-200}" ;; *) printf '%s' "$1" ;; esac; }
+case "$url" in
+  *generateAccessToken) reply '{"accessToken":"${TOKEN}"}' ;;
+  *bundles*) [ "\${STUB_FAIL:-}" = bundles ] && reply '{"error":{"message":"The caller does not have permission"}}' 403 || reply "{\\"versionCode\\":\${STUB_BUNDLE_CODE:-2}}" ;;
+  *:commit) reply '{}' ;;
+  */tracks/*) reply '{}' ;;
+  */tracks) reply '{"tracks":[{"track":"alpha","releases":[{"status":"completed","versionCodes":["2"]}]},{"track":"production"}]}' ;;
+  */edits) [ "$method" = POST ] && reply '{"id":"E1"}' ;;
+  */edits/*) reply '{}' ;;
+esac`);
+
+  beforeEach(() => {
+    calls = join(dir, 'calls'); argv = join(dir, 'argv'); bodies = join(dir, 'bodies');
+    for (const f of [calls, argv, bodies]) writeFileSync(f, '');
+    writeFileSync(join(android, 'app-release-bundle.aab'), 'bundle');
+  });
+
+  const play = (args, env = {}, opts = {}) => run(args, { env: { CURL: curlStub(), PLAY_ACCESS_TOKEN: TOKEN, ...env }, ...opts });
+  const callList = () => readFileSync(calls, 'utf8').trim().split('\n').filter(Boolean);
+
+  it('uploads the bundle, sets the track with notes, and commits, in that order', () => {
+    const r = play(['upload', '--track', 'alpha', '--notes', 'Fixes the icon.', '--yes']);
+    expect(r.status, r.stderr).toBe(0);
+    expect(callList().map(c => c.replace(/^(\w+) .*\/(edits[^?]*)$/, '$1 $2'))).toEqual([
+      'POST edits', 'POST edits/E1/bundles', 'PUT edits/E1/tracks/alpha', 'POST edits/E1:commit',
+    ]);
+    const put = readFileSync(bodies, 'utf8');
+    expect(put).toContain('"versionCodes":["2"]');
+    expect(put).toContain('"status":"completed"');
+    expect(put).toContain('"text":"Fixes the icon."');
+    expect(r.stdout).toContain("Sent version 2 to the 'alpha' track");
+  });
+
+  it('--draft leaves the release as a draft', () => {
+    const r = play(['upload', '--track', 'alpha', '--draft', '--yes']);
+    expect(r.status, r.stderr).toBe(0);
+    expect(readFileSync(bodies, 'utf8')).toContain('"status":"draft"');
+  });
+
+  it('never puts the token on the command line', () => {
+    play(['upload', '--track', 'alpha', '--yes']);
+    const seen = readFileSync(argv, 'utf8');
+    expect(seen.split('\n').filter(l => l.includes('-sS')).join('\n')).not.toContain(TOKEN);
+    expect(seen).toContain(`Bearer ${TOKEN}`); // only on the stdin config line
+  });
+
+  it('refuses without a track, without --yes when there is no terminal, and with a missing bundle, and sends nothing', () => {
+    expect(play(['upload', '--yes']).stderr).toContain('no track');
+    expect(play(['upload', '--track', 'alpha']).stderr).toContain('--yes');
+    rmSync(join(android, 'app-release-bundle.aab'));
+    expect(play(['upload', '--track', 'alpha', '--yes']).stderr).toContain('run \'build\' first');
+    expect(callList()).toEqual([]);
+  });
+
+  it('discards the edit and does not commit when the bundle is not the manifest version', () => {
+    const r = play(['upload', '--track', 'alpha', '--yes'], { STUB_BUNDLE_CODE: '7' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("versionCode '7'");
+    const list = callList();
+    expect(list.some(c => c.endsWith(':commit'))).toBe(false);
+    expect(list.at(-1)).toMatch(/^DELETE .*\/edits\/E1$/);
+  });
+
+  it('shows Google\'s own message when a call is refused, and cleans up', () => {
+    const r = play(['upload', '--track', 'alpha', '--yes'], { STUB_FAIL: 'bundles' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('403');
+    expect(r.stderr).toContain('The caller does not have permission');
+    expect(callList().at(-1)).toMatch(/^DELETE /);
+  });
+
+  it('makes its own token from the service account when none is given', () => {
+    const r = play(['tracks'], { PLAY_ACCESS_TOKEN: '', PLAY_SERVICE_ACCOUNT: 'releaser@example.iam.gserviceaccount.com' });
+    expect(r.status, r.stderr).toBe(0);
+    expect(callList()[0]).toContain('serviceAccounts/releaser@example.iam.gserviceaccount.com:generateAccessToken');
+    expect(readFileSync(argv, 'utf8')).toContain(`Bearer ${TOKEN}`);
+  });
+
+  it('says what to set when there is no way to sign in', () => {
+    const r = play(['tracks'], { PLAY_ACCESS_TOKEN: '', PLAY_SERVICE_ACCOUNT: '' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('PLAY_SERVICE_ACCOUNT');
+  });
+
+  it('tracks lists track names and their releases without changing anything', () => {
+    const r = play(['tracks']);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain('alpha');
+    expect(r.stdout).toContain('completed 2');
+    expect(r.stdout).toContain('production');
+    expect(callList().some(c => c.startsWith('PUT') || c.endsWith(':commit'))).toBe(false);
+  });
+
+  it('release builds a new version, then uploads exactly that version', () => {
+    const r = play(['release', '--track', 'alpha', '--code', '5', '--yes'], { STUB_BUNDLE_CODE: '5' });
+    expect(r.status, r.stderr).toBe(0);
+    expect(manifest()).toContain('"appVersionCode": 5');
+    expect(readFileSync(bodies, 'utf8')).toContain('"versionCodes":["5"]');
+    expect(r.stdout).toContain("Sent version 5 to the 'alpha' track");
+  });
+
+  it('release stops before building when no track is given', () => {
+    const r = play(['release', '--yes']);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('no track');
+    expect(manifest()).toBe(MANIFEST);
+    expect(() => readFileSync(join(dir, 'log'), 'utf8')).toThrow(); // Bubblewrap never ran
   });
 });
