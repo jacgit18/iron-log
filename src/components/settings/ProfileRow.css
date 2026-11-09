@@ -3,16 +3,21 @@
 /* Settings, the optional age and sex row (brief recommendations-by-age-sex): a labelled year box, three radio choices and Clear, each 44 px; the choices wrap at 375 px. */
 .pr-fields {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sp-10);
   margin: var(--sp-10) 0 0;
 }
 .pr-year {
   display: grid;
   gap: var(--sp-6);
-  max-width: 12rem;
+  max-width: min(12rem, 100%);
+  /* 12rem is wider than the screen at 200% text on a phone */
 }
 .pr-year input {
+  box-sizing: border-box;
   min-height: 44px;
+  min-width: 0;
+  width: 100%;
 }
 .pr-sex {
   display: flex;
