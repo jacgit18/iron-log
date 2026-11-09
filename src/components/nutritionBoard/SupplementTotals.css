@@ -1,0 +1,85 @@
+@layer base, components;
+@layer components {
+/* Supplement totals sheet: a bar per nutrient with its figure and status in words. Over the limit uses the rust token and the words "Over the limit", never colour alone. */
+.stt-list {
+  display: grid;
+  gap: var(--sp-12);
+  margin: var(--sp-12) 0;
+  padding: 0;
+  list-style: none;
+}
+.stt-row {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-10);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.stt-row.over {
+  border-color: var(--str);
+}
+.stt-row .note {
+  margin: 0;
+}
+.stt-hd, .stt-st {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp-4) var(--sp-8);
+}
+.stt-fig {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.stt-st {
+  font-size: var(--fs-sm);
+}
+.stt-st span {
+  color: var(--muted);
+}
+.stt-row.close .stt-st b {
+  color: var(--warn-ink);
+}
+.stt-row.over .stt-st b {
+  color: var(--str);
+}
+.stt-bar {
+  height: var(--sp-8);
+  background: var(--sunk);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.stt-bar i {
+  display: block;
+  height: 100%;
+  background: var(--m-supp, #3b7d2c);
+}
+.stt-row.close .stt-bar i {
+  background: var(--accent-fill);
+}
+.stt-row.over .stt-bar i {
+  background: var(--str);
+}
+.stt-empty {
+  display: grid;
+  gap: var(--sp-8);
+  justify-items: start;
+  margin: var(--sp-12) 0;
+}
+.stt-empty p {
+  margin: 0;
+}
+.stt-empty .btn, .nb-suppact .btn {
+  min-height: 44px;
+}
+.stt-foot {
+  margin: 0 0 var(--sp-12);
+}
+.nb-suppwarn {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--str);
+}
+}

@@ -38,7 +38,7 @@ export const SUPPLEMENT_SLOTS: SupplementSlot[] = ['morning', 'noon', 'night'];
 
 // What is in one serving: nutrient rows (a known key and unit, a positive amount; one row per key and unit) and the serving size. Anything else is dropped.
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
-function nutrientsOf(x: any): SupplementNutrient[] {
+export function nutrientsOf(x: any): SupplementNutrient[] {
   if (!Array.isArray(x)) return [];
   const seen = new Set<string>(); const out: SupplementNutrient[] = [];
   for (const r of x) {
