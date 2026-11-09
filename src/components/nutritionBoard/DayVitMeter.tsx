@@ -1,20 +1,17 @@
 import { useState } from 'react';
-import { useFeature } from '../../features.js';
 import { entriesOn } from '../../lib/dietLog.js';
 import { dayNutrientMeter } from '../../lib/dayNutrientMeter.js';
 import { totalsView } from '../../lib/supplementTotalsView.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.js';
 
-// Vitamins and minerals under a day's Supplements meter (brief vitamin-mineral-day-meter, layout B, admin-only with the Totals sheet): a closed line naming the two nearest their limits, and on a tap thin bars for up to
+// Vitamins and minerals under a day's Supplements meter (brief vitamin-mineral-day-meter, layout B): a closed line naming the two nearest their limits, and on a tap thin bars for up to
 // five. It reads the same rows as the Totals sheet (`lib/dayNutrientMeter.ts`), so food counts only where a limit counts food.
 export default function DayVitMeter({ day }: { day: string }) {
-  const on = useFeature('supplementTotals');
   const supp = useAppStore(s => s.supp);
   const diet = useAppStore(s => s.diet);
   const profile = useAppStore(s => s.cfg.profile);
   const [open, setOpen] = useState(false);
-  if (!on) return null;
   const m = dayNutrientMeter(totalsView(supp.items, supp.taken, day, 'taken', entriesOn(diet, day), profile));
   if (!m) return null;
   if (m.kind === 'none') return <p className="wb-fatnote nb-vit-none" id={`nb-vit-${day}`}>Vitamins and minerals: nothing ticked yet</p>;

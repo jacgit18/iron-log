@@ -2,9 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
 
-// Brief vitamin-mineral-day-meter (layout B): vitamins and minerals under a day's Supplements meter, admin-only with the Totals sheet. Which nutrient is nearest its limit, ties, food and every
+// Brief vitamin-mineral-day-meter (layout B): vitamins and minerals under a day's Supplements meter, open to everyone since 2026-11-09. Which nutrient is nearest its limit, ties, food and every
 // status word are node tests (lib/dayNutrientMeter.test.ts, over the same rows the sheet draws); this covers the wiring a node test cannot: the closed line and the open bars on the real board,
-// ticking moving it, "Totals" opening the sheet, a person without the feature seeing nothing, and axe at 375 px in both themes. The fixed clock is Thursday 2026-09-24.
+// ticking moving it, "Totals" opening the sheet, a person who is not an admin seeing it too, and axe at 375 px in both themes. The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
 
 async function addSupplement(page, name, nutrient, amount) {
@@ -73,7 +73,9 @@ test.describe('admin session', () => {
   }
 });
 
-test('a person without the feature sees no vitamin and mineral line on any day', async ({ page }) => {
-  await openNutrition(page);
-  await expect(page.locator('.nb-vit, .nb-vit-none')).toHaveCount(0);
+test('a person who is not an admin sees the line like everyone (released 2026-11-09)', async ({ page }) => {
+  await setUp(page); // no admin session
+  const col = todayCol(page);
+  await col.getByLabel('Mag cap', { exact: false }).first().check();
+  await expect(col.locator('.nb-vit-tog')).toContainText('Magnesium 62%');
 });

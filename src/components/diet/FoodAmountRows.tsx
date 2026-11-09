@@ -7,8 +7,8 @@ import { MICRO_UNIT } from '../../shared/foodMicro.js';
 import { nutrientLabel } from '../../lib/nutrientInfo.js';
 import './FoodAmountRows.css';
 
-// "Vitamins and minerals (optional)" on the One-off food form and the Ready-made form (brief type-food-amounts, layout A): a closed disclosure unless the food already has amounts. Admin-only with
-// the Totals sheet; the caller decides whether to render it. A row a person edits stops being `filled`, so the calorie-change rule keeps it.
+// "Vitamins and minerals (optional)" on the One-off food form and the Ready-made form (brief type-food-amounts, layout A): a closed disclosure unless the food already has amounts. The caller
+// decides whether to render it. A row a person edits stops being `filled`, so the calorie-change rule keeps it.
 export default function FoodAmountRows({ idp, rows, onChange, perServing = false, cleared = false }: { idp: string; rows: AmountRow[]; onChange: (rows: AmountRow[]) => void; perServing?: boolean; cleared?: boolean }) {
   const [open, setOpen] = useState(rows.length > 0);
   const free = nextFreeKey(rows);

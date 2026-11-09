@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
-import { microKept } from '../../lib/foodMicroKept.js';
-import { microText } from '../../lib/labelFill.js';
 import { withMicro } from '../../shared/foodMicro.js';
 import { findMatches } from '../../lib/dietPlan.js';
 import { quickItems } from '../../lib/dietRecent.js';
@@ -15,7 +13,6 @@ import { PLAN_SLOTS } from '../../shared/diet.js';
 import { ymd } from '../../shared/dates.js';
 import type { FoodHit } from '../../shared/foods.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import type { PlanSlot } from '../../types.ts';
 import CopyDay from '../diet/CopyDay.js';
@@ -86,9 +83,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const recipes = useAppStore(s => s.recipes);
   const saved = useAppStore(s => s.cfg.diet?.meals) ?? [];
   const moved = useAppStore(s => s.cfg.diet?.mealsMoved) ?? {};
-  const totalsOn = useFeature('supplementTotals'); // the typed vitamin and mineral rows, admin-only with the Totals sheet
   const [q, setQ] = useState('');
-  const [removed, setRemoved] = useState<number | null>(null); // the fill whose photo amounts were removed
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
   const eat = day === today;
   const st = () => useAppStore.getState();
@@ -109,14 +104,9 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
     );
   }
   if (flow === 'oneoff') {
-    const kept = (kcal: number) => (removed === fill.key ? undefined : microKept(fill.food, kcal));
-    const photoMicro = (kcal: string) => (fill.food?.fromPhoto ? kept(Number(kcal)) : undefined);
     return <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add"
-      {...(totalsOn ? { amounts: { ...(fill.food?.micro ? { micro: fill.food.micro } : {}), ...(fill.food ? { kcal: fill.food.kcal } : {}) } } : {})}
-      below={kcal => { const m = totalsOn ? undefined : photoMicro(kcal); return m && Object.keys(m).length > 0 && (
-        <p className="note" role="status">Vitamins and minerals read from the photo, check them against the label: {microText(m)}. <button type="button" className="btn sm" onClick={() => { setRemoved(fill.key); document.getElementById('dt-add-k')?.focus(); }}>Remove</button></p>
-      ); }}
-      onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(totalsOn ? v.micro ?? undefined : kept(v.kcal)) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
+      amounts={{ ...(fill.food?.micro ? { micro: fill.food.micro } : {}), ...(fill.food ? { kcal: fill.food.kcal } : {}) }}
+      onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(v.micro ?? undefined) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
   }
   if (flow === 'find') return <FindFood day={day} onAdded={onMsg} onFood={onFill} reopen={reopen} {...(resume ? { resume } : {})} />;
   if (flow === 'copy') return <CopyDay key={day} day={day} onAdded={onMsg} />;

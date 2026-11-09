@@ -3,9 +3,9 @@ import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 import { startFood } from './recipesNav.js';
 
-// Brief type-food-amounts: typing vitamin and mineral amounts on a food (admin-only with the Totals sheet). The row-to-amount rules (unit conversion, cap, duplicates, the calorie-change
+// Brief type-food-amounts: typing vitamin and mineral amounts on a food (open to everyone since 2026-11-09). The row-to-amount rules (unit conversion, cap, duplicates, the calorie-change
 // rule) are node tests (lib/foodAmountRows.test.ts, store/dietSlice.test.ts); this covers the wiring a node test cannot: the section on the real One-off, edit and Ready-made forms,
-// what reaches the saved food log and recipes, and that a person without the feature sees nothing. The fixed clock is Thursday 2026-09-24.
+// what reaches the saved food log and recipes, and that a person who is not an admin gets it too (released 2026-11-09). The fixed clock is Thursday 2026-09-24.
 const SPINACH = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5, f: 1, micro: { calcium: 100, iron: 2 } }] };
 const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:diet/main') || '{}').items || []);
 const recipes = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:recipes/main') || '{}').items || []);
@@ -131,12 +131,14 @@ test.describe('open section, accessibility', () => {
   }
 });
 
-test('a person without the feature sees no vitamins and minerals section and the form saves as before', async ({ page }) => {
+test('a person who is not an admin can type amounts like everyone (released 2026-11-09)', async ({ page }) => {
   await openNutrition(page);
   const sheet = await openAdd(page, 'One-off food');
   await fillOneOff(sheet);
-  await expect(sheet.getByRole('button', { name: /Vitamins and minerals/ })).toHaveCount(0);
+  await sheet.getByRole('button', { name: /Vitamins and minerals \(optional\)/ }).click();
+  await sheet.getByRole('button', { name: '+ Add a nutrient' }).click();
+  await sheet.getByLabel('Amount 1').fill('180');
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
-  expect('micro' in (await stored(page))[0]).toBe(false);
+  expect((await stored(page))[0].micro).toEqual({ calcium: 180 });
 });

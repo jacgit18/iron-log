@@ -1,18 +1,15 @@
 import { useState } from 'react';
-import { useFeature } from '../../features.js';
 import { editProfile, yearFeedback } from '../../lib/profileEdit.js';
 import type { Profile } from '../../shared/profile.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import './ProfileRow.css';
 
-// Settings, App group: the optional birth year and sex that pick the recommended amounts in the Totals sheet (brief recommendations-by-age-sex). Admin-only with the sheet. Stored in `cfg.profile`, part of the settings document: it syncs with the rest of the account's settings and goes with delete-my-data and the export, and nothing else reads it.
+// Settings, App group: the optional birth year and sex that pick the recommended amounts in the Totals sheet (brief recommendations-by-age-sex). Stored in `cfg.profile`, part of the settings document: it syncs with the rest of the account's settings and goes with delete-my-data and the export, and nothing else reads it.
 export default function ProfileRow() {
-  const on = useFeature('supplementTotals');
   const profile = useAppStore(s => s.cfg.profile);
   const thisYear = useToday(s => s.today).getFullYear();
   const [year, setYear] = useState(profile?.birthYear !== undefined ? String(profile.birthYear) : '');
-  if (!on) return null;
   const save = (p: Profile | undefined) => { useAppStore.getState().mutateCfg(c => { if (p) c.profile = p; else delete c.profile; }); };
   const fb = yearFeedback(year, thisYear);
   const sex = profile?.sex ?? 'none';

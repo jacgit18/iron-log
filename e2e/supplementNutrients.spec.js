@@ -5,7 +5,7 @@ import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } 
 // Brief supplement-nutrient-totals, PR 2: what is in a supplement (typed on its sheet), the Totals sheet, and the warning line under a day's ticks. The sums, limits and words are node tests
 // (supplementNutrients.test.ts, supplementTotalsView.test.ts); this covers the wiring a node test cannot: the form rows, the sheet, the link, the warning, phone width and axe. The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
-// Admin-only for now (src/features.ts `supplementTotals`): the browser is told it is an admin before the page loads.
+// Open to everyone since 2026-11-09 (the `supplementTotals` flag is gone); most tests here still sign in as an admin from habit, and the last one runs without.
 const asAdmin = async page => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 
 async function addSupplement(page, name, rows) {
@@ -95,24 +95,15 @@ test('removing every nutrient row clears what the item lists', async ({ page }) 
   await expect(dialog(page).locator('#stt-magnesium')).toHaveCount(0);
 });
 
-test('a person who is not an admin sees no nutrient rows, no Totals button and no warning, and an edit keeps what the item lists', async ({ page }) => {
-  await asAdmin(page);
-  await setUp(page);
-  await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'false'));
-  await page.reload();
+test('a person who is not an admin sees the nutrient rows, the Totals button and the warning like everyone (released 2026-11-09)', async ({ page }) => {
+  await setUp(page); // no admin session
   await openNutrition(page);
   const col = todayCol(page);
   await col.getByLabel('Mag A', { exact: false }).first().check();
-  await col.getByLabel('Mag B', { exact: false }).first().check(); // 400 mg of magnesium: over the limit for an admin
-  await expect(col.locator('.nb-suppwarn')).toHaveCount(0);
-  await expect(col.getByRole('button', { name: /^Totals/ })).toHaveCount(0);
+  await col.getByLabel('Mag B', { exact: false }).first().check(); // 400 mg of magnesium: over the limit
+  await expect(col.locator('.nb-suppwarn')).toContainText('Over an upper limit today: Magnesium');
+  await expect(col.getByRole('button', { name: /^Totals/ })).toBeVisible();
   await openSupplementEditor(page);
   await page.getByRole('button', { name: /^Edit Mag A/ }).click();
-  await expect(page.locator('#supp-add-nutrient')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Save' }).click(); // saved with no rows on the form
-  await closeSupplementEditor(page);
-  await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true'));
-  await page.reload();
-  await openNutrition(page);
-  await expect(todayCol(page).locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts. General information, not medical advice.');
+  await expect(page.locator('#supp-add-nutrient')).toBeVisible();
 });

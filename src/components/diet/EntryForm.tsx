@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { kcalFromMacros } from '../../lib/foodMacros.js';
 import { liveRows, microOfRows, rowsFromMicro } from '../../lib/foodAmountRows.js';
 import type { AmountRow } from '../../lib/foodAmountRows.js';
@@ -13,7 +13,7 @@ const opt = (t: string) => (t.trim() === '' ? null : Number(t));
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 
 // One food: a name, calories, protein and optional carbs and fat. Used to add (quick add) and to edit an entry. `onSubmit` returns an error text, or null when it was saved.
-export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, onCancel, below, amounts }: { idp: string; initial?: { n: string; kcal: number; p: number; c?: number; f?: number }; /** Numbers to begin with in an add form (a food picked from the search); the caller changes `key` to apply a new one. */ start?: { n: string; kcal: number; p: number; c?: number; f?: number }; submitLabel: string; onSubmit: (v: EntryValues) => string | null; onCancel?: () => void; /** A line shown above the buttons that follows the calories as typed (the One-off form's photo amounts, which are dropped when calories change). */ below?: (kcal: string) => ReactNode; /** Shows the "Vitamins and minerals (optional)" section: the amounts to begin with and the calories they came with (admin-only, the caller decides). */ amounts?: { micro?: Micro; kcal?: number } }) {
+export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, onCancel, amounts }: { idp: string; initial?: { n: string; kcal: number; p: number; c?: number; f?: number }; /** Numbers to begin with in an add form (a food picked from the search); the caller changes `key` to apply a new one. */ start?: { n: string; kcal: number; p: number; c?: number; f?: number }; submitLabel: string; onSubmit: (v: EntryValues) => string | null; onCancel?: () => void; /** Shows the "Vitamins and minerals (optional)" section: the amounts to begin with and the calories they came with (the caller decides). */ amounts?: { micro?: Micro; kcal?: number } }) {
   const from = initial ?? start;
   // Vitamins and minerals (brief type-food-amounts): shown only when the caller passes `amounts`; rows from a lookup, a scan or an earlier save go when calories change, rows typed here stay.
   const [rows, setRows] = useState<AmountRow[]>(() => rowsFromMicro(amounts?.micro, true));
@@ -51,7 +51,6 @@ export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, 
       </div>
       {!initial && <p className="note">Fill in protein, carbs and fat and the calories fill in. Type calories yourself to keep your number.</p>}
       {live && <FoodAmountRows idp={idp} rows={live.rows} onChange={setRows} cleared={live.cleared} />}
-      {below?.(kcal)}
       {err && <p className="note" role="alert">{err}</p>}
       <div className="actions">
         {onCancel && <button type="button" className="btn sm" onClick={onCancel}>Cancel</button>}

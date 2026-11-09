@@ -1,7 +1,6 @@
 import { entriesOn } from '../../lib/dietLog.js';
 import { shortDay, supplementDay } from '../../lib/nutritionBoard.js';
 import { hasFoodData, limitWarning } from '../../lib/supplementTotalsView.js';
-import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import './SupplementTotals.css';
 
@@ -14,8 +13,7 @@ export default function SupplementsSection({ day }: { day: string }) {
   const profile = useAppStore(s => s.cfg.profile);
   const v = supplementDay(supp, day);
   const eaten = entriesOn(diet, day);
-  const totalsOn = useFeature('supplementTotals');
-  const warn = totalsOn ? limitWarning(supp.items, supp.taken, day, eaten, profile) : '';
+  const warn = limitWarning(supp.items, supp.taken, day, eaten, profile);
   return (
     <div className="wb-slot nb-supps" role="group" aria-labelledby={`nb-supp-h-${day}`}>
       <div className="wb-slothd"><b id={`nb-supp-h-${day}`}>Supplements</b><span>{v.total ? v.text : ''}</span></div>
@@ -32,7 +30,7 @@ export default function SupplementsSection({ day }: { day: string }) {
         </div>
       ))}
       {warn && <p className="nb-suppwarn" role="status">{warn}</p>}
-      {totalsOn && (v.total > 0 || hasFoodData(eaten)) && <div className="nb-suppact"><button type="button" className="btn sm" id={`nb-supp-totals-${day}`} aria-label={`Totals for ${shortDay(day)}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>Totals</button></div>}
+      {(v.total > 0 || hasFoodData(eaten)) && <div className="nb-suppact"><button type="button" className="btn sm" id={`nb-supp-totals-${day}`} aria-label={`Totals for ${shortDay(day)}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>Totals</button></div>}
     </div>
   );
 }
