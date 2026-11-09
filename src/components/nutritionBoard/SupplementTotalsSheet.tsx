@@ -12,8 +12,9 @@ import './SupplementTotals.css';
 export default function SupplementTotalsSheet({ day }: { day: string }) {
   const supp = useAppStore(s => s.supp);
   const diet = useAppStore(s => s.diet);
+  const profile = useAppStore(s => s.cfg.profile);
   const [basis, setBasis] = useState<TotalsBasis>('taken');
-  const v = totalsView(supp.items, supp.taken, day, basis, entriesOn(diet, day));
+  const v = totalsView(supp.items, supp.taken, day, basis, entriesOn(diet, day), profile);
   const first = supp.items.find(i => i.slot !== '');
   const st = () => useAppStore.getState();
   return (
@@ -25,6 +26,7 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
         <button type="button" id="stt-sched" aria-pressed={basis === 'scheduled'} className={basis === 'scheduled' ? 'on' : ''} onClick={() => setBasis('scheduled')}>Everything scheduled</button>
       </div>
       {v.coverage && <p className="note" id="stt-coverage">{v.coverage}</p>}
+      <p className="note" id="stt-profile">{v.profileNote}</p>
       {!v.hasData && (
         <div className="stt-empty">
           <p>Add what is in a supplement, or log a food with a barcode scan or Find food, to see totals.</p>

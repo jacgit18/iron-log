@@ -40,7 +40,7 @@ describe('the table', () => {
 describe('groupFor', () => {
   const today = '2026-11-09';
   it('picks the person\'s band and names it', () => {
-    expect(groupFor('magnesium', f(1990), today)).toEqual({ recommended: 320, upper: 350, group: 'women ages 31 and over', basis: 'RDA' });
+    expect(groupFor('magnesium', f(1990), today)).toEqual({ recommended: 320, upper: 350, group: 'women ages 31 and over', ages: 'ages 31 and over', basis: 'RDA' });
     expect(groupFor('magnesium', f(1990, 'male'), today)).toMatchObject({ recommended: 420, group: 'men ages 31 and over' });
     expect(groupFor('magnesium', f(2000, 'male'), today)).toMatchObject({ recommended: 400, group: 'men ages 19 to 30' });
     expect(groupFor('fiber', f(1960), today)).toMatchObject({ recommended: 21, group: 'women ages 51 and over', basis: 'AI' });
