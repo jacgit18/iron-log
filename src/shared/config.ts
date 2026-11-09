@@ -1,6 +1,7 @@
 import { DEFAULT_CFG } from '../lib/logic.js';
 import type { Cfg, WarmupItem } from '../types.ts';
 import { normDietCfg } from './diet.js';
+import { cleanProfile } from './profile.js';
 import { normRecipeChips } from './recipes.js';
 import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
 
@@ -36,6 +37,7 @@ export function normConfig(c: any): Partial<Cfg> {
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
   if ('groceryBudget' in out && !validGroceryBudget(out.groceryBudget)) delete out.groceryBudget;
   if ('diet' in out) { const d = normDietCfg(out.diet); if (d) out.diet = d; else delete out.diet; }
+  if ('profile' in out) { const pr = cleanProfile(out.profile); if (pr) out.profile = pr; else delete out.profile; }
   if ('recipeChips' in out) { const rc = normRecipeChips(out.recipeChips); if (rc) out.recipeChips = rc; else delete out.recipeChips; }
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
   ['backup', 'ghBackup', 'token', 'ghToken'].forEach(k => { delete out[k]; });
@@ -51,7 +53,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'groceryBudget', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'groceryBudget', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips', 'profile'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 
