@@ -5,6 +5,8 @@ import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } 
 // Brief supplement-nutrient-totals, PR 2: what is in a supplement (typed on its sheet), the Totals sheet, and the warning line under a day's ticks. The sums, limits and words are node tests
 // (supplementNutrients.test.ts, supplementTotalsView.test.ts); this covers the wiring a node test cannot: the form rows, the sheet, the link, the warning, phone width and axe. The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
+// Admin-only for now (src/features.ts `supplementTotals`): the browser is told it is an admin before the page loads.
+const asAdmin = async page => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 
 async function addSupplement(page, name, rows) {
   await page.locator('#suplib-new').click();
@@ -28,6 +30,7 @@ async function setUp(page) {
 }
 
 test('a day with no nutrient data has a Totals sheet that says what to do and no warning', async ({ page }) => {
+  await asAdmin(page);
   await openNutrition(page);
   await openSupplementEditor(page);
   await page.locator('#suplib-new').click();
@@ -43,6 +46,7 @@ test('a day with no nutrient data has a Totals sheet that says what to do and no
 });
 
 test('ticking supplements adds up what is in them, warns past the limit and the sheet says so in words', async ({ page }) => {
+  await asAdmin(page);
   await setUp(page);
   const col = todayCol(page);
   await col.getByLabel('Mag A', { exact: false }).first().check();
@@ -64,6 +68,7 @@ test('ticking supplements adds up what is in them, warns past the limit and the 
 });
 
 test('Totals sheet has no axe violations (light and dark) and does not scroll sideways at 375 px', async ({ page }) => {
+  await asAdmin(page);
   await page.setViewportSize({ width: 375, height: 800 });
   await setUp(page);
   await todayCol(page).getByLabel('Mag B', { exact: false }).first().check();
@@ -78,6 +83,7 @@ test('Totals sheet has no axe violations (light and dark) and does not scroll si
 });
 
 test('removing every nutrient row clears what the item lists', async ({ page }) => {
+  await asAdmin(page);
   await setUp(page);
   await openSupplementEditor(page);
   await page.getByRole('button', { name: /^Edit Mag A/ }).click();
@@ -87,4 +93,26 @@ test('removing every nutrient row clears what the item lists', async ({ page }) 
   await todayCol(page).getByLabel('Mag A', { exact: false }).first().check();
   await todayCol(page).getByRole('button', { name: 'Totals' }).click();
   await expect(dialog(page).locator('#stt-magnesium')).toHaveCount(0);
+});
+
+test('a person who is not an admin sees no nutrient rows, no Totals button and no warning, and an edit keeps what the item lists', async ({ page }) => {
+  await asAdmin(page);
+  await setUp(page);
+  await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'false'));
+  await page.reload();
+  await openNutrition(page);
+  const col = todayCol(page);
+  await col.getByLabel('Mag A', { exact: false }).first().check();
+  await col.getByLabel('Mag B', { exact: false }).first().check(); // 400 mg of magnesium: over the limit for an admin
+  await expect(col.locator('.nb-suppwarn')).toHaveCount(0);
+  await expect(col.getByRole('button', { name: /^Totals/ })).toHaveCount(0);
+  await openSupplementEditor(page);
+  await page.getByRole('button', { name: /^Edit Mag A/ }).click();
+  await expect(page.locator('#supp-add-nutrient')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click(); // saved with no rows on the form
+  await closeSupplementEditor(page);
+  await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true'));
+  await page.reload();
+  await openNutrition(page);
+  await expect(todayCol(page).locator('.nb-suppwarn')).toHaveText('Over an upper limit today: Magnesium. Totals shows what each limit counts.');
 });
