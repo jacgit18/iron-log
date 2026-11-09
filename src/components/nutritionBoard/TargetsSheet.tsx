@@ -29,7 +29,7 @@ export default function TargetsSheet() {
   const st = () => useAppStore.getState();
   return (
     <Sheet className="nbsheet" aria-label="Targets and goal">
-      <h2 className="cond" id="diet-h">Targets and goal</h2>
+      <h2 className="cond" id="nbt-h">Targets and goal</h2>
       <div className="dt"><DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} hasDate={weeksLeft !== null && weeksLeft > 0} /></div>
       <div className="sect">Body weight</div>
       <form className="wcustom" noValidate onSubmit={e => { e.preventDefault(); if (st().saveBodyWeight(w)) setW(''); }}>

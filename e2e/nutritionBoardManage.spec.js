@@ -91,3 +91,20 @@ test('adding a supplement from the library in Manage returns to the editor with 
   await expect(page.locator('#suplib-h')).toBeVisible(); // back in the editor, not on the board
   await expect(page.locator('.exlib .exrow b', { hasText: 'Vitamin D3' })).toBeVisible();
 });
+
+test('phone Back from a supplement opened in the library closes it, then Manage, then leaves Nutrition', async ({ page }) => {
+  // Closing the supplement sheet puts the editor back (like Cancel), so Back is one step per sheet: no extra Manage appears after the sheet is gone.
+  await openNutrition(page);
+  await openManage(page);
+  await page.locator('#sched-edit').click();
+  await page.locator('#suplib-new').click();
+  await expect(page.locator('#supp-name')).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('#supp-name')).toHaveCount(0);
+  await expect(page.locator('#suplib-h')).toBeVisible();
+  await page.goBack();
+  await expect(sheet(page)).toHaveCount(0);
+  await expect(page.locator('#nb-h')).toBeVisible();
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => location.hash)).not.toContain('nutrition');
+});
