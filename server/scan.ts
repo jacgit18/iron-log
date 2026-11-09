@@ -35,7 +35,7 @@ const SYSTEM = [
   '"name" the product name if printed; "serving" the serving size words as printed (like "2/3 cup"); "servingG" grams of one serving;',
   '"servingsPerPack" servings per container; "kcal" calories, "p" protein g, "c" total carbohydrate g, "f" total fat g, all PER SERVING.',
   `"micro" an object of the vitamin and mineral amounts printed PER SERVING, only with these keys and in the unit shown: ${MICRO_KEYS}; for example {"calcium":260,"vitaminD":2.5}.`,
-  'Give each as the amount in mg or mcg printed on the label (convert mcg to mg or the reverse when needed, and IU is not allowed for vitamin D: use the mcg printed in brackets, else leave it out); never the percent of Daily Value; leave out a nutrient that is not printed; omit "micro" when none is.',
+  'Give each as the amount printed on the label in the unit shown after its key (mg, mcg or g; convert when the label uses another of these, and IU is not allowed for vitamin D: use the mcg printed in brackets, else leave it out); never the percent of Daily Value; leave out a nutrient that is not printed; omit "micro" when none is.',
   'If only a "per 100 g" column is printed and no per-serving column, answer {"per100gOnly":true,"name":...} and no numbers.',
   'If the photo is not a nutrition-facts label, answer {}.',
 ].join(' ');
