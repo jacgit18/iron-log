@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { normDietCfg, normDietEntries } from '../../src/shared/diet.ts';
+import { normSupplementItem } from '../../src/shared/listItems.ts';
 import { normRecipes } from '../../src/shared/recipes.ts';
+import { supplementNutrientTotals, targetTotals } from '../../src/lib/supplementNutrients.ts';
+import { limitWarning } from '../../src/lib/supplementTotalsView.ts';
 import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import { SEED_EXERCISE_IDS } from './seedPersona.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from './personas.ts';
@@ -36,7 +39,7 @@ describe('QA personas', () => {
       expect(rows.groceryItems).toHaveLength(p.data.groceryItems);
       expect(rows.programs).toBe(p.data.programs);
       expect(rows.erased).toBe(p.data.erased === true);
-      expect(rows.recipes).toHaveLength(p.data.recipes ?? 0);
+      expect(rows.recipes).toHaveLength((p.data.recipes ?? 0) + (p.data.vitamins ? 1 : 0)); // the vitamin persona adds one ready-made food
     }
   });
 
@@ -107,9 +110,9 @@ describe('QA personas', () => {
     const rowsOf = (id: string) => buildPersonaRows(personaById(id)!, EXERCISES, TODAY);
     const sumOn = (rows: ReturnType<typeof rowsOf>, d: string, k: 'kcal' | 'p') => rows.dietEntries.filter(e => e.data.d === d).reduce((a, e) => a + e.data[k], 0);
 
-    it('has the five diet accounts, and 17 in all', () => {
-      expect(PERSONAS.filter(p => p.group === 'Diet').map(p => p.id)).toEqual(['diet-on-target', 'diet-over-target', 'diet-fresh', 'meal-planner', 'recipe-collector']);
-      expect(PERSONAS).toHaveLength(17);
+    it('has the six diet accounts, and 18 in all', () => {
+      expect(PERSONAS.filter(p => p.group === 'Diet').map(p => p.id)).toEqual(['diet-on-target', 'diet-over-target', 'diet-fresh', 'meal-planner', 'vitamin-tracker', 'recipe-collector']);
+      expect(PERSONAS).toHaveLength(18);
     });
 
     it('puts the on-target account at about 60% of its calories today, with 14 days logged and targets set', () => {
@@ -172,5 +175,48 @@ describe('QA personas', () => {
         for (const e of r.dietEntries) { expect(e.clientId.length).toBeLessThanOrEqual(60); expect(e.position).toBeGreaterThan(0); }
       }
     });
+  });
+});
+
+describe('the vitamin tracker persona (QA data for the vitamin and mineral features)', () => {
+  const p = personaById('vitamin-tracker')!;
+  const rows = buildPersonaRows(p, EXERCISES, TODAY);
+  const day = '2026-10-27';
+  const items = rows.supplements.map(x => normSupplementItem(x.data)!);
+  const taken = Object.fromEntries(rows.supplementDays.map(d => [d.day, d.taken]));
+  const eaten = normDietEntries(rows.dietEntries.map(e => e.data));
+
+  it('writes supplements the app reads back whole, with unique ids, and ticks that name real supplements', () => {
+    expect(items).toHaveLength(7);
+    expect(new Set(rows.supplements.map(x => x.clientId)).size).toBe(7);
+    rows.supplements.forEach((x, i) => expect(x.data.id).toBe(x.clientId, `${i}`));
+    expect(items.find(i => i.id.endsWith('mag-pm'))).toMatchObject({ slot: 'night', portion: 0.5, serving: { units: 2 } });
+    expect(items.find(i => i.id.endsWith('fish-oil'))?.nutrients).toBeUndefined();
+    for (const d of rows.supplementDays) for (const id of Object.keys(d.taken)) expect(items.some(i => i.id === id), id).toBe(true);
+    expect(rows.supplementDays.map(d => d.day)).toEqual(['2026-10-27', '2026-10-26', '2026-10-25', '2026-10-24', '2026-10-22']);
+  });
+  it('puts today in the states the scenarios walk: vitamin D over, zinc close, magnesium from supplements only, five without a limit', () => {
+    const t = supplementNutrientTotals(items, taken, day, 'taken', eaten.filter(e => e.d === day));
+    const by = (k: string) => t.find(x => x.key === k)!;
+    expect(by('vitaminD').total).toBe(125); // 125 mcg of supplement; today's foods (oatmeal, yogurt, chicken) carry no vitamin D
+    expect(by('zinc')).toMatchObject({ fromSupplements: 30, fromFood: 6, total: 36 });
+    expect(by('magnesium')).toMatchObject({ foodCounted: false, total: 200 });
+    expect(limitWarning(items, taken, day, eaten.filter(e => e.d === day))).toContain('Vitamin D');
+    expect(targetTotals(items, taken, day, 'taken', eaten.filter(e => e.d === day)).map(x => x.key)).toEqual(expect.arrayContaining(['vitaminB12', 'fiber', 'potassium', 'sodium']));
+  });
+  it('carries amounts on most foods and none on one, and one ready-made food with amounts', () => {
+    const today = eaten.filter(e => e.d === day);
+    expect(today.length).toBeGreaterThanOrEqual(3);
+    expect(today.map(e => [e.n, !!e.micro])).toEqual([['Oatmeal with berries', true], ['Greek yogurt', false], ['Chicken and rice bowl', true]]); // the coverage line reads 2 of 3
+    const r = normRecipes(rows.recipes.map(x => x.data)).find(x => x.cat === 'ready');
+    expect(r).toMatchObject({ n: 'Fortified cereal', micro: { iron: 4.5, vitaminD: 2, calcium: 130, zinc: 1.2 } });
+  });
+  it('sets no birth year or sex, and no other persona carries vitamin data', () => {
+    expect(rows.config && 'profile' in rows.config).toBe(false);
+    for (const q of PERSONAS.filter(x => x.id !== p.id)) {
+      const r = buildPersonaRows(q, EXERCISES, TODAY);
+      expect(r.supplements, q.id).toEqual([]);
+      expect(r.dietEntries.some(e => e.data.micro), q.id).toBe(false);
+    }
   });
 });
