@@ -105,5 +105,5 @@ test('the page has a theme-color per OS scheme, the manifest shortcuts and the i
   await expect(page.locator('meta[name="theme-color"]')).toHaveCount(2);
   await expect(page.locator('link[rel="apple-touch-startup-image"]')).toHaveCount(5);
   const manifest = await (await page.request.get('/manifest.webmanifest')).json();
-  expect(manifest.shortcuts.map(sc => sc.url)).toEqual(['./?open=board', './?open=daily']);
+  expect(manifest.shortcuts.map(sc => sc.url)).toEqual(['./?open=board', './?open=daily', './?open=progress', './#/daily/nutrition']);
 });
