@@ -166,6 +166,23 @@ test('supplements tick on today, last week and a day ahead, each with its own co
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
 });
 
+test('the Supplements meter sits before Water, fills as supplements are ticked, and says "None scheduled" with none', async ({ page }) => {
+  await openNutrition(page);
+  const bar = c => meter(c, 'Supplements').locator('i');
+  const names = await todayCol(page).locator('.wb-bar .wb-barl span').allTextContents();
+  expect(names.indexOf('Supplements')).toBeGreaterThan(-1);
+  expect(names.indexOf('Supplements')).toBeLessThan(names.indexOf('Water'));
+  await expect(meter(todayCol(page), 'Supplements')).toHaveAttribute('aria-label', 'Supplements taken: None scheduled');
+  await expect(todayCol(page).locator('.wb-bar', { hasText: 'None scheduled' })).toBeVisible();
+  await seedSupps(page);
+  await openNutrition(page);
+  await expect(meter(todayCol(page), 'Supplements')).toHaveAttribute('aria-label', 'Supplements taken: 0 of 2 taken');
+  await page.locator(`[id="nb-supp-${TODAY}-creatine"]`).check();
+  await expect(meter(todayCol(page), 'Supplements')).toHaveAttribute('aria-label', 'Supplements taken: 1 of 2 taken');
+  expect(await bar(todayCol(page)).evaluate(e => e.style.width)).toBe('50%');
+  await expect(col(page, '2026-09-27').locator('.wb-bar', { hasText: '0 of 2 taken' })).toBeVisible();
+});
+
 test('a sheet adds one Back step and Back closes it; the page keeps its address', async ({ page }) => {
   await openNutrition(page);
   const before = await hash(page);
@@ -208,5 +225,38 @@ test.describe('on a phone', () => {
     await expect(page.locator('.nb-target')).toHaveText('Adding to Fri 25');
     const small = await page.locator('.nb-toolbar .btn, .nb-step .btn, .nb-weeksw button, .nb-hydration button, .nb-tick').evaluateAll(els => els.filter(e => e.offsetParent).map(e => ({ n: e.textContent.trim(), h: e.getBoundingClientRect().height })).filter(x => x.h < 43.5));
     expect(small).toEqual([]);
+  });
+
+  for (const width of [375, 390]) {
+    test(`header B and add-food A at ${width} px: title row with short buttons, week switcher full width, Add food over three equal buttons, centered day text`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await openNutrition(page);
+      const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
+      const title = await box('#nb-h'), targets = await box('#nb-targets'), manage = await box('#nb-manage'), week = await box('.nb-weeksw');
+      expect(await page.locator('#nb-targets').evaluate(e => e.innerText)).toBe('Targets'); // the short name on a phone; the accessible name stays Targets and goal
+      expect(Math.abs(targets.y - title.y)).toBeLessThan(30); // same row as the title
+      expect(manage.r).toBeGreaterThan(width - 24); // buttons sit at the right
+      expect(week.y).toBeGreaterThan(targets.b - 1); // switcher below
+      expect(week.w).toBeGreaterThan(width - 40); // and full width
+      expect(Math.min(targets.h, manage.h)).toBeGreaterThanOrEqual(43.5);
+      const add = await box('#nb-add');
+      const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
+      expect(three).toHaveLength(3);
+      expect(add.w).toBeGreaterThan(width - 40);
+      expect(three.every(t => t.y > add.b - 1 && Math.abs(t.y - three[0].y) < 1 && Math.abs(t.w - three[0].w) < 1 && t.h >= 43.5)).toBe(true);
+      expect(await page.locator('.nb-steppick').evaluate(e => getComputedStyle(e).textAlignLast)).toBe('center');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('on a day ahead only Add food shows; on last week the food buttons are gone', async ({ page }) => {
+    await openNutrition(page);
+    const step = page.getByRole('group', { name: 'Day stepper' });
+    await step.getByRole('button', { name: 'Next day' }).click();
+    await expect(page.locator('#nb-add')).toBeVisible();
+    await expect(page.locator('.nb-tbtns .btn')).toHaveCount(1);
+    await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-20');
+    await expect(page.locator('#nb-add')).toHaveCount(0);
+    await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();
   });
 });

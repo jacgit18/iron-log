@@ -87,13 +87,6 @@ export function planLog(r: Resolved, entries: DietEntry[], day: string): { add: 
   return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id }], left: 0 } : { add: [], left: 1 };
 }
 
-/** The recipe ids the days in `days` need from the shop, in order, each once; saved meals and removed recipes add none. */
-export function recipeIdsFor(plan: Plan, days: string[], recipes: Recipe[]): string[] {
-  const seen = new Set<string>();
-  for (const d of days) for (const it of plan[d] ?? []) if (it.k === 'r' && recipes.some(r => r.id === it.id)) seen.add(it.id);
-  return [...seen];
-}
-
 export const MAX_FIND_MATCHES = 8;
 
 /** The recipes or meals whose name contains `query` (case-blind; empty matches all), A to Z, then capped: the cap keeps the first alphabetical ones, not the first stored. */

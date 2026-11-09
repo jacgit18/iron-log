@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
 import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
-import { addItem, dayTotals, daysFrom, findMatches, inWindow, planLog, prunePlan, recipeIdsFor, removeItem, resolve, setPortion, totalsText } from './dietPlan.js';
+import { addItem, dayTotals, daysFrom, findMatches, inWindow, planLog, prunePlan, removeItem, resolve, setPortion, totalsText } from './dietPlan.js';
 
 const today = '2026-10-30';
 const recipes: Recipe[] = [
@@ -80,13 +80,6 @@ describe('planLog', () => {
     expect(planLog(resolve(r('r1'), recipes, meals), day, today)).toEqual({ add: [], left: 1 });
     expect(planLog(resolve(r('r2'), recipes, meals), [], today)).toMatchObject({ error: expect.stringContaining('calories') });
     expect(planLog(resolve(r('zzz'), recipes, meals), [], today)).toMatchObject({ error: expect.stringContaining('removed') });
-  });
-});
-
-describe('recipeIdsFor', () => {
-  it('lists the recipes of the days once each, skipping meals and removed recipes', () => {
-    const p = { [today]: [r('r1'), m('m1'), r('gone')], '2026-10-31': [r('r3'), r('r1')], '2026-11-20': [r('r2')] };
-    expect(recipeIdsFor(p, daysFrom(today, 7), recipes)).toEqual(['r1', 'r3']);
   });
 });
 

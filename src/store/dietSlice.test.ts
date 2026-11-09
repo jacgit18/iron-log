@@ -259,12 +259,4 @@ describe('the meal planner', () => {
     st().addPlanItem(today, 'r', 'r2');
     expect(Object.keys(st().cfg.diet!.plan!)).toEqual([today]);
   });
-  it('sends the missing ingredients of the days to To get, each name once', () => {
-    st().addPlanItem(today, 'r', 'r1'); st().addPlanItem(tomorrow, 'r', 'r2');
-    const r = st().planToGroceries([today, tomorrow]);
-    expect(r.recipes).toBe(2); expect(r.refused).toBeNull();
-    const names = st().grocery.items.map(i => i.n.toLowerCase());
-    expect(names.filter(n => n === 'chicken')).toHaveLength(1);
-    expect(names).toEqual(expect.arrayContaining(['chicken', 'rice', 'peppers']));
-  });
 });

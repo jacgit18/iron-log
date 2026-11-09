@@ -2,11 +2,11 @@ import { test, expect } from './fixtures.js';
 import { startRecipe } from './recipesNav.js';
 
 // The meal planner (brief diet-meal-planner). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
-// this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today, a day with no Log button, and the missing ingredients on Shopping.
+// this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today and a day with no Log button.
 import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // The Nutrition board's planner, once the Diet panel's Plan strip (brief diet-meal-planner, now on the week board of brief nutrition-board). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
-// this covers the wiring: plan a recipe and a saved meal from the add sheet, change a portion, Log on today, a day with no Log button, and the missing ingredients on Shopping.
+// this covers the wiring: plan a recipe and a saved meal from the add sheet, change a portion, Log on today and a day with no Log button.
 const TOMORROW = '2026-09-25'; // the fixed clock is Thursday 2026-09-24
 const board = page => page.locator('.nb');
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
@@ -76,7 +76,7 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await expect(col(page, TOMORROW).locator('.wb-card', { hasText: 'Breakfast' })).toBeVisible();
 });
 
-test('a recipe has a portion stepper, and the plan sends its missing ingredients to Shopping', async ({ page }) => {
+test('a recipe has a portion stepper', async ({ page }) => {
   await newRecipe(page, 'Chili', 600, 40, ['Kidney beans', 'Chili powder']);
   await nutrition(page);
   await planRecipe(page, 'Chili', TOMORROW);
@@ -85,10 +85,7 @@ test('a recipe has a portion stepper, and the plan sends its missing ingredients
   await next.getByText('Chili', { exact: true }).click();
   await next.getByRole('button', { name: 'More Chili' }).click();
   await expect(next.getByText('900 kcal · 60 g protein')).toBeVisible();
-  await page.getByRole('button', { name: 'Add missing ingredients to Shopping' }).click();
-  await expect(status(page)).toContainText('Added 2 to Shopping.');
-  await page.click('#daily-grocery');
-  await expect(page.getByText('Kidney beans').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /Add missing ingredients to Shopping/ })).toHaveCount(0); // removed from Nutrition (brief nutrition-mobile-layout); the recipe keeps its own button
 });
 
 test('Last week, This week and Next week switch the week the board shows', async ({ page }) => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addingTo, basisOf, dayGroups, dayView, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, supplementDay, weekDays, weekLabel, weekOf } from './nutritionBoard.js';
+import { addFlows, addingTo, basisOf, dayGroups, dayView, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -173,4 +173,28 @@ describe('supplements for a day', () => {
     expect(supplementDay(s, '2026-11-09').text).toBe('0 of 3 taken');
   });
   it('nothing scheduled says so', () => { expect(supplementDay(supp(), TODAY).text).toBe('Nothing scheduled'); });
+});
+
+describe('the Supplements meter', () => {
+  const items = [
+    { id: 'a', n: 'Creatine', dose: '5 g', slot: 'morning' }, { id: 'b', n: 'Vitamin D', dose: '', slot: 'morning' },
+    { id: 'c', n: 'Zinc', dose: '', slot: 'noon' }, { id: 'd', n: 'Magnesium', dose: '400 mg', slot: 'night' },
+  ] as Supplements['items'];
+  it('"2 of 4 taken" fills half the bar and says so for a screen reader', () => {
+    const m = suppMeter(supp({ items, taken: { [TODAY]: { a: true, d: true } } }), TODAY);
+    expect([m.done, m.total, m.pct, m.text, m.label]).toEqual([2, 4, 50, '2 of 4 taken', 'Supplements taken: 2 of 4 taken']);
+  });
+  it('all taken is a full bar; a day ahead starts empty', () => {
+    expect(suppMeter(supp({ items, taken: { [TODAY]: { a: true, b: true, c: true, d: true } } }), TODAY)).toMatchObject({ pct: 100, text: '4 of 4 taken' });
+    expect(suppMeter(supp({ items }), '2026-11-10')).toMatchObject({ pct: 0, text: '0 of 4 taken' });
+  });
+  it('nothing scheduled is an empty bar that says "None scheduled"', () => {
+    expect(suppMeter(supp(), TODAY)).toMatchObject({ total: 0, pct: 0, text: 'None scheduled' });
+    expect(suppMeter(supp({ items: [{ id: 'x', n: 'Spare', dose: '', slot: '' }] as Supplements['items'] }), TODAY).total).toBe(0);
+  });
+  it('rides on the day view, and the four food and water meters stay four', () => {
+    const v = view(TODAY, { supp: supp({ items, taken: { [TODAY]: { a: true } } }) });
+    expect(v.supps.text).toBe('1 of 4 taken');
+    expect(v.meters).toHaveLength(4);
+  });
 });

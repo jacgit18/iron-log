@@ -1,6 +1,5 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { addItem, recipeIdsFor, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
-import { monthKey } from '../lib/grocery.js';
+import { addItem, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
 import { moveItem } from '../lib/weekBoard.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
@@ -123,13 +122,6 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   },
 
   removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index)); },
-
-  planToGroceries(days) {
-    const ids = recipeIdsFor(planOf(get), days, get().recipes), month = monthKey(new Date());
-    let added = 0, already = 0, refused: string | null = null;
-    for (const id of ids) { const r = get().addMissingToGrocery(id, month); added += r.added; already += r.already; refused ??= r.refused; }
-    return { added, already, refused, recipes: ids.length };
-  },
 
   setDietPace(pace, rate) {
     if (pace === 'custom') { const bad = rateError(rate ?? null); if (bad) return bad; }
