@@ -8,7 +8,7 @@ import { labelNote, type LabelFill, type LabelResult } from '../shared/scan.js';
 // Scan label (brief label-photo-scan): what a scan result does to the Ready-made form. Pure, so the rules are node tests: the four numbers are always
 // replaced (they come from the label); the name, the Note and Servings per pack are filled only while their boxes are empty; a result with no numbers changes no number.
 export interface FormText { n: string; note: string; pack: string }
-export interface FillPlan { n?: string; kcal?: string; p?: string; c?: string; f?: string; note?: string; pack?: string; /** Vitamins and minerals per serving; the Ready-made form ignores them (a recipe holds the four macros only). */ micro?: Micro; message: string }
+export interface FillPlan { n?: string; kcal?: string; p?: string; c?: string; f?: string; note?: string; pack?: string; /** Vitamins and minerals per serving; the Ready-made form keeps them on the food (brief recipes-vitamins-minerals) while calories are unchanged. */ micro?: Micro; message: string }
 
 const str = (v: number | undefined) => (v !== undefined ? String(v) : '');
 

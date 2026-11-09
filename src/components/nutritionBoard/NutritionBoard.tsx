@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { bwSorted, goalStatus } from '../../lib/body.js';
+import { entryFromFood } from '../../lib/dietLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { addingTo, dayView, foodEditable, longDay, onBoard, weekDays, weekLabel, weekOf, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
@@ -56,7 +57,7 @@ export default function NutritionBoard() {
     if ('error' in out) { setMsg(out.error); return; }
     let done = 0, stopped: string | null = null;
     for (const f of out.add) {
-      stopped = st().addDietEntry({ d: today, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) }).error;
+      stopped = st().addDietEntry(entryFromFood(today, f)).error;
       if (stopped) break;
       done++;
     }
