@@ -75,6 +75,14 @@ describe('GET /api/supplement-label/c:dsld:<id>', () => {
       const out = await code(async () => reply({ ingredientRows: [] }));
       expect(out.status).toBe(404);
     });
+    it('never follows a redirect: it asks with redirect "error", and a redirect (thrown by fetch, or a 302 from a stand-in) is 503 "upstream"', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const ask = vi.fn(async (_u: string, _o?: RequestInit) => { throw new TypeError('fetch failed: unexpected redirect'); });
+      expect((await code(ask)).body.why).toBe('upstream');
+      expect(ask.mock.calls[0][1]?.redirect).toBe('error');
+      const out = await code(async () => new Response(null, { status: 302, headers: { location: 'https://example.com/' } }));
+      expect(out.status).toBe(503); expect(out.body.why).toBe('upstream');
+    });
     it('a body that is not JSON is 503', async () => {
       vi.spyOn(console, 'warn').mockImplementation(() => {});
       expect((await code(async () => new Response('<html>oops</html>', { status: 200 }))).status).toBe(503);
