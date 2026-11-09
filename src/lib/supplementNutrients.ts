@@ -2,6 +2,7 @@ import { NUTRIENT_KEYS, TARGET_KEYS } from '../shared/nutrientKeys.js';
 import type { NutrientKey, NutrientUnit, TargetKey } from '../shared/nutrientKeys.js';
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
 import type { Profile } from '../shared/profile.js';
+import { CLOSE_FRACTION } from './intakeChecks.js';
 import { upperFor } from './nutrientGroups.js';
 import { limitOf } from './nutrientLimits.js';
 import { targetOf } from './nutrientTargets.js';
@@ -94,7 +95,7 @@ export function limitStatus(t: Pick<NutrientTotal, 'key' | 'total'>, upper?: num
   const top = upper ?? limit.upper;
   const percent = Math.round((t.total / top) * 100);
   const over = t.total > top ? round3(t.total - top) : 0;
-  return { status: over > 0 ? 'over' : t.total >= top * 0.8 ? 'close' : 'under', percent, over };
+  return { status: over > 0 ? 'over' : t.total >= top * CLOSE_FRACTION ? 'close' : 'under', percent, over };
 }
 
 export const overLimit = (totals: NutrientTotal[], profile?: Profile, date?: string): NutrientTotal[] => totals.filter(t => limitStatus(t, limitFor(t.key, profile, date)).status === 'over');
