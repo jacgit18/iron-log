@@ -165,6 +165,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-236': { auto: 'e2e', specs: ['e2e/supplementPortions.spec.js'], partial: 'the seeded account is not used; the spec makes its own supplements' },
   'S-237': { auto: 'e2e', specs: ['e2e/typeFoodAmounts.spec.js', 'e2e/recommendationsByAgeSex.spec.js', 'e2e/supplementNutrients.spec.js'], partial: 'the Ready-made form is not walked as a non-admin' },
   'S-216': { auto: 'e2e', specs: ['e2e/nutritionBoardManage.spec.js'], partial: 'the pace chips and the typed calories are not walked' },
+  'S-238': { auto: 'unit', specs: ['src/lib/mealRollup.test.ts', 'src/lib/dietPlan.test.ts'], partial: 'the roll-up and the planned log are node tests; no browser spec builds a recipe from a food and logs it' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */
