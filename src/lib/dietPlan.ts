@@ -1,5 +1,5 @@
 import type { DietEntry, PlanItem, Recipe, SavedItem, SavedMeal } from '../types.ts';
-import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, samePlanItem } from '../shared/diet.js';
 import { fmtNum, hasMacros, servingNumbers, shiftDay } from './dietLog.js';
 import { planMeal } from './dietMeals.js';
 import { sortByName } from './sort.js';
@@ -23,7 +23,7 @@ export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries
 export function addItem(plan: Plan, day: string, item: PlanItem, today: string): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
   const list = plan[day] ?? [];
-  if (list.some(i => i.k === item.k && i.id === item.id)) return fail('That is already on this day.');
+  if (list.some(i => samePlanItem(i, item))) return fail('That is already in that meal.'); // the same food may be in two different meals
   if (list.length >= MAX_PLAN_ITEMS) return fail(`A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`);
   return { plan: { ...plan, [day]: [...list, item] }, error: null };
 }
@@ -39,7 +39,7 @@ export function removeItem(plan: Plan, day: string, index: number): Plan {
 export function setPortion(plan: Plan, day: string, index: number, portion: number): Plan {
   const it = plan[day]?.[index];
   if (!it || it.k !== 'r' || !(portion >= 0.5 && portion <= 10) || portion * 2 !== Math.round(portion * 2)) return plan;
-  const next: PlanItem = portion === 1 ? { k: 'r', id: it.id } : { k: 'r', id: it.id, x: portion };
+  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}) };
   return { ...plan, [day]: plan[day]!.map((x, i) => (i === index ? next : x)) };
 }
 
@@ -85,13 +85,6 @@ export function planLog(r: Resolved, entries: DietEntry[], day: string): { add: 
   if (!r.recipe || !nums) return { error: 'Add calories and protein to this recipe to log it.' };
   const room = entries.filter(e => e.d === day).length < MAX_DIET_PER_DAY;
   return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id }], left: 0 } : { add: [], left: 1 };
-}
-
-/** The recipe ids the days in `days` need from the shop, in order, each once; saved meals and removed recipes add none. */
-export function recipeIdsFor(plan: Plan, days: string[], recipes: Recipe[]): string[] {
-  const seen = new Set<string>();
-  for (const d of days) for (const it of plan[d] ?? []) if (it.k === 'r' && recipes.some(r => r.id === it.id)) seen.add(it.id);
-  return [...seen];
 }
 
 export const MAX_FIND_MATCHES = 8;

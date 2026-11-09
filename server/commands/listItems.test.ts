@@ -228,6 +228,12 @@ describe('list item cleaning and refusals', () => {
     expect(b.body.rows[0].data).toEqual({ id: 'zinc', n: 'Zinc', slot: '' });
   });
 
+  it('keeps what is in one serving of a supplement and drops bad rows', async () => {
+    const r = await put({ list: 'supplement_item', position: 0, item: { id: 'multi', n: 'Multi', slot: 'morning', serving: { units: 2, form: 'Capsule' },
+      nutrients: [{ key: 'vitaminD', amount: 25, unit: 'mcg' }, { key: 'lead', amount: 1, unit: 'mg' }, { key: 'zinc', amount: -3, unit: 'mg' }] } });
+    expect(r.body.rows[0].data).toEqual({ id: 'multi', n: 'Multi', slot: 'morning', serving: { units: 2, form: 'Capsule' }, nutrients: [{ key: 'vitaminD', amount: 25, unit: 'mcg' }] });
+  });
+
   it.each([
     ['another list', { list: 'other', position: 0, item: { id: 'a', n: 'A' } }],
     ['no position', { list: 'stretch', item: { id: 'a', n: 'A' } }],

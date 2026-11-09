@@ -1,9 +1,11 @@
 import { test, expect } from './fixtures.js';
+import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Food search sort. A unit test cannot see the real select, the choice in localStorage across a reload, storage that throws, that the
 // request is not repeated when the order changes, or that picking still works on a re-ordered list.
-const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+// The search lives in the add sheet's Find food way (brief nutrition-board): `diet` is that sheet.
+const diet = page => page.getByRole('dialog');
+const nutrition = async page => { await openNutrition(page); await openAdd(page, 'Find food'); };
 const hits = [
   { id: 1, name: 'Rice, white', kcal: 130, p: 2.7 },
   { id: 2, name: 'Chicken breast', kcal: 120, p: 22 },

@@ -19,7 +19,6 @@ import './ReceiptScan.css';
 export interface Applied { text: string; undo: () => void }
 
 export function useReceiptScan(g: Grocery, mk: string) {
-  const on = useFeature('scan');
   const keepOn = useFeature('receipts');
   const camera = useRef<HTMLInputElement>(null);
   const library = useRef<HTMLInputElement>(null);
@@ -30,7 +29,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const [applied, setApplied] = useState<(Applied & { mk: string; t: number }) | null>(null);
   const [kept, setKept] = useState<{ image: string; meta: KeepMeta; busy: boolean; fail: SaveFailure['reason'] | null } | null>(null);
   const months = useAppStore(s => s.groceryMonths);
-  const canScan = on && withoutUsed(g, months).items.length > 0;
+  const canScan = withoutUsed(g, months).items.length > 0;
 
   // Uploads the photo kept in memory. On a failure the photo stays here for Try again until the notice is dismissed or the page closes.
   const keep = async (image: string, meta: KeepMeta) => {

@@ -14,24 +14,24 @@ export interface ScenarioAutomation {
 }
 
 export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
-  'S-01': { auto: 'e2e', specs: ['e2e-qa/dietToday.spec.js', 'e2e/diet.spec.js'] },
-  'S-02': { auto: 'e2e', specs: ['e2e-qa/dietOverTarget.spec.js', 'src/store/dietSlice.test.ts'] },
+  'S-01': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
+  'S-02': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
   'S-03': { auto: 'e2e', specs: ['e2e/dietPace.spec.js'] },
   'S-04': { auto: 'e2e', specs: ['e2e/dietPace.spec.js'] },
   'S-05': { auto: 'e2e', specs: ['e2e/dietMeals.spec.js'] },
   'S-06': { auto: 'e2e', specs: ['e2e/dietMeals.spec.js'] },
   'S-07': { auto: 'e2e', specs: ['e2e/dietPlan.spec.js'] },
-  'S-08': { auto: 'e2e', specs: ['e2e-qa/mealPlanner.spec.js', 'e2e/dietPlan.spec.js'] },
-  'S-09': { auto: 'e2e', specs: ['e2e-qa/mealPlanner.spec.js', 'e2e/dietPlan.spec.js', 'src/lib/dietPlan.test.ts'] },
-  'S-10': { auto: 'e2e', specs: ['e2e-qa/dietSuggest.spec.js', 'e2e/dietSuggest.spec.js', 'src/lib/dietSuggest.test.ts'] },
+  'S-08': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
+  'S-09': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
+  'S-10': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
   'S-11': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js'] },
   'S-12': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'] },
-  'S-13': { auto: 'e2e', specs: ['e2e-qa/dietCaloriesFirst.spec.js', 'e2e/dietAutoMacros.spec.js'] },
+  'S-13': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
   'S-14': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'] },
   'S-15': { auto: 'e2e', specs: ['e2e/recipeMacros.spec.js'] },
   'S-16': { auto: 'e2e', specs: ['e2e/recipeMacros.spec.js'] },
   'S-17': { auto: 'e2e', specs: ['e2e/dietFoodSearch.spec.js', 'e2e/dietFindFoodUsda.spec.js', 'e2e/foodSearchSort.spec.js'] },
-  'S-18': { auto: 'e2e', specs: ['e2e-qa/foodSearchOffline.spec.js', 'e2e/dietFoodSearch.spec.js', 'e2e/dietFindFoodUsda.spec.js', 'e2e/foodSearchSort.spec.js'] },
+  'S-18': { auto: 'manual' }, // its e2e-qa spec still drives the removed Diet card and the removed Nutrition button; retag when the spec is rewritten
   'S-19': { auto: 'e2e', specs: ['e2e/readyMade.spec.js'] },
   'S-20': { auto: 'e2e', specs: ['e2e/readyMade.spec.js'] },
   'S-21': { auto: 'e2e', specs: ['e2e/recipeNutrition.spec.js'] },
@@ -127,6 +127,25 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js'] },
   'S-112': { auto: 'e2e', specs: ['e2e/priceHistory.spec.js', 'src/lib/itemHistory.test.ts'] },
   'S-113': { auto: 'unit', specs: ['src/lib/itemHistory.test.ts', 'e2e/priceHistory.spec.js'], partial: 'the pack average and the no-price rows are unit tested only; the history sheet is not walked for a pack item or an unpriced purchase (the never-bought item having no line is in priceHistory.spec.js)' },
+  'S-193': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-194': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-195': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'the Fat figure and the Water meter after a drink are unit tested only' },
+  'S-196': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'the planned-then-logged step on today is not walked' },
+  'S-197': { auto: 'unit', specs: ['src/lib/nutritionBoard.test.ts'], partial: 'no spec walks the no-target display in the browser' },
+  'S-198': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-199': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'the remembered pick is walked, the other clock times are unit tested' },
+  'S-200': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'the Back to ways of adding button is not walked' },
+  'S-201': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'Quick add and Undo are covered by e2e/nutritionQuickLog.spec.js, not this walk' },
+  'S-207': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-208': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-210': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'adding the supplements through Manage is not walked' },
+  'S-211': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'the 500 oz refusal is not walked' },
+  'S-212': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'the training minutes limit is not walked' },
+  'S-213': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-214': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
+  'S-215': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'only the add and drink sheets are walked' },
+  'S-218': { auto: 'e2e', specs: ['e2e/nutritionBoardManage.spec.js'] },
+  'S-216': { auto: 'e2e', specs: ['e2e/nutritionBoardManage.spec.js'], partial: 'the pace chips and the typed calories are not walked' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */

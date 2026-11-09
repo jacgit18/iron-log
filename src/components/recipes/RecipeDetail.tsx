@@ -15,6 +15,7 @@ import { linkedRecipe } from '../../lib/recipeSuggest.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import AteThis from '../diet/AteThis.js';
+import GoesWith from './GoesWith.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
 import type { Recipe } from '../../types.ts';
@@ -47,6 +48,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.usual !== undefined && <p className="note">Usual: {amountText(recipe.usual, recipe)}</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
+        <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
         <div className="rc-actions"><MineActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} /></div>
       </section>
     );
@@ -94,6 +96,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.steps.length > 0 && (<><h3>Steps</h3><ol className="rc-steps">{recipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></>)}
       {recipe.note && <p className="note">{recipe.note}</p>}
       {credit && <p className="rc-attrib">{credit}</p>}
+      <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
       <div className="rc-actions">
         {mine ? (
           <MineActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />

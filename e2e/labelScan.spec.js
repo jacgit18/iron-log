@@ -73,9 +73,9 @@ test.describe('as an admin', () => {
   });
 });
 
-test('a person who is not an admin sees no Scan label button', async ({ page }) => {
+test('a person who is not an admin sees Scan label and Choose photo (open to everyone since 2026-11-08)', async ({ page }) => {
   await openForm(page);
   await expect(page.getByRole('button', { name: 'Save food' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Scan label' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Pick from photos' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Scan label' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Choose photo' })).toBeVisible();
 });

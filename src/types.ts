@@ -2,6 +2,7 @@
    (shared/validate) returns one of these; anything outside them is cleaned away. Dates are 'YYYY-MM-DD' strings; `updatedAt` is an ISO date-time. */
 
 import type { IssueStatus } from './shared/issues.ts';
+import type { NutrientKey, NutrientUnit } from './shared/nutrientKeys.ts';
 export type PhaseKey = 'strength' | 'iso' | 'hyp' | 'exp' | 'mob';
 export type SlotType = 'single' | 'superset' | 'either';
 
@@ -228,7 +229,12 @@ export interface LiftGoal { w: number; start?: number; by?: string; bw?: number;
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
 /** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string }
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[] }
+/** What is in one serving, typed by the person (supplement nutrient totals). `amount` is per serving; ticking the item on a day counts one serving. */
+export interface SupplementNutrient { key: NutrientKey; amount: number; unit: NutrientUnit }
+/** `units`: how many capsules, tablets or scoops make one serving; `form`: Capsule, Powder, ... */
+export interface SupplementServing { units: number; form?: string }
+export type { NutrientKey, NutrientUnit };
 /** What was ticked off on each day: {"YYYY-MM-DD": {<id>: true}}. */
 export type Taken = Record<string, Record<string, true>>;
 export interface Boost { hot?: true; mins?: number }
@@ -331,8 +337,10 @@ export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[]
 export type FoodType = 'ingredient' | 'ready' | 'drink';
 /** What a recipe is used as (brief recipes-used-as-ingredients-tab): one or more. Left out, the labels are worked out from its category and `type` (`lib/recipeUses.ts`). */
 export type RecipeUse = 'meal' | 'ingredient' | 'ready' | 'drink';
+/** What a recipe covers on a plate (brief week-board): derived from its category and numbers until the person sets it. */
+export type PlateMark = 'protein' | 'carb' | 'veg';
 /** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
@@ -342,9 +350,12 @@ export type DietPace = 'slow' | 'steady' | 'fast' | 'custom';
 export interface SavedItem { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
 /** A meal you saved from what you logged: a name and its foods (brief diet-saved-meals). Kept in `cfg.diet.meals`. */
 export interface SavedMeal { id: string; n: string; items: SavedItem[] }
+/** The meal of the day a planned item belongs to (brief week-board); an item with none is "not set". */
+export type PlanSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 /** One planned item (brief diet-meal-planner): a recipe (`k` 'r') or a saved meal (`k` 'm') by id; `x` is the recipe's portion (0.5 to 10), left out when it is 1. */
-export interface PlanItem { k: 'r' | 'm'; id: string; x?: number }
-export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; plan?: Record<string, PlanItem[]> }
+export interface PlanItem { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }
+/** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]> }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
 export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number }
 
