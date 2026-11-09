@@ -2037,7 +2037,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
     steps: [
-      'Rename Whole milk to Milk and open Cereal bowl. Then add a food with no numbers by hand (just a name), link it to the bowl, and look at the counted line. Finally delete Milk from Recipes and open the bowl.',
+      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Write a recipe, name it Mystery, type one ingredient (a pinch of something) and no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes and open the bowl.',
     ],
     expected: [
       'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
@@ -2228,11 +2228,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Groceries and make sure a few items are in At home. Open Recipes, press Library.',
       'Press Meals, Ingredients and Drinks in turn. Read the "n of m at home" on rows.',
-      'Press Ingredients when none of the loaded recipes fit.',
+      'Press Ingredients, then the Dessert filter (no loaded ingredient is a dessert).',
     ],
     expected: [
       'Library has All, Meals, Ingredients and Drinks (no Foods) and no counts. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
-      'An empty tab says there is none among these and offers Show more to load others.',
+      'An empty tab says "No ingredients recipe among these. Show more to load others." and offers Show more.',
     ],
   },
   {
@@ -2348,7 +2348,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'A day ahead shows Calories, Protein and Fat as "amount / target" of its planned items against 2,400 kcal and 160 g, and each meal (Breakfast, Lunch, Dinner, Snack) shows its calories against its share of the day. Planned items from before meals existed sit under Not set.',
-      'The added recipe appears in that meal and the bars move; More raises that card\'s portion and the bars with it. A bar turns red when the day is over its target.',
+      'The added recipe appears in that meal and the bars move; More raises that card\'s portion and the bars with it. A bar over its target fills in full in orange and its label says how many grams over (for example "Fat planned: 108.5 / 70 g, 38.5 g over").',
     ],
   },
   {
@@ -2359,7 +2359,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Dinner shows Protein, Carb and Veg marks; Protein has a check and Carb and Veg do not.',
-      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button appears only if you have a recipe that counts as Veg (a side or a favorite); with the four starter recipes there may be none.',
+      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button appears only if you have a recipe that counts as Veg (a side or a favorite); with the starter recipes there is none: add a food by hand called Steamed broccoli (50 kcal, 4 g protein) with the Veg chip on, and a "+ Add a veg: Steamed broccoli" button then appears and gives Veg its check.',
     ],
   },
   {
@@ -2442,7 +2442,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-196', feature: 'Nutrition board', title: 'Meters count the plan for days ahead, and today\'s plan counts only once logged', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'On Nutrition note today\'s Calories meter and the planned items under today\'s Breakfast, Lunch and Dinner.',
+      'On Nutrition note today\'s Calories meter and the planned items under today\'s meals (the seed plans two under Not set).',
       'Tap one of today\'s planned items and press Log.',
       'Look at a day after today that has planned items: add up the calories of its cards and compare with its Calories meter.',
     ],
@@ -2505,10 +2505,10 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-201', feature: 'Nutrition board', title: 'Log with One-off food and Quick add', persona: 'diet-on-target', brief: 'nutrition-board',
+    id: 'S-201', feature: 'Nutrition board', title: 'Log with One-off food and Quick add', persona: 'recipe-collector', brief: 'nutrition-board',
     steps: [
       'Press One-off food in the toolbar, add "Rice" 300 kcal and 20 g protein.',
-      'Press Quick add in the toolbar. Read Suggested now and Recent and favorites. Tap a food under Recent and favorites, press Log it, then Undo.',
+      'In Recipes press Ate this on one recipe (the chips list recipes you have logged or starred, and this account has none logged yet). Press Quick add in the toolbar. Read Suggested now and Recent and favorites. Tap a food under Recent and favorites, press Log it, then Undo.',
       'Tap one suggestion under Suggested now.',
     ],
     expected: [
@@ -2935,7 +2935,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Type 1974, choose "Prefer not to say", and open Totals again. Then press Clear and open Totals once more.',
     ],
     expected: [
-      '85 shows "Enter a four-digit year, like 1985." and saves nothing. 2012 saves but says "Amounts are shown for ages 19 and over, so the adult range is used.", and Totals says "Amounts for your age are not shown. The adult range is used."',
+      '85 shows "Enter a four-digit year, like 1985." and saves nothing (after a reload the year box is empty; the sex you chose stays). 2012 saves but says "Amounts are shown for ages 19 and over, so the adult range is used.", and Totals says "Amounts for your age are not shown. The adult range is used."',
       'With a year and "Prefer not to say", Totals says "Your own amounts need both a birth year and a sex, so the adult range is shown. You can change this in Settings." After Clear the year box is empty, "Prefer not to say" is the one selected (it is what no answer looks like), and Totals asks you to add them.',
     ],
   },
