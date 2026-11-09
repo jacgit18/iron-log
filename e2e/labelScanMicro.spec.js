@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorag
 test('a photo with vitamin lines shows the count in the One-off form and the saved food has them', async ({ page }) => {
   const sheet = await scan(page, LABEL);
   await expect(sheet.locator('#dt-add-k')).toHaveValue('120');
-  await expect(line(sheet)).toContainText('4');
+  await expect(line(sheet)).toContainText('Calcium 130 mg, Iron 4.5 mg, Vitamin D 2 mcg, Zinc 1.2 mg'); // each amount named, to check against the label
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   await expect(todayCol(page).locator('.nb-eat')).toContainText(['Fortified cereal']);

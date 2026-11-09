@@ -1,5 +1,8 @@
 import { SCAN_TEXT } from './scanPhoto.js';
+import { MICRO_UNIT } from '../shared/foodMicro.js';
 import type { Micro } from '../shared/foodMicro.js';
+import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
+import { limitOf } from './nutrientLimits.js';
 import { labelNote, type LabelFill, type LabelResult } from '../shared/scan.js';
 
 // Scan label (brief label-photo-scan): what a scan result does to the Ready-made form. Pure, so the rules are node tests: the four numbers are always
@@ -38,3 +41,6 @@ export function labelFood(l: LabelFill): { n: string; kcal: number; p: number; c
     ...(l.micro ? { micro: l.micro, fromPhoto: true as const } : {}),
   };
 }
+
+/** The amounts read from a photo in words, in the limits table's order: "Calcium 130 mg, Iron 4.5 mg". The form shows them so a person can check each against the label before saving. */
+export const microText = (m: Micro): string => NUTRIENT_KEYS.filter(k => m[k] !== undefined).map(k => `${limitOf(k)?.label ?? k} ${m[k]} ${MICRO_UNIT[k]}`).join(', ');

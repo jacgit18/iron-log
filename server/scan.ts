@@ -6,7 +6,7 @@ import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
 import { NUTRIENT_KEYS } from '../src/shared/nutrientKeys.ts';
 import { cleanLabel, isJpegBase64, jsonFromReply, type LabelResult } from '../src/shared/scan.ts';
 
-// Label photo scan (brief label-photo-scan), mounted at /api/scan behind sign-in, requireAdmin and a per-user limit. The server sends one photo of a
+// Label photo scan (brief label-photo-scan), mounted at /api/scan behind sign-in (open to every signed-in account) and a per-user limit. The server sends one photo of a
 // nutrition-facts label to the Claude API and answers with the few numbers a Ready-made food needs (src/shared/scan.ts checks every field). The key
 // never reaches a phone. The photo is held only while the call runs: never written to disk or the database, never logged, never cached.
 // This file is the only place that knows the vendor: changing it means rewriting `askModel`.
