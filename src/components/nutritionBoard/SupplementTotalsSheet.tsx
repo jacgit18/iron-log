@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { entriesOn } from '../../lib/dietLog.js';
+import { weekAverages } from '../../lib/intakeAverage.js';
+import { INTAKE_DISCLAIMER } from '../../lib/intakeChecks.js';
 import { totalsView } from '../../lib/supplementTotalsView.js';
 import type { TotalsBasis } from '../../lib/supplementNutrients.js';
 import { shortDay } from '../../lib/nutritionBoard.js';
@@ -14,7 +16,7 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
   const diet = useAppStore(s => s.diet);
   const profile = useAppStore(s => s.cfg.profile);
   const [basis, setBasis] = useState<TotalsBasis>('taken');
-  const v = totalsView(supp.items, supp.taken, day, basis, entriesOn(diet, day), profile);
+  const v = totalsView(supp.items, supp.taken, day, basis, entriesOn(diet, day), profile, weekAverages(supp.items, supp.taken, day, basis, diet));
   const first = supp.items.find(i => i.slot !== '');
   const st = () => useAppStore.getState();
   return (
@@ -40,6 +42,8 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
             <div className="stt-hd"><b>{r.label}</b><span className="stt-fig">{r.figure}</span></div>
             <div className="stt-bar" role="img" aria-label={`${r.label}: ${r.figure}. ${r.statusText}. ${r.limitText}`}><i style={{ width: `${r.percent}%` }} /></div>
             <div className="stt-st"><b>{r.statusText}</b><span>{r.limitText}</span></div>
+            {r.targetText && <p className="note stt-target"><b>Target:</b> {r.targetText}</p>}
+            {r.averageText && <p className="note stt-avg">{r.averageText}</p>}
             {r.foodLine && <p className="note stt-food">{r.foodLine}</p>}
             <p className="note">From supplements: {r.products.length ? r.products.join(', ') : 'none'}</p>
             {r.notAdded.map(n => <p key={n} className="note">{n}</p>)}
@@ -58,6 +62,7 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
                 <div className="stt-hd"><b>{r.label}</b><span className="stt-fig">{r.figure}</span></div>
                 <div className="stt-bar" role="img" aria-label={`${r.label}: ${r.figure}. ${r.statusText}`}><i style={{ width: `${r.percent}%` }} /></div>
                 <div className="stt-st"><b>{r.statusText}</b></div>
+                {r.averageText && <p className="note stt-avg">{r.averageText}</p>}
                 {r.foodLine && <p className="note stt-food">{r.foodLine}</p>}
                 <p className="note">From supplements: {r.products.length ? r.products.join(', ') : 'none'}</p>
                 {r.notAdded.map(n => <p key={n} className="note">{n}</p>)}
@@ -68,7 +73,7 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
           </ul>
         </section>
       )}
-      <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan, Find food, a label photo, or a recipe, ready-made food or meal built from those; Quick add and foods typed by hand add nothing), so a total can be low, and a total under a limit is not proof of safety. A supplement you also log as a food counts twice. General information, not medical advice; your needs depend on age, sex and health.</p>
+      <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan, Find food, a label photo, or a recipe, ready-made food or meal built from those; Quick add and foods typed by hand add nothing), so a total can be low, and a total under a limit is not proof of safety. A supplement you also log as a food counts twice. {INTAKE_DISCLAIMER}</p>
       <div className="actions"><button type="button" className="btn primary" id="stt-done" onClick={() => st().closeModal()}>Done</button></div>
     </Sheet>
   );

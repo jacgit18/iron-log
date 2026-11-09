@@ -16,7 +16,7 @@ export default function NutrientRows({ rows, onChange }: { rows: NutrientDraft[]
   return (
     <fieldset className="nrows">
       <legend>What is in one serving (optional)</legend>
-      <p className="note">Copy it from the label. It feeds the daily totals against the upper limits; leave it empty and nothing changes. A row with no amount is left out when you save.</p>
+      <p className="note">Copy it from the label. It feeds the daily totals against the upper limits; leave it empty and nothing changes. A row with no amount is left out when you save. Enter the elemental amount the Supplement Facts panel lists (for example magnesium, not magnesium oxide).</p>
       {rows.map((r, i) => (
         <div key={i} className="nrow">
           <select aria-label={`Nutrient ${i + 1}`} value={r.key} onChange={e => { const key = e.target.value as NutrientKey; set(i, { key, unit: nutrientUnit(key) ?? r.unit }); }}>

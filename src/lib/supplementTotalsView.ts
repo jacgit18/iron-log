@@ -1,6 +1,8 @@
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
 import { profileAge } from '../shared/profile.js';
 import type { Profile } from '../shared/profile.js';
+import type { WeekAverages } from './intakeAverage.js';
+import { targetCheck } from './intakeChecks.js';
 import { groupFor } from './nutrientGroups.js';
 import { limitOf } from './nutrientLimits.js';
 import { foodCoverage, limitFor, limitStatus, overLimit, supplementNutrientTotals, targetPosition, targetTotals } from './supplementNutrients.js';
@@ -30,6 +32,10 @@ export interface TotalRow {
   /** "Magnesium 200 mg" per product that adds to it, biggest first. */
   products: string[];
   recommendedText: string;
+  /** The target check in words (total intake against the recommended amount); empty until a food with vitamin or mineral data is logged, because supplements alone cannot say "below". Separate from the limit's words. */
+  targetText: string;
+  /** "7-day average: 190 mg (4 days with data)"; empty with no day of data. */
+  averageText: string;
   scopeNote: string;
   /** Rows a product listed that could not be added, with the reason. */
   notAdded: string[];
@@ -45,6 +51,7 @@ export interface TargetRow {
   foodLine: string;
   products: string[];
   recommendedText: string;
+  averageText: string;
   scopeNote: string;
   notAdded: string[];
 }
@@ -91,9 +98,12 @@ export function profileNote(profile: Profile | undefined, date: string): string 
   return 'Add your birth year and sex in Settings to see your own amounts. Until then the adult range is shown.';
 }
 
+/** "7-day average: 190 mg (4 days with data)". */
+const averageLine = (a: { average: number; days: number } | undefined, unit: string): string => (a ? `7-day average: ${fmtAmount(a.average)} ${unit} (${a.days} ${a.days === 1 ? 'day' : 'days'} with data)` : '');
+
 const rangeText = (min: number, max: number): string => (min === max ? fmtAmount(min) : `${fmtAmount(min)} to ${fmtAmount(max)}`);
 
-function targetRows(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis, eaten: readonly DietEntry[], profile?: Profile): TargetRow[] {
+function targetRows(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis, eaten: readonly DietEntry[], profile?: Profile, avg?: WeekAverages): TargetRow[] {
   return targetTotals(items, taken, date, basis, eaten).map((t): TargetRow => {
     const target = targetOf(t.key)!;
     const g = groupFor(t.key, profile, date); // the person's own recommended amount, when a profile gives one
@@ -112,20 +122,22 @@ function targetRows(items: SupplementItem[], taken: Taken, date: string, basis: 
     return {
       key: t.key, label: target.label, figure: `${fmtAmount(t.total)} ${t.unit}`, percent: Math.max(0, Math.min(100, pct)), statusText,
       foodLine: t.fromFood > 0 ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : '',
-      products: t.products.map(p => `${p.name} ${fmtAmount(p.amount)} ${t.unit}`), recommendedText, scopeNote: target.scopeNote,
+      products: t.products.map(p => `${p.name} ${fmtAmount(p.amount)} ${t.unit}`), recommendedText, averageText: averageLine(avg?.targets.get(t.key), t.unit), scopeNote: target.scopeNote,
       notAdded: t.notAdded.map(n => `${n.name}: ${fmtAmount(n.amount)} ${n.unit} not added. ${n.reason}`),
     };
   });
 }
 
-export function totalsView(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis, eaten: readonly DietEntry[] = [], profile?: Profile): TotalsView {
+export function totalsView(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis, eaten: readonly DietEntry[] = [], profile?: Profile, avg?: WeekAverages): TotalsView {
   const hasData = scheduled(items).some(i => (i.nutrients || []).length > 0) || hasFoodData(eaten);
   const rows = supplementNutrientTotals(items, taken, date, basis, eaten).map((t): TotalRow => {
     const limit = limitOf(t.key)!;
     const g = groupFor(t.key, profile, date); // the person's own band: their limit where it changes with age, their recommended amount
     const upper = limitFor(t.key, profile, date) ?? limit.upper;
     const s = limitStatus(t, upper);
-    const rec = limit.recommended;
+    const rec = g ? { min: g.recommended, max: g.recommended } : limit.recommended;
+    // The target check is about total intake whatever the limit counts, and needs food to say "below": until a food with data is logged there is no verdict, only the supplements line.
+    const tc = hasFoodData(eaten) ? targetCheck({ fromFood: t.fromFood, fromSupplements: t.fromSupplements }, rec) : undefined;
     return {
       key: t.key,
       label: limit.label,
@@ -138,11 +150,13 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
       foodLine: t.fromFood <= 0 ? '' : t.foodCounted ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : `Food ${fmtAmount(t.fromFood)} ${t.unit} is not added: ${NOT_ADDED[limit.scope === 'supplements' ? 'supplements' : 'form']}.`,
       products: t.products.map(p => `${p.name} ${fmtAmount(p.amount)} ${t.unit}`),
       recommendedText: g ? `Recommended for ${g.group}: ${fmtAmount(g.recommended)} ${t.unit} a day${UNIT_NOTE[t.key] ?? ''}. ${GENERAL_INFO}` : `Recommended ${rangeText(rec.min, rec.max)} ${t.unit} a day (${limit.recommendedNote}). ${GENERAL_INFO}`,
+      targetText: !tc || tc.status === 'none' ? '' : tc.status === 'below' ? `Below the recommended amount (${tc.percent}%)` : tc.status === 'meets' ? 'Meets the recommended amount' : 'Above the recommended amount',
+      averageText: averageLine(avg?.limits.get(t.key), t.unit),
       scopeNote: limit.scopeNote,
       notAdded: t.notAdded.map(n => `${n.name}: ${fmtAmount(n.amount)} ${n.unit} not added. ${n.reason}`),
     };
   });
-  const targets = targetRows(items, taken, date, basis, eaten, profile);
+  const targets = targetRows(items, taken, date, basis, eaten, profile, avg);
   return { rows, targets, hasData, noneCounted: hasData && rows.length === 0 && targets.length === 0, coverage: coverageText(eaten), profileNote: profileNote(profile, date) };
 }
 
