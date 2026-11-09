@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { entriesOn, fmtNum, roomOn } from '../../lib/dietLog.js';
+import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
+import type { Food } from '../../lib/foodMacros.js';
+import { microKept } from '../../lib/foodMicroKept.js';
+import { withMicro } from '../../shared/foodMicro.js';
 import { findMatches } from '../../lib/dietPlan.js';
 import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
@@ -86,8 +89,8 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const eat = day === today;
   const st = () => useAppStore.getState();
   const plan = (kind: 'r' | 'm', id: string, name: string) => { const e = st().addPlanItem(day, kind, id, meal); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[meal]}.`); };
-  const addFood = (f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }) => {
-    const r = st().addDietEntry({ d: day, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) });
+  const addFood = (f: Food) => {
+    const r = st().addDietEntry(entryFromFood(day, f));
     onMsg(r.error ?? `Added ${f.n}.`);
   };
   if (flow === 'quick') {
@@ -101,7 +104,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
       </div>
     );
   }
-  if (flow === 'oneoff') return <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add" onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
+  if (flow === 'oneoff') return <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add" onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(microKept(fill.food, v.kcal)) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
   if (flow === 'find') return <FindFood day={day} onAdded={onMsg} onFood={onFill} reopen={reopen} {...(resume ? { resume } : {})} />;
   if (flow === 'copy') return <CopyDay key={day} day={day} onAdded={onMsg} />;
   if (flow === 'savemeal') return entriesOn(diet, day).length === 0 ? <p className="note">Nothing eaten yet to save.</p> : <SaveMeal key={day} day={day} onSaved={onMsg} />;

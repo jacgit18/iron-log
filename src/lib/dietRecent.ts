@@ -1,5 +1,6 @@
 import type { DietEntry, FoodType, Recipe } from '../types.ts';
 import { cleanGrams as cleanDietGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { withMicro } from '../shared/foodMicro.js';
 import { cleanGrams, scaleFood, type FoodHit } from '../shared/foods.js';
 import { hasMacros } from './dietLog.js';
 
@@ -22,7 +23,7 @@ export function quickItems(entries: readonly DietEntry[], recipes: readonly Reci
 
 /** A scanned product eaten as `grams` of it, as the ready-made food to create (its numbers are for that amount: one portion) and the numbers to log; null for grams outside 1 to 5000 or numbers
  *  an entry can't hold. */
-export function scanFoodDraft(hit: FoodHit, grams: number, type: FoodType): (Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'> & { recipe: Omit<Recipe, 'id'> }) | null {
+export function scanFoodDraft(hit: FoodHit, grams: number, type: FoodType): (Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'micro'> & { recipe: Omit<Recipe, 'id'> }) | null {
   const g = cleanGrams(grams);
   if (g === null) return null;
   const s = scaleFood(hit, g);
@@ -31,7 +32,8 @@ export function scanFoodDraft(hit: FoodHit, grams: number, type: FoodType): (Pic
   const c = s.c === undefined ? null : cleanDietGrams(s.c), f = s.f === undefined ? null : cleanDietGrams(s.f);
   const nums = { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}) };
   const n = (hit.brand ? `${hit.name} (${hit.brand})` : hit.name).replace(/\s+/g, ' ').trim().slice(0, 80);
-  return { ...nums, recipe: { n, cat: 'ready', type, ing: [], steps: [], ...nums, note: `From a barcode scan: the numbers are for ${g} g.` } };
+  // The ready-made food (a recipe) holds the four numbers only; the vitamins and minerals ride on the logged entry.
+  return { ...nums, ...withMicro(s.micro), recipe: { n, cat: 'ready', type, ing: [], steps: [], ...nums, note: `From a barcode scan: the numbers are for ${g} g.` } };
 }
 
 /** The ready-made food already saved under `name` (case-blind), or undefined: a product scanned again is logged under it instead of being saved twice. */

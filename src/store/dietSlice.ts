@@ -52,6 +52,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const merged: Record<string, unknown> = { ...cur, ...patch };
     if (merged.c === null) delete merged.c; // null clears an optional number
     if (merged.f === null) delete merged.f;
+    if (patch.kcal !== undefined && patch.kcal !== cur.kcal) delete merged.micro; // changed calories mean a changed portion: the amounts would no longer match (the One-off form's rule)
     const e = normDietEntry(merged);
     if (!e) return bad();
     set({ diet: list.map(x => (x.id === id ? e : x)) });

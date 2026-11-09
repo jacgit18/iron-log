@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import type { Micro } from '../../shared/foodMicro.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
 import { AI_LABEL_TEXT, OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
@@ -10,7 +11,7 @@ import SortControl from '../SortControl.jsx';
 import './Diet.css';
 
 /** What a pick fills into the entry form. */
-export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: number }
+export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: number; micro?: Micro }
 
 // "Look up nutrition" (brief diet-food-lookup): type a few letters, pick a result from USDA FoodData Central, set the grams, and the entry form is filled in (still editable).
 // One request at a time: a newer search cancels the older, and a late answer for old words is dropped. Nothing is stored here.
