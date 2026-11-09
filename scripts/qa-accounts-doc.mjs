@@ -54,10 +54,10 @@ The accounts exist only after the seed has run. It resets each account to its st
 
 **In the app (QA service with \`QA_OWNER_DATABASE_URL\` set):** the picker shows a hollow dot for an account that is not seeded. **Reset** (or **Seed** for an unseeded one) re-runs that account's seed; **Seed missing accounts** does each missing one in turn. The account you are on cannot be reset: switch away first. Where the server has no owner URL, the buttons are not shown.
 
-**From a terminal (owner runs this):**
-1. Dry run (changes nothing): \`QA_DATABASE_URL=<owner URL of the QA branch> npm run qa:seed -- --host <the host in that URL>\`
-2. Write: add \`--apply\`, with \`QA_PII_ENCRYPTION_KEY\` set to the value of the Secret Manager secret \`iron-log-qa-pii-key\` (QA's own key, never production's). One account only: \`--persona <id>\`.
-3. It refuses a database without the QA mark and production's host. Neither the URL nor the key is printed.
+**From a terminal (owner runs this), nothing to look up or paste:** \`npm run qa:seed:sm\` reads QA's owner database URL (Secret Manager \`iron-log-qa-owner-database-url\`) and QA's own key (\`iron-log-qa-pii-key\`, only with \`--apply\`) itself, gives them to the seed script and exits, so neither is typed, exported, printed or left in your shell. It needs \`gcloud auth login\` as someone who can read the two secrets.
+1. Dry run (changes nothing): \`npm run qa:seed:sm\`, or for one account \`npm run qa:seed:sm -- --persona <id>\`.
+2. Write: add \`--apply\` (\`npm run qa:seed:sm -- --persona <id> --apply\`).
+3. It refuses a database without the QA mark and production's host. By hand, without the script: \`QA_DATABASE_URL=<owner URL of the QA branch> npm run qa:seed -- --host <the host in that URL>\` and \`QA_PII_ENCRYPTION_KEY\` for \`--apply\`.
 
 QA's service needs \`QA_PERSONAS=true\` (the deploy script sets it for QA only) and the owner's Google email on \`ADMIN_EMAILS\`.
 `);

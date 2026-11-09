@@ -46,8 +46,8 @@ try {
   console.log(`database host: ${new URL(url).hostname}`);
   for (const persona of chosen) {
     const rows = buildPersonaRows(persona, exerciseIds, today);
-    console.log(`${apply ? 'seeding' : 'would seed'}: ${persona.id} (${persona.plan}${persona.planStatus ? `, ${persona.planStatus}` : ''}): ${rows.programs ? 2 : 0} programs, ${rows.logs.length} log entries, ${rows.body.length} body weights, ${rows.groceryItems.length} grocery items, ${rows.dietEntries.length} diet entries, ${rows.recipes.length} recipes${rows.config ? `, settings (${Object.keys(rows.config.ex ?? {}).length} library exercises)` : ''}${rows.erased ? ', erased' : ''}`);
-    if (apply) await seedPersona(client, crypto, persona, rows, today);
+    console.log(`${apply ? 'seeding' : 'would seed'}: ${persona.id} (${persona.plan}${persona.planStatus ? `, ${persona.planStatus}` : ''}): ${rows.programs ? 2 : 0} programs, ${rows.logs.length} log entries, ${rows.body.length} body weights, ${rows.groceryItems.length} grocery items, ${rows.dietEntries.length} diet entries, ${rows.recipes.length} recipes${rows.supplements.length ? `, ${rows.supplements.length} supplements with ${rows.supplementDays.length} tick days` : ''}${rows.config ? `, settings (${Object.keys(rows.config.ex ?? {}).length} library exercises)` : ''}${rows.erased ? ', erased' : ''}`);
+    if (apply) { await seedPersona(client, crypto, persona, rows, today); console.log(`seeded: ${persona.id}`); }
   }
   if (!apply) console.log('Dry run. Add --apply to write these.');
 } catch (e) {
