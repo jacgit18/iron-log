@@ -46,6 +46,16 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
+  "shareTarget": {
+    "action": "https://loadbearer.app/",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
   "fullScopeUrl": "https://loadbearer.app/",
   "minSdkVersion": 24,
   "orientation": "default",
