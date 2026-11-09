@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { entryText } from '../../lib/dietLog.js';
+import { entryFromFood, entryText } from '../../lib/dietLog.js';
 import { findFoods, scaleFood, type Food } from '../../lib/foodMacros.js';
 import { foodTypeOf } from '../../lib/foodType.js';
 import { FOOD_TYPE_LABEL } from '../../shared/recipes.js';
@@ -20,7 +20,7 @@ export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day
   const nums = picked ? scaleFood(picked, portion) : null;
   const add = () => {
     if (!nums) { setErr('Those numbers are out of range.'); return; }
-    const r = useAppStore.getState().addDietEntry({ d: day, n: nums.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), ...(nums.from ? { from: nums.from } : {}) });
+    const r = useAppStore.getState().addDietEntry(entryFromFood(day, nums));
     if (r.error) { setErr(r.error); return; }
     setErr(''); onAdded(`Added ${portion === 1 ? '1 portion' : `${portion} portions`} of ${nums.n}.`); setPicked(null); setQ(''); setPortion(1);
   };

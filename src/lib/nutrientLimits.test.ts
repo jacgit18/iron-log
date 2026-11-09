@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
+import { LIMIT_KEYS } from '../shared/nutrientKeys.js';
 import { NUTRIENT_LIMITS, limitOf } from './nutrientLimits.js';
 
 describe('nutrient limits table', () => {
-  it('has exactly one row for each nutrient a supplement can list', () => {
-    expect(NUTRIENT_LIMITS.map(r => r.key).sort()).toEqual([...NUTRIENT_KEYS].sort());
+  it('has exactly one row for each nutrient that has a limit', () => {
+    expect(NUTRIENT_LIMITS.map(r => r.key).sort()).toEqual([...LIMIT_KEYS].sort());
   });
   it.each(NUTRIENT_LIMITS.map(r => [r.key, r] as const))('%s is sourced and sane', (_k, r) => {
+    expect(r.sourceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(r.source).toMatch(/^NIH Office of Dietary Supplements, https:\/\/ods\.od\.nih\.gov\/factsheets\/[A-Za-z0-9]+-HealthProfessional\//);
     expect(r.upper).toBeGreaterThan(0);
     expect(Number.isFinite(r.upper)).toBe(true);

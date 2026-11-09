@@ -1,5 +1,6 @@
 import type { FoodType, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeIngredient, RecipeUse } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
+import { cleanMicro } from './foodMicro.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
@@ -115,7 +116,8 @@ export function normRecipe(x: unknown): Recipe | null {
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  const micro = cleanMicro(o.micro); // vitamins and minerals per serving, filled by a scan, the ingredient calculator or a meal's roll-up; never typed
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

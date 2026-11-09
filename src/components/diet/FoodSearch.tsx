@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import type { Micro } from '../../shared/foodMicro.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
 import { AI_LABEL_TEXT, OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
+import { labelFood } from '../../lib/labelFill.js';
 import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
 import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
 import { useSortChoice } from '../useSortChoice.js';
@@ -10,7 +12,7 @@ import SortControl from '../SortControl.jsx';
 import './Diet.css';
 
 /** What a pick fills into the entry form. */
-export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: number }
+export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: number; micro?: Micro; /** The amounts were read from a label photo (the One-off form says so and offers Remove). */ fromPhoto?: true }
 
 // "Look up nutrition" (brief diet-food-lookup): type a few letters, pick a result from USDA FoodData Central, set the grams, and the entry form is filled in (still editable).
 // One request at a time: a newer search cancels the older, and a late answer for old words is dropped. Nothing is stored here.
@@ -55,8 +57,8 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
     if (r.result.kind === 'unreadable') { setAiNote(SCAN_TEXT.unreadable); return; }
     if (r.result.kind === 'per100g') { setAiNote(SCAN_TEXT.per100g); return; }
     const l = r.result.label;
-    const name = l.name || 'Food from a label';
-    setAi({ name, fill: { n: name.slice(0, 80), kcal: l.kcal, p: l.p, ...(l.c !== undefined ? { c: l.c } : {}), ...(l.f !== undefined ? { f: l.f } : {}) } });
+    const fill = labelFood(l);
+    setAi({ name: fill.n, fill });
   };
   const useAi = () => { if (!ai) return; onUse(ai.fill); setAi(null); setText(''); };
 

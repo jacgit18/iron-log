@@ -1,6 +1,8 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
 import { parseDate, ymd } from '../shared/dates.js';
+import { scaleMicro, withMicro } from '../shared/foodMicro.js';
+import type { Micro } from '../shared/foodMicro.js';
 
 /* ---------- Food log helpers (ADR 086): what a day adds up to, what is offered again, what is kept. Pure; the store and the view call these. ---------- */
 
@@ -47,22 +49,26 @@ export function pruned(entries: DietEntry[], today: string): DietEntry[] {
 export const hasMacros = (r: Pick<Recipe, 'kcal' | 'p'>): boolean => r.kcal !== undefined && r.p !== undefined;
 
 /** The numbers for eating `servings` of a recipe (a snapshot: later edits to the recipe never change them), or null without calories and protein or out of range. Carbs and fat come along when the recipe has them. */
-export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f'>, servings: number): { kcal: number; p: number; c?: number; f?: number } | null {
+export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro'>, servings: number): { kcal: number; p: number; c?: number; f?: number; micro?: Micro } | null {
   if (!hasMacros(r) || !(servings > 0)) return null;
   const kcal = cleanKcal(r.kcal! * servings), p = cleanProtein(r.p! * servings);
   if (kcal === null || p === null) return null;
   const c = r.c === undefined ? null : cleanGrams(r.c * servings), f = r.f === undefined ? null : cleanGrams(r.f * servings);
-  return { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}) };
+  return { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...withMicro(scaleMicro(r.micro, servings)) };
 }
 
 /** What "Ate this" and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
-export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
+export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
   const nums = servingNumbers(r, servings);
   if (!nums) return { error: 'Those numbers are out of range.' };
   const bad = ateDayError(day, today);
   if (bad) return { error: bad };
-  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id } };
+  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro) } };
 }
+
+/** The entry to add for a food on `day`: its numbers, the recipe it came from, and its vitamins and minerals when it has them (one place, so a copied or re-logged food keeps them). */
+export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): Omit<DietEntry, 'id'> =>
+  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro) });
 
 /** The most portions Ate this, the planner and Find food offer. */
 export const PORTION_MAX = 10;

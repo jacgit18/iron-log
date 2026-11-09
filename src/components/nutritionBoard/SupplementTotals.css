@@ -73,6 +73,13 @@
 .stt-empty .btn, .nb-suppact .btn {
   min-height: 44px;
 }
+.stt-sect {
+  margin: var(--sp-12) 0 var(--sp-4);
+  font-size: var(--fs-md);
+}
+.stt-row.target .stt-bar i {
+  background: var(--muted);
+}
 .stt-foot {
   margin: 0 0 var(--sp-12);
 }

@@ -3,6 +3,7 @@ import { existingReady, scanFoodDraft } from '../../lib/dietRecent.js';
 import { DEFAULT_FOOD_TYPE } from '../../lib/foodType.js';
 import { ateEntry, entryText } from '../../lib/dietLog.js';
 import { FOOD_TYPE_LABEL, FOOD_TYPES } from '../../shared/recipes.js';
+import { withMicro } from '../../shared/foodMicro.js';
 import { defaultGrams, hitLabel, type FoodHit } from '../../shared/foods.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -34,7 +35,7 @@ export default function ScanFood({ hit, day, onDone, onCancel }: { hit: FoodHit;
     }
     const food = known ?? existingReady(useAppStore.getState().recipes, draft.recipe.n);
     const made = food && ateEntry({ ...nums, id: food.id }, 1, day, today);
-    const r = made && 'entry' in made ? useAppStore.getState().addDietEntry(made.entry) : null;
+    const r = made && 'entry' in made ? useAppStore.getState().addDietEntry({ ...made.entry, ...withMicro(draft.micro) }) : null;
     if (!r || r.error) { onDone(`${known ? 'Found' : 'Saved'} ${draft.recipe.n} as a food. ${r?.error ?? 'It was not logged.'}`); onCancel(); return; }
     onDone(known ? `Logged ${draft.recipe.n}, a food you already had.` : `Saved ${draft.recipe.n} as ${FOOD_TYPE_LABEL[type].toLowerCase()} and logged it.`);
     onCancel();

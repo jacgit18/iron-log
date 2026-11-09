@@ -1,3 +1,6 @@
+import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
+import { cleanMicro } from '../shared/foodMicro.js';
+import type { Micro } from '../shared/foodMicro.js';
 import { cleanGrams, type FoodHit } from '../shared/foods.js';
 
 // "Calculate from ingredients" (brief recipe-ingredient-macros): the rules behind the recipe form's helper. An ingredient's grams are read from its amount
@@ -44,7 +47,7 @@ export function servingsFor(text: string): { servings: number; assumed: boolean 
 export interface MacroRow { name: string; grams: number | null; hit: FoodHit | null }
 export interface MacroTotals {
   /** Per serving; carbs and fat only when every counted food has them. */
-  per: { kcal: number; p: number; c?: number; f?: number };
+  per: { kcal: number; p: number; c?: number; f?: number; /** A vitamin or mineral is here only when every counted food lists it (the rule carbs and fat follow). */ micro?: Micro };
   counted: number;
   total: number;
   /** The names left out (no food picked, or no grams). */
@@ -64,8 +67,9 @@ export function totals(rows: MacroRow[], servings: number): MacroTotals {
   const hasC = used.every(r => r.hit.c !== undefined), hasF = used.every(r => r.hit.f !== undefined);
   if (used.length > 0 && !hasC) missing.push('carbs');
   if (used.length > 0 && !hasF) missing.push('fat');
+  const micro = used.length === 0 ? null : cleanMicro(Object.fromEntries(NUTRIENT_KEYS.filter(k => used.every(r => r.hit.micro?.[k] !== undefined)).map(k => [k, sum(h => h.micro?.[k])])));
   return {
-    per: { kcal: Math.round(sum(h => h.kcal)), p: round1(sum(h => h.p)), ...(used.length > 0 && hasC ? { c: round1(sum(h => h.c)) } : {}), ...(used.length > 0 && hasF ? { f: round1(sum(h => h.f)) } : {}) },
+    per: { kcal: Math.round(sum(h => h.kcal)), p: round1(sum(h => h.p)), ...(used.length > 0 && hasC ? { c: round1(sum(h => h.c)) } : {}), ...(used.length > 0 && hasF ? { f: round1(sum(h => h.f)) } : {}), ...(micro ? { micro } : {}) },
     counted: used.length, total: rows.length, leftOut, missing,
   };
 }

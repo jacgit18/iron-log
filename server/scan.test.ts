@@ -2,6 +2,8 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
+import { NUTRIENT_KEYS } from '../src/shared/nutrientKeys.ts';
 import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, scanRoutes, type ScanDeps } from './scan.ts';
 
 let server: Server | undefined;
@@ -36,6 +38,21 @@ describe('POST /api/scan/label', () => {
     const sent = JSON.parse(String(init.body)) as { model: string; messages: { content: { type: string; source?: { data: string; media_type: string } }[] }[] };
     expect(sent.model).toBe(DEFAULT_MODEL);
     expect(sent.messages[0]!.content[0]!.source).toEqual({ type: 'base64', media_type: 'image/jpeg', data: jpeg });
+  });
+
+  it('asks for the 15 vitamin and mineral keys per serving in mg or mcg, never percent, and allows enough output', async () => {
+    const ask = vi.fn(async () => model(good));
+    const post = await start({ key: 'k', fetch: ask as unknown as typeof fetch });
+    await post({ image: jpeg });
+    const sent = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { system: string; max_tokens: number };
+    for (const k of NUTRIENT_KEYS) expect(sent.system).toContain(`${k} (${MICRO_UNIT[k]})`);
+    expect(sent.system).toContain('never the percent of Daily Value');
+    expect(sent.max_tokens).toBe(700);
+  });
+
+  it('answers with the checked amounts and drops what the model made up', async () => {
+    const post = await start({ key: 'k', fetch: (async () => model('{"kcal":120,"p":3,"micro":{"iron":4.5,"vitaminD":2,"choline":300,"zinc":99999}}')) as unknown as typeof fetch });
+    expect(((await (await post({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'ok', label: { kcal: 120, p: 3, micro: { iron: 4.5, vitaminD: 2 } } });
   });
 
   it('uses the model it is given', async () => {

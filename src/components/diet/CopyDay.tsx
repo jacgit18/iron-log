@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { entriesOn, entryText, shiftDay } from '../../lib/dietLog.js';
+import { entriesOn, entryFromFood, entryText, shiftDay } from '../../lib/dietLog.js';
 import { planCopy } from '../../lib/dietSuggest.js';
 import { fmtDayDate, ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -21,7 +21,7 @@ export default function CopyDay({ day, onAdded }: { day: string; onAdded: (text:
     const plan = planCopy(diet, src, day, ticked);
     let done = 0, stopped: string | null = null;
     for (const f of plan.add) {
-      stopped = useAppStore.getState().addDietEntry({ d: day, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) }).error;
+      stopped = useAppStore.getState().addDietEntry(entryFromFood(day, f)).error;
       if (stopped) break;
       done++;
     }
