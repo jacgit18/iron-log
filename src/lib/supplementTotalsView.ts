@@ -21,6 +21,8 @@ export interface TotalRow {
   limitText: string;
   /** Bar width, 0 to 100 (an over-the-limit total fills the bar). */
   percent: number;
+  /** The share of the limit, whole percent, not capped (an over-the-limit total reads 112): what the day meter ranks by. */
+  share: number;
   status: LimitStatus;
   statusText: string;
   /** What the total is made of when food is part of the picture: "Supplements 200 mg, food 80 mg", or "Food 80 mg is not added: this limit counts supplements only." Empty with no food. */
@@ -130,6 +132,7 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
       figure: `${fmtAmount(t.total)} ${t.unit}${t.fromFood > 0 && !t.foodCounted ? ' from supplements' : ''}`, // food shown beside the row but not added: say what the figure is, so 0 is not read as none
       limitText: `Limit ${fmtAmount(upper)} ${t.unit}${g ? ` for ${g.ages}` : ''}`,
       percent: Math.min(100, s.percent),
+      share: s.percent,
       status: s.status,
       statusText: s.status === 'over' ? `Over the limit${g ? ` for ${g.ages}` : ''} by ${fmtAmount(s.over)} ${t.unit}` : s.status === 'close' ? `Close to the limit (${s.percent}%)` : `${s.percent}% of the limit`,
       foodLine: t.fromFood <= 0 ? '' : t.foodCounted ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : `Food ${fmtAmount(t.fromFood)} ${t.unit} is not added: ${NOT_ADDED[limit.scope === 'supplements' ? 'supplements' : 'form']}.`,

@@ -113,6 +113,68 @@
 .wb-legend .nbw {
   background: var(--wb-water);
 }
+/* Vitamins and minerals under Supplements (brief vitamin-mineral-day-meter, layout B): a closed line, then thin bars in the new teal `--m-vit`. Own classes only; the Board's rules are untouched. */
+.wb-meter.nb-vit-meter {
+  height: 6px;
+}
+.wb-meter.nb-vit-meter i {
+  background: var(--m-vit);
+}
+.wb-meter.nb-vit-meter.over i {
+  background: var(--str);
+}
+.nb-vit {
+  margin: var(--sp-2) 0 var(--sp-8) var(--sp-8);
+  padding-left: var(--sp-10);
+  border-left: 2px solid var(--line);
+}
+.nb-vit-tog {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.nb-vit-tog svg {
+  flex: none;
+}
+.nb-vit-list {
+  display: grid;
+  gap: var(--sp-6);
+  padding-bottom: var(--sp-6);
+}
+.nb-vit-sub .wb-meter {
+  margin-top: var(--sp-2);
+}
+.nb-vit-over {
+  color: var(--str);
+}
+.nb-vit-close {
+  color: var(--warn-ink);
+}
+.nb-vit-all {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.nb-vit-none {
+  margin: 0 0 var(--sp-8) var(--sp-8);
+}
 .wb-legend .nbs {
   background: var(--m-supp);
 }
@@ -122,16 +184,19 @@
 .wb {
   --wb-water: #2f5fa8;
   --m-supp: #3b7d2c;
+  --m-vit: #0e7c86;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .wb {
     --wb-water: #7fb0f0;
     --m-supp: #8fd16a;
+    --m-vit: #5fc9d2;
   }
 }
 :root[data-theme="dark"] .wb {
   --wb-water: #7fb0f0;
   --m-supp: #8fd16a;
+  --m-vit: #5fc9d2;
 }
 /* Phone (brief nutrition-mobile-layout): header B puts the title and the short Targets and Manage buttons on one row with the week switcher full width below; add-food A is Add food across the width over three equal buttons. Wide screens keep the long layout. */
 @media (max-width: 699px) {
