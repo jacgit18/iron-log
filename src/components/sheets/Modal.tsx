@@ -18,6 +18,8 @@ import BarcodeSheet from '../diet/BarcodeSheet.js';
 import PortionSheet from '../diet/PortionSheet.js';
 import AddFoodSheet from '../nutritionBoard/AddFoodSheet.js';
 import DrinkSheet from '../nutritionBoard/DrinkSheet.js';
+import ManageSheet from '../nutritionBoard/ManageSheet.js';
+import TargetsSheet from '../nutritionBoard/TargetsSheet.js';
 import BoardFilterSheet from '../board/BoardFilterSheet.js';
 import BulkShareSheet from '../grocery/BulkShareSheet.js';
 import PriceHistorySheet from '../grocery/PriceHistorySheet.js';
@@ -40,7 +42,7 @@ export default function Modal() {
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
-    case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} />;
+    case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} backToManage={modal.from === 'manage'} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'moveprog': return <MoveSheet key={`move-${modal.idx}`} idx={modal.idx as number} />;
@@ -54,6 +56,8 @@ export default function Modal() {
     case 'bulkshare': return <BulkShareSheet />;
     case 'nbadd': return <AddFoodSheet key={String(modal.day ?? '')} />;
     case 'nbdrink': return <DrinkSheet key={String(modal.day ?? '')} />;
+    case 'nbmanage': return <ManageSheet />;
+    case 'nbtargets': return <TargetsSheet />;
     case 'portion': return <PortionSheet key={String(modal.id ?? '')} />;
     case 'pricehistory': return <PriceHistorySheet key={String(modal.id ?? '')} />;
     case 'receipt': return <ReceiptSheet />;

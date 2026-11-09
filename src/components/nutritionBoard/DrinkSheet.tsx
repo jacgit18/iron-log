@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { HOT_OZ, TRAIN_OZ_PER_30, hydrationView, longDay, shortDay } from '../../lib/nutritionBoard.js';
-import { BOTTLES, CUP_OZ, OZ_PER_LB, cupsOf, fmtOz, goalFor } from '../../lib/water.js';
+import { BOTTLES, CUP_OZ, cupsOf, fmtOz } from '../../lib/water.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -10,7 +10,7 @@ import Sheet from '../Sheet.js';
 import '../supplements/Supplements.css';
 
 // The drink sheet (brief nutrition-board): the day's water against its goal, a button for every container size, another amount, hot day and training minutes, the goal broken down line by line, the drinks logged (Remove, with Undo). A day ahead sets the goal and logs no drinks.
-// It calls the same store actions the Water panel did: addWater, removeWater, setWaterBoost, setWaterGoal. `modal.day` is the day.
+// It calls the same store actions the Water panel did: addWater, removeWater, setWaterBoost. The base goal is changed in Targets and goal. `modal.day` is the day.
 export default function DrinkSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
@@ -19,13 +19,10 @@ export default function DrinkSheet() {
   const today = ymd(useToday(s => s.today));
   const day = typeof modal?.day === 'string' ? modal.day : today;
   const h = hydrationView(day, today, supp, body);
-  const gi = goalFor(supp, body, day);
   const list = supp.water[day] ?? [];
   const mins = supp.boost[day]?.mins ? String(supp.boost[day]!.mins) : '';
   const [custom, setCustom] = useState('');
   const [m, setM] = useState(mins);
-  const [editGoal, setEditGoal] = useState(false);
-  const [goalText, setGoalText] = useState('');
   const st = () => useAppStore.getState();
   const pct = Math.min(100, Math.round((h.drunk / h.goal) * 100));
   return (
@@ -63,14 +60,7 @@ export default function DrinkSheet() {
         {h.lines.map(l => <div key={l.label}><span>{l.label}</span><b>{l.label.startsWith('Base') ? '' : '+'}{fmtOz(l.oz)} oz</b></div>)}
         <div><span><b>Goal</b></span><b>{fmtOz(h.goal)} oz</b></div>
       </div>
-      {!editGoal ? <button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => { setGoalText(fmtOz(gi.baseOz)); setEditGoal(true); }}>Change base goal</button> : (
-        <form className="wgoalform" noValidate onSubmit={e => { e.preventDefault(); if (st().setWaterGoal(goalText)) setEditGoal(false); }}>
-          <label className="field">Fixed daily goal (oz)<input type="number" inputMode="decimal" min="8" max="500" step="any" value={goalText} autoFocus onChange={e => setGoalText(e.target.value)} /></label>
-          <button type="submit" className="btn sm primary">Use this amount</button>
-          {supp.waterMode === 'fixed' && <button type="button" className="btn sm" onClick={() => { st().setWaterByWeight(); setEditGoal(false); }}>Use my weight ({OZ_PER_LB} oz per lb)</button>}
-          <button type="button" className="btn sm ghost" onClick={() => setEditGoal(false)}>Cancel</button>
-        </form>
-      )}
+      <button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => st().openModal({ type: 'nbtargets' })}>Change base goal</button>
       {!h.future && (
         <>
           <div className="sect">Logged</div>

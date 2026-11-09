@@ -24,3 +24,19 @@ export const openDrink = async (page, day) => {
 };
 // Today's column on the board (the fixed clock in fixtures.js is Thursday 2026-09-24).
 export const todayCol = page => page.locator('.nb-col.today');
+// The Targets and goal sheet (PR 2 of brief nutrition-board) and the Manage sheet, opened from the board header. Both return the dialog.
+export const openTargets = async page => {
+  await page.locator('#nb-targets').click();
+  const sheet = page.getByRole('dialog', { name: 'Targets and goal' });
+  await expect(sheet).toBeVisible();
+  return sheet;
+};
+export const openManage = async page => {
+  await page.locator('#nb-manage').click();
+  const sheet = page.getByRole('dialog', { name: 'Manage' });
+  await expect(sheet).toBeVisible();
+  return sheet;
+};
+// The supplement editor and library: Manage, then Supplements and library. `closeSupplementEditor` is its Done button.
+export const openSupplementEditor = async page => { await openManage(page); await page.locator('#sched-edit').click(); await expect(page.locator('#sched-h')).toBeVisible(); };
+export const closeSupplementEditor = async page => { await page.locator('#sched-done').click(); await expect(page.getByRole('dialog')).toHaveCount(0); };

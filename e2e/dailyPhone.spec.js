@@ -1,14 +1,15 @@
 import { test, expect } from './fixtures.js';
+import { closeSupplementEditor, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // Supplements and Water on a phone share Groceries' flat pattern (Supplements.css): a supplement tick on the Nutrition board is one 44px tap target with the
 // tick beside its name, and nothing scrolls the page sideways at the narrowest width.
 const open = async page => { await page.setViewportSize({ width: 320, height: 700 }); await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const addOne = async (page, n, dose) => {
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
   await page.fill('#suppname-morning', n); await page.fill('#suppdose-morning', dose);
   await page.click('#suppadd-morning');
   await expect(page.locator('.srow', { hasText: n })).toHaveCount(1); // really added, so the checks below are not vacuous
-  await page.click('#sched-edit');
+  await closeSupplementEditor(page);
 };
 
 test('a supplement row ticks from its whole label, with the tick beside the name', async ({ page }) => {

@@ -1,13 +1,16 @@
 import type { SupplementSlot } from '../../types.ts';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { afterSheetClose } from '../../lib/backNav.js';
 import { SLOT_OPTIONS } from '../../lib/supplements.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
 // Add or edit a supplement in the library: name, dose, note, and when it is on the schedule.
-export default function SupplementSheet({ id }: { id?: string | null }) {
+// `backToManage`: it was opened from the library inside the Manage sheet, so closing it (saved, removed or cancelled) reopens that editor instead of leaving you on the board.
+export default function SupplementSheet({ id, backToManage }: { id?: string | null; backToManage?: boolean }) {
   const s = useAppStore.getState();
+  useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
   const cur = id ? s.supp.items.find(x => x.id === id) : null;
   const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : '', dose: cur ? cur.dose || '' : '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : 'morning' }));
   const [err, setErr] = useState('');

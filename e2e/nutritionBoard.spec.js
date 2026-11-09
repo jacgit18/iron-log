@@ -23,7 +23,7 @@ test('Nutrition is one board with a week switcher; the old Water, Last 7 days an
   await expect(page.getByRole('group', { name: 'Week' }).getByRole('button')).toHaveText(['Last week', 'This week', 'Next week']);
   await expect(page.locator('#water-h, #water7-h, #sched-h')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Food eaten' })).toHaveCount(0);
-  await expect(page.locator('#diet-h')).toBeVisible(); // the Targets block stays until it moves into a sheet
+  await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block moved into the Targets and goal sheet
   await expect(page.getByRole('status').filter({ hasText: 'This week · Sep 24 to 30' })).toBeVisible();
 });
 

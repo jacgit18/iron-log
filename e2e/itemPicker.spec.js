@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
+import { closeSupplementEditor, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // The exercise picker in the add sheets (ADR 036): your library, the catalog when syncing, a create row. The API is scripted, as in
 // sync.spec.js: the account has Program A with one Lat Pulldown card.
@@ -195,7 +196,7 @@ const openSupplements = async (page, answer = search()) => {
   await page.route('**/api/catalog/search?*', answer);
   await openSynced(page);
   await page.click('#tab-daily'); await page.click('#daily-supplements');
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
 };
 const morningName = page => page.getByRole('combobox', { name: 'Add to Morning' });
 
@@ -252,7 +253,7 @@ test('Exercise library: the search shows catalog matches, Add moves one into you
 test('Supplement library: the search asks the server and Add keeps it Library only', async ({ page }) => {
   await page.route('**/api/catalog/search?*', search());
   await openSynced(page);
-  await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.click('#sched-edit');
+  await page.click('#tab-daily'); await page.click('#daily-supplements'); await openSupplementEditor(page);
   await page.locator('.exlib').getByRole('searchbox').fill('kaged');
   const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
   await fromCatalog.getByRole('button', { name: 'Add Creatine HCl by Kaged from the catalog' }).click();
@@ -261,16 +262,16 @@ test('Supplement library: the search asks the server and Add keeps it Library on
   await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
 });
 
-test('the Supplement library is under Edit on Daily → Supplements, not on the Program tab', async ({ page }) => {
+test('the Supplement library is in Manage on Daily → Nutrition, not on the Program tab', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
   await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button').locator('b')).toHaveText(['Programs', 'Exercises', 'Stretches', 'Saved', 'Compare']);
   await page.click('#tab-daily'); await page.click('#daily-supplements');
   await expect(page.locator('#suplib-h')).toHaveCount(0);
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
   await expect(page.locator('#suplib-h')).toHaveText('Supplement library');
   await expect(page.locator('.exlib .exrow').filter({ hasText: 'Fish Oil' })).toHaveCount(1); // a Library only one is listed
-  await page.click('#sched-edit');
+  await closeSupplementEditor(page);
   await expect(page.locator('#suplib-h')).toHaveCount(0);
 });
 
