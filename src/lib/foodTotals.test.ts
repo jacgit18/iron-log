@@ -39,6 +39,10 @@ describe('coverage', () => {
   it('says it in words, with the warning that foods without data add nothing', () => {
     expect(coverageText([food('1', { iron: 1 }), food('2'), food('3')])).toBe('Food: 1 of 3 eaten foods had vitamin or mineral data. Foods without data add nothing, so food totals can be low.');
     expect(coverageText([food('1', { iron: 1 })])).toBe('Food: 1 of 1 eaten food had vitamin or mineral data.');
+    // a food that lists only nutrients without a limit (sodium, fiber, ...) is not data the sheet can show yet
+    expect(hasFoodData([food('1', { sodium: 400, fiber: 3 })])).toBe(false);
+    expect(coverageText([food('1', { sodium: 400, fiber: 3 }), food('2', { zinc: 2, sodium: 100 })])).toContain('Food: 1 of 2 eaten foods');
+    expect(totalsView([], {}, day, 'taken', [food('1', { potassium: 300 })])).toMatchObject({ hasData: false, rows: [], noneCounted: false });
     expect(coverageText([])).toBe('');
   });
 });

@@ -1,4 +1,4 @@
-import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
+import { LIMIT_KEYS, NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
 import type { NutrientKey, NutrientUnit } from '../shared/nutrientKeys.js';
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
 import { limitOf } from './nutrientLimits.js';
@@ -48,7 +48,9 @@ export const countedItems = (items: SupplementItem[], taken: Taken, date: string
 };
 
 /** The foods of a day that list at least one vitamin or mineral, and how many were eaten in all: the sheet says so, because a food with no data adds nothing and the total can be low. */
-export const foodCoverage = (eaten: readonly DietEntry[]): { eaten: number; withData: number } => ({ eaten: eaten.length, withData: eaten.filter(e => e.micro && Object.keys(e.micro).length > 0).length });
+// Only the nutrients the sheet can show count (those with a limit, LIMIT_KEYS) until the sheet has a section for the others (brief nutrients-without-upper-limit, PR 2): a food that lists only sodium or fiber
+// would otherwise open Totals to an empty sheet and be counted as having data.
+export const foodCoverage = (eaten: readonly DietEntry[]): { eaten: number; withData: number } => ({ eaten: eaten.length, withData: eaten.filter(e => LIMIT_KEYS.some(k => e.micro?.[k] !== undefined)).length });
 
 /** One entry per nutrient that a counted supplement or an eaten food lists, in the order of the limits table. `eaten` is the day's diet entries. */
 export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis = 'taken', eaten: readonly DietEntry[] = []): NutrientTotal[] {

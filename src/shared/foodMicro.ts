@@ -2,7 +2,7 @@ import { NUTRIENT_KEYS } from './nutrientKeys.js';
 import type { NutrientKey } from './nutrientKeys.js';
 
 /* ---------- Vitamins and minerals in a food (brief food-vitamins-minerals) ----------
-   `Micro` is the amount of each of the 15 nutrients in the limits table, in that nutrient's own unit (`MICRO_UNIT`: mg or mcg, never IU), either per 100 g (a lookup result) or as eaten
+   `Micro` is the amount of each of the 20 nutrients in `NUTRIENT_KEYS` (the 15 in the limits table and the 5 in the targets table), in that nutrient's own unit (`MICRO_UNIT`: mg, mcg or g, never IU), either per 100 g (a lookup result) or as eaten
    (a diet entry). Keys are written in NUTRIENT_KEYS order so a cleaned value compares equal to itself (`validDietEntry`). A missing key means "the source does not say", not zero.
    `MICRO_MAX` is ten times the adult upper limit in `src/lib/nutrientLimits.ts`, or for the nutrients with no limit the cap in `src/lib/nutrientTargets.ts` (a unit test keeps both in step): a bigger number is a misread, so it is dropped, never stored.
    The two vendor maps below turn USDA FoodData Central and Open Food Facts answers into a Micro per 100 g; nothing here is stored or sent on its own. */
