@@ -40,16 +40,22 @@ test('changing the calories on the One-off form drops the amounts, so they never
   expect('micro' in e).toBe(false);
 });
 
-test('editing an eaten food keeps its vitamins and minerals', async ({ page }) => {
+test('editing an eaten food keeps its vitamins and minerals, and changing its calories drops them', async ({ page }) => {
   await openNutrition(page);
   const sheet = await find(page, 100);
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   const [e] = await stored(page);
   await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
+  await page.locator(`#nb-e-${e.id}-n`).fill('Spinach, fresh');
+  await page.getByRole('button', { name: 'Save' }).click();
+  const [renamed] = await stored(page);
+  expect(renamed.n).toBe('Spinach, fresh');
+  expect(renamed.micro).toEqual({ calcium: 100, iron: 2 }); // a rename keeps them
+  await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
   await page.locator(`#nb-e-${e.id}-k`).fill('110');
   await page.getByRole('button', { name: 'Save' }).click();
   const [after] = await stored(page);
   expect(after.kcal).toBe(110);
-  expect(after.micro).toEqual({ calcium: 100, iron: 2 });
+  expect('micro' in after).toBe(false); // a changed portion: the amounts would no longer match
 });
