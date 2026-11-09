@@ -253,7 +253,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     get().mutateSupp(s => {
-      const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}) };
+      const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}),
+        ...(cur?.serving ? { serving: cur.serving } : {}), ...(cur?.nutrients ? { nutrients: cur.nutrients } : {}) }; // what is in a serving is not on this form: an edit keeps it
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
     });
