@@ -8,16 +8,19 @@ const dietRows = async user => (await pool.query(
   `select li.client_id, li.data, li.version from list_items li join users u on u.id = li.user_id
     where u.auth_user_id = $1 and li.list = 'diet_entry' and li.deleted_at is null order by li.client_id`, [`dev:${user}`])).rows;
 const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
-// The Diet box: the parent of its heading (its region has no accessible name in the signed-in app, where the page-level spec finds it by name).
-const diet = page => page.getByRole('heading', { name: 'Diet', level: 2 }).locator('..');
+// Today's column of the Nutrition week board (brief nutrition-board): food is added from the add sheet's One-off food, and eaten food is listed in `.nb-eat` rows.
+const diet = page => page.locator('.nb-col.today');
 const addFood = async (page, name, kcal, protein) => {
-  const box = diet(page);
-  if (!(await box.getByLabel('Food').isVisible())) await box.getByRole('button', { name: 'Add one' }).click();
-  await box.getByLabel('Food').fill(name);
-  await box.getByLabel('Calories', { exact: true }).last().fill(String(kcal));
-  await box.getByLabel('Protein (g)').last().fill(String(protein));
-  await box.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(box.locator('.dt-entry', { hasText: name })).toBeVisible();
+  await page.locator('#nb-add').click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: /^One-off food/ }).click();
+  await sheet.locator('#dt-add-n').fill(name);
+  await sheet.locator('#dt-add-k').fill(String(kcal));
+  await sheet.locator('#dt-add-p').fill(String(protein));
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(diet(page).locator('.nb-eat', { hasText: name })).toBeVisible();
 };
 const reload = async page => { await page.reload(); await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 }); };
 
@@ -36,13 +39,13 @@ test('a food logged on one phone reaches the account, shows on a second phone, a
   const b = await newPhone(browser, user);
   const second = await b.open();
   await nutrition(second);
-  await expect(diet(second).locator('.dt-entry')).toHaveCount(2);
-  await expect(diet(second).locator('.dt-entry', { hasText: 'Chicken' })).toContainText('350');
+  await expect(diet(second).locator('.nb-eat')).toHaveCount(2);
+  await expect(diet(second).locator('.nb-eat', { hasText: 'Chicken' })).toContainText('350');
 
   // The second phone edits one and deletes the other; the database ends with the one edited row.
   const rice = (await dietRows(user)).find(r => r.data.n === 'Rice');
   await diet(second).getByRole('button', { name: 'Edit Rice' }).click();
-  await second.locator(`#dt-e-${rice.client_id}-k`).fill('260');
+  await second.locator(`#nb-e-${rice.client_id}-k`).fill('260');
   await diet(second).getByRole('button', { name: 'Save', exact: true }).click();
   await diet(second).getByRole('button', { name: 'Delete Chicken' }).click();
   await expect.poll(async () => (await dietRows(user)).map(r => [r.data.n, r.data.kcal])).toEqual([['Rice', 260]]);
@@ -50,8 +53,8 @@ test('a food logged on one phone reaches the account, shows on a second phone, a
   // The first phone picks the changes up when it next loads (as in grocery.spec.js), shows the account's log, and keeps no private copy of it.
   await reload(page);
   await nutrition(page);
-  await expect(diet(page).locator('.dt-entry')).toContainText('260');
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
+  await expect(diet(page).locator('.nb-eat')).toContainText('260');
+  await expect(diet(page).locator('.nb-eat')).toHaveCount(1);
   expect(await page.evaluate(() => localStorage.getItem('ironlog:diet/main'))).toBeNull();
   await a.close();
   await b.close();
@@ -84,6 +87,6 @@ test('restoring the account backup brings a lost food log back on screen and int
   await dialog.getByRole('button', { name: 'Add to my data' }).click();
   await expect.poll(async () => (await dietRows(user)).map(r => r.data.n).sort(), { message: 'the restored entries are written to the account' }).toEqual(['Eggs', 'Oats']);
   await nutrition(page);
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
+  await expect(diet(page).locator('.nb-eat')).toHaveCount(2);
   await a.close();
 });
