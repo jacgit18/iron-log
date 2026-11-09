@@ -2,7 +2,8 @@ import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
-import { isCatalogId, nutrientsOf } from '../shared/listItems.js';
+import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
+import { normPortion } from '../lib/supplementPortion.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
@@ -199,7 +200,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
       const i = s.items.findIndex(x => x.id === id);
       const { dose: d0, ...rest } = s.items[i];
       const nd = dz || d0;
-      s.items.splice(i + 1, 0, { ...rest, id: newSupplementId(s.items, rest.n), slot, ...(nd ? { dose: nd } : {}) });
+      const copy = { ...rest, id: newSupplementId(s.items, rest.n), slot, ...(nd ? { dose: nd } : {}) };
+      delete copy.portion; // a new intake starts at one serving: you choose its amount
+      s.items.splice(i + 1, 0, copy);
     });
   },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
@@ -253,11 +256,19 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     const nutrients = d.nutrients === undefined ? cur?.nutrients || [] : nutrientsOf(d.nutrients);
+    const serving = d.serving === undefined ? cur?.serving : normSupplementItem({ id: 'x', n: 'x', serving: d.serving })?.serving; // one serving size per product; the same cleaner as a synced item
+    const portion = d.portion === undefined ? cur?.portion : normPortion(d.portion);
     get().mutateSupp(s => {
       const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}),
-        ...(cur?.serving ? { serving: cur.serving } : {}), ...(nutrients.length ? { nutrients } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
+        ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
+      // The same product in other sections shares one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
+      if (cur) for (const x of s.items) {
+        if (x.id === item.id || !sameSupplement(x, cur.n, cur.brand)) continue;
+        if (d.nutrients !== undefined) { if (nutrients.length) x.nutrients = nutrients.map(r => ({ ...r })); else delete x.nutrients; }
+        if (d.serving !== undefined) { if (serving) x.serving = { ...serving }; else delete x.serving; }
+      }
     });
     set({ modal: null }); flag('Supplement saved'); return null;
   },

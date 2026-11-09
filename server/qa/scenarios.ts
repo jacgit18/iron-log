@@ -67,13 +67,20 @@ export type ScenarioFeature =
   | 'Saved meals move'
   | 'Counts as'
   | 'Week board'
-  | 'Nutrition board';
+  | 'Nutrition board'
+  | 'Supplement portions'
+  | 'Vitamin and mineral totals'
+  | 'Vitamin and mineral day line'
+  | 'Food vitamins and minerals'
+  | 'Typed amounts'
+  | 'Age and sex amounts';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Terms',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Supplement portions',
+  'Vitamin and mineral totals', 'Vitamin and mineral day line', 'Food vitamins and minerals', 'Typed amounts', 'Age and sex amounts', 'Terms',
 ];
 
 export interface Scenario {
@@ -2733,8 +2740,227 @@ export const SCENARIOS: readonly Scenario[] = [
       'Saved meals and foods closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
     ],
   },
+  // ---- Supplement portions (brief supplement-portions, ADR 114). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----
   {
-    id: 'S-219', feature: 'Terms', title: 'Both sign-in buttons stay off until the Terms box is ticked', persona: 'new-user', brief: 'terms-acceptance',
+    id: 'S-219', feature: 'Supplement portions', title: 'Say how many capsules you take and see the amount', persona: 'meal-planner', brief: 'supplement-portions',
+    steps: [
+      'Press Manage, Supplements and library, then + New. Name it "Magnesium glycinate", add the row Magnesium 200 mg, and type 2 in "Capsules or tablets in one serving".',
+      'In "How much you take each time" press − once, then + twice, reading the line under the stepper each time. Press Save, then Done.',
+      'On today\'s Supplements tick it, then press Totals.',
+    ],
+    expected: [
+      'The stepper starts at "2 capsules" with "200 mg magnesium" (the row is the amount in one label serving, which is 2 capsules); − gives "1 capsule" and "100 mg magnesium"; + twice gives "3 capsules" and "300 mg magnesium", each with the working under it ("3 × 100 mg per capsule = 300 mg" style).',
+      'After saving, today\'s row reads "Magnesium glycinate 3 capsules" next to its tick, and Totals counts the amount you chose, naming "(3 capsules)" beside the product.',
+    ],
+  },
+  {
+    id: 'S-220', feature: 'Supplement portions', title: 'Twice a day with a different amount each time', persona: 'meal-planner', brief: 'supplement-portions',
+    steps: [
+      'With the supplement from the last scenario, add it to Night on the Supplements tab, then open its Night entry and press − until it says "1 capsule". Save.',
+      'Tick Morning and Night today and read the Totals magnesium figure; then edit the nutrient rows on the Night entry (change 200 mg to 300 mg) and open the Morning entry.',
+    ],
+    expected: [
+      'A copy added to another section starts at one serving; after the change Morning shows its own amount and Night shows "1 capsule".',
+      'The Totals figure is the Morning amount plus the Night amount. The Morning entry now shows the same rows (300 mg) and serving size as Night, while its capsule count is unchanged.',
+    ],
+  },
+  {
+    id: 'S-221', feature: 'Supplement portions', title: 'No serving size, and an old supplement', persona: 'diet-on-target', brief: 'supplement-portions', edge: true,
+    steps: [
+      'Open a supplement that has nutrient rows but no serving size (or add one) and read "How much you take each time"; press − then + and watch the line under it.',
+      'Open a supplement you saved before portions existed and look at today\'s Supplements and Totals.',
+    ],
+    expected: [
+      'With no serving size it counts servings in quarters ("½ serving", "1½ servings") from ¼ to 10, and the line says "per serving × ½".',
+      'An older supplement shows no tag on the day and Totals counts it exactly as before (one serving per tick).',
+    ],
+  },
+  // ---- Vitamins and minerals (briefs supplement-nutrient-totals, food-vitamins-minerals, recipes-vitamins-minerals, nutrients-without-upper-limit, type-food-amounts, recommendations-by-age-sex, vitamin-mineral-day-meter,
+  // intake-target-and-safety-checks; QA data for the vitamin and mineral features). The figures below are what the 'vitamin-tracker' account's seed produces (checked against the app's own code on 2026-11-09); nothing here has been walked by the owner. ----
+  {
+    id: 'S-222', feature: 'Vitamin and mineral totals', title: 'Today\'s Totals read the supplements and the foods, with the warning line under the ticks', persona: 'vitamin-tracker', brief: 'supplement-nutrient-totals',
+    steps: [
+      'Open Nutrition and read today\'s Supplements: the ticks under Morning, Noon and Night, and the line under them.',
+      'Press Totals. Read the line about food at the top, then the rows for Vitamin D, Zinc and Magnesium, then the No upper limit section and the note at the bottom.',
+    ],
+    expected: [
+      'Morning and Noon are ticked, Night (Magnesium glycinate, "1 capsule") is not. Under the ticks: "Over an upper limit today: Vitamin D. Totals shows what each limit counts. General information, not medical advice."',
+      'The food line reads "Food: 2 of 3 eaten foods had vitamin or mineral data. Foods without data add nothing, so food totals can be low."',
+      'Vitamin D 125 mcg, "Over the limit by 25 mcg", "Limit 100 mcg" (the bar is full and rust red). Zinc 36 mg, "Close to the limit (90%)", "Supplements 30 mg, food 6 mg." Magnesium "200 mg from supplements", "57% of the limit", "Food 130 mg is not added: this limit counts supplements only." Calcium 820 mg, "41% of the limit".',
+      'No upper limit: Potassium 950 mg "Below the recommended range"; Vitamin B12 500.8 mcg "20,867% of the recommended amount"; Fiber 9 g "Below the recommended range"; Sodium 710 mg "31% of the 2,300 mg level to stay under". Nothing in that section is amber or red, and none of it is in the warning line.',
+      'The sheet says "Add your birth year and sex in Settings to see your own amounts. Until then the adult range is shown." Each row ends with its recommended amount and "General information, not medical advice."; the bottom note ends "It does not account for pregnancy, breastfeeding, medicines or health conditions, and it is not medical advice."',
+    ],
+  },
+  {
+    id: 'S-223', feature: 'Vitamin and mineral totals', title: 'What I took, Everything scheduled, and unticking moves the warning', persona: 'vitamin-tracker', brief: 'supplement-nutrient-totals',
+    steps: [
+      'Press Totals, then "Everything scheduled". Read the Magnesium row.',
+      'Close the sheet. Untick Vitamin D3 under Noon, read the line under the ticks, then press Totals ("What I took") and look for a Vitamin D row.',
+      'Tick Vitamin D3 again.',
+    ],
+    expected: [
+      'On Everything scheduled, Magnesium is "300 mg from supplements", "Close to the limit (86%)", listing "Magnesium glycinate 200 mg" and "Magnesium glycinate (1 capsule) 100 mg" (the Night intake counts at half a serving).',
+      'Unticked: the warning line is gone and What I took has no Vitamin D row (no food today lists vitamin D). Ticked again: the warning line and the row come back.',
+    ],
+  },
+  {
+    id: 'S-224', feature: 'Vitamin and mineral totals', title: 'The target line and the 7-day average sit apart from the limit', persona: 'vitamin-tracker', brief: 'intake-target-and-safety-checks',
+    steps: [
+      'Press Totals ("What I took") and read, for Calcium, Zinc, Magnesium and Vitamin D, the line that starts "Target:" and the line that starts "7-day average".',
+      'Read the 7-day average of Potassium in the No upper limit section.',
+    ],
+    expected: [
+      'Target lines: Calcium "Below the recommended amount (82%)", Zinc "Above the recommended amount", Magnesium "Meets the recommended amount" (food counts for the target even though the magnesium limit counts supplements only), Vitamin D "Above the recommended amount". None of them mentions the limit.',
+      '7-day averages: Calcium "534.29 mg (7 days with data)", Zinc "18.86 mg", Vitamin D "60.43 mcg", Magnesium "171.43 mg from supplements", Potassium "1,721.43 mg (7 days with data)". A day with no data is skipped, never counted as zero.',
+    ],
+  },
+  {
+    id: 'S-225', feature: 'Vitamin and mineral totals', title: 'Supplements alone: no target verdict, and an unticked day says nothing is ticked', persona: 'diet-fresh', brief: 'intake-target-and-safety-checks', edge: true,
+    steps: [
+      'Press Manage, Supplements and library, then + New. Name it "Zinc", add the row Zinc 15 mg, press Save, then Done. Do not tick it.',
+      'Read the line under Supplements on today, then press Totals.',
+      'Close the sheet, tick Zinc, and press Totals again.',
+    ],
+    expected: [
+      'Unticked: under the Supplements bar "Vitamins and minerals: nothing ticked yet", and Totals says "Nothing ticked on this day yet."',
+      'Ticked: Zinc 15 mg, "38% of the limit", "7-day average: 15 mg (1 day with data)". There is no "Target:" line (supplements alone cannot say below) and no line about food.',
+    ],
+  },
+  {
+    id: 'S-226', feature: 'Vitamin and mineral day line', title: 'A folded line under Supplements names the two nearest their limits', persona: 'vitamin-tracker', brief: 'vitamin-mineral-day-meter',
+    steps: [
+      'On today, read the line under the Supplements bar. Press it.',
+      'Read the bars, then press the link at the bottom.',
+    ],
+    expected: [
+      'The closed line (one tap tall) reads "Vitamins and minerals: Vitamin D over · Zinc 90%", with words as well as colour.',
+      'Opened, five thin bars: Vitamin D (over, rust), Zinc 90%, Magnesium 57%, Calcium 41% and Iron 6%. The link says "All 7 in Totals" and opens the Totals sheet for that day. Pressing the line again folds it.',
+    ],
+  },
+  {
+    id: 'S-227', feature: 'Vitamin and mineral day line', title: 'An earlier day with no ticks still shows what the foods carried', persona: 'vitamin-tracker', brief: 'vitamin-mineral-day-meter', edge: true,
+    steps: [
+      'Open the day four days ago (use the day picker; it can be in last week) and read the line under Supplements.',
+      'Open the day five days ago and read its line.',
+    ],
+    expected: [
+      'Four days ago nothing was ticked, but the foods listed amounts: "Vitamins and minerals: Calcium 16% · Zinc 15%", no Vitamin D over.',
+      'Five days ago Magnesium and the B12 and fiber capsule were ticked: "Vitamins and minerals: Magnesium 57% · Calcium 16%".',
+    ],
+  },
+  {
+    id: 'S-228', feature: 'Food vitamins and minerals', title: 'A food found by name carries its vitamins and minerals into the log', persona: 'diet-fresh', brief: 'food-vitamins-minerals',
+    steps: [
+      'Press Add food, then Find food. Type "spinach", pick the first result, set 100 g and press Use.',
+      'Read the form that opens, press Add, then close the sheet and press Totals on today.',
+    ],
+    expected: [
+      'The One-off form opens with "Vitamins and minerals (optional)" already open and rows filled by the lookup (for example Calcium, Iron, Potassium), each in mg, mcg or g, with "Filled from the food lookup or an earlier save. Check them against the label; change or remove any row."',
+      'After Add, a Totals button appears on today. The sheet says "Food: 1 of 1 eaten food had vitamin or mineral data." and the rows show the amounts for 100 g.',
+    ],
+  },
+  {
+    id: 'S-229', feature: 'Food vitamins and minerals', title: 'A scanned barcode logs the food with its vitamins and minerals', persona: 'diet-fresh', brief: 'food-vitamins-minerals', device: true,
+    steps: [
+      'On a phone, press Add food, then Scan barcode, and scan a packaged food with a nutrition panel (a cereal box works).',
+      'Check the amounts in the form against the box (Sodium and Fiber are the ones Open Food Facts lists most often), then press Add.',
+    ],
+    expected: [
+      'The food is found and the form shows "Vitamins and minerals (optional)" with rows that match the box for the serving you chose. A product that lists none shows no rows and counts as a food with no data.',
+      'After Add, Totals counts the food and the coverage line says 1 of 1.',
+    ],
+  },
+  {
+    id: 'S-230', feature: 'Food vitamins and minerals', title: 'A ready-made food carries amounts per serving and logging it adds them to the day', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
+    steps: [
+      'Open Recipes, find "Fortified cereal" and press Edit. Read "Vitamins and minerals per serving (optional)", then press Cancel.',
+      'Go to Nutrition, press Add food, Recipes, then Log beside Fortified cereal and confirm one serving. Press Done, then Totals.',
+    ],
+    expected: [
+      'Four rows, in the table\'s order: Calcium 130 mg, Iron 4.5 mg, Vitamin D 2 mcg, Zinc 1.2 mg.',
+      'The coverage line reads "Food: 3 of 4 eaten foods had vitamin or mineral data." Zinc 37.2 mg "Close to the limit (93%)", Vitamin D 127 mcg "Over the limit by 27 mcg", Calcium 950 mg, Iron 7 mg.',
+    ],
+  },
+  {
+    id: 'S-231', feature: 'Typed amounts', title: 'Type vitamin and mineral amounts on a one-off food', persona: 'diet-fresh', brief: 'type-food-amounts',
+    steps: [
+      'Press Add food, then One-off food. Type the name "Burrito bowl", 300 calories and 20 protein. Press "Vitamins and minerals (optional)".',
+      'Press "+ Add a nutrient", leave Calcium and type 180. Press "+ Add a nutrient" again, choose Vitamin B12, type 0.01 and change its unit to mg. Press Add, then close the sheet.',
+      'In Eaten, press Edit on Burrito bowl, read the rows, then Cancel. Press Totals.',
+    ],
+    expected: [
+      'The section is closed when the form opens. After Add the food is in Eaten.',
+      'Edit shows Calcium 180 mg and Vitamin B12 10 mcg (0.01 mg is stored as 10 mcg).',
+      'Totals: Calcium 180 mg "9% of the limit"; Vitamin B12 10 mcg "417% of the recommended amount" in the No upper limit section.',
+    ],
+  },
+  {
+    id: 'S-232', feature: 'Typed amounts', title: 'Typed rows survive a calorie change, filled rows do not, and a silly amount is refused in words', persona: 'diet-fresh', brief: 'type-food-amounts', edge: true,
+    steps: [
+      'Press Add food, Find food, pick a food from the results and press Use. Press "+ Add a nutrient", choose Zinc in the new row (Copper if the food already lists zinc) and type 1.5. Then change the calories.',
+      'On a fresh One-off form open the section, add Vitamin B12 with 1 and unit mg, then add Zinc twice (5 mg, then 2000 mcg). Read the lines under the rows.',
+      'Press Add, then Edit the food in Eaten and change only its name.',
+    ],
+    expected: [
+      'After the calorie change the filled rows go and the line says "Calories changed: amounts you did not retype were cleared."; the Zinc row you typed stays. While rows are showing, the "Vitamins and minerals" heading cannot be folded.',
+      'The lines read "Vitamin B12 1 mg is far above any food; left out." and "Zinc is listed twice; only the first is kept." The saved food has only Zinc 5 mg.',
+      'Changing only the name keeps the amounts; changing the calories on edit drops the ones you did not retype.',
+    ],
+  },
+  {
+    id: 'S-233', feature: 'Label scan', title: 'A label photo fills the vitamin and mineral rows, to check against the label', persona: 'diet-fresh', brief: 'food-vitamins-minerals', device: true,
+    steps: [
+      'On a phone, press Add food, Find food, then the label photo option after a miss (or scan from the Ready-made form), and photograph the Nutrition Facts of a fortified cereal or a packaged food that lists sodium and fiber.',
+      'Compare every vitamin and mineral row with the label, remove one row, then change the calories.',
+    ],
+    expected: [
+      'The form shows each vitamin and mineral the label lists as its own row (including Sodium and Fiber when listed) so each can be checked against the label.',
+      'Removing a row removes only that amount. Changing the calories clears the rows the photo filled and says so. Record any amount that does not match the label: that is the accuracy check for the label scan.',
+    ],
+  },
+  {
+    id: 'S-234', feature: 'Age and sex amounts', title: 'A birth year and sex change your own limit and recommended amount', persona: 'vitamin-tracker', brief: 'recommendations-by-age-sex',
+    steps: [
+      'Open Settings, find "Recommended amounts" in the App group, type 1974 as the birth year and choose Female.',
+      'Go back to Nutrition, press Totals and read Calcium, Magnesium and Zinc, then Vitamin B12.',
+    ],
+    expected: [
+      'Calcium: "Limit 2,000 mg for ages 51 to 70" and "Recommended for women ages 51 to 70: 1,200 mg a day." Magnesium: "Recommended for women ages 31 and over: 320 mg a day." Zinc: "Recommended for women ages 19 and over: 8 mg a day."',
+      'Vitamin B12 reads "20,867% of the recommended amount for women ages 19 and over". The note at the top says the amounts are for the age and sex given and do not cover pregnancy or breastfeeding.',
+    ],
+  },
+  {
+    id: 'S-235', feature: 'Age and sex amounts', title: 'A bad year, "Prefer not to say" and Clear', persona: 'vitamin-tracker', brief: 'recommendations-by-age-sex', edge: true,
+    steps: [
+      'In Settings > Recommended amounts choose Female, then type 85, then replace it with 2012, then press Totals on today.',
+      'Type 1974, choose "Prefer not to say", and open Totals again. Then press Clear and open Totals once more.',
+    ],
+    expected: [
+      '85 shows "Enter a four-digit year, like 1985." and saves nothing. 2012 saves but says "Amounts are shown for ages 19 and over, so the adult range is used.", and Totals says "Amounts for your age are not shown. The adult range is used."',
+      'With a year and "Prefer not to say", Totals says "Your own amounts need both a birth year and a sex, so the adult range is shown. You can change this in Settings." After Clear the boxes are empty and Totals asks you to add them.',
+    ],
+  },
+  {
+    id: 'S-236', feature: 'Supplement portions', title: 'The seeded Night capsule is at half a serving', persona: 'vitamin-tracker', brief: 'supplement-portions',
+    steps: [
+      'Read the Night supplement on today, then press Manage, Supplements and library and open Magnesium glycinate at Night, then the one at Morning.',
+    ],
+    expected: [
+      'The day shows "1 capsule" beside Night\'s Magnesium glycinate and nothing beside Morning\'s. Night\'s stepper reads "1 capsule" with "100 mg magnesium"; Morning\'s reads "2 capsules" with "200 mg magnesium". Both show the same nutrient rows and serving size (2 capsules).',
+    ],
+  },
+  {
+    id: 'S-237', feature: 'Vitamin and mineral totals', title: 'Every account sees every vitamin and mineral part', persona: 'paid-monthly', brief: 'feature-map', edge: true,
+    steps: [
+      'Press Manage, Supplements and library, then + New, and look for "What is in one serving (optional)" and "How much you take each time".',
+      'Open Settings > App and look for "Recommended amounts". On Nutrition press Add food, One-off food and look for "Vitamins and minerals (optional)". Open Recipes, add a ready-made food and look for "Vitamins and minerals per serving (optional)".',
+    ],
+    expected: [
+      'All four are there for an ordinary account: the vitamin and mineral features are open to everyone (released 2026-11-09), not only to admins.',
+    ],
+  },
+  {
+    id: 'S-238', feature: 'Terms', title: 'Both sign-in buttons stay off until the Terms box is ticked', persona: 'new-user', brief: 'terms-acceptance',
     steps: [
       'Sign out from the account menu so the sign-in page shows, and look under the headline.',
       'Without ticking anything, try Sign in with Google and Sign in with email.',
@@ -2750,7 +2976,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-220', feature: 'Terms', title: 'The email-code form cannot be used with the box unticked', persona: 'new-user', brief: 'terms-acceptance', edge: true,
+    id: 'S-239', feature: 'Terms', title: 'The email-code form cannot be used with the box unticked', persona: 'new-user', brief: 'terms-acceptance', edge: true,
     steps: [
       'On the sign-in page tick the box, press Sign in with email and type an address.',
       'Untick the box before pressing Send code.',
@@ -2760,7 +2986,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-221', feature: 'Terms', title: 'A first sign-in records the acceptance and opens the app', persona: 'new-user', brief: 'terms-acceptance',
+    id: 'S-240', feature: 'Terms', title: 'A first sign-in records the acceptance and opens the app', persona: 'new-user', brief: 'terms-acceptance',
     steps: [
       'On the sign-in page tick the box and press Sign in with Google with an account that has never used the app. (Test accounts count as accepted, so use a real sign-in.)',
       'When Google sends you back, look at what opens.',
@@ -2771,7 +2997,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-222', feature: 'Terms', title: 'A signed-in account that never accepted sees only the accept screen', persona: 'new-user', brief: 'terms-acceptance', edge: true,
+    id: 'S-241', feature: 'Terms', title: 'A signed-in account that never accepted sees only the accept screen', persona: 'new-user', brief: 'terms-acceptance', edge: true,
     steps: [
       'Open the app signed in with an account that signed in before this feature existed (or one whose box was not remembered). (Test accounts count as accepted, so use a real account.)',
       'Look at the screen, and try the Board behind it. Press Continue without ticking, then tick and turn the connection off and press Continue.',
