@@ -25,7 +25,7 @@ export default function SupplementLibrary() {
       <div className="inline spread">
         <h2 id="suplib-h" tabIndex={-1}>Supplement library</h2>
         <div className="inline">
-          <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
+          <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement', from: 'manage' })}>+ New supplement</button>
         </div>
       </div>
       <p className="note">Your supplements. Ones set to Morning, Noon or Night are on the schedule above every day; “Library only” ones are kept here to schedule later.</p>
@@ -64,7 +64,7 @@ export default function SupplementLibrary() {
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><Icon name="arrow-up" /></button>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><Icon name="arrow-down" /></button>
                     </>}
-                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
+                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id, from: 'manage' })}>Edit</button>
                   </div>
                 </div>
                 );

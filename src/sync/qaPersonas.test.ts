@@ -11,6 +11,16 @@ function stub(status: number) {
 }
 afterEach(() => { vi.unstubAllGlobals(); });
 
+describe('the reset call', () => {
+  it('sends the browser\'s own date so the seed\'s today is the person\'s today', async () => {
+    stub(200);
+    await resetPersona('diet-on-target');
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0]![1] as RequestInit).body));
+    const d = new Date();
+    expect(body).toEqual({ id: 'diet-on-target', today: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` });
+  });
+});
+
 describe('the switch stamp', () => {
   it('is written after a switch and after Return that worked', async () => {
     const a = stub(200);

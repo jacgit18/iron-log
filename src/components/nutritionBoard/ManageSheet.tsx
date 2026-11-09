@@ -1,0 +1,45 @@
+import { useState } from 'react';
+import { ymd } from '../../shared/dates.js';
+import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
+import { afterSheetClose } from '../../lib/backNav.js';
+import { navigate } from '../useRoute.js';
+import Sheet from '../Sheet.js';
+import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
+import { Schedule } from '../supplements/SupplementEditor.js';
+import '../supplements/Supplements.css';
+
+// The Manage sheet (brief nutrition-board, PR 2): the places the old page scattered. Supplements and library opens the schedule editor and the whole library here;
+// Saved meals and foods and Water reminder open the existing Recipes and Settings screens (the sheet closes first).
+export default function ManageSheet() {
+  const closeModal = useAppStore(s => s.closeModal);
+  const supp = useAppStore(s => s.supp);
+  const today = ymd(useToday(s => s.today));
+  const modal = useAppStore(s => s.modal);
+  const [editing, setEditing] = useState(modal?.view === 'editor'); // reopened here after a library item was saved from its own sheet
+  const leave = (go: () => void) => { afterSheetClose(window.history, window, go); closeModal(); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
+  if (editing) {
+    return (
+      <Sheet className="nbsheet" aria-label="Manage supplements">
+        <h2 className="cond">Supplements and library</h2>
+        <Schedule date={today} supp={supp} editing />
+        <div className="mt-16"><SupplementLibrary /></div>
+        <div className="actions">
+          <button type="button" className="btn" id="sched-back" onClick={() => setEditing(false)}>Back to Manage</button>
+          <button type="button" className="btn primary" id="sched-done" onClick={closeModal}>Done</button>
+        </div>
+      </Sheet>
+    );
+  }
+  return (
+    <Sheet className="nbsheet" aria-label="Manage">
+      <h2 className="cond">Manage</h2>
+      <ul className="nb-manage">
+        <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>
+        <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Saved meals and foods</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>
+        <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => useAppStore.getState().setTab('settings'))}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
+      </ul>
+      <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>
+    </Sheet>
+  );
+}

@@ -299,6 +299,18 @@ describe('reset (the seed, run in the app on QA)', () => {
     expect(ownerPools[0]!.listenerCount('error')).toBeGreaterThan(0); // a dropped idle connection must not crash the process (it failed the Tests run on main 2026-11-03: the test database was dropped under an idle owner connection)
   }, 60_000);
 
+  it('seeds today as the date the browser sends, and ignores a date that is not within a day of the server\'s', async () => {
+    const { base } = await serve({ qaOwnerDatabaseUrl: url, qaOwnerPool: owned() });
+    const jar = await signUp(base, ADMIN);
+    const newestDay = async () => (await sql<{ d: string }>`select max(data->>'d') as d from list_items where list = 'diet_entry' and user_id = (select id from users where auth_user_id = ${personaAuthId('diet-on-target')})`.execute(db)).rows[0]!.d;
+    const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+    // The seed's newest entry is today's, so it carries the date the seed was told is today. (Offset -1 is the browser still on yesterday late in a US evening.)
+    expect((await call(base, jar, 'POST', '/qa/personas/reset', { id: 'diet-on-target', today: day(-1) })).status).toBe(200);
+    expect(await newestDay()).toBe(day(-1));
+    expect((await call(base, jar, 'POST', '/qa/personas/reset', { id: 'diet-on-target', today: day(-5) })).status).toBe(200);
+    expect(await newestDay()).toBe(day(0));
+  }, 60_000);
+
   it('can then be switched to, and the account has the data it was described with', async () => {
     const { base } = await serve({ qaOwnerDatabaseUrl: url, qaOwnerPool: owned() });
     const jar = await signUp(base, ADMIN);

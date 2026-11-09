@@ -5,6 +5,7 @@ import { amountText, unitWord, usualStart } from '../../lib/foodUnit.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
+import PairSuggestion from './PairSuggestion.js';
 import type { Recipe } from '../../types.ts';
 import './Diet.css';
 
@@ -45,6 +46,7 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
       {done && (
         <p className="note" role="status">{done.text} <button type="button" className="btn sm ghost" onClick={() => { useAppStore.getState().removeDietEntry(done.id, false); setDone(null); }}>Undo</button></p>
       )}
+      {done && <PairSuggestion key={done.id} recipe={recipe} day={day} today={today} />}
     </div>
   );
 }

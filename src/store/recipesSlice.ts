@@ -1,5 +1,6 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
 import { linkError, settleMeals } from '../lib/mealRollup.js';
+import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
@@ -13,6 +14,7 @@ const clean = (n: string) => n.replace(/\s+/g, ' ').trim();
 
 export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   recipes: [],
+  recipesLoaded: false,
 
   saveRecipes() { get().saveDoc(MAIN, { items: get().recipes }); },
 
@@ -94,11 +96,38 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     return { changed: hit.length, undo };
   },
 
+  pairRecipes(aId, bId) {
+    const list = get().recipes, err = pairError(list, aId, bId);
+    if (err) return err;
+    set({ recipes: addPair(list, aId, bId) });
+    get().saveRecipes();
+    return null;
+  },
+
+  unpairRecipes(aId, bId) {
+    set({ recipes: removePair(get().recipes, aId, bId) });
+    get().saveRecipes();
+  },
+
+  makeMealFromPair(aId, bId) {
+    const list = get().recipes, a = list.find(r => r.id === aId), b = list.find(r => r.id === bId);
+    if (!a || !b) return { error: 'That recipe is gone.' };
+    const not = mealPairError(a, b);
+    if (not) return { error: not };
+    const had = existingPairMeal(list, aId, bId);
+    if (had) return { id: had.id }; // a second press opens the meal that is already there
+    const err = get().saveRecipe(mealFromPair(a, b));
+    if (err) return { error: err };
+    const known = new Set(list.map(r => r.id));
+    const made = get().recipes.find(r => !known.has(r.id));
+    return made ? { id: made.id } : { error: 'That meal can’t be saved.' };
+  },
+
   removeRecipe(id) {
     const list = get().recipes; const i = list.findIndex(r => r.id === id);
     if (i < 0) return;
     const gone = list[i]!;
-    const after = settleMeals(list.filter(r => r.id !== id)); // a meal that used it keeps the line as plain text and recounts
+    const after = settleMeals(dropPairsTo(list.filter(r => r.id !== id), id)); // a meal that used it keeps the line as plain text and recounts
     const before = new Map(list.map(r => [r.id, r])), moved = after.filter(r => before.get(r.id) !== r); // the meals the delete changed: Undo gives them back as they were
     set({ recipes: after });
     get().saveRecipes();

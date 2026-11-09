@@ -71,6 +71,25 @@ describe('copyCatalogRecipe', () => {
   });
 });
 
+describe('makeMealFromPair', () => {
+  const two = () => { st().saveRecipe(draft); st().saveRecipe({ ...draft, n: 'Rice', cat: 'carbs' }); const [a, b] = st().recipes; return [a!.id, b!.id] as const; };
+  it('builds one meal linked to both, and a second press opens that meal instead of adding another', () => {
+    const [a, b] = two();
+    const first = st().makeMealFromPair(a, b);
+    expect(first).toHaveProperty('id');
+    expect(st().recipes).toHaveLength(3);
+    const again = st().makeMealFromPair(b, a);
+    expect(again).toEqual(first);
+    expect(st().recipes).toHaveLength(3);
+  });
+  it('refuses a pair with a sauce in it and adds nothing', () => {
+    st().saveRecipe(draft); st().saveRecipe({ ...draft, n: 'Salsa', cat: 'sauces' });
+    const [a, b] = st().recipes;
+    expect(st().makeMealFromPair(a!.id, b!.id)).toEqual({ error: 'Salsa is a sauce, so it can’t be one part of a meal.' });
+    expect(st().recipes).toHaveLength(2);
+  });
+});
+
 describe('removeRecipe', () => {
   it('removes it and Undo puts it back where it was', () => {
     st().saveRecipe(draft); st().saveRecipe({ ...draft, n: 'Second' });

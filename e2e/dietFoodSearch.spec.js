@@ -1,11 +1,13 @@
 import { test, expect } from './fixtures.js';
+import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Food search (brief diet-food-lookup; the separate Look up nutrition box was removed by recipe-first-diet-log, the same lookup now sits under the past-meals search). The parsing, scaling and caps are node tests (foods.test.ts, foodSearch.test.ts); this covers the wiring with the
 // route stubbed: type, wait for the pause, pick a result, set grams, the form fills in and stays editable, then the failure and empty texts.
-const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
-// The One-off food form starts folded; a test that types into it opens it first.
-const oneOff = page => page.getByRole('button', { name: 'Add one' }).click();
+// The search and the One-off food form now live in the add sheet (brief nutrition-board): `diet` is that sheet, `nutrition` opens it on Find food, `oneOff` goes to the One-off food way (the form is always open there).
+const diet = page => page.getByRole('dialog');
+const nutrition = async page => { await openNutrition(page); await openAdd(page, 'Find food'); };
+const oneOff = async page => { await diet(page).getByRole('button', { name: 'Back to ways of adding' }).click(); await diet(page).getByRole('button', { name: /^One-off food/ }).click(); };
+const eaten = page => page.locator('.nb-col.today .nb-eat');
 const hits = [
   { id: 1, name: 'Chicken breast, raw', kcal: 120, p: 22.5, c: 0, f: 2.6 },
   { id: 2, name: 'Granola bar', brand: 'Acme', kcal: 450, p: 8, c: 65, serving: 40 },
@@ -30,12 +32,13 @@ test('pick a food, set the grams, and the entry form is filled in and can still 
   await expect(diet(page).getByLabel('Fat (g), optional')).toHaveValue('3.9');
   await diet(page).getByLabel('Calories', { exact: true }).fill('175');
   await diet(page).getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
-  await expect(diet(page).locator('.dt-entry')).toContainText('Chicken breast, raw');
-  await expect(diet(page).locator('.dt-entry')).toContainText('175');
+  await diet(page).getByRole('button', { name: 'Done' }).click();
+  await expect(eaten(page)).toHaveCount(1);
+  await expect(eaten(page)).toContainText('Chicken breast, raw');
+  await expect(eaten(page)).toContainText('175');
   await page.reload();
-  await nutrition(page);
-  await expect(diet(page).locator('.dt-entry')).toContainText('Chicken breast, raw');
+  await openNutrition(page);
+  await expect(eaten(page)).toContainText('Chicken breast, raw');
 });
 
 test('a branded food starts at its serving, and a bad grams value blocks Use', async ({ page }) => {
@@ -52,7 +55,6 @@ test('a branded food starts at its serving, and a bad grams value blocks Use', a
 
 test('no results, a server that is not set up, and a daily limit each say so and leave typing alone', async ({ page }) => {
   await nutrition(page);
-  await oneOff(page);
   const box = diet(page).getByLabel('Search your past meals and recipes');
   await stub(page, 200, { ok: true, hits: [] });
   await box.fill('zzzz');
@@ -65,6 +67,7 @@ test('no results, a server that is not set up, and a daily limit each say so and
   await stub(page, 429, { ok: false, error: 'limit' });
   await box.fill('rice');
   await expect(diet(page).getByText('You have used today’s food searches. You can still type the numbers.')).toBeVisible();
+  await oneOff(page);
   await diet(page).getByLabel('Food', { exact: true }).fill('Plain rice');
   await expect(diet(page).getByLabel('Food', { exact: true })).toHaveValue('Plain rice');
 });

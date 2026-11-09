@@ -147,7 +147,7 @@ test.describe('as an admin', () => {
   });
 });
 
-test('a signed-in account that is not an admin can scan a barcode, and its miss does not offer the AI label photo', async ({ page }) => {
+test('a signed-in account that is not an admin can scan a barcode, and its miss offers the AI label photo (open to everyone since 2026-11-08)', async ({ page }) => {
   await withReader(page, [{ rawValue: '4006381333931', format: 'ean_13' }]); await noCamera(page);
   await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
   await page.reload();
@@ -155,5 +155,5 @@ test('a signed-in account that is not an admin can scan a barcode, and its miss 
   await page.getByRole('button', { name: 'Scan barcode' }).click();
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible(); // the lookup went through for a non-admin
-  await expect(page.locator('#bc-label')).toHaveCount(0); // Photo the label is the AI scan, still admin only
+  await expect(page.locator('#bc-label')).toHaveCount(1); // Photo the label is the AI scan, open to everyone
 });

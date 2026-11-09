@@ -30,4 +30,8 @@
   border-color: var(--accent);
   color: var(--accent-ink);
 }
+.rc-usedchips .rc-usedauto {
+  border-style: dashed;
+  color: var(--muted);
+}
 }

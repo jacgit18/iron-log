@@ -4,12 +4,12 @@ import { findFoods, scaleFood, type Food } from '../../lib/foodMacros.js';
 import { foodTypeOf } from '../../lib/foodType.js';
 import { FOOD_TYPE_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import FoodSearch, { type FoodFill } from './FoodSearch.js';
+import FoodSearch, { type FoodFill, type ScanResume } from './FoodSearch.js';
 import './Diet.css';
 
 // "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one, set a portion, add it. Nothing is stored for this; it reads the log and the recipes.
 // The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
-export default function FindFood({ day, onAdded, onFood }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void }) {
+export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [q, setQ] = useState('');
@@ -56,7 +56,7 @@ export default function FindFood({ day, onAdded, onFood }: { day: string; onAdde
           </div>
         </div>
       )}
-      {!picked && <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} />}
+      {!picked && <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />}
       {err && <p className="note" role="alert">{err}</p>}
     </div>
   );

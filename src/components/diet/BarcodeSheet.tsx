@@ -92,7 +92,8 @@ export default function BarcodeSheet() {
     return () => clearTimeout(t);
   }, [looking]);
 
-  const typeName = () => { closeModal(); setTimeout(() => document.getElementById(SEARCH_BOX_IDS.find(id => document.getElementById(id)) ?? '')?.focus(), 0); };
+  const onType = modal?.onType as (() => void) | undefined; // set by a caller that shows its own search box again (the nutrition board's add sheet)
+  const typeName = () => { closeModal(); if (onType) { onType(); return; } setTimeout(() => document.getElementById(SEARCH_BOX_IDS.find(id => document.getElementById(id)) ?? '')?.focus(), 0); };
   const miss = fail === 'notfound' && !looking;
   const allowance = currentAllowance();
   const usedUp = labelUsedUp(allowance);
