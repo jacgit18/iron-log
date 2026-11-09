@@ -62,6 +62,12 @@ describe('play-release.sh build', () => {
     expect(manifest()).toContain('"appVersionCode": 9');
   });
 
+  it('--code at or below the current version still builds but says Play may reject it', () => {
+    const r = run(['build', '--code', '2']);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain('not above');
+  });
+
   it('puts the manifest back when the build fails', () => {
     const r = run(['build'], { bubblewrap: 'fail' });
     expect(r.status).not.toBe(0);

@@ -82,6 +82,7 @@ cmd_build() {
   new="${code:-$((old + 1))}"
   case "$new" in ''|*[!0-9]*) die "version code must be a whole number, got '$new'" ;; esac
   [ "$new" -ge 1 ] || die "version code must be 1 or more"
+  if [ -n "$code" ] && [ "$new" -le "$old" ]; then echo "Note: version code $new is not above the manifest's current $old. Play rejects a code it has already seen, so use one higher than your last upload." >&2; fi
 
   # Globals, not locals: the EXIT trap runs after this function has returned.
   ok=false; backup="$(mktemp)"; stamp="$(mktemp)"
