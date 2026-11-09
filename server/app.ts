@@ -22,6 +22,7 @@ import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { barcodeRoutes } from './foodBarcode.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { supplementLabelRoutes, type SupplementLabelDeps } from './supplementLabel.ts';
 import { receiptsRoutes } from './receipts.ts';
 import { scanRoutes, type ScanDeps } from './scan.ts';
 import { accountsRoutes } from './accountsRoutes.ts';
@@ -77,6 +78,8 @@ export interface AppDeps {
   billing?: { api: StripeApi; config: BillingConfig };
   /** Food search (brief diet-food-lookup): the USDA key and, in tests, a stand-in for fetch. Unset key: the route answers 503. */
   foods?: FoodDeps;
+  /** Supplement label amounts (brief supplement-label-amounts): in tests, a stand-in for fetch. No key: NIH's label database is open. */
+  supplementLabel?: SupplementLabelDeps;
   /** Label photo scan (brief label-photo-scan): the Anthropic key, model and daily ceiling. Unset key: the route answers 503. Admin only. */
   scan?: ScanDeps;
   /** The most accounts that may exist (SIGNUP_CAP), shown on the admin accounts screen; unset means no cap. */
@@ -113,6 +116,8 @@ const LIMITS = {
   accounts: { max: 60, windowMs: 60_000 } as Limit,
   // Food search: a person typing, one request per pause. The daily allowance is in foodSearch.ts.
   foods: { max: 20, windowMs: 60_000 } as Limit,
+  // Supplement label amounts: one lookup when a catalog supplement is picked or Fill from label is pressed; the daily allowance is in supplementLabel.ts.
+  supplementLabel: { max: 20, windowMs: 60_000 } as Limit,
   // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
   scan: { max: 10, windowMs: 60_000 } as Limit,
   // Saved receipt photos (brief receipt-save-photo): a person keeping a photo, reading the list, opening one; a loop is what this stops.
@@ -152,7 +157,7 @@ async function purgeCodesFor(auth: Auth, email: string): Promise<void> {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, scan, appLabel, signupCap, pii }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, supplementLabel, scan, appLabel, signupCap, pii }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -250,6 +255,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Barcode lookup (brief barcode-scan): for everyone who is signed in (no AI, no per-use cost), mounted before the /api/foods prefix it sits under; same per-user limit as typed search.
   if (db) app.use('/api/foods/barcode', rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
+  // One catalog supplement's label amounts from NIH DSLD (brief supplement-label-amounts): everyone signed in, free API, per-user limit and daily cap in supplementLabel.ts.
+  if (db) app.use('/api/supplement-label', rateLimit(limits.supplementLabel, undefined, byUser), supplementLabelRoutes(supplementLabel));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): everyone signed in (owner, 2026-11-08), per-user limit and daily caps in scan.ts; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
   // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
