@@ -2770,7 +2770,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Open a supplement you saved before portions existed and look at today\'s Supplements and Totals.',
     ],
     expected: [
-      'With no serving size it counts servings in quarters ("½ serving", "1½ servings") from ¼ to 10, and the line says "per serving × ½".',
+      'With no serving size it counts servings in quarters ("¾ serving" after one −, "1¼ servings" after one + from one serving) from ¼ to 10, and the line says "per serving × ½".',
       'An older supplement shows no tag on the day and Totals counts it exactly as before (one serving per tick).',
     ],
   },
@@ -2896,7 +2896,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-232', feature: 'Typed amounts', title: 'Typed rows survive a calorie change, filled rows do not, and a silly amount is refused in words', persona: 'diet-fresh', brief: 'type-food-amounts', edge: true,
     steps: [
-      'Press Add food, Find food, pick a food from the results and press Use. Press "+ Add a nutrient", choose Zinc in the new row (Copper if the food already lists zinc) and type 1.5. Then change the calories.',
+      'Press Add food, Find food, pick a food from the results and press Use. Press "+ Add a nutrient", choose a nutrient the food does not list in the new row (Iodine; a food from the database already lists zinc and copper) and type 1.5. Then change the calories.',
       'On a fresh One-off form open the section, add Vitamin B12 with 1 and unit mg, then add Zinc twice (5 mg, then 2000 mcg). Read the lines under the rows.',
       'Press Add, then Edit the food in Eaten and change only its name.',
     ],
@@ -2936,7 +2936,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       '85 shows "Enter a four-digit year, like 1985." and saves nothing. 2012 saves but says "Amounts are shown for ages 19 and over, so the adult range is used.", and Totals says "Amounts for your age are not shown. The adult range is used."',
-      'With a year and "Prefer not to say", Totals says "Your own amounts need both a birth year and a sex, so the adult range is shown. You can change this in Settings." After Clear the boxes are empty and Totals asks you to add them.',
+      'With a year and "Prefer not to say", Totals says "Your own amounts need both a birth year and a sex, so the adult range is shown. You can change this in Settings." After Clear the year box is empty, "Prefer not to say" is the one selected (it is what no answer looks like), and Totals asks you to add them.',
     ],
   },
   {
@@ -2956,6 +2956,19 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'All four are there for an ordinary account: the vitamin and mineral features are open to everyone (released 2026-11-09), not only to admins.',
+    ],
+  },
+  {
+    id: 'S-238', feature: 'Food vitamins and minerals', title: 'A recipe built from a food adds up its vitamins and minerals, logged or planned', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
+    steps: [
+      'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Write a recipe, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
+      'On the recipe\'s page press Ate this (one portion), then open Nutrition and press Totals.',
+      'Close Totals. Press Add food, Recipes, then Plan beside "Cereal duo" and press Done. Press the planned Cereal duo card under Dinner and press Log, then press Totals again.',
+    ],
+    expected: [
+      'The form and the saved page say "Per serving, from the parts: 180 kcal · 4.5 g protein · 39 g carbs · 1.5 g fat. 1 of 1 ingredient counted." and list "1.5 portions Fortified cereal".',
+      'After the first log (1.5 portions of the cereal on top of the seeded day): Calcium 1,015 mg, Iron 9.25 mg, Vitamin D 128 mcg "Over the limit by 28 mcg", Zinc 37.8 mg "Close to the limit (95%)". The line reads "Food: 3 of 4 eaten foods had vitamin or mineral data."',
+      'After the planned one is logged from the board: Calcium 1,210 mg, Iron 16 mg, Vitamin D 131 mcg, Zinc 39.6 mg "Close to the limit (99%)", and "Food: 4 of 5 eaten foods had vitamin or mineral data." Each log adds the same 195 mg of calcium, 6.75 mg of iron, 3 mcg of vitamin D and 1.8 mg of zinc.',
     ],
   },
 ];
