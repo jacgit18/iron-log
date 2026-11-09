@@ -5,7 +5,7 @@ import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
   BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
-  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
+  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementNutrient, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { Micro } from '../shared/foodMicro.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -38,7 +38,7 @@ export interface SlotForm {
 /** `cat`: a new stretch picked from the catalog in the sheet; it is saved with that catalog id and name (ADR 036). */
 export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string; cat?: CatalogItem | null }
 export interface StretchExpForm { id?: string; n: string; url?: string; note?: string; group?: string }
-export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string }
+export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string; /** What is in one serving; left out, an edit keeps what the item has. */ nutrients?: SupplementNutrient[] }
 /** The log sheet's save: the entry plus the optional changes it can make along the way. */
 export interface LogForm {
   entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
