@@ -14,18 +14,19 @@ export default function FoodAmountRows({ idp, rows, onChange, perServing = false
   const free = nextFreeKey(rows);
   const set = (i: number, patch: Partial<AmountRow>) => onChange(rows.map((r, j) => { if (j !== i) return r; const { filled: _filled, ...typed } = r; return { ...typed, ...patch }; })); // an edited row is no longer filled
   const notes = microOfRows(rows).left;
-  const shown = open || rows.length > 0 || cleared; // rows or the calories-changed line need the body open
+  const locked = rows.length > 0 || cleared; // rows (they are saved) or the calories-changed line keep the body open: nothing a save would use is hidden
+  const shown = open || locked;
   return (
     <div className="fa">
-      <button type="button" className="btn fa-disc" id={`${idp}-fa-disc`} aria-expanded={shown} aria-controls={`${idp}-fa`} onClick={() => setOpen(!shown)}>
-        <span>Vitamins and minerals{perServing ? ' per serving' : ''} (optional)</span><span aria-hidden="true">{shown ? '▾' : '▸'}</span>
+      <button type="button" className="btn fa-disc" id={`${idp}-fa-disc`} aria-expanded={shown} aria-controls={`${idp}-fa`} aria-disabled={locked || undefined} onClick={() => { if (!locked) setOpen(!shown); }}>
+        <span>Vitamins and minerals{perServing ? ' per serving' : ''} (optional)</span><span aria-hidden="true">{locked ? '' : shown ? '▾' : '▸'}</span>
       </button>
       {shown && (
         <div id={`${idp}-fa`} className="fa-body" role="group" aria-label={`Vitamins and minerals${perServing ? ' per serving' : ''}`}>
           <p className="note">Amounts {perServing ? 'per serving' : 'as you eat it'}, from a label or a database. Leave it empty and the food counts as no data.</p>
           {rows.some(r => r.filled) && <p className="note" role="status">Filled from the food lookup or an earlier save. Check them against the label; change or remove any row.</p>}
           {rows.map((r, i) => (
-            <div key={r.key + i} className="fa-row">
+            <div key={i} className="fa-row">
               <select aria-label={`Nutrient ${i + 1}`} value={r.key} onChange={e => { const key = e.target.value as NutrientKey; set(i, { key, unit: MICRO_UNIT[key] }); }}>
                 {NUTRIENT_KEYS.map(k => <option key={k} value={k}>{nutrientLabel(k)}</option>)}
               </select>
