@@ -24,6 +24,15 @@ describe('android/twa-manifest.json', () => {
     expect(twa.appVersionCode).toBeGreaterThanOrEqual(1);
     expect(twa.signingKey.path).toBe('./android.keystore'); // relative, never a path on one machine
   });
+  it('receives shared links like the web manifest does, so the app is in Android\'s share list', () => {
+    // Bubblewrap only writes the SEND intent filter when twa-manifest.json has shareTarget; the web manifest's share_target does not reach an installed Play app by itself.
+    const target = manifestBlock.match(/share_target: \{([^}]*\{[^}]*\}[^}]*)\}/)?.[1] ?? '';
+    const param = name => target.match(new RegExp(`${name}: '([^']+)'`))?.[1];
+    expect(twa.shareTarget.action).toBe('https://loadbearer.app/');
+    expect(twa.shareTarget.method).toBe('GET');
+    expect(twa.shareTarget.params).toEqual({ title: param('title'), text: param('text'), url: param('url') });
+    expect(twa.shareTarget.params.url).toBe('share_url'); // what src/lib/shareTarget.ts reads
+  });
   it('sells nothing: no Play Billing feature', () => {
     expect(twa.features?.playBilling).toBeUndefined();
   });
