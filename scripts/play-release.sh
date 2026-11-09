@@ -37,6 +37,7 @@ NODE="${NODE:-node}"
 PLAY_API="${PLAY_API:-https://androidpublisher.googleapis.com}"
 PLAY_SERVICE_ACCOUNT="${PLAY_SERVICE_ACCOUNT:-}"
 MANIFEST="$ANDROID_DIR/twa-manifest.json"
+TOKEN=""                                        # never inherited from the environment: PLAY_ACCESS_TOKEN is the way to supply one
 
 usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//' >&2; exit 2; }
 die() { echo "play-release: $*" >&2; exit 1; }
@@ -75,7 +76,7 @@ cmd_store_password() {
   echo "Stored as $SECRET in $PROJECT_ID. Only project owners can read it unless you grant more."
 }
 
-manifest_code() { grep -oE '"appVersionCode": *[0-9]+' "$MANIFEST" | grep -oE '[0-9]+$'; }
+manifest_code() { grep -oE '"appVersionCode": *[0-9]+' "$MANIFEST" | grep -oE '[0-9]+$' || true; }
 
 cmd_build() {
   local code=""
@@ -148,7 +149,7 @@ cmd_build() {
 # json_get a.b: one value from JSON on stdin ("" when missing or not JSON).
 json_get() { $NODE -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const v=process.argv[1].split(".").reduce((o,k)=>o[k],JSON.parse(s));if(v!==undefined&&v!==null)process.stdout.write(String(v))}catch{}})' "$1"; }
 
-package_id() { grep -oE '"packageId": *"[^"]+"' "$MANIFEST" | sed -E 's/.*: *"([^"]+)"/\1/'; }
+package_id() { grep -oE '"packageId": *"[^"]+"' "$MANIFEST" | sed -E 's/.*: *"([^"]+)"/\1/' || true; }
 
 # A token for the Play API: PLAY_ACCESS_TOKEN, else one made for the service account from your gcloud sign-in (IAM Credentials API).
 play_token() {
@@ -181,7 +182,7 @@ api() {
 cleanup_edit() { if [ -n "${EDIT_ID:-}" ]; then ( api DELETE "$EDIT_URL/$EDIT_ID" ) >/dev/null 2>&1 || true; fi; }
 
 open_edit() {
-  TOKEN="$(play_token)"
+  TOKEN="${TOKEN:-$(play_token)}"
   PKG="$(package_id)"; [ -n "$PKG" ] || die "no packageId in $MANIFEST"
   EDIT_URL="$PLAY_API/androidpublisher/v3/applications/$PKG/edits"
   EDIT_ID="$(api POST "$EDIT_URL" -H 'Content-Type: application/json' -d '{}' | json_get id)"
@@ -223,6 +224,7 @@ cmd_upload() {
   echo "  notes:   $notes"
   if [ "$yes" != true ]; then
     [ -t 0 ] || die "no terminal to ask on: pass --yes to send without asking"
+    TOKEN="${TOKEN:-$(play_token)}"
     local answer; read -rp "Send it? Sideload-test the .apk first if you have not. [y/N] " answer
     case "$answer" in y|Y|yes) ;; *) die "cancelled; nothing was sent" ;; esac
   fi
@@ -241,17 +243,24 @@ cmd_upload() {
 }
 
 cmd_release() {
-  local build_args=() upload_args=() track="${PLAY_TRACK:-}"
+  local build_args=() upload_args=() track="${PLAY_TRACK:-}" yes=false notes="" notes_file=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --code) build_args+=(--code "${2:?--code needs a number}"); shift 2 ;;
       --track) track="${2:?--track needs a name}"; upload_args+=(--track "$track"); shift 2 ;;
-      *) upload_args+=("$1"); shift ;;
+      --notes) notes="${2:?--notes needs text}"; upload_args+=(--notes "$notes"); shift 2 ;;
+      --notes-file) notes_file="${2:?--notes-file needs a path}"; upload_args+=(--notes-file "$notes_file"); shift 2 ;;
+      --draft) upload_args+=(--draft); shift ;;
+      --yes) yes=true; upload_args+=(--yes); shift ;;
+      *) usage ;;
     esac
   done
   # Fail before the build, not after it, when the upload could not work anyway.
   [ -n "$track" ] || die "no track: pass --track NAME or set PLAY_TRACK (run 'tracks' to see the names)"
-  TOKEN="$(play_token)"; unset TOKEN
+  if [ -n "$notes_file" ]; then [ -f "$notes_file" ] || die "$notes_file not found"; notes="$(cat "$notes_file")"; fi
+  [ "${#notes}" -le 500 ] || die "release notes are ${#notes} characters; Play allows 500"
+  [ "$yes" = true ] || [ -t 0 ] || die "no terminal to ask on: pass --yes to send without asking"
+  TOKEN="$(play_token)"
   cmd_build ${build_args[@]+"${build_args[@]}"}
   cmd_upload ${upload_args[@]+"${upload_args[@]}"}
 }

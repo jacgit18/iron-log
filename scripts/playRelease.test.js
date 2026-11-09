@@ -228,4 +228,28 @@ esac`);
     expect(manifest()).toBe(MANIFEST);
     expect(() => readFileSync(join(dir, 'log'), 'utf8')).toThrow(); // Bubblewrap never ran
   });
+
+  it('release stops before building on an unknown option, a missing notes file, over-long notes, or no way to ask', () => {
+    const noBuild = () => expect(() => readFileSync(join(dir, 'log'), 'utf8')).toThrow(); // Bubblewrap never ran
+    expect(play(['release', '--track', 'alpha', '--yes', '--notes-fil', 'x']).status).toBe(2);
+    expect(play(['release', '--track', 'alpha', '--yes', '--notes-file', join(dir, 'missing.txt')]).stderr).toContain('not found');
+    expect(play(['release', '--track', 'alpha', '--yes', '--notes', 'x'.repeat(501)]).stderr).toContain('Play allows 500');
+    expect(play(['release', '--track', 'alpha']).stderr).toContain('--yes'); // no terminal under test, no --yes
+    expect(manifest()).toBe(MANIFEST);
+    noBuild();
+  });
+
+  it('upload checks the sign-in before it asks, and ignores a TOKEN left in the environment', () => {
+    const r = play(['upload', '--track', 'alpha', '--yes'], { PLAY_ACCESS_TOKEN: '', PLAY_SERVICE_ACCOUNT: '', TOKEN: 'someone-elses-token' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('PLAY_SERVICE_ACCOUNT');
+    expect(callList()).toEqual([]);
+  });
+
+  it('says so when the manifest has no version code, instead of exiting silently', () => {
+    writeFileSync(join(android, 'twa-manifest.json'), MANIFEST.replace(/ *"appVersionCode": 2,\n/, ''));
+    const r = play(['upload', '--track', 'alpha', '--yes']);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('no appVersionCode');
+  });
 });
