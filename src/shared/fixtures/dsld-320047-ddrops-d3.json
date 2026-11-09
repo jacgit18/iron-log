@@ -1,0 +1,28 @@
+{
+ "id": 320047,
+ "fullName": "Liquid Vitamin D3 2000 IU",
+ "brandName": "Ddrops",
+ "upcSku": "",
+ "entryDate": "2024-10-24",
+ "servingSizes": [
+  {
+   "minQuantity": 0.03,
+   "unit": "mL",
+   "notes": "1 drop (0.028 mL or 0.001 fl. oz.)"
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Vitamin D3",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin D",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  }
+ ]
+}

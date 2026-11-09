@@ -1,0 +1,464 @@
+{
+ "id": 66727,
+ "fullName": "Mega Men Multivitamin",
+ "brandName": "GNC Mega Men",
+ "upcSku": "",
+ "entryDate": "2016-11-21",
+ "servingSizes": [
+  {
+   "minQuantity": 2,
+   "unit": "Beige Caplet(s)",
+   "notes": null
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Vitamin A",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin A",
+   "quantity": [
+    {
+     "quantity": 5000,
+     "unit": "IU"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Vitamin C",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin C",
+   "quantity": [
+    {
+     "quantity": 300,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Vitamin D",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin D",
+   "quantity": [
+    {
+     "quantity": 1600,
+     "unit": "IU"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Vitamin E",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin E",
+   "quantity": [
+    {
+     "quantity": 30,
+     "unit": "IU"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Vitamin K",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin K",
+   "quantity": [
+    {
+     "quantity": 80,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Thiamine",
+   "category": "vitamin",
+   "ingredientGroup": "Thiamin",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Riboflavin",
+   "category": "vitamin",
+   "ingredientGroup": "Riboflavin",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Niacin",
+   "category": "vitamin",
+   "ingredientGroup": "Niacin",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Vitamin B6",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin B6",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Folic Acid",
+   "category": "vitamin",
+   "ingredientGroup": "Folate",
+   "quantity": [
+    {
+     "quantity": 400,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Vitamin B12",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin B12",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Biotin",
+   "category": "vitamin",
+   "ingredientGroup": "Biotin",
+   "quantity": [
+    {
+     "quantity": 300,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Pantothenic Acid",
+   "category": "vitamin",
+   "ingredientGroup": "Pantothenic Acid (Vitamin B5)",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Calcium",
+   "category": "mineral",
+   "ingredientGroup": "Calcium",
+   "quantity": [
+    {
+     "quantity": 200,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Iodine",
+   "category": "mineral",
+   "ingredientGroup": "Iodine",
+   "quantity": [
+    {
+     "quantity": 150,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Magnesium",
+   "category": "mineral",
+   "ingredientGroup": "Magnesium",
+   "quantity": [
+    {
+     "quantity": 100,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Zinc",
+   "category": "mineral",
+   "ingredientGroup": "Zinc",
+   "quantity": [
+    {
+     "quantity": 25,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Selenium",
+   "category": "mineral",
+   "ingredientGroup": "Selenium",
+   "quantity": [
+    {
+     "quantity": 200,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Copper",
+   "category": "mineral",
+   "ingredientGroup": "Copper",
+   "quantity": [
+    {
+     "quantity": 2,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Manganese",
+   "category": "mineral",
+   "ingredientGroup": "Manganese",
+   "quantity": [
+    {
+     "quantity": 2,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Chromium",
+   "category": "mineral",
+   "ingredientGroup": "Chromium",
+   "quantity": [
+    {
+     "quantity": 120,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Molybdenum",
+   "category": "mineral",
+   "ingredientGroup": "Molybdenum",
+   "quantity": [
+    {
+     "quantity": 75,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Super Antioxidant Blend",
+   "category": "blend",
+   "ingredientGroup": "Blend (Combination)",
+   "quantity": [
+    {
+     "quantity": 0,
+     "unit": "NP"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Alpha-Lipoic Acid",
+     "category": "non-nutrient/non-botanical",
+     "ingredientGroup": "Alpha-Lipoic Acid",
+     "quantity": [
+      {
+       "quantity": 25,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Lutemax 2020 Lutein",
+     "category": "non-nutrient/non-botanical",
+     "ingredientGroup": "Lutein",
+     "quantity": [
+      {
+       "quantity": 2,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Lycopene",
+     "category": "non-nutrient/non-botanical",
+     "ingredientGroup": "Lycopene",
+     "quantity": [
+      {
+       "quantity": 1,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "Fruit & Vegetable Blend",
+   "category": "blend",
+   "ingredientGroup": "Blend (Herb/Botanical)",
+   "quantity": [
+    {
+     "quantity": 68.5,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Orange peel powder",
+     "category": "botanical",
+     "ingredientGroup": "Orange (unspecified)",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Spinach leaf powder",
+     "category": "botanical",
+     "ingredientGroup": "Spinach",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Elderberry fruit powder",
+     "category": "botanical",
+     "ingredientGroup": "European Elder",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "Amino Acid Blend",
+   "category": "blend",
+   "ingredientGroup": "Blend",
+   "quantity": [
+    {
+     "quantity": 0,
+     "unit": "NP"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "L-Arginine",
+     "category": "amino acid",
+     "ingredientGroup": "Arginine",
+     "quantity": [
+      {
+       "quantity": 50,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "L-Glutamine",
+     "category": "amino acid",
+     "ingredientGroup": "Glutamine",
+     "quantity": [
+      {
+       "quantity": 50,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "Brain Health Blend:",
+   "category": "blend",
+   "ingredientGroup": "Blend (Combination)",
+   "quantity": [
+    {
+     "quantity": 0,
+     "unit": "NP"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Choline",
+     "category": "vitamin",
+     "ingredientGroup": "Choline",
+     "quantity": [
+      {
+       "quantity": 10,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Inositol",
+     "category": "non-nutrient/non-botanical",
+     "ingredientGroup": "Inositol",
+     "quantity": [
+      {
+       "quantity": 10,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Silica",
+     "category": "mineral",
+     "ingredientGroup": "Silicon",
+     "quantity": [
+      {
+       "quantity": 4,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  }
+ ]
+}
