@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 import { startFood } from './recipesNav.js';
 
-// Brief type-food-amounts: typing vitamin and mineral amounts on a food (admin-only with the Totals sheet). The row-to-amount rules (unit conversion, cap, duplicates, the calorie-change
+// Brief type-food-amounts: typing vitamin and mineral amounts on a food (open to everyone since 2026-11-09). The row-to-amount rules (unit conversion, cap, duplicates, the calorie-change
 // rule) are node tests (lib/foodAmountRows.test.ts, store/dietSlice.test.ts); this covers the wiring a node test cannot: the section on the real One-off, edit and Ready-made forms,
 // what reaches the saved food log and recipes, and that a person who is not an admin gets it too (released 2026-11-09). The fixed clock is Thursday 2026-09-24.
 const SPINACH = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5, f: 1, micro: { calcium: 100, iron: 2 } }] };

@@ -30,7 +30,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const [kcal, setKcal] = useState(str(recipe?.kcal));
   // Vitamins and minerals per serving (brief recipes-vitamins-minerals): never typed; they come with a lookup or a label scan and are kept only while calories are still the number they came with.
   const [microKcal, setMicroKcal] = useState<number | undefined>(recipe?.kcal);
-  // Typed rows (brief type-food-amounts), admin-only with the Totals sheet: the same amounts as rows you can see and change. A lookup or scan refills them; untouched filled rows go when calories change.
+  // Typed rows (brief type-food-amounts): the same amounts as rows you can see and change. A lookup or scan refills them; untouched filled rows go when calories change.
   const [rows, setRows] = useState<AmountRow[]>(() => rowsFromMicro(recipe?.micro, true));
   const [protein, setProtein] = useState(str(recipe?.p));
   const [carbs, setCarbs] = useState(str(recipe?.c));
