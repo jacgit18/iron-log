@@ -20,41 +20,44 @@ export interface NutrientLimit {
   scope: 'total' | 'supplements' | 'form';
   scopeNote: string;
   source: string;
+  /** The day the figures were read from `source` (a fact sheet changes; the date says how old this is). */
+  sourceDate: string;
 }
 
 const ODS = 'NIH Office of Dietary Supplements, https://ods.od.nih.gov/factsheets/';
+const READ = '2026-11-08'; // the day every row below was read
 
 export const NUTRIENT_LIMITS: NutrientLimit[] = [
   { key: 'calcium', label: 'Calcium', unit: 'mg', upper: 2000, recommended: { min: 1000, max: 1200 }, recommendedNote: 'adults 19 and over; 1,200 mg for women 51+ and everyone 71+',
-    scope: 'total', scopeNote: '2,000 mg is the limit for ages 51+; 2,500 mg for 19 to 50. Counts food and supplements.', source: `${ODS}Calcium-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: '2,000 mg is the limit for ages 51+; 2,500 mg for 19 to 50. Counts food and supplements.', sourceDate: READ, source: `${ODS}Calcium-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'copper', label: 'Copper', unit: 'mcg', upper: 10000, recommended: { min: 900, max: 900 }, recommendedNote: 'adults 19 and over',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}Copper-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Copper-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'folate', label: 'Folate', unit: 'mcg', upper: 1000, recommended: { min: 400, max: 400 }, recommendedNote: 'mcg DFE (dietary folate equivalents) for adults 19 and over',
-    scope: 'form', scopeNote: 'The limit is for synthetic folic acid from supplements and fortified food, not for folate in food. Enter the folic acid amount in mcg.', source: `${ODS}Folate-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'form', scopeNote: 'The limit is for synthetic folic acid from supplements and fortified food, not for folate in food. Enter the folic acid amount in mcg.', sourceDate: READ, source: `${ODS}Folate-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'iodine', label: 'Iodine', unit: 'mcg', upper: 1100, recommended: { min: 150, max: 150 }, recommendedNote: 'adults 19 and over',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}Iodine-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Iodine-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'iron', label: 'Iron', unit: 'mg', upper: 45, recommended: { min: 8, max: 18 }, recommendedNote: 'adults 19 and over: 8 mg for men and for women 51+, 18 mg for women 19 to 50',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}Iron-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Iron-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'magnesium', label: 'Magnesium', unit: 'mg', upper: 350, recommended: { min: 310, max: 420 }, recommendedNote: 'adults 19 and over, by age and sex',
-    scope: 'supplements', scopeNote: 'The limit counts magnesium from supplements and medicines only, not magnesium in food and drink.', source: `${ODS}Magnesium-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'supplements', scopeNote: 'The limit counts magnesium from supplements and medicines only, not magnesium in food and drink.', sourceDate: READ, source: `${ODS}Magnesium-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'niacin', label: 'Niacin', unit: 'mg', upper: 35, recommended: { min: 14, max: 16 }, recommendedNote: 'mg NE (niacin equivalents) for adults 19 and over',
-    scope: 'form', scopeNote: 'The limit is for niacin from supplements; it does not apply to niacin taken under medical supervision.', source: `${ODS}Niacin-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'form', scopeNote: 'The limit is for niacin from supplements; it does not apply to niacin taken under medical supervision.', sourceDate: READ, source: `${ODS}Niacin-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'phosphorus', label: 'Phosphorus', unit: 'mg', upper: 3000, recommended: { min: 700, max: 700 }, recommendedNote: 'adults 19 and over',
-    scope: 'total', scopeNote: '3,000 mg is the limit for ages 71+; 4,000 mg for 19 to 70. Counts food and supplements.', source: `${ODS}Phosphorus-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: '3,000 mg is the limit for ages 71+; 4,000 mg for 19 to 70. Counts food and supplements.', sourceDate: READ, source: `${ODS}Phosphorus-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'selenium', label: 'Selenium', unit: 'mcg', upper: 400, recommended: { min: 55, max: 55 }, recommendedNote: 'adults 19 and over',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}Selenium-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Selenium-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'vitaminA', label: 'Vitamin A', unit: 'mcg', upper: 3000, recommended: { min: 700, max: 900 }, recommendedNote: 'mcg RAE (retinol activity equivalents): 900 for men, 700 for women, adults 19 and over',
-    scope: 'form', scopeNote: 'The limit is for preformed vitamin A (retinol and its esters such as retinyl palmitate), not for beta-carotene. Enter the retinol amount in mcg.', source: `${ODS}VitaminA-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'form', scopeNote: 'The limit is for preformed vitamin A (retinol and its esters such as retinyl palmitate), not for beta-carotene. Enter the retinol amount in mcg.', sourceDate: READ, source: `${ODS}VitaminA-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'vitaminB6', label: 'Vitamin B6', unit: 'mg', upper: 100, recommended: { min: 1.3, max: 1.7 }, recommendedNote: 'adults 19 and over, by age and sex',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}VitaminB6-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}VitaminB6-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'vitaminC', label: 'Vitamin C', unit: 'mg', upper: 2000, recommended: { min: 75, max: 90 }, recommendedNote: 'adults 19 and over: 90 mg for men, 75 mg for women; 35 mg more for people who smoke',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}VitaminC-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}VitaminC-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'vitaminD', label: 'Vitamin D', unit: 'mcg', upper: 100, recommended: { min: 15, max: 20 }, recommendedNote: 'adults 19 and over: 15 mcg (600 IU) up to age 70, 20 mcg (800 IU) from 71; 1 mcg = 40 IU',
-    scope: 'total', scopeNote: 'Counts vitamin D from food and supplements.', source: `${ODS}VitaminD-HealthProfessional/ (Tables 2 and 4)` },
+    scope: 'total', scopeNote: 'Counts vitamin D from food and supplements.', sourceDate: READ, source: `${ODS}VitaminD-HealthProfessional/ (Tables 2 and 4)` },
   { key: 'vitaminE', label: 'Vitamin E', unit: 'mg', upper: 1000, recommended: { min: 15, max: 15 }, recommendedNote: 'mg alpha-tocopherol, adults 19 and over',
-    scope: 'form', scopeNote: 'The limit is for any form of supplemental alpha-tocopherol, including synthetic vitamin E.', source: `${ODS}VitaminE-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'form', scopeNote: 'The limit is for any form of supplemental alpha-tocopherol, including synthetic vitamin E.', sourceDate: READ, source: `${ODS}VitaminE-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'zinc', label: 'Zinc', unit: 'mg', upper: 40, recommended: { min: 8, max: 11 }, recommendedNote: 'adults 19 and over: 11 mg for men, 8 mg for women',
-    scope: 'total', scopeNote: 'Counts food and supplements.', source: `${ODS}Zinc-HealthProfessional/ (Tables 1 and 3)` },
+    scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Zinc-HealthProfessional/ (Tables 1 and 3)` },
 ];
 
 const BY_KEY = new Map(NUTRIENT_LIMITS.map(r => [r.key, r]));
