@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { kcalFromMacros } from '../../lib/foodMacros.js';
 
 /** One food as typed: carbs and fat are optional (`null` when the box was left empty, so an edit can clear one). */
@@ -9,7 +9,7 @@ const opt = (t: string) => (t.trim() === '' ? null : Number(t));
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 
 // One food: a name, calories, protein and optional carbs and fat. Used to add (quick add) and to edit an entry. `onSubmit` returns an error text, or null when it was saved.
-export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, onCancel }: { idp: string; initial?: { n: string; kcal: number; p: number; c?: number; f?: number }; /** Numbers to begin with in an add form (a food picked from the search); the caller changes `key` to apply a new one. */ start?: { n: string; kcal: number; p: number; c?: number; f?: number }; submitLabel: string; onSubmit: (v: EntryValues) => string | null; onCancel?: () => void }) {
+export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, onCancel, below }: { idp: string; initial?: { n: string; kcal: number; p: number; c?: number; f?: number }; /** Numbers to begin with in an add form (a food picked from the search); the caller changes `key` to apply a new one. */ start?: { n: string; kcal: number; p: number; c?: number; f?: number }; submitLabel: string; onSubmit: (v: EntryValues) => string | null; onCancel?: () => void; /** A line shown above the buttons that follows the calories as typed (the One-off form's photo amounts, which are dropped when calories change). */ below?: (kcal: string) => ReactNode }) {
   const from = initial ?? start;
   const [n, setN] = useState(from?.n ?? '');
   const [kcal, setKcal] = useState(str(from?.kcal));
@@ -43,6 +43,7 @@ export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, 
         {field('f', 'Fat (g), optional', f, macro(setF, 'f'), { inputMode: 'decimal' })}
       </div>
       {!initial && <p className="note">Fill in protein, carbs and fat and the calories fill in. Type calories yourself to keep your number.</p>}
+      {below?.(kcal)}
       {err && <p className="note" role="alert">{err}</p>}
       <div className="actions">
         {onCancel && <button type="button" className="btn sm" onClick={onCancel}>Cancel</button>}
