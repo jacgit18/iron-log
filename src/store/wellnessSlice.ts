@@ -2,7 +2,7 @@ import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
-import { isCatalogId } from '../shared/listItems.js';
+import { isCatalogId, nutrientsOf } from '../shared/listItems.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
@@ -252,9 +252,10 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if ((!cur || !sameSupplement(cur, n, cur.brand)) && get().supp.items.some(x => sameSupplement(x, n, cur?.brand) && x.id !== d.id)) return 'You already have that supplement. To take it more than once a day, add it to another section on the Supplements tab.';
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
+    const nutrients = d.nutrients === undefined ? cur?.nutrients || [] : nutrientsOf(d.nutrients);
     get().mutateSupp(s => {
       const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}),
-        ...(cur?.serving ? { serving: cur.serving } : {}), ...(cur?.nutrients ? { nutrients: cur.nutrients } : {}) }; // what is in a serving is not on this form: an edit keeps it
+        ...(cur?.serving ? { serving: cur.serving } : {}), ...(nutrients.length ? { nutrients } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
     });

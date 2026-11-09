@@ -19,6 +19,7 @@ import PortionSheet from '../diet/PortionSheet.js';
 import AddFoodSheet from '../nutritionBoard/AddFoodSheet.js';
 import DrinkSheet from '../nutritionBoard/DrinkSheet.js';
 import ManageSheet from '../nutritionBoard/ManageSheet.js';
+import SupplementTotalsSheet from '../nutritionBoard/SupplementTotalsSheet.js';
 import TargetsSheet from '../nutritionBoard/TargetsSheet.js';
 import BoardFilterSheet from '../board/BoardFilterSheet.js';
 import BulkShareSheet from '../grocery/BulkShareSheet.js';
@@ -57,6 +58,7 @@ export default function Modal() {
     case 'nbadd': return <AddFoodSheet key={String(modal.day ?? '')} />;
     case 'nbdrink': return <DrinkSheet key={String(modal.day ?? '')} />;
     case 'nbmanage': return <ManageSheet />;
+    case 'nbsupptotals': return <SupplementTotalsSheet day={String(modal.day ?? '')} />;
     case 'nbtargets': return <TargetsSheet />;
     case 'portion': return <PortionSheet key={String(modal.id ?? '')} />;
     case 'pricehistory': return <PriceHistorySheet key={String(modal.id ?? '')} />;
