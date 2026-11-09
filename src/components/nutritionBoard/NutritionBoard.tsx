@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { bwSorted, goalStatus } from '../../lib/body.js';
-import { planLog, recipeIdsFor, type Plan, type Resolved } from '../../lib/dietPlan.js';
+import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { addingTo, dayView, foodEditable, longDay, onBoard, weekDays, weekLabel, weekOf, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
-import { addMissingMessage } from '../../lib/recipePantry.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -21,7 +20,7 @@ const NO_PLAN: Plan = {};
 const NO_MEALS: SavedMeal[] = [];
 
 // Nutrition as one week board (brief nutrition-board): a week switcher (Last week, This week, Next week), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1280 px).
-// Each day holds four meters, its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
+// Each day holds five meters (calories, protein, fat, supplements, water), its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
   const today = ymd(now);
@@ -50,7 +49,6 @@ export default function NutritionBoard() {
   }, [cfg, body, now]);
   const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals, diet, supp, body, targets })), [days, today, plan, recipes, meals, diet, supp, body, targets]);
   const moveTargets = days.map(d => ({ id: d, label: longDay(d) }));
-  const need = recipeIdsFor(plan, days, recipes).length;
   const st = () => useAppStore.getState();
   const goWeek = (o: WeekOffset) => { setPicked(o === 0 ? today : weekDays(today, o)[0]!); setMsg(''); };
   const log = (r: Resolved) => {
@@ -77,7 +75,7 @@ export default function NutritionBoard() {
           {WEEK_OFFSETS.map(o => <button key={o} type="button" aria-pressed={o === offset} onClick={() => goWeek(o)}>{WEEK_NAME[o]}</button>)}
         </div>
         <div className="nb-headbtns">
-          <button type="button" className="btn sm" id="nb-targets" onClick={() => st().openModal({ type: 'nbtargets' })}>Targets and goal</button>
+          <button type="button" className="btn sm" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}><span className="nb-short">Targets</span><span className="nb-long">Targets and goal</span></button>
           <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
         </div>
       </div>
@@ -96,7 +94,7 @@ export default function NutritionBoard() {
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.id} hit={scanned} day={day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}</p>
-      <div className="wb-legend" aria-hidden="true"><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span><span><i className="fat" />Fat</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>
+      <div className="wb-legend" aria-hidden="true"><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span><span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>
       {wide ? (
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} />)}</div>
       ) : (
@@ -105,9 +103,6 @@ export default function NutritionBoard() {
           <DayColumn v={views[days.indexOf(day)]!} today={today} selected days={moveTargets} onPick={() => undefined} onLog={log} onMsg={setMsg} />
         </>
       )}
-      <div className="nb-shop">
-        <button type="button" className="btn sm" disabled={need === 0} onClick={() => setMsg(addMissingMessage(st().planToGroceries(days)))}>Add missing ingredients to Shopping</button>
-      </div>
     </section>
   );
 }

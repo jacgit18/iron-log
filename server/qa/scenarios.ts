@@ -206,15 +206,16 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-09', feature: 'Meal planner', title: 'Plan to Groceries adds each missing ingredient once', persona: 'meal-planner', brief: 'diet-meal-planner',
+    id: 'S-09', feature: 'Meal planner', title: 'A recipe\'s missing ingredients go to Shopping once; Nutrition has no button for it', persona: 'meal-planner', brief: 'diet-meal-planner',
     steps: [
-      'On Nutrition press Add missing ingredients to Shopping under the board (it covers the week shown).',
-      'Open Groceries and look at Shopping.',
-      'Return to Nutrition and press Add missing ingredients to Shopping again.',
+      'Open Daily, Nutrition and look under the day for a button named Add missing ingredients to Shopping.',
+      'Open Recipes, open a planned recipe and press Add missing to Shopping.',
+      'Open Groceries and look at Shopping, then press the recipe\'s button again.',
     ],
     expected: [
-      'The first press adds every ingredient of the week\'s recipes once (a name two recipes share is added once) and reports "Added N to Shopping. M are on Shopping already."',
-      'The second press adds nothing and reports that all of them are on Shopping already.',
+      'Nutrition has no Add missing ingredients to Shopping button; the page ends with the day\'s Hydration.',
+      'The recipe\'s button adds each ingredient it lacks once and reports how many were added and how many are on Shopping already.',
+      'The second press adds nothing and says they are all on Shopping already.',
     ],
   },
 
@@ -2401,7 +2402,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The Week buttons read Last week, This week and Next week, with This week pressed; a line under them names the week (for example "This week · Sep 24 to 30"); the buttons at the right read Targets and goal and Manage.',
-      'Seven day columns sit side by side; today\'s is named with "· today". Each holds four meters (Calories, Protein, Fat, Water), its meals or an Eaten list, Supplements and Hydration.',
+      'Seven day columns sit side by side; today\'s is named with "· today". Each holds five meters (Calories, Protein, Fat, Supplements, Water), its meals or an Eaten list, Supplements and Hydration.',
       'None of the old panels is there; food, supplements, water and targets are all reachable from the board (S-199 to S-218).',
     ],
   },
@@ -2419,14 +2420,14 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-195', feature: 'Nutrition board', title: 'Today\'s four meters count what was eaten and drunk', persona: 'diet-on-target', brief: 'nutrition-board',
+    id: 'S-195', feature: 'Nutrition board', title: 'Today\'s meters count what was eaten and drunk', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'On Nutrition read today\'s four meters: Calories, Protein, Fat and Water.',
+      'On Nutrition read today\'s meters: Calories, Protein, Fat, Supplements and Water.',
       'Press + Add food, One-off food, add "Rice" 300 kcal, 20 g protein, 40 g carbs, 5 g fat, then Done.',
       'Press + Drink under Hydration, press the 16.9 oz size, then Done.',
     ],
     expected: [
-      'Before: Calories reads "1,440 / 2,400 kcal" and Protein "58 / 160 g"; Fat is a number against 70 g; Water is "0 / <goal> oz". A screen reader says "Calories eaten so far: …", and Water "drunk".',
+      'Before: Calories reads "1,440 / 2,400 kcal" and Protein "58 / 160 g"; Fat is a number against 70 g; Supplements reads "n of m taken" (or "None scheduled"); Water is "0 / <goal> oz". A screen reader says "Calories eaten so far: …", and Water "drunk".',
       'After Rice: Calories reads "1,740 / 2,400 kcal", Protein "78 / 160 g", Fat 5 g higher, and Rice is in the Eaten list.',
       'After the drink: Water reads "16.9 / <goal> oz", and Hydration says how many oz are to go.',
     ],
