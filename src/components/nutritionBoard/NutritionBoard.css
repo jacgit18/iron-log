@@ -63,9 +63,6 @@
 .nb-scan {
   margin-bottom: var(--sp-8);
 }
-.nb-shop {
-  margin-top: var(--sp-12);
-}
 .nb-step {
   display: flex;
   gap: var(--sp-6);
@@ -84,6 +81,8 @@
   flex: 1;
   min-width: 0;
   min-height: 44px;
+  text-align: center;
+  text-align-last: center;
 }
 .nb-dayname {
   min-height: 44px;
@@ -108,19 +107,68 @@
 .wb-meter.nb-water i {
   background: var(--wb-water);
 }
+.wb-meter.nb-supps-meter i {
+  background: var(--m-supp);
+}
 .wb-legend .nbw {
   background: var(--wb-water);
 }
+.wb-legend .nbs {
+  background: var(--m-supp);
+}
+.nb-short {
+  display: none;
+}
 .wb {
   --wb-water: #2f5fa8;
+  --m-supp: #3b7d2c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .wb {
     --wb-water: #7fb0f0;
+    --m-supp: #8fd16a;
   }
 }
 :root[data-theme="dark"] .wb {
   --wb-water: #7fb0f0;
+  --m-supp: #8fd16a;
+}
+/* Phone (brief nutrition-mobile-layout): header B puts the title and the short Targets and Manage buttons on one row with the week switcher full width below; add-food A is Add food across the width over three equal buttons. Wide screens keep the long layout. */
+@media (max-width: 699px) {
+  .nb-head h2 {
+    order: 1;
+  }
+  .nb-headbtns {
+    order: 2;
+  }
+  .nb-weeksw {
+    order: 3;
+    flex: 1 0 100%;
+    display: flex;
+  }
+  .nb-weeksw button {
+    flex: 1;
+    min-height: 44px;
+  }
+  .nb-long {
+    display: none;
+  }
+  .nb-short {
+    display: inline;
+  }
+  .nb-tbtns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    flex: 1 0 100%;
+  }
+  .nb-tbtns #nb-add {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+  .nb-tbtns .btn {
+    min-height: 44px;
+    padding-inline: var(--sp-4);
+  }
 }
 .nb-empty {
   font-size: var(--fs-sm);

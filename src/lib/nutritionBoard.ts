@@ -94,7 +94,9 @@ export type MeterBasis = 'eaten' | 'planned';
 export const basisOf = (day: string, today: string): MeterBasis => (day <= today ? 'eaten' : 'planned');
 
 export interface Meter { key: 'kcal' | 'protein' | 'fat' | 'water'; label: string; unit: string; value: number; target: number | null; over: boolean; text: string; note?: string; hidden?: boolean }
-export interface DayView { day: string; kind: DayKind; basis: MeterBasis; meters: Meter[]; plan: BoardDay; eaten: DietEntry[]; fatNote: string | null }
+/** The Supplements meter of a day: the share ticked, no target and never over. `pct` is 0 to 100; a day with nothing scheduled is an empty bar that says so. */
+export interface SuppMeter { done: number; total: number; pct: number; text: string; label: string }
+export interface DayView { day: string; kind: DayKind; basis: MeterBasis; meters: Meter[]; supps: SuppMeter; plan: BoardDay; eaten: DietEntry[]; fatNote: string | null }
 
 const meterText = (value: number, target: number | null, unit: string): string => `${fmtNum(value)}${target ? ` / ${fmtNum(target)}` : ''} ${unit}`;
 const meter = (key: Meter['key'], label: string, unit: string, value: number, target: number | null): Meter => ({ key, label, unit, value, target, over: !!target && value > target, text: meterText(value, target, unit) });
@@ -121,7 +123,14 @@ export function dayView(day: string, today: string, a: { plan: Plan; recipes: Re
   if (planned && plan.fatState === 'partial') fatMeter.note = `Fat: ${plan.fatFoods.known} of ${plan.fatFoods.all} foods have it.`;
   if (fatHidden) { fatMeter.note = 'Add fat to your foods to see fat here.'; fatMeter.hidden = true; }
   const fatNote = !planned && eaten.length > 0 && missingCarbsFat(a.diet, day) ? 'Carbs and fat count only what you enter.' : null;
-  return { day, kind: dayKind(day, today), basis, meters, plan, eaten, fatNote };
+  return { day, kind: dayKind(day, today), basis, meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote };
+}
+
+/** The Supplements meter (drawn before Water): "2 of 4 taken" fills 50%; nothing scheduled says "None scheduled" with an empty bar. Counts ticks on any day. */
+export function suppMeter(supp: Supplements, day: string): SuppMeter {
+  const { done, total } = supplementDay(supp, day);
+  const text = total ? `${done} of ${total} taken` : 'None scheduled';
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0, text, label: `Supplements taken: ${text}` };
 }
 
 /** The label of a meter for a screen reader: the numbers in words, and whether they are eaten or planned. */
