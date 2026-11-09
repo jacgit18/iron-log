@@ -1,4 +1,5 @@
 import { PH_KEYS } from '../lib/data.js';
+import { normPortion } from '../lib/supplementPortion.js';
 import type { Experiment, Stretch, StretchExperiment, SupplementItem, SupplementNutrient, SupplementServing, SupplementSlot } from '../types.ts';
 import { MAX_NUTRIENT_ROWS, NUTRIENT_KEYS, NUTRIENT_UNITS } from './nutrientKeys.js';
 import { goodUrl, str } from './stretchWeek.js';
@@ -59,8 +60,8 @@ function servingOf(x: any): SupplementServing | null {
 export function normSupplementItem(x: any, slot: unknown = x && x.slot): SupplementItem | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 60)) return null;
   const catalogId = isCatalogId(x.catalogId) ? x.catalogId : null;
-  const serving = servingOf(x.serving), nutrients = nutrientsOf(x.nutrients);
+  const serving = servingOf(x.serving), nutrients = nutrientsOf(x.nutrients), portion = normPortion(x.portion);
   return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x),
     ...(catalogId && str(x.brand, 60) ? { brand: str(x.brand, 60) } : {}), ...(catalogId ? { catalogId } : {}),
-    ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) };
+    ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) };
 }

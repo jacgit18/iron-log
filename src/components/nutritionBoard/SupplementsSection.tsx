@@ -24,7 +24,7 @@ export default function SupplementsSection({ day }: { day: string }) {
           {s.items.map(i => (
             <label key={i.id} className={`nb-tick${i.taken ? ' taken' : ''}`}>
               <input type="checkbox" className="chk" id={`nb-supp-${day}-${i.id}`} checked={i.taken} onChange={e => useAppStore.getState().setSupplementTaken(day, i.id, e.target.checked)} />
-              <span>{i.n}{i.dose && <small> {i.dose}</small>}</span>
+              <span>{i.n}{i.dose && <small> {i.dose}</small>}{i.tag && <small className="nb-portion"> {i.tag}</small>}</span>
             </label>
           ))}
         </div>

@@ -1,0 +1,53 @@
+@layer base, components;
+@layer components {
+/* "How much you take each time" on the supplement sheet: the serving size, then a stepper with 44 px buttons and the amount line under it. At 375 px the size fields stack so nothing scrolls sideways. */
+.pstep {
+  display: grid;
+  gap: var(--sp-8);
+  margin: var(--sp-12) 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pstep legend {
+  padding: 0;
+  font-weight: 600;
+}
+.pstep .note {
+  margin: 0;
+}
+.pstep-size {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 8rem);
+  gap: var(--sp-8);
+}
+.pstep-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.pstep-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: var(--fs-xl);
+}
+.pstep-val {
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--fs-xl);
+}
+.pstep-sum {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.pstep-main {
+  font-size: var(--fs-lg);
+}
+@media (max-width: 420px) {
+  .pstep-size {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+}

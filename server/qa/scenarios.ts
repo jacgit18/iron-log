@@ -66,13 +66,14 @@ export type ScenarioFeature =
   | 'Saved meals move'
   | 'Counts as'
   | 'Week board'
-  | 'Nutrition board';
+  | 'Nutrition board'
+  | 'Supplement portions';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Supplement portions',
 ];
 
 export interface Scenario {
@@ -2730,6 +2731,41 @@ export const SCENARIOS: readonly Scenario[] = [
       'The rows read Supplements and library, Saved meals and foods and Water reminder, each with a one-line note.',
       'The editor shows the Morning, Noon and Night editor and the whole library; the new supplement appears on every day\'s Supplements.',
       'Saved meals and foods closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
+    ],
+  },
+  // ---- Supplement portions (brief supplement-portions, ADR 109). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----
+  {
+    id: 'S-219', feature: 'Supplement portions', title: 'Say how many capsules you take and see the amount', persona: 'meal-planner', brief: 'supplement-portions',
+    steps: [
+      'Press Manage, Supplements and library, then + New. Name it "Magnesium glycinate", add the row Magnesium 200 mg, and type 2 in "Capsules or tablets in one serving".',
+      'In "How much you take each time" press − once, then + twice, reading the line under the stepper each time. Press Save, then Done.',
+      'On today\'s Supplements tick it, then press Totals.',
+    ],
+    expected: [
+      'The stepper starts at "2 capsules" with "400 mg magnesium"; − gives "1 capsule" and "200 mg magnesium"; + twice gives "3 capsules" and "600 mg magnesium", each with the working under it ("3 × 100 mg per capsule = 300 mg" style).',
+      'After saving, today\'s row reads "Magnesium glycinate 3 capsules" next to its tick, and Totals counts the amount you chose, naming "(3 capsules)" beside the product.',
+    ],
+  },
+  {
+    id: 'S-220', feature: 'Supplement portions', title: 'Twice a day with a different amount each time', persona: 'meal-planner', brief: 'supplement-portions',
+    steps: [
+      'With the supplement from the last scenario, add it to Night on the Supplements tab, then open its Night entry and press − until it says "1 capsule". Save.',
+      'Tick Morning and Night today and read the Totals magnesium figure; then edit the nutrient rows on the Night entry (change 200 mg to 300 mg) and open the Morning entry.',
+    ],
+    expected: [
+      'A copy added to another section starts at one serving; after the change Morning shows its own amount and Night shows "1 capsule".',
+      'The Totals figure is the Morning amount plus the Night amount. The Morning entry now shows the same rows (300 mg) and serving size as Night, while its capsule count is unchanged.',
+    ],
+  },
+  {
+    id: 'S-221', feature: 'Supplement portions', title: 'No serving size, and an old supplement', persona: 'diet-on-target', brief: 'supplement-portions', edge: true,
+    steps: [
+      'Open a supplement that has nutrient rows but no serving size (or add one) and read "How much you take each time"; press − then + and watch the line under it.',
+      'Open a supplement you saved before portions existed and look at today\'s Supplements and Totals.',
+    ],
+    expected: [
+      'With no serving size it counts servings in quarters ("½ serving", "1½ servings") from ¼ to 10, and the line says "per serving × ½".',
+      'An older supplement shows no tag on the day and Totals counts it exactly as before (one serving per tick).',
     ],
   },
 ];
