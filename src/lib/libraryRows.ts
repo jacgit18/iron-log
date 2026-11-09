@@ -9,6 +9,10 @@ import { pantryStatus } from './recipePantry.js';
 export const LIBRARY_TABS = [{ key: 'all', label: 'All' }, { key: 'meals', label: 'Meals' }, { key: 'ingredients', label: 'Ingredients' }, { key: 'drinks', label: 'Drinks' }] as const satisfies readonly { key: RecipeTab; label: string }[];
 export type LibraryTab = typeof LIBRARY_TABS[number]['key'];
 
+/** The line under a Library tab with nothing in it: "No ingredients among these. Show more to load others." (a tab's name is already plural, so no "recipe" after it). */
+export const libraryEmptyNote = (tab: LibraryTab, more: boolean): string =>
+  `${tab === 'all' ? 'Nothing' : `No ${LIBRARY_TABS.find(t => t.key === tab)?.label.toLowerCase()}`} among these${more ? '. Show more to load others' : ''}.`;
+
 /** The recipe a Library item would become (nothing is written), or null for an item with no recipe. */
 const asRecipe = (it: CatalogItem): Recipe | null => recipeFromCatalog(it, []);
 

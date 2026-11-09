@@ -2232,7 +2232,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Library has All, Meals, Ingredients and Drinks (no Foods) and no counts. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
-      'An empty tab says "No ingredients recipe among these. Show more to load others." and offers Show more.',
+      'An empty tab says "No ingredients among these. Show more to load others." and offers Show more.',
     ],
   },
   {
