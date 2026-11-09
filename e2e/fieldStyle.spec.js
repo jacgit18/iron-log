@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // A text field, number field or select that no style rule reaches falls back to the browser's own look (square corners, a 2px grey border, 2px padding).
 // Field styling is opt-in by wrapper (ux/DESIGN-SYSTEM.md "Fields"), so this walks the tabs that have fields and fails on one that looks unstyled.
@@ -61,7 +62,7 @@ test('Daily > Nutrition: the add sheet, the drink sheet and the supplement edito
   await page.locator('.nb-col.today').getByRole('button', { name: /^\+ Drink/ }).click();
   expect(await unstyled(page, 3)).toEqual([]); // other amount, training minutes
   await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
   expect(await unstyled(page, 3)).toEqual([]); // each time of day's add form
 });
 

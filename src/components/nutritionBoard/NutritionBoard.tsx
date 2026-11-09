@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { bwSorted, goalStatus } from '../../lib/body.js';
 import { planLog, recipeIdsFor, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
@@ -21,8 +21,8 @@ const NO_PLAN: Plan = {};
 const NO_MEALS: SavedMeal[] = [];
 
 // Nutrition as one week board (brief nutrition-board): a week switcher (Last week, This week, Next week), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1280 px).
-// Each day holds four meters, its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105). `actions` is whatever the page puts beside the title.
-export default function NutritionBoard({ actions }: { actions?: ReactNode }) {
+// Each day holds four meters, its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
+export default function NutritionBoard() {
   const now = useToday(s => s.today);
   const today = ymd(now);
   const wide = useWideBoard();
@@ -76,7 +76,10 @@ export default function NutritionBoard({ actions }: { actions?: ReactNode }) {
         <div className="seg nb-weeksw" role="group" aria-label="Week">
           {WEEK_OFFSETS.map(o => <button key={o} type="button" aria-pressed={o === offset} onClick={() => goWeek(o)}>{WEEK_NAME[o]}</button>)}
         </div>
-        {actions}
+        <div className="nb-headbtns">
+          <button type="button" className="btn sm" id="nb-targets" onClick={() => st().openModal({ type: 'nbtargets' })}>Targets and goal</button>
+          <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
+        </div>
       </div>
       <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
       <div className="nb-toolbar" role="group" aria-label="Add food">

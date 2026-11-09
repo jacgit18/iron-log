@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition, openTargets, todayCol } from './nutritionBoardHelpers.js';
 import { startRecipe } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086): the daily calorie, protein, carbs and fat targets (the Diet box under the week board), and the food log, now a day column of the Nutrition week board with food added from the add sheet.
@@ -11,7 +11,7 @@ const seedBody = (page, goal, weight) => page.addInitScript(([g, w]) => {
   localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: g } }));
   localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w }] }));
 }, [goal, weight]);
-const diet = page => page.getByRole('region', { name: 'Diet' });
+const diet = page => page.getByRole('dialog', { name: 'Targets and goal' }); // the Targets and goal sheet (it was the Diet panel under the board)
 const nutrition = openNutrition;
 // The add sheet's One-off food form (always open there); returns the dialog.
 const oneOff = page => openAdd(page, 'One-off food');
@@ -24,15 +24,16 @@ const addFood = async (sheet, name, kcal, p) => {
 };
 const eaten = page => todayCol(page).locator('.nb-eat');
 const noViolations = async page => {
-  const { violations } = await new AxeBuilder({ page }).include('#diet-h').include('.nb').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  const { violations } = await new AxeBuilder({ page }).include('.nb').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 };
 
 test('Diet is on Nutrition for everyone; with no goal weight it asks for one and still lets you type a target', async ({ page }) => {
   await nutrition(page);
-  await expect(diet(page).getByRole('heading', { name: 'Diet' })).toBeVisible();
-  await expect(diet(page)).toContainText('Set a goal weight under Progress');
   await expect(todayCol(page)).toContainText('Nothing logged'); // the food log is today's column on the board
+  await openTargets(page);
+  await expect(diet(page).getByRole('heading', { name: 'Targets and goal' })).toBeVisible();
+  await expect(diet(page)).toContainText('Set a goal weight under Progress');
   await diet(page).getByRole('button', { name: 'Set target' }).click();
   await page.locator('#dt-tk').fill('3000');
   await page.locator('#dt-tp').fill('180');
@@ -45,6 +46,7 @@ test('the target is recommended from the goal weight, and your own number replac
   await seedBody(page, 185, 170);
   await page.reload();
   await nutrition(page);
+  await openTargets(page);
   await expect(diet(page)).toContainText('2,800 kcal');
   await expect(diet(page)).toContainText('150 g protein');
   await expect(diet(page)).toContainText('370 g carbs');
@@ -64,6 +66,7 @@ test('the target is recommended from the goal weight, and your own number replac
   await expect(diet(page)).toContainText('85 g fat');
   await page.reload();
   await nutrition(page);
+  await openTargets(page);
   await expect(diet(page)).toContainText('3,000 kcal');
   await expect(diet(page)).toContainText('450 g carbs');
   await diet(page).getByRole('button', { name: 'Use recommended' }).click();
@@ -170,14 +173,16 @@ test('the food log follows the board: today is a separate day from yesterday (re
   await expect(page.locator('.nb-target')).toContainText('Adding to Thu 24 · today');
 });
 
-test('the Nutrition screen reads the week board first, then the Diet targets; Supplements and Hydration sit inside each day and there is no second date bar', async ({ page }) => {
+test('the Nutrition screen is the week board with Targets and goal and Manage in its header; Supplements and Hydration sit inside each day and there is no second date bar', async ({ page }) => {
   await nutrition(page);
   const y = async loc => (await loc.boundingBox()).y;
   await expect(todayCol(page).getByText('Supplements', { exact: true })).toBeVisible();
   await expect(todayCol(page).getByText('Hydration', { exact: true })).toBeVisible();
-  expect(await y(page.locator('#nb-h'))).toBeLessThan(await y(page.locator('#diet-h')));
+  await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block is no longer under the board
+  expect(await y(page.locator('#nb-targets'))).toBeLessThan(await y(todayCol(page)));
   await expect(page.locator('.weekbar')).toHaveCount(0);
-  await expect(diet(page).getByRole('button', { name: /Day before|Day after|Previous day|Next day/ })).toHaveCount(0); // no day selector inside Diet
+  await openTargets(page);
+  await expect(diet(page).getByRole('button', { name: /Day before|Day after|Previous day|Next day/ })).toHaveCount(0); // no day selector inside Targets and goal
 });
 
 test('an entry without carbs and fat still logs, and the log says carbs and fat count only what was entered', async ({ page }) => {

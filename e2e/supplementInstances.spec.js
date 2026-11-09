@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // The same supplement twice a day: picking one that is already scheduled adds another instance in the other section, each ticked on its own.
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -19,7 +20,7 @@ async function open(page) {
   await page.route('**/api/catalog/search?*', json(200, { ok: true, items: [], more: false }));
   await page.goto('/');
   await page.click('#tab-daily'); await page.click('#daily-supplements');
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
 }
 
 test('a supplement already in Morning gets a second instance in Night, ticked and removed on its own', async ({ page }) => {
