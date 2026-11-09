@@ -48,6 +48,14 @@ describe('ranking', () => {
   });
 });
 
+describe('over ranks first even when the share rounds level', () => {
+  it('40.1 mg of zinc is over at 100% and ranks above iron exactly at its 45 mg limit, though iron comes first in the table', () => {
+    const m = view([item('a', [{ key: 'zinc', amount: 40.1, unit: 'mg' }]), item('b', [{ key: 'iron', amount: 45, unit: 'mg' }])]);
+    if (m?.kind !== 'rows') throw new Error('rows');
+    expect(m.top.map(t => [t.label, t.status])).toEqual([['Zinc', 'over'], ['Iron', 'close']]);
+  });
+});
+
 describe('food counts as the sheet counts it', () => {
   const eaten: DietEntry[] = [{ id: 'e', d: day, n: 'Oysters', kcal: 100, p: 10, micro: { zinc: 10, magnesium: 400 } }];
   it('food raises a limit that counts food (zinc 35 + 10 is over) and not one that counts supplements only (magnesium stays 62%)', () => {

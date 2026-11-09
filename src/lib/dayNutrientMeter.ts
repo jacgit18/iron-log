@@ -34,7 +34,7 @@ export function dayNutrientMeter(v: TotalsView): DayMeterView | null {
   if (!v.hasData) return null;
   if (v.noneCounted) return { kind: 'none' };
   if (v.rows.length === 0) return null;
-  const ranked = [...v.rows].sort((a, b) => b.share - a.share).map(item); // a tie keeps the limits table's order (the sort is stable)
+  const ranked = [...v.rows].sort((a, b) => Number(b.status === 'over') - Number(a.status === 'over') || b.share - a.share).map(item); // over first (a total a hair past its limit rounds to 100%, level with one exactly at it), then by share; a tie keeps the limits table's order (the sort is stable)
   const top = ranked.slice(0, CLOSED_NAMES);
   return { kind: 'rows', top, subs: ranked.slice(0, SUB_LIMIT), tracked: ranked.length, hidden: Math.max(0, ranked.length - SUB_LIMIT), closed: top.map(t => `${t.label} ${t.status === 'over' ? 'over' : t.text}`).join(' · ') };
 }
