@@ -5,9 +5,9 @@ import pg from 'pg';
 import { pinSslMode } from '../db/sslMode.ts';
 import { PERSONAS, personaAuthId, personaById } from '../qa/personas.ts';
 import { scenariosForPersona } from '../qa/scenarios.ts';
+import { seedToday } from '../qa/seedDay.ts';
 import { SEED_EXERCISE_IDS, seedPersona } from '../qa/seedPersona.ts';
 import { buildPersonaRows } from '../qa/seedPlan.ts';
-import { seedToday } from '../qa/seedDay.ts';
 import type { PiiCrypto } from './piiCrypto.ts';
 
 /* ---------- QA test accounts: an admin switches to a seeded account and back (brief: qa-persona-picker) ----------
