@@ -307,6 +307,14 @@ describe('supplement library', () => {
     expect(st().saveSupplement({ id: x.id, n: 'Renamed', dose: '3 g', slot: 'morning', note: 'with water' })).toBeNull();
     expect(st().supp.items.find(i => i.id === x.id)).toEqual({ id: 'creatine', n: 'Creatine', slot: 'morning', dose: '3 g', note: 'with water', brand: 'NOW Foods', catalogId: now.id });
   });
+  it('adds a catalog supplement with the amounts read from its label, cleaned like typed rows; without them it is added as before (brief supplement-label-amounts)', () => {
+    const d3 = { id: 'c:dsld:320047', name: 'Ddrops Liquid Vitamin D3', brand: 'Ddrops', data: {} };
+    expect(st().addCatalogSupplement(d3, { slot: 'morning', nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'bogus', amount: 1, unit: 'mg' }, { key: 'zinc', amount: -3, unit: 'mg' }], serving: { units: 2, form: 'Gummy' } })).toBeNull();
+    expect(st().supp.items.find(i => i.catalogId === d3.id)).toEqual({ id: 'ddrops-liquid-vitamin-d3', n: 'Ddrops Liquid Vitamin D3', slot: 'morning', brand: 'Ddrops', catalogId: d3.id, serving: { units: 2, form: 'Gummy' }, nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }] });
+    expect(saved('supplements/main').items.find(i => i.catalogId === d3.id).nutrients).toEqual([{ key: 'vitaminD', amount: 50, unit: 'mcg' }]);
+    expect(st().addCatalogSupplement({ id: 'c:dsld:5', name: 'Plain', data: {} }, { nutrients: [], serving: { units: 0 } })).toBeNull();
+    expect(st().supp.items.find(i => i.catalogId === 'c:dsld:5')).toEqual({ id: 'plain', n: 'Plain', slot: '', catalogId: 'c:dsld:5' });
+  });
   it('cuts a long catalog name to 60 characters, and refuses an id that is not a catalog id', () => {
     st().addCatalogSupplement({ id: 'c:dsld:7', name: 'A'.repeat(70), data: {} });
     const x = st().supp.items.find(i => i.catalogId === 'c:dsld:7');

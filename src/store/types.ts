@@ -416,7 +416,8 @@ export interface WellnessSlice {
   addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;
   removeSupplement(id: string): boolean;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
-  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string }): string | null;
+  /** `nutrients` and `serving` are one serving's amounts read from its label (brief supplement-label-amounts); left out, it is added with none. */
+  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string; nutrients?: SupplementNutrient[]; serving?: SupplementServing }): string | null;
   saveSupplement(d: SupplementForm): string | null;
   deleteSupplement(id: string): void;
   moveSupplement(id: string, dir: number): void;

@@ -240,7 +240,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (items.some(x => x.catalogId === c.id)) return 'Already in your supplements.';
     if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
     const slot = opts.slot && SLOTS.some(([k]) => k === opts.slot) ? opts.slot : ''; const dz = String(opts.dose || '').trim().slice(0, 40);
-    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id }); })) return null;
+    // The label's amounts (brief supplement-label-amounts) are cleaned like any typed rows and become the supplement's own (ADR 026); none given adds it exactly as before.
+    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id, ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); })) return null;
     flag(`Added ${n}`); return null;
   },
   // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id

@@ -4,9 +4,12 @@ import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/supplements.js';
 import { pickerKey } from '../../lib/picker.js';
+import { planFill } from '../../lib/supplementLabelFill.js';
+import { useSupplementLabel } from '../../hooks/useSupplementLabel.js';
 import ItemPicker from '../ItemPicker.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import { LabelAmounts } from './LabelPreview.js';
 import './Supplements.css';
 
 // One of yours as the add picker lists it: where it is now and its dose; badged Library or Custom only when syncing (ADR 027).
@@ -31,6 +34,9 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
   const list = scheduleOf(items)[slot]; const t = slotTally(items, taken, date, slot);
   const held = pick && pickerKey(pickedName(pick, items)) === pickerKey(name) ? pick : null;
   const heldItem = held?.kind === 'mine' ? items.find(i => i.id === held.id) : undefined;
+  // A catalog supplement's label (brief supplement-label-amounts): read when it is picked, shown before Add, saved with it. A failed or slow lookup never blocks the add.
+  const { state: lab } = useSupplementLabel(held?.kind === 'catalog' ? held.item.id : null);
+  const fill = lab.status === 'ready' ? planFill({}, lab.label).result : undefined;
   const done = () => { setName(''); setDose(''); setPick(null); setErr(''); };
   // Add: one of yours moves into this section, a catalog product joins your library in it, anything else is a new supplement.
   const add = (e: FormEvent) => {
@@ -38,7 +44,7 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
     // One of yours that is already scheduled stays where it is and gets another instance here (taken twice a day); a library-only one moves in.
     if (held?.kind === 'mine') { if (heldItem?.slot ? s.addSupplementInstance(held.id, slot, dose) : s.setSupplementSlot(held.id, slot, dose)) done(); return; }
     if (held?.kind === 'catalog') {
-      const m = s.addCatalogSupplement(held.item, { slot, dose });
+      const m = s.addCatalogSupplement(held.item, { slot, dose, ...(fill?.nutrients.length || fill?.serving ? { nutrients: fill.nutrients, serving: fill.serving } : {}) });
       // null also means nothing was saved (still loading): keep what was typed unless it is really there now.
       if (m) setErr(m); else if (useAppStore.getState().supp.items.some(i => i.catalogId === held.item.id)) done();
       return;
@@ -76,6 +82,9 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
             ? `Adds another ${heldItem.n} to ${label}, so you can take it more than once a day${dose.trim() ? ', with this dose' : ''}.`
             : `Moves it to ${label}${dose.trim() ? ' with this dose' : ''}.`}</p>}
           {held?.kind === 'catalog' && <p className="note">From the catalog. It joins your supplements in {label}.</p>}
+          {held?.kind === 'catalog' && lab.status === 'loading' && <p className="note" role="status">Reading the label... Add now and it is added without amounts.</p>}
+          {held?.kind === 'catalog' && lab.status === 'failed' && <p className="note" role="status">Could not load this product's amounts. You can type them in the supplement's sheet.</p>}
+          {held?.kind === 'catalog' && lab.status === 'ready' && <LabelAmounts label={lab.label} />}
           {err && <p className="note err" role="alert">{err}</p>}
         </form>
       )}
