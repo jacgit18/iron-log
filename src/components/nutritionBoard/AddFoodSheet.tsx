@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
 import { microKept } from '../../lib/foodMicroKept.js';
+import { microText } from '../../lib/labelFill.js';
 import { withMicro } from '../../shared/foodMicro.js';
 import { findMatches } from '../../lib/dietPlan.js';
 import { quickItems } from '../../lib/dietRecent.js';
@@ -85,6 +86,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const saved = useAppStore(s => s.cfg.diet?.meals) ?? [];
   const moved = useAppStore(s => s.cfg.diet?.mealsMoved) ?? {};
   const [q, setQ] = useState('');
+  const [removed, setRemoved] = useState<number | null>(null); // the fill whose photo amounts were removed
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
   const eat = day === today;
   const st = () => useAppStore.getState();
@@ -104,7 +106,15 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
       </div>
     );
   }
-  if (flow === 'oneoff') return <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add" onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(microKept(fill.food, v.kcal)) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
+  if (flow === 'oneoff') {
+    const kept = (kcal: number) => (removed === fill.key ? undefined : microKept(fill.food, kcal));
+    const photoMicro = (kcal: string) => (fill.food?.fromPhoto ? kept(Number(kcal)) : undefined);
+    return <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add"
+      below={kcal => { const m = photoMicro(kcal); return m && Object.keys(m).length > 0 && (
+        <p className="note" role="status">Vitamins and minerals read from the photo, check them against the label: {microText(m)}. <button type="button" className="btn sm" onClick={() => { setRemoved(fill.key); document.getElementById('dt-add-k')?.focus(); }}>Remove</button></p>
+      ); }}
+      onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(kept(v.kcal)) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
+  }
   if (flow === 'find') return <FindFood day={day} onAdded={onMsg} onFood={onFill} reopen={reopen} {...(resume ? { resume } : {})} />;
   if (flow === 'copy') return <CopyDay key={day} day={day} onAdded={onMsg} />;
   if (flow === 'savemeal') return entriesOn(diet, day).length === 0 ? <p className="note">Nothing eaten yet to save.</p> : <SaveMeal key={day} day={day} onSaved={onMsg} />;
