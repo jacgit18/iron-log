@@ -3,6 +3,7 @@
 
 import type { IssueStatus } from './shared/issues.ts';
 import type { Micro } from './shared/foodMicro.ts';
+import type { Profile } from './shared/profile.ts';
 import type { NutrientKey, NutrientUnit } from './shared/nutrientKeys.ts';
 export type PhaseKey = 'strength' | 'iso' | 'hyp' | 'exp' | 'mob';
 export type SlotType = 'single' | 'superset' | 'either';
@@ -149,6 +150,8 @@ export interface Cfg extends ProgramCfg {
   groceryBudget?: number;
   /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
   diet?: DietCfg;
+  /** Optional birth year and sex, used only to pick the recommended amounts in the Totals sheet (brief recommendations-by-age-sex). */
+  profile?: Profile;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   /** Equipment the user added: id (`x:` and a slug) to its name. */
   equipment?: Record<string, string>;
