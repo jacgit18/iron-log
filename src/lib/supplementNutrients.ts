@@ -1,6 +1,6 @@
 import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
 import type { NutrientKey, NutrientUnit } from '../shared/nutrientKeys.js';
-import type { SupplementItem, Taken } from '../types.ts';
+import type { DietEntry, SupplementItem, Taken } from '../types.ts';
 import { limitOf } from './nutrientLimits.js';
 import { scheduled } from './supplements.js';
 
@@ -8,7 +8,7 @@ import { scheduled } from './supplements.js';
    Each nutrient row on a supplement is the amount in ONE serving; ticking the item on a day counts one serving.
    'taken' sums the ticked scheduled items, 'scheduled' sums every scheduled item. Units convert only where a standard factor exists
    (mg, mcg and g to the limit's unit; vitamin D IU to mcg at 40 IU per mcg, NIH ODS); anything else (vitamin A and E in IU, which depend on the
-   form) is listed in `notAdded`, never guessed. `fromFood` is 0 until food nutrients are built (the sheet keeps the two numbers apart from day one). */
+   form) is listed in `notAdded`, never guessed. `fromFood` is the day's eaten foods that list the nutrient (brief food-vitamins-minerals): it joins `total` only where the limit counts food (`scope: 'total'`), because the supplements-only limit (magnesium) and the one-form limits (folate, niacin, vitamin A, vitamin E) cover something a food label does not separate, so adding food would overstate. */
 
 export type TotalsBasis = 'taken' | 'scheduled';
 
@@ -20,6 +20,8 @@ export interface NutrientTotal {
   unit: 'mg' | 'mcg';
   fromSupplements: number;
   fromFood: number;
+  /** Whether `fromFood` is part of `total` (the limit counts food), or only shown beside it. */
+  foodCounted: boolean;
   total: number;
   /** The products that add to the total, with their amount in `unit` (biggest first). */
   products: { itemId: string; name: string; amount: number }[];
@@ -45,23 +47,38 @@ export const countedItems = (items: SupplementItem[], taken: Taken, date: string
   return scheduled(items).filter(i => basis === 'scheduled' || day[i.id]);
 };
 
-/** One entry per nutrient that at least one counted product lists, in the order of the limits table. */
-export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis = 'taken'): NutrientTotal[] {
+/** The foods of a day that list at least one vitamin or mineral, and how many were eaten in all: the sheet says so, because a food with no data adds nothing and the total can be low. */
+export const foodCoverage = (eaten: readonly DietEntry[]): { eaten: number; withData: number } => ({ eaten: eaten.length, withData: eaten.filter(e => e.micro && Object.keys(e.micro).length > 0).length });
+
+/** One entry per nutrient that a counted supplement or an eaten food lists, in the order of the limits table. `eaten` is the day's diet entries. */
+export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis = 'taken', eaten: readonly DietEntry[] = []): NutrientTotal[] {
   const by = new Map<NutrientKey, NutrientTotal>();
+  const entryFor = (key: NutrientKey): NutrientTotal => {
+    let t = by.get(key);
+    if (!t) { const limit = limitOf(key)!; t = { key, unit: limit.unit, fromSupplements: 0, fromFood: 0, foodCounted: limit.scope === 'total', total: 0, products: [], notAdded: [] }; by.set(key, t); }
+    return t;
+  };
   for (const item of countedItems(items, taken, date, basis)) {
     for (const row of item.nutrients || []) {
       const limit = limitOf(row.key);
       if (!limit) continue;
-      let t = by.get(row.key);
-      if (!t) { t = { key: row.key, unit: limit.unit, fromSupplements: 0, fromFood: 0, total: 0, products: [], notAdded: [] }; by.set(row.key, t); }
+      const t = entryFor(row.key);
       const c = toLimitUnit(row.key, row.amount, row.unit, limit.unit);
       if ('reason' in c) { t.notAdded.push({ itemId: item.id, name: item.n, amount: row.amount, unit: row.unit, reason: c.reason }); continue; }
       t.fromSupplements = round3(t.fromSupplements + c.value);
       t.products.push({ itemId: item.id, name: item.n, amount: c.value });
     }
   }
+  for (const e of eaten) {
+    for (const k of NUTRIENT_KEYS) {
+      const a = e.micro?.[k];
+      if (a === undefined || !limitOf(k)) continue; // a food's amounts are already in the limit's unit (MICRO_UNIT)
+      const t = entryFor(k);
+      t.fromFood = round3(t.fromFood + a);
+    }
+  }
   const order = (k: NutrientKey) => NUTRIENT_KEYS.indexOf(k);
-  return [...by.values()].map(t => ({ ...t, total: round3(t.fromSupplements + t.fromFood), products: t.products.sort((a, b) => b.amount - a.amount) })).sort((a, b) => order(a.key) - order(b.key));
+  return [...by.values()].map(t => ({ ...t, total: round3(t.fromSupplements + (t.foodCounted ? t.fromFood : 0)), products: t.products.sort((a, b) => b.amount - a.amount) })).sort((a, b) => order(a.key) - order(b.key));
 }
 
 /** under the limit, close (80% or more of it) or over (above it; exactly the limit is not over). */
