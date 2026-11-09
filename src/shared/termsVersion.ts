@@ -2,7 +2,7 @@
 // page's own `Last updated` line (public/terms.html, public/privacy.html); termsVersion.test.ts fails when they disagree. Bump a number here in
 // the same change that bumps its page and everyone, new and existing, is asked to accept again. Shared with the server, which refuses any other value.
 export const TERMS_VERSION = '1.2';
-export const PRIVACY_VERSION = '1.5';
+export const PRIVACY_VERSION = '1.9';
 
 export interface TermsVersions { terms: string; privacy: string }
 export const CURRENT_TERMS: TermsVersions = { terms: TERMS_VERSION, privacy: PRIVACY_VERSION };
