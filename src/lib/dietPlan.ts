@@ -1,7 +1,9 @@
 import type { DietEntry, PlanItem, Recipe, SavedItem, SavedMeal } from '../types.ts';
+import { withMicro } from '../shared/foodMicro.js';
 import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, samePlanItem } from '../shared/diet.js';
 import { fmtNum, hasMacros, servingNumbers, shiftDay } from './dietLog.js';
 import { planMeal } from './dietMeals.js';
+import type { Food } from './foodMacros.js';
 import { sortByName } from './sort.js';
 
 /* ---------- The meal planner (brief diet-meal-planner): a day's list of recipes and saved meals, what it adds up to, what logging it does, what it needs from the shop. Pure; the store and the panel call these. ---------- */
@@ -78,13 +80,13 @@ export function totalsText(t: { kcal: number; protein: number; without: number }
 }
 
 /** What logging a planned item on `day` adds: the entries that fit under the per-day limit and how many did not; or why it cannot be logged. */
-export function planLog(r: Resolved, entries: DietEntry[], day: string): { add: (SavedItem)[]; left: number } | { error: string } {
+export function planLog(r: Resolved, entries: DietEntry[], day: string): { add: Food[]; left: number } | { error: string } {
   if (r.gone) return { error: 'That was removed. Remove it from the plan.' };
   if (r.meal) return planMeal(entries, day, r.meal);
   const nums = r.recipe && hasMacros(r.recipe) ? servingNumbers(r.recipe, r.portion) : null;
   if (!r.recipe || !nums) return { error: 'Add calories and protein to this recipe to log it.' };
   const room = entries.filter(e => e.d === day).length < MAX_DIET_PER_DAY;
-  return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id }], left: 0 } : { add: [], left: 1 };
+  return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id, ...withMicro(nums.micro) }], left: 0 } : { add: [], left: 1 };
 }
 
 export const MAX_FIND_MATCHES = 8;

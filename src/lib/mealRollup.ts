@@ -1,4 +1,7 @@
 import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { cleanMicro } from '../shared/foodMicro.js';
+import type { Micro } from '../shared/foodMicro.js';
+import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
 import type { Recipe, RecipeIngredient } from '../types.ts';
 import { tabOf } from './recipeList.js';
 
@@ -12,7 +15,7 @@ import { tabOf } from './recipeList.js';
 /** The most links in a chain of meals inside meals (lunch box, sandwich, spread). */
 export const MAX_LINKS = 3;
 
-export interface PerServing { kcal: number; p: number; c?: number; f?: number }
+export interface PerServing { kcal: number; p: number; c?: number; f?: number; /** Vitamins and minerals: a nutrient only when every counted part lists it. */ micro?: Micro }
 export interface Rollup {
   per: PerServing;
   /** Lines that gave numbers, and lines in all (skipped and blank lines are not lines). */
@@ -21,7 +24,7 @@ export interface Rollup {
   /** The linked parts that have no calories and protein yet. */
   needNumbers: string[];
 }
-type Draft = Pick<Recipe, 'ing'> & Partial<Pick<Recipe, 'id' | 'servings' | 'own' | 'kcal' | 'p' | 'c' | 'f'>>;
+type Draft = Pick<Recipe, 'ing'> & Partial<Pick<Recipe, 'id' | 'servings' | 'own' | 'kcal' | 'p' | 'c' | 'f' | 'micro'>>;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const quantified = (i: RecipeIngredient): i is RecipeIngredient & { rid: string; q: number } => !!i.rid && i.q !== undefined && !i.skip;
@@ -39,7 +42,7 @@ function numbersOf(part: Recipe, recipes: readonly Recipe[], seen: ReadonlySet<s
     const r = mealRollup(part, recipes, seen, depth + 1);
     if (r && r.counted > 0) return r.per;
   }
-  return hasNumbers(part) ? { kcal: part.kcal!, p: part.p!, ...(part.c !== undefined ? { c: part.c } : {}), ...(part.f !== undefined ? { f: part.f } : {}) } : null;
+  return hasNumbers(part) ? { kcal: part.kcal!, p: part.p!, ...(part.c !== undefined ? { c: part.c } : {}), ...(part.f !== undefined ? { f: part.f } : {}), ...(part.micro ? { micro: part.micro } : {}) } : null;
 }
 
 /** A meal's numbers per serving from its linked parts, or null when it has none. `recipes` is the whole list the links resolve in. */
@@ -58,8 +61,9 @@ export function mealRollup(meal: Draft, recipes: readonly Recipe[], seen: Readon
   const servings = meal.servings && meal.servings >= 1 ? meal.servings : 1;
   const sum = (pick: (n: PerServing) => number | undefined) => used.reduce((a, u) => a + (pick(u.n) ?? 0) * u.q, 0) / servings;
   const hasC = used.length > 0 && used.every(u => u.n.c !== undefined), hasF = used.length > 0 && used.every(u => u.n.f !== undefined);
+  const micro = used.length === 0 ? null : cleanMicro(Object.fromEntries(NUTRIENT_KEYS.filter(k => used.every(u => u.n.micro?.[k] !== undefined)).map(k => [k, sum(n => n.micro?.[k])])));
   return {
-    per: { kcal: Math.round(sum(n => n.kcal)), p: round1(sum(n => n.p)), ...(hasC ? { c: round1(sum(n => n.c)) } : {}), ...(hasF ? { f: round1(sum(n => n.f)) } : {}) },
+    per: { kcal: Math.round(sum(n => n.kcal)), p: round1(sum(n => n.p)), ...(hasC ? { c: round1(sum(n => n.c)) } : {}), ...(hasF ? { f: round1(sum(n => n.f)) } : {}), ...(micro ? { micro } : {}) },
     counted: used.length, total: lines.length, needNumbers,
   };
 }
@@ -133,12 +137,13 @@ export function settleMeals(recipes: Recipe[]): Recipe[] {
       const kcal = roll && roll.counted > 0 ? cleanKcal(roll.per.kcal) : null, p = roll ? cleanProtein(roll.per.p) : null;
       if (roll && kcal !== null && p !== null) {
         const c = roll.per.c !== undefined ? cleanGrams(roll.per.c) : null, f = roll.per.f !== undefined ? cleanGrams(roll.per.f) : null;
-        const { kcal: _k, p: _p, c: _c, f: _f, ...rest } = out;
-        const set: Recipe = { ...rest, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}) };
-        const order = (x: Recipe) => JSON.stringify([x.kcal, x.p, x.c, x.f]);
+        const { kcal: _k, p: _p, c: _c, f: _f, micro: _m, ...rest } = out;
+        const set: Recipe = { ...rest, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(roll.per.micro ? { micro: roll.per.micro } : {}) };
+        const order = (x: Recipe) => JSON.stringify([x.kcal, x.p, x.c, x.f, x.micro]);
         if (order(set) !== order(out)) { out = set; changed = true; }
       }
     }
+    else if (out.own && out.micro && hasParts(out)) { const { micro: _m, ...rest } = out; out = rest; changed = true; } // its calories are the person's own: amounts rolled up from the parts would disagree with them
     return out;
   });
   return changed ? next : recipes;

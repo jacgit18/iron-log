@@ -68,11 +68,11 @@ describe('re-logging keeps them', () => {
 });
 
 describe('scan and One-off form', () => {
-  it('a scanned product logs its amounts for the grams eaten, and the saved food does not hold them', () => {
+  it('a scanned product logs its amounts for the grams eaten, and the saved food holds them too (brief recipes-vitamins-minerals; PR A left them off the saved food)', () => {
     const hit: FoodHit = { id: 5, name: 'Cereal', kcal: 380, p: 8, serving: 40, micro: { iron: 12, vitaminC: 0 } };
     const d = scanFoodDraft(hit, 50, 'ready')!;
     expect(d.micro).toEqual({ iron: 6 });
-    expect('micro' in d.recipe).toBe(false);
+    expect(d.recipe.micro).toEqual({ iron: 6 });
   });
   it('the One-off form keeps a looked-up food\'s amounts only while calories are unchanged', () => {
     const food = { kcal: 100, micro: { iron: 1 } };

@@ -17,6 +17,9 @@ import CountsAsChips from './CountsAsChips.js';
 import UsedAsChips from './UsedAsChips.js';
 import { useCountsAs } from './useCountsAs.js';
 import IngredientList from './IngredientList.js';
+import { microKept } from '../../lib/foodMicroKept.js';
+import { withMicro } from '../../shared/foodMicro.js';
+import type { Micro } from '../../shared/foodMicro.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 import ServingSize from './ServingSize.js';
@@ -50,6 +53,9 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
   const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
+  // Vitamins and minerals per serving (brief recipes-vitamins-minerals) are never typed: they come from the ingredient calculator, kept only while calories are still the number they came with. A meal's come from its parts at save.
+  const [micro, setMicro] = useState<Micro | undefined>(recipe?.micro);
+  const [microKcal, setMicroKcal] = useState<number | undefined>(recipe?.kcal);
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [tagText, setTagText] = useState('');
   const [nutOpen, setNutOpen] = useState(false);
@@ -134,7 +140,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
+    const microOut = rolled ? rolled.micro : parts ? undefined : microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, k ?? -1); // a meal on its own numbers keeps none
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -153,7 +160,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
   };
   const adoptNumbers = (per: PerServing) => {
-    setKcal(String(per.kcal)); setProtein(String(per.p));
+    setKcal(String(per.kcal)); setProtein(String(per.p)); setMicro(per.micro); setMicroKcal(per.kcal);
     if (per.c !== undefined) setCarbs(String(per.c));
     if (per.f !== undefined) setFat(String(per.f));
     setCalc(false); setErr('');

@@ -32,8 +32,8 @@ export function scanFoodDraft(hit: FoodHit, grams: number, type: FoodType): (Pic
   const c = s.c === undefined ? null : cleanDietGrams(s.c), f = s.f === undefined ? null : cleanDietGrams(s.f);
   const nums = { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}) };
   const n = (hit.brand ? `${hit.name} (${hit.brand})` : hit.name).replace(/\s+/g, ' ').trim().slice(0, 80);
-  // The ready-made food (a recipe) holds the four numbers only; the vitamins and minerals ride on the logged entry.
-  return { ...nums, ...withMicro(s.micro), recipe: { n, cat: 'ready', type, ing: [], steps: [], ...nums, note: `From a barcode scan: the numbers are for ${g} g.` } };
+  // The ready-made food (a recipe) keeps the amounts too (brief recipes-vitamins-minerals), so logging it again from Recipes carries them.
+  return { ...nums, ...withMicro(s.micro), recipe: { n, cat: 'ready', type, ing: [], steps: [], ...nums, ...withMicro(s.micro), note: `From a barcode scan: the numbers are for ${g} g.` } };
 }
 
 /** The ready-made food already saved under `name` (case-blind), or undefined: a product scanned again is logged under it instead of being saved twice. */

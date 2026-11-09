@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
+import { microKept } from '../../lib/foodMicroKept.js';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
 import { marksOf } from '../../lib/plate.js';
 import { usesOf } from '../../lib/recipeUses.js';
 import { readyMadeValues } from '../../lib/readyMade.js';
 import { planFill } from '../../lib/labelFill.js';
 import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
+import { withMicro } from '../../shared/foodMicro.js';
+import type { Micro } from '../../shared/foodMicro.js';
 import { MAX_RECIPE_NAME } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import FoodSearch, { type FoodFill } from '../diet/FoodSearch.js';
@@ -24,6 +27,9 @@ const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: Recipe; onDone: (savedId: string | null) => void; scanFirst?: boolean }) {
   const [n, setN] = useState(recipe?.n ?? '');
   const [kcal, setKcal] = useState(str(recipe?.kcal));
+  // Vitamins and minerals per serving (brief recipes-vitamins-minerals): never typed; they come with a lookup or a label scan and are kept only while calories are still the number they came with.
+  const [micro, setMicro] = useState<Micro | undefined>(recipe?.micro);
+  const [microKcal, setMicroKcal] = useState<number | undefined>(recipe?.kcal);
   const [protein, setProtein] = useState(str(recipe?.p));
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
@@ -44,7 +50,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []); // a scan that ends after Cancel changes nothing
   const fillFrom = (f: FoodFill) => {
     if (!n.trim()) setN(f.n);
-    setKcal(String(f.kcal)); setProtein(String(f.p)); setCarbs(str(f.c)); setFat(str(f.f)); setErr('');
+    setKcal(String(f.kcal)); setProtein(String(f.p)); setCarbs(str(f.c)); setFat(str(f.f)); setMicro(f.micro); setMicroKcal(f.kcal); setErr('');
   };
   // Scan label (brief label-photo-scan): fills the form from a photo, never saves. Only empty text boxes are kept, numbers are replaced because they come from the label.
   const scan = async (file: File | undefined) => {
@@ -56,7 +62,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     if (!r.ok) { setScanNote(SCAN_TEXT[r.reason]); return; }
     const plan = planFill(r.result, { n: '', note: '', pack: '' }); // what the label offers; a name or note typed while it was reading is kept below
     if (plan.n !== undefined) setN(cur => (cur.trim() ? cur : plan.n ?? ''));
-    if (plan.kcal !== undefined) { setKcal(plan.kcal); setProtein(plan.p ?? ''); setCarbs(plan.c ?? ''); setFat(plan.f ?? ''); setErr(''); }
+    if (plan.kcal !== undefined) { setKcal(plan.kcal); setProtein(plan.p ?? ''); setCarbs(plan.c ?? ''); setFat(plan.f ?? ''); setMicro(plan.micro); setMicroKcal(Number(plan.kcal)); setErr(''); }
     if (plan.note !== undefined) setNote(cur => (cur.trim() ? cur : plan.note ?? ''));
     if (plan.pack !== undefined) setPack(cur => (cur.trim() ? cur : plan.pack ?? ''));
     setScanNote(plan.message);
@@ -65,7 +71,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const save = () => {
     const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack, usual, unit, plural });
     if ('error' in v) { setErr(v.error); return; }
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ing: [], steps: [], ...v, note });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ing: [], steps: [], ...v, ...withMicro(microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, v.kcal)), note });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null);
