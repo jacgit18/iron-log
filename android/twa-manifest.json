@@ -34,6 +34,18 @@
       "shortName": "Daily",
       "url": "https://loadbearer.app/?open=daily",
       "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+    },
+    {
+      "name": "Progress",
+      "shortName": "Progress",
+      "url": "https://loadbearer.app/?open=progress",
+      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+    },
+    {
+      "name": "Nutrition",
+      "shortName": "Nutrition",
+      "url": "https://loadbearer.app/#/daily/nutrition",
+      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
     }
   ],
   "generatorApp": "bubblewrap-cli",
