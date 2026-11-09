@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogItem, Grocery, Recipe } from '../types.ts';
-import { LIBRARY_TABS, libraryEmptyNote, inLibraryTab, inMine, libraryHave } from './libraryRows.js';
+import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave } from './libraryRows.js';
 
 const item = (id: string, name: string, cat: Recipe['cat'], ing: string[]): CatalogItem => ({ id, name, data: { recipe: { cat, ing, steps: ['Cook.'] } } } as unknown as CatalogItem);
 const sauce = item('c:1', 'Salsa', 'sauces', ['tomato']), stew = item('c:2', 'Stew', 'protein', ['beef', 'carrot']), tea = item('c:3', 'Iced tea', 'drinks', ['tea']), cake = item('c:4', 'Cake', 'dessert', ['flour']);
