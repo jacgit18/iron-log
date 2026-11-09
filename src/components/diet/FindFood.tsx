@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
 import { findFoods, scaleFood, type Food } from '../../lib/foodMacros.js';
+import { foodTypeOf } from '../../lib/foodType.js';
+import { FOOD_TYPE_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import FoodSearch, { type FoodFill } from './FoodSearch.js';
+import FoodSearch, { type FoodFill, type ScanResume } from './FoodSearch.js';
 import './Diet.css';
 
 // "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one, set a portion, add it. Nothing is stored for this; it reads the log and the recipes.
 // The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
-export default function FindFood({ day, onAdded, onFood }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void }) {
+export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [q, setQ] = useState('');
@@ -29,7 +31,16 @@ export default function FindFood({ day, onAdded, onFood }: { day: string; onAdde
       </label>
       {found.length > 0 && (
         <ul className="dt-recents" aria-label="Matches">
-          {found.map(f => <li key={f.n}><button type="button" className="btn sm" onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{f.from ? ' (recipe)' : ''} · {entryText(f)}</button></li>)}
+          {found.map(f => {
+            const rec = f.from ? recipes.find(r => r.id === f.from) : undefined;
+            const type = rec ? foodTypeOf(rec) : null;
+            return (
+              <li key={f.n}>
+                <button type="button" className="btn sm" id={`dt-find-${f.from ?? f.n}`} onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
+                {rec && <button type="button" className="btn sm" aria-describedby={`dt-find-${rec.id}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: rec.id, day })}>Log</button>}
+              </li>
+            );
+          })}
         </ul>
       )}
       {q.trim() !== '' && !picked && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}
@@ -45,7 +56,7 @@ export default function FindFood({ day, onAdded, onFood }: { day: string; onAdde
           </div>
         </div>
       )}
-      {!picked && <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} />}
+      {!picked && <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />}
       {err && <p className="note" role="alert">{err}</p>}
     </div>
   );

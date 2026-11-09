@@ -55,6 +55,15 @@ export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f'>, servin
   return { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}) };
 }
 
+/** What "Ate this" and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
+export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
+  const nums = servingNumbers(r, servings);
+  if (!nums) return { error: 'Those numbers are out of range.' };
+  const bad = ateDayError(day, today);
+  if (bad) return { error: bad };
+  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id } };
+}
+
 /** The most portions Ate this, the planner and Find food offer. */
 export const PORTION_MAX = 10;
 

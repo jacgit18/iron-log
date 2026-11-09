@@ -66,7 +66,7 @@ describe('QA scenarios page', () => {
   describe('automation tags and recorded results (brief: qa-scenario-automation)', () => {
     it('builds with no vault access and shows an Automation line per scenario and a coverage line that adds up', () => {
       expect((doc.match(/^- \*\*Automation:\*\* /gm) ?? []).length).toBe(SCENARIOS.length);
-      const m = doc.match(/Automation: (\d+) e2e, (\d+) api, (\d+) manual, (\d+) untagged\./);
+      const m = doc.match(/Automation: (\d+) e2e, (\d+) api, (\d+) unit, (\d+) manual, (\d+) untagged\./);
       expect(m && m.slice(1).map(Number).reduce((a, b) => a + b, 0)).toBe(SCENARIOS.filter(s => !s.retired).length);
     });
 

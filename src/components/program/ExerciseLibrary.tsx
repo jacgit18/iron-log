@@ -32,7 +32,7 @@ export default function ExerciseLibrary() {
   return (
     <section className="panel edpanel exlib exlibwide">
       <div className="inline spread">
-        <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
+        <h2 id="exlib-h" tabIndex={-1}>Exercises</h2>
         <div className="inline">
           <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
         </div>

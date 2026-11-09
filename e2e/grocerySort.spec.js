@@ -22,9 +22,9 @@ const open = async (page, view) => { await page.click('#tab-daily'); await page.
 const rowNames = (page, sel) => page.locator(`${sel} .gtickname`).evaluateAll(els => els.map(e => e.firstChild.textContent));
 const sortBox = page => page.getByRole('combobox', { name: 'Sort' });
 
-test('At home: each option reorders, the choice survives a reload, and the stored list is untouched', async ({ page }) => {
+test('Inventory: each option reorders, the choice survives a reload, and the stored list is untouched', async ({ page }) => {
   await seed(page);
-  await open(page, 'home');
+  await open(page, 'inventory');
   expect(await rowNames(page, '.ghome')).toEqual(['Apples', 'Árbol chili', 'Bread', 'Eggs', 'Rice']);
   const stored = await page.evaluate(k => localStorage.getItem(k), KEYS.cat);
 
@@ -34,17 +34,17 @@ test('At home: each option reorders, the choice survives a reload, and the store
   expect(await rowNames(page, '.ghome')).toEqual(['Apples', 'Árbol chili', 'Bread', 'Eggs', 'Rice']); // Rice is ticked (have), so it goes last
 
   await page.reload();
-  await open(page, 'home');
+  await open(page, 'inventory');
   await expect(sortBox(page)).toHaveValue('open');
   expect(await page.evaluate(k => localStorage.getItem(k), KEYS.cat)).toBe(stored); // sorting wrote nothing
-  await expect(page.locator('#groc-view-get')).toBeVisible();
-  await page.click('#groc-view-get');
-  await expect(sortBox(page)).toHaveValue('name'); // To get remembers its own choice
+  await expect(page.locator('#groc-view-shopping')).toBeVisible();
+  await page.click('#groc-view-shopping');
+  await expect(sortBox(page)).toHaveValue('name'); // Shopping remembers its own choice
 });
 
 test('ticking a row that moves under Not ticked first keeps keyboard focus on its box', async ({ page }) => {
   await seed(page);
-  await open(page, 'home');
+  await open(page, 'inventory');
   await sortBox(page).selectOption('open');
   const box = page.locator('#groc-have-apple');
   await box.focus();
@@ -56,7 +56,7 @@ test('ticking a row that moves under Not ticked first keeps keyboard focus on it
 
 test('search finds part of a name ignoring case and accents, says when nothing matches, and clears cleanly', async ({ page }) => {
   await seed(page);
-  await open(page, 'home');
+  await open(page, 'inventory');
   const search = page.getByRole('searchbox', { name: 'Search groceries' });
   await search.fill('ARBOL');
   expect(await rowNames(page, '.ghome')).toEqual(['Árbol chili']);
@@ -68,9 +68,9 @@ test('search finds part of a name ignoring case and accents, says when nothing m
   await expect(page.locator('#groc-nomatch')).toHaveCount(0);
 });
 
-test('To get: price order and search apply to the shown list while the count stays for the whole month', async ({ page }) => {
+test('Shopping: price order and search apply to the shown list while the count stays for the whole month', async ({ page }) => {
   await seed(page);
-  await open(page, 'get');
+  await open(page, 'shopping');
   const names = () => page.locator('.gget .gnamebtn').evaluateAll(els => els.map(e => e.firstChild.textContent));
   expect(await names()).toEqual(['Apples', 'Árbol chili', 'Bread', 'Eggs']);
   await sortBox(page).selectOption('price');
@@ -79,7 +79,7 @@ test('To get: price order and search apply to the shown list while the count sta
   expect(await names()).toEqual(['Apples', 'Eggs', 'Bread']);
   await page.getByRole('searchbox', { name: 'Search groceries' }).fill('egg');
   expect(await names()).toEqual(['Eggs']);
-  await expect(page.locator('#groc-summary')).toContainText('Got 0 of 4'); // the tallies still see the whole month (Rice is had, so it is not on the list)
+  await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 4'); // the tallies still see the whole month (Rice is had, so it is not on the list)
 });
 
 test('a browser that blocks storage still shows A to Z and keeps working', async ({ page }) => {
@@ -90,7 +90,7 @@ test('a browser that blocks storage still shows A to Z and keeps working', async
   });
   await page.reload();
   await seed(page);
-  await open(page, 'home');
+  await open(page, 'inventory');
   await expect(sortBox(page)).toHaveValue('name');
   await sortBox(page).selectOption('price');
   await expect(sortBox(page)).toHaveValue('price');

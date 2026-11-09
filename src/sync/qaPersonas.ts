@@ -34,5 +34,7 @@ async function postSwitch(path: string, body: unknown): Promise<SwitchOutcome> {
 }
 
 export const switchPersona = (id: string) => postSwitch('/switch', { id });
-export const resetPersona = (id: string) => post('/reset', { id });
+/** The browser's own date goes with a reset so the seed's "today" is the person's today (server/qa/seedDay.ts). */
+const localToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+export const resetPersona = (id: string) => post('/reset', { id, today: localToday() });
 export const returnToAdmin = () => postSwitch('/return', {});

@@ -20,9 +20,15 @@ describe('QA scenario automation tags', () => {
     }
   });
 
-  it('kinds fit the file: e2e names e2e/ specs, api names server/ tests', () => {
+  it('names only e2e/, e2e-qa/, server/ or src/ files, and at least one that fits the kind (e2e, api, unit)', () => {
+    const own = { e2e: ['e2e/', 'e2e-qa/'], api: ['server/'], unit: ['src/'] } as const;
+    const all = Object.values(own).flat();
     for (const [id, a] of Object.entries(AUTOMATION)) {
-      for (const f of a.specs ?? []) expect(f.startsWith(a.auto === 'e2e' ? 'e2e/' : 'server/'), `${id} ${f}`).toBe(true);
+      for (const f of a.specs ?? []) expect(all.some(p => f.startsWith(p)), `${id} ${f}`).toBe(true);
+      if (a.auto !== 'manual') {
+        const prefixes: readonly string[] = own[a.auto];
+        expect((a.specs ?? []).some(f => prefixes.some(p => f.startsWith(p))), `${id} has no ${a.auto} spec`).toBe(true);
+      }
     }
   });
 
@@ -32,7 +38,14 @@ describe('QA scenario automation tags', () => {
 
   it('counts every scenario once, with untagged ones as their own class', () => {
     const c = coverageCounts(SCENARIOS.map(s => s.id));
-    expect(c.e2e + c.api + c.manual + c.untagged).toBe(SCENARIOS.length);
+    expect(c.e2e + c.api + c.unit + c.manual + c.untagged).toBe(SCENARIOS.length);
     expect(coverageCounts(['S-998']).untagged).toBe(1);
+  });
+
+  it('gives a partial note only to a tag that has specs', () => {
+    for (const [id, a] of Object.entries(AUTOMATION)) if (a.partial !== undefined) {
+      expect(a.auto, id).not.toBe('manual');
+      expect(a.partial.trim().length, id).toBeGreaterThan(10);
+    }
   });
 });

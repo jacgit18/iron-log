@@ -38,8 +38,8 @@ test('phone 390x844: every button, field and tab is at least 44x44 on each tab',
 for (const [name, clicks] of [
   ['Progress > Training trends', [['tab', 'Progress'], ['button', /Training trends/]]],
   ['Daily > Nutrition', [['tab', 'Daily'], ['button', 'Nutrition']]],
-  ['Program > Exercise library', [['tab', 'Program'], ['button', 'Exercise library']]],
-  ['Program > Stretch library', [['tab', 'Program'], ['button', 'Stretch library']]],
+  ['Program > Exercises', [['tab', 'Program'], ['button', 'Exercises']]],
+  ['Program > Stretches', [['tab', 'Program'], ['button', 'Stretches']]],
 ]) {
   test(`phone 390x844: ${name} has no target under 44px`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

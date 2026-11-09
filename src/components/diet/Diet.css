@@ -17,40 +17,11 @@
 .dt input {
   min-height: 44px;
 }
-.dt-meter {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr;
-  gap: var(--sp-4) var(--sp-8);
-  align-items: center;
-  margin: var(--sp-8) 0;
-}
-.dt-meter .bar {
-  width: 100%;
-}
-/* 1920 page cap: keep the target and the meters a readable width, with Set target beside them. */
+/* 1920 page cap: keep the target a readable width, with Set target beside it. */
 @media (min-width:1501px) {
-  .dt-targets,
-  .dt-meter {
+  .dt-targets {
     max-width: 1100px;
   }
-}
-.dt-mtext {
-  grid-column: 2;
-  font-size: var(--fs-md);
-  color: var(--muted);
-}
-.dt-list {
-  list-style: none;
-  margin: var(--sp-8) 0;
-  padding: 0;
-}
-.dt-entry {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-8);
-  padding: var(--sp-6) 0;
-  border-top: 1px solid var(--line);
 }
 .dt-name {
   flex: 1 1 8rem;
@@ -112,44 +83,7 @@
 }
 .dt-recents .btn,
 .dt-meals .btn,
-.dt-copy .btn,
-.dt-plan .btn {
-  min-height: 44px;
-}
-/* The meal planner: its own week strip, not the shared day-tab rules. */
-.dt-plan {
-  margin: var(--sp-8) 0;
-}
-.dt-weeknav,
-.dt-planshop {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-  margin: var(--sp-8) 0;
-}
-.dt-strip {
-  list-style: none;
-  padding: 0;
-  margin: var(--sp-8) 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-6);
-}
-.dt-strip .btn[aria-pressed="true"] {
-  background: var(--accent-fill);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
-.dt-planlist {
-  list-style: none;
-  padding: 0;
-  margin: var(--sp-8) 0;
-}
-.dt-planrow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-8);
+.dt-copy .btn {
   min-height: 44px;
 }
 /* Saved meals: Manage turns each button into a row with Rename and Delete. */
@@ -207,20 +141,35 @@
   height: 24px;
   flex: none;
 }
-.dt-oneoff-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-}
-.dt-oneoff-head .btn {
-  min-height: 44px;
-}
 /* Sort pill and its one-line honesty note above the food search results. */
 .dt-sortrow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-8);
+}
+/* Recent and favorites, the scan step and the portion sheet (brief nutrition-quick-log). */
+.dt-quick {
+  margin: var(--sp-8) 0;
+}
+.dt-recents .dt-fav {
+  border-color: var(--accent);
+}
+.dt-quick .btn,
+.portionsheet .btn {
+  min-height: 44px;
+}
+.portionsheet .actions {
+  margin-top: var(--sp-12);
+}
+.dt-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.dt-pair .btn {
+  min-height: 44px;
 }
 }

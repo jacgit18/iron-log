@@ -1,0 +1,14 @@
+@layer base, components;
+@layer components {
+/* The one-line card at the top of the Inventory rail (the rail itself is GroceryRail.css). */
+.ginvhave {
+  margin: 0;
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+}

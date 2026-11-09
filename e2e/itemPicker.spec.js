@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
+import { closeSupplementEditor, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // The exercise picker in the add sheets (ADR 036): your library, the catalog when syncing, a create row. The API is scripted, as in
 // sync.spec.js: the account has Program A with one Lat Pulldown card.
@@ -39,7 +40,7 @@ async function openSynced(page, catalogAnswer = byKind) {
 const openAdd = async page => { await page.click('#tab-program'); await page.getByRole('button', { name: '+ Add exercise', exact: true }).click(); };
 const field = page => page.getByRole('dialog').getByRole('combobox', { name: 'Exercise' });
 const libraryNames = async page => {
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   return page.locator('.exlib .exrow .exmain b').allTextContents();
 };
 
@@ -138,7 +139,7 @@ test('after the catalog fails to load, Try again asks again and shows it (the fa
 test('a new stretch picked from the catalog is saved with its group and the routine chosen in the sheet', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.getByRole('button', { name: 'Stretches', exact: true }).click();
   await page.click('#slib-new');
   const name = page.getByRole('dialog').getByRole('combobox', { name: 'Name' });
   await name.fill('calf');
@@ -158,7 +159,7 @@ test('a new stretch picked from the catalog is saved with its group and the rout
 test('typing a stretch you already have offers it, and picking it opens that stretch instead of a second one', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.getByRole('button', { name: 'Stretches', exact: true }).click();
   await page.click('#slib-new');
   await page.getByRole('dialog').getByRole('combobox', { name: 'Name' }).fill('scare');
   await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Scarecrow/ }).click();
@@ -195,7 +196,7 @@ const openSupplements = async (page, answer = search()) => {
   await page.route('**/api/catalog/search?*', answer);
   await openSynced(page);
   await page.click('#tab-daily'); await page.click('#daily-supplements');
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
 };
 const morningName = page => page.getByRole('combobox', { name: 'Add to Morning' });
 
@@ -236,7 +237,7 @@ test('Supplements tab: a slow answer to an older search never replaces the newer
 test('Exercise library: the search shows catalog matches, Add moves one into your library, and Browse catalog is gone', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Browse catalog' })).toHaveCount(0);
   await page.locator('.exlib').getByRole('searchbox').fill('cable');
   const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
@@ -252,7 +253,7 @@ test('Exercise library: the search shows catalog matches, Add moves one into you
 test('Supplement library: the search asks the server and Add keeps it Library only', async ({ page }) => {
   await page.route('**/api/catalog/search?*', search());
   await openSynced(page);
-  await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.click('#sched-edit');
+  await page.click('#tab-daily'); await page.click('#daily-supplements'); await openSupplementEditor(page);
   await page.locator('.exlib').getByRole('searchbox').fill('kaged');
   const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
   await fromCatalog.getByRole('button', { name: 'Add Creatine HCl by Kaged from the catalog' }).click();
@@ -261,16 +262,16 @@ test('Supplement library: the search asks the server and Add keeps it Library on
   await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
 });
 
-test('the Supplement library is under Edit on Daily → Supplements, not on the Program tab', async ({ page }) => {
+test('the Supplement library is in Manage on Daily → Nutrition, not on the Program tab', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button')).toHaveText(['Programs', 'Exercise library', 'Stretch library']);
+  await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button').locator('b')).toHaveText(['Programs', 'Exercises', 'Stretches', 'Saved', 'Compare']);
   await page.click('#tab-daily'); await page.click('#daily-supplements');
   await expect(page.locator('#suplib-h')).toHaveCount(0);
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
   await expect(page.locator('#suplib-h')).toHaveText('Supplement library');
   await expect(page.locator('.exlib .exrow').filter({ hasText: 'Fish Oil' })).toHaveCount(1); // a Library only one is listed
-  await page.click('#sched-edit');
+  await closeSupplementEditor(page);
   await expect(page.locator('#suplib-h')).toHaveCount(0);
 });
 
@@ -287,7 +288,7 @@ test('Supplements tab: while a new search runs, the last answer is filtered by t
 test('Stretch library: the search shows catalog matches, and the empty note points to them', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.getByRole('button', { name: 'Stretches', exact: true }).click();
   await page.locator('.exlib').getByRole('searchbox').fill('calf');
   await expect(page.getByText('None of yours match. Add one from the catalog below, or with + New stretch.')).toBeVisible();
   const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
@@ -306,7 +307,7 @@ test('a built-in your program uses counts as yours: the catalog never offers a s
   await expect(page.getByRole('dialog').getByText('New exercise. It will be added to your exercise list.')).toHaveCount(0);
   await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Equipment' })).toHaveValue('cable');
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await page.locator('.exlib').getByRole('searchbox').fill('lat pulldown');
   await expect(page.getByRole('region', { name: 'From the catalog' }).getByText('No exercises in the catalog match that, or you have them all.')).toBeVisible();
 });
@@ -314,7 +315,7 @@ test('a built-in your program uses counts as yours: the catalog never offers a s
 test('a catalog exercise whose muscles you changed can get the catalog muscles back', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await page.locator('.exlib').getByRole('searchbox').fill('cable fly');
   await page.getByRole('region', { name: 'From the catalog' }).getByRole('button', { name: 'Add Cable Fly from the catalog' }).click();
   const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Cable Fly' });
@@ -337,7 +338,7 @@ test('a catalog exercise whose muscles you changed can get the catalog muscles b
 test('Use catalog muscles says so when the catalog lists none, and a chip tap clears its note', async ({ page }) => {
   await openSynced(page);
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await page.locator('.exlib').getByRole('searchbox').fill('hammer row');
   await page.getByRole('region', { name: 'From the catalog' }).getByRole('button', { name: 'Add Hammer Row Test from the catalog' }).click();
   await page.getByRole('button', { name: 'Edit Hammer Row Test' }).click();

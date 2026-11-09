@@ -247,11 +247,11 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/billing', rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
-  // Barcode lookup (brief barcode-scan): admin-only, so it is mounted before the everyone prefix it sits under; same per-user limit as typed search.
-  if (db) app.use('/api/foods/barcode', requireAdmin, rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
+  // Barcode lookup (brief barcode-scan): for everyone who is signed in (no AI, no per-use cost), mounted before the /api/foods prefix it sits under; same per-user limit as typed search.
+  if (db) app.use('/api/foods/barcode', rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
-  // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
-  if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
+  // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): everyone signed in (owner, 2026-11-08), per-user limit and daily caps in scan.ts; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
+  if (db) app.use('/api/scan', rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
   // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
   if (db) app.use('/api/receipts', requireAdmin, rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));

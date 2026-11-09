@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe, newMenuVisible } from './recipesNav.js';
 
 // Progress here is the hub with drill-in pages, which is what a window under 1280px shows (progressOnePage.spec.js covers the wide page).
 test.use({ viewport: { width: 1100, height: 900 } });
@@ -60,10 +61,10 @@ test('a tab switch from an open page: Back returns to that page, address include
 
 test('the Program view is in the address and swaps in place', async ({ page }) => {
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library' }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect.poll(() => hash(page)).toBe('#/program/exercises');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Exercise library' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Exercises', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Programs' }).click();
   await expect.poll(() => hash(page)).toMatch(/^#\/program\/[ab]$/); // the program shown has its own address (e2e/boardUrls.spec.js)
 });
@@ -72,23 +73,26 @@ test('the Daily section and the Grocery view are in the address', async ({ page 
   await page.click('#tab-daily');
   await page.click('#daily-grocery');
   await expect.poll(() => hash(page)).toMatch(/^#\/daily\/grocery/);
-  await page.click('#groc-view-spend');
-  await expect.poll(() => hash(page)).toBe('#/daily/grocery/spend');
+  await page.click('#groc-view-bought');
+  await expect.poll(() => hash(page)).toBe('#/daily/grocery/bought');
+  await page.click('#groc-bought-history');
+  await expect.poll(() => hash(page)).toBe('#/daily/grocery/bought/history');
   await page.reload();
-  await expect(page.locator('#groc-view-spend')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#groc-view-bought')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#groc-bought-history')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('a recipe form adds a Back step; a reload on it shows the list', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await expect.poll(() => hash(page)).toBe('#/daily/recipes/form');
   await page.goBack();
-  await expect(page.getByRole('button', { name: 'New recipe' })).toBeVisible();
+  await newMenuVisible(page);
   expect(await hash(page)).toBe('#/daily/recipes');
   await page.goForward();
   await page.reload(); // the recipe itself is not in the address, so there is nothing to show but the list
-  await expect(page.getByRole('button', { name: 'New recipe' })).toBeVisible();
+  await newMenuVisible(page);
   await expect.poll(() => hash(page)).toBe('#/daily/recipes');
 });
 

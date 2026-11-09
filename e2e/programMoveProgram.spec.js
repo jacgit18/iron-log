@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-const openDay = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: `Day ${n}`, exact: true }).click(); };
+const openDay = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: new RegExp(`^Day ${n}`) }).click(); };
 const names = page => page.locator('.edpanel:not(.lib) .edrow .edmain b').allTextContents();
 const firstRow = page => page.locator('.edpanel:not(.lib) .edrow').first();
 const sheet = page => page.getByRole('dialog');
@@ -39,7 +39,7 @@ test('Undo puts the card back in Program A, and Program B loses it', async ({ pa
   await page.getByRole('status').filter({ hasText: 'Moved' }).getByRole('button', { name: 'Undo' }).click();
   expect(await names(page)).toEqual(before);
   await page.getByRole('group', { name: 'Program to edit' }).getByRole('button', { name: 'Program B' }).click();
-  await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: 'Day 2', exact: true }).click();
+  await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: /^Day 2/ }).click();
   expect(await names(page)).not.toContain(before[0]);
 });
 

@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // Servings scale a recipe's amounts (brief recipe-servings-scaling). Every amount shape is a node test (recipeScale.test.ts); this covers
 // the wiring: the Servings field rewriting the amount fields, the note, what Save keeps, and the view-only "Scale for tonight" stepper.
@@ -14,7 +15,7 @@ const expectAmount = (page, i, text) => expect(amountBtn(page, i)).toHaveText(te
 // A recipe saved with no servings, opened to change: the case where entering Servings only says what the amounts are for.
 const soupWithoutServings = async page => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Servings', { exact: true }).fill('');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
@@ -24,7 +25,7 @@ const soupWithoutServings = async page => {
 };
 const make = async page => {
   await open(page);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Pancakes');
   await page.getByLabel('Servings', { exact: true }).fill('4');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('flour');
@@ -45,7 +46,7 @@ test('changing Servings rewrites the amounts, and Save keeps the new amounts', a
   await expect(page.getByText('Other · 8 servings')).toBeVisible();
   await page.reload();
   await open(page);
-  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('4 cups flour')).toBeVisible();
 });
 
@@ -92,7 +93,7 @@ test('Scale for tonight changes the amounts shown and saves nothing', async ({ p
   await expect(page.getByText('2 cups flour')).toBeVisible();
   await page.getByRole('button', { name: 'More servings' }).click();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
-  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expectAmount(page, 0, '2 cups');

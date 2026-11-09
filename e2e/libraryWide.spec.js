@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 
 // What a unit test cannot catch: the Exercise library is a CSS grid of two columns from 1280px (and one column below), so it needs a real layout.
 // The Stretch library shares the .exlib class and must stay as it is; DOM order stays the same at every width.
-const open = async (page, name = 'Exercise library') => { await page.goto('/#/program'); await page.getByRole('button', { name, exact: true }).click(); await expect(page.locator('.exlib .exrow').first()).toBeVisible(); };
+const open = async (page, name = 'Exercises') => { await page.goto('/#/program'); await page.getByRole('button', { name, exact: true }).click(); await expect(page.locator('.exlib .exrow').first()).toBeVisible(); };
 const cols = page => page.evaluate(() => {
   const rows = [...document.querySelectorAll('.exlib .exrow')].map(r => r.getBoundingClientRect());
   const panel = document.querySelector('.exlib').getBoundingClientRect();
@@ -50,7 +50,7 @@ test('at 1920px the page is about half as tall in two columns as in one', async 
 
 test('Stretch library: two columns from 1280px with the group headings full width, one column at 1279px', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await open(page, 'Stretch library');
+  await open(page, 'Stretches');
   const c = await cols(page);
   expect(c.xs).toHaveLength(2);
   expect(c.panel.w).toBeGreaterThan(1800);

@@ -1,0 +1,15 @@
+@layer base, components;
+@layer components {
+/* The One-time item box in an item's Edit row (brief quickadd-one-time-items). */
+.gonetime {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+.gonetime .note {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+}

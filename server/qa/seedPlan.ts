@@ -10,7 +10,7 @@ export interface SeedLog { clientId: string; exerciseId: string; d: string; wk: 
 export interface SeedBody { wk: string; d: string; weightLb: number }
 export interface SeedGrocery { clientId: string; position: number; data: { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean } }
 export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number } }
-export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f: number } }
+export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f: number; pairs?: string[]; counts?: string[] } }
 export interface PersonaRows {
   dietEntries: SeedDiet[];
   recipes: SeedRecipe[];
@@ -152,7 +152,18 @@ function buildRecipes(persona: Persona): SeedRecipe[] {
       kcal: 250 + Math.floor(rand() * 40) * 10, p: 12 + Math.floor(rand() * 30), c: 20 + Math.floor(rand() * 50), f: 5 + Math.floor(rand() * 25),
     } });
   }
-  return out;
+  return withPairing(out);
+}
+
+/** Goes with and Counts as for the accounts with enough recipes (briefs recipes-goes-with, week-board): Chicken and rice bowl and Baked salmon each go with Tuna salad (a side, so Veg), stored on both, and Lentil soup counts as Protein and Carb by hand. A QA tester then has a pairing and a hand-set Counts as to start from. */
+function withPairing(list: SeedRecipe[]): SeedRecipe[] {
+  const by = (n: string) => list.find(r => r.data.n === n);
+  const bowl = by('Chicken and rice bowl'), salmon = by('Baked salmon'), tuna = by('Tuna salad'), soup = by('Lentil soup');
+  if (!bowl || !salmon || !tuna) return list;
+  const link = (a: SeedRecipe, ids: string[]) => { a.data.pairs = ids; };
+  link(bowl, [tuna.data.id]); link(salmon, [tuna.data.id]); link(tuna, [bowl.data.id, salmon.data.id]);
+  if (soup) soup.data.counts = ['protein', 'carb'];
+  return list;
 }
 
 /** The settings document: the exercises the programs use (so the library lists them: a synced account lists only cfg.ex, ADR 024), the diet targets, saved meals and the plan (which uses the saved meals and the first recipe of each day). */
@@ -162,7 +173,10 @@ function buildConfig(persona: Persona, today: Date, recipes: SeedRecipe[], exerc
   if (spec.diet?.targets) Object.assign(diet, DIET_TARGETS, { pace: 'steady' });
   const meals = MEALS.slice(0, spec.meals ?? 0).map((m, i) => ({
     id: `qa-${persona.id}-m${i + 1}`, n: m.n,
-    items: m.items.map(it => ({ n: it.n, kcal: Math.round(DIET_TARGETS.kcal * it.share), p: Math.round(DIET_TARGETS.protein * it.share), c: Math.round(DIET_TARGETS.carbs * it.share), f: Math.round(DIET_TARGETS.fat * it.share) })),
+    // "Usual breakfast" is made of the account's first two recipes when it has them (each food from its recipe, same numbers), so the move into Recipes links it; every other meal is hand-typed foods and moves with its saved totals.
+    items: m.n === 'Usual breakfast' && recipes.length >= 2
+      ? recipes.slice(0, 2).map(r => ({ n: r.data.n, kcal: r.data.kcal, p: r.data.p, c: r.data.c, f: r.data.f, from: r.data.id }))
+      : m.items.map(it => ({ n: it.n, kcal: Math.round(DIET_TARGETS.kcal * it.share), p: Math.round(DIET_TARGETS.protein * it.share), c: Math.round(DIET_TARGETS.carbs * it.share), f: Math.round(DIET_TARGETS.fat * it.share) })),
   }));
   if (meals.length) diet.meals = meals;
   const plan: Record<string, unknown[]> = {};

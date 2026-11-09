@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
-import { ateDayError, ateMax, barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, packServings, PORTION_MAX, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
+import { ateDayError, ateEntry, ateMax, barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, packServings, PORTION_MAX, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
 
 const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string, cf?: [number, number]): DietEntry => ({ id, d, n, kcal, p, ...(cf ? { c: cf[0], f: cf[1] } : {}), ...(from ? { from } : {}) });
 const list = [e('a', '2026-10-29', 'Rice', 200, 4), e('b', '2026-10-29', 'Chili', 600, 40.5, 'r1'), e('c', '2026-10-28', 'Eggs', 150, 12)];
@@ -138,5 +138,23 @@ describe('whole pack (ready-made foods)', () => {
   });
   it('multiplies the per-serving numbers by the whole pack', () => {
     expect(servingNumbers({ kcal: 210, p: 6, c: 40, f: 1 }, 12)).toEqual({ kcal: 2520, p: 72, c: 480, f: 12 });
+  });
+});
+
+describe('ateEntry (shared by Ate this and the portion sheet)', () => {
+  const r = { id: 'r1', n: 'Egg', kcal: 70, p: 6, c: 0.5, f: 5 };
+  const today = '2026-11-07';
+  it('logs exactly the numbers servingNumbers gives, with the recipe id', () => {
+    const out = ateEntry(r, 3, today, today);
+    expect(out).toEqual({ entry: { d: today, n: 'Egg', ...servingNumbers(r, 3)!, from: 'r1' } });
+  });
+  it('accepts a past day, refuses a future or too-old day with the usual wording', () => {
+    expect('entry' in ateEntry(r, 1, '2026-11-01', today)).toBe(true);
+    expect(ateEntry(r, 1, '2026-11-08', today)).toEqual({ error: ateDayError('2026-11-08', today) });
+    expect(ateEntry(r, 1, oldestDay(today).replace(/\d\d$/, d => String(Number(d) - 1).padStart(2, '0')), today)).toHaveProperty('error');
+  });
+  it('refuses numbers out of range and food without numbers', () => {
+    expect(ateEntry({ ...r, kcal: 9000 }, 10, today, today)).toEqual({ error: 'Those numbers are out of range.' });
+    expect(ateEntry({ id: 'x', n: 'Nothing' }, 1, today, today)).toEqual({ error: 'Those numbers are out of range.' });
   });
 });

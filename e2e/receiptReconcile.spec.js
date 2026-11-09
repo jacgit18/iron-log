@@ -14,7 +14,7 @@ const seed = async (page, lines, list = items, stores = ["BJ's"]) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines, pulled: [] }));
   }, { lines, items: list, stores });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping');
 };
 const answer = (page, lines, store) => page.route('**/api/scan/receipt', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'ok', receipt: { ...(store ? { store } : {}), date: '2026-09-10', lines } } }) }));
 const month = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09') ?? '{"lines":{}}').lines);
@@ -43,19 +43,19 @@ test('a ticked item shows what the list has and what the receipt says; an untick
   expect((await month(page)).almonds).toBeUndefined();
 });
 
-test('a ticked item the receipt does not show is listed and kept; Untick unticks it on Apply and Undo ticks it back with its price', async ({ page }) => {
+test('a ticked item the receipt does not show is listed and stays bought; Move back to Shopping unticks it on Apply and Undo ticks it back with its price', async ({ page }) => {
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs'), line('ROTISSERIE CHKN', 499, 'chick')]);
   const sheet = await scan(page);
-  const miss = sheet.getByRole('group', { name: 'Ticked, not on this receipt' });
+  const miss = sheet.getByRole('group', { name: 'Already bought, not on this receipt' });
+  await miss.getByText(/^Review these/).click(); // the rows are folded until opened
   await expect(miss.getByText('Milk')).toBeVisible();
-  await expect(miss.getByText('Ticked now: 1 × $3.79')).toBeVisible();
-  await expect(miss.getByText('Kept')).toBeVisible();
-  await miss.getByLabel('Untick Milk').check();
-  await expect(miss.getByText('Will be unticked')).toBeVisible();
-  await expect(sheet.getByText('1 will be unticked.')).toBeVisible();
+  await expect(miss.getByText('Bought: 1 × $3.79')).toBeVisible();
+  await miss.getByLabel('Move back to Shopping: Milk').check();
+  await expect(miss.getByText('Will move back to Shopping')).toBeVisible();
+  await expect(sheet.getByText('1 will move back to Shopping.')).toBeVisible();
   await sheet.getByRole('button', { name: 'Apply 2 items' }).click();
-  await expect(page.getByText('1 item unticked.')).toBeVisible();
+  await expect(page.getByText('1 item moved back to Shopping.')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();
   await page.getByRole('button', { name: 'Undo' }).click();
   expect((await month(page)).milk).toEqual({ got: true, qty: 1, cents: 379 });
@@ -65,7 +65,8 @@ test('leaving a ticked item unticked-by-choice alone writes nothing for it, and 
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs'), line('ROTISSERIE CHKN', 499, 'chick')]);
   const sheet = await scan(page);
-  const miss = sheet.getByRole('group', { name: 'Ticked, not on this receipt' });
+  const miss = sheet.getByRole('group', { name: 'Already bought, not on this receipt' });
+  await miss.getByText(/^Review these/).click(); // the rows are folded until opened
   await expect(miss.getByText('Eggs')).toHaveCount(0);
   await sheet.getByLabel('Include ORG EGGS 18CT').uncheck();
   await expect(miss.getByText('Eggs')).toBeVisible();
@@ -80,18 +81,38 @@ test('with the receipt\'s store known, a ticked item counted at another store is
   await seed(page, { eggs: { got: true, qty: 1 }, milk: { got: true, qty: 1, cents: 379 }, almonds: { got: true, qty: 1, cents: 1199 } }, list, ["BJ's", 'Aldi']);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs')], "BJ'S");
   const sheet = await scan(page);
-  const miss = sheet.getByRole('group', { name: 'Ticked, not on this receipt' });
+  const miss = sheet.getByRole('group', { name: 'Already bought, not on this receipt' });
+  await miss.getByText(/^Review these/).click(); // the rows are folded until opened
   await expect(miss.getByText('Almonds')).toBeVisible();
   await expect(miss.getByText('Milk')).toHaveCount(0);
 });
 
-test('with only an Untick chosen, the button says Untick and the notice says what was unticked', async ({ page }) => {
+test('with only a Move back chosen, the button says Move 1 item back to Shopping and the notice says what was moved', async ({ page }) => {
   await seed(page, ticked);
   await answer(page, [line('ORG EGGS 18CT', 899, 'eggs')]);
   const sheet = await scan(page);
   await sheet.getByLabel('Include ORG EGGS 18CT').uncheck();
-  await sheet.getByRole('group', { name: 'Ticked, not on this receipt' }).getByLabel('Untick Milk').check();
-  await sheet.getByRole('button', { name: 'Untick 1 item' }).click();
-  await expect(page.getByText('Unticked 1 item for')).toBeVisible();
+  const missing = sheet.getByRole('group', { name: 'Already bought, not on this receipt' });
+  await missing.getByText(/^Review these/).click();
+  await missing.getByLabel('Move back to Shopping: Milk').check();
+  await sheet.getByRole('button', { name: 'Move 1 item back to Shopping' }).click();
+  await expect(page.getByText('Moved 1 item back to Shopping for')).toBeVisible();
   expect((await month(page)).milk?.got).toBeUndefined();
+});
+
+test('a second receipt at the same store does not list the items the first receipt ticked, but does list one ticked by hand', async ({ page }) => {
+  await seed(page, { milk: ticked.milk });
+  await answer(page, [line('ORG EGGS 18CT', 899, 'eggs'), line('ROTISSERIE CHKN', 499, 'chick')]);
+  await (await scan(page)).getByRole('button', { name: 'Apply 2 items' }).click();
+  expect((await month(page)).eggs.rc).toBe(true);
+  expect((await month(page)).milk.rc).toBeUndefined(); // ticked by hand
+  await answer(page, [line('ALMONDS 3LB', 1249, 'almonds')]);
+  const sheet = await scan(page);
+  await expect(sheet.getByText('2 items from an earlier receipt are not listed.')).toBeVisible();
+  const miss = sheet.getByRole('group', { name: 'Already bought, not on this receipt' });
+  await miss.getByText(/^Review these 1 item/).click();
+  await expect(miss.getByText('Milk')).toBeVisible();
+  await expect(miss.getByText('Eggs')).toHaveCount(0);
+  await expect(miss.getByText('Rotisserie chicken')).toHaveCount(0);
+  await expect(sheet.getByText(/Is this the right one/)).toHaveCount(0);
 });

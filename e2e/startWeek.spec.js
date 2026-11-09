@@ -8,7 +8,7 @@ test('the Program editor tags a card that starts in a later week, and the board 
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   const row = page.locator('.edpanel:not(.lib) .edrow', { hasText: 'Farmer Carry Test' });
   await expect(row).toBeVisible();
-  await expect(row.locator('.tag')).not.toContainText('Starts'); // added to a day that is not finished: starts this week
+  await expect(row).not.toContainText('Starts'); // added to a day that is not finished: starts this week
   await page.click('#tab-board');
   await expect(page.getByRole('heading', { name: 'Farmer Carry Test' })).toHaveCount(1);
   await page.click('#tab-program');
@@ -20,7 +20,7 @@ test('the Program editor tags a card that starts in a later week, and the board 
     localStorage.setItem(k, JSON.stringify(p));
   });
   await page.reload(); await page.click('#tab-program');
-  await expect(row.locator('.tag')).toContainText('Starts Sep 27');
+  await expect(row).toContainText('Starts Sep 27');
   await page.click('#tab-board');
   await expect(page.getByRole('heading', { name: 'Farmer Carry Test' })).toHaveCount(0);
 });

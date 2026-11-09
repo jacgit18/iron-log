@@ -1,30 +1,36 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The Program editor's day control: a stepper (previous, a picker of the seven days, next) everywhere, plus Day buttons to jump on a wide screen only.
+// The Program editor's day control: on a phone a stepper (previous, a picker of the seven days, next); on a wide screen one row of day tabs with each day's exercise count
+// (brief program-tab-desktop-layout).
 const stepper = page => page.getByRole('group', { name: 'Day stepper' });
 const pick = page => page.getByRole('combobox', { name: 'Day to edit' });
 const heading = page => page.locator('#ed-title');
 
-test('the stepper and the picker change the day; the ends are disabled', async ({ page }) => {
-  await page.click('#tab-program');
-  await expect(stepper(page).getByRole('button', { name: 'Previous day' })).toBeDisabled();
-  await stepper(page).getByRole('button', { name: 'Next day' }).click();
-  await expect(heading(page)).toContainText('Day 2');
-  await pick(page).selectOption('7');
-  await expect(heading(page)).toContainText('Day 7');
-  await expect(stepper(page).getByRole('button', { name: 'Next day' })).toBeDisabled();
+test.describe('on a phone, the stepper changes the day', () => {
+  test.use({ viewport: { width: 375, height: 800 }, hasTouch: true, isMobile: true });
+  test('the stepper and the picker change the day; the ends are disabled', async ({ page }) => {
+    await page.click('#tab-program');
+    await expect(stepper(page).getByRole('button', { name: 'Previous day' })).toBeDisabled();
+    await stepper(page).getByRole('button', { name: 'Next day' }).click();
+    await expect(heading(page)).toContainText('Day 2');
+    await pick(page).selectOption('7');
+    await expect(heading(page)).toContainText('Day 7');
+    await expect(stepper(page).getByRole('button', { name: 'Next day' })).toBeDisabled();
+  });
 });
 
-test('on a wide screen the Day buttons jump to a day, are centred, and show no count', async ({ page }) => {
+test('on a wide screen the day tabs jump to a day, are centred, show the exercise count, and there is no stepper', async ({ page }) => {
   await page.click('#tab-program');
   const jump = page.getByRole('group', { name: 'Jump to day' });
-  await jump.getByRole('button', { name: 'Day 5', exact: true }).click();
+  await jump.getByRole('button', { name: /^Day 5/ }).click();
   await expect(heading(page)).toContainText('Day 5');
-  await expect(pick(page)).toHaveValue('5');
-  const b = jump.getByRole('button', { name: 'Day 5', exact: true });
-  await expect(b).toHaveText('Day 5');
+  const b = jump.getByRole('button', { name: /^Day 5/ });
+  await expect(b).toHaveAttribute('aria-pressed', 'true');
+  await expect(b).toContainText(/\d+ exercises?|rest/);
   expect(await b.evaluate(el => getComputedStyle(el).textAlign)).toBe('center');
+  await expect(stepper(page)).toHaveCount(0);
+  await expect(pick(page)).toHaveCount(0);
 });
 
 test.describe('on a phone', () => {
@@ -40,11 +46,13 @@ test.describe('on a phone', () => {
   });
 });
 
-test('on a wide screen the Day buttons sit under the stepper, not beside it', async ({ page }) => {
+test('on a wide screen the day tabs are one row under the header card, starting at the page edge', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.click('#tab-program');
-  const s = await stepper(page).boundingBox();
-  const d = await page.getByRole('group', { name: 'Jump to day' }).boundingBox();
-  expect(d.y).toBeGreaterThanOrEqual(s.y + s.height); // below it, even when the row has room for both
-  expect(d.x).toBeLessThanOrEqual(s.x + 2); // starting at the same left edge
+  const tabs = await page.getByRole('group', { name: 'Jump to day' }).boundingBox();
+  const head = await page.locator('.proghead').boundingBox();
+  expect(tabs.y).toBeGreaterThanOrEqual(head.y + head.height);
+  expect(Math.abs(tabs.x - head.x)).toBeLessThanOrEqual(2);
+  const rows = await page.locator('.dtabs button').evaluateAll(bs => new Set(bs.map(b => Math.round(b.getBoundingClientRect().top))).size);
+  expect(rows).toBe(1);
 });

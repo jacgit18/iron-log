@@ -1,8 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The split card may sit folded at the bottom of To get (a separate change); open it when it does, so this spec reads the card either way.
-const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+// The split card may sit folded at the bottom of Shopping (a separate change); open it when it does, so this spec reads the card either way.
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes), so opening it goes there first.
+const openSplit = async page => { await page.click('#groc-view-bought'); const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
 
 // The split card's settled marks (ADR 062): every owed row can be marked paid (or sent) once the money has moved outside the app; amounts never change.
 // The fixed date is in September 2026, so the month below is 2026-09. $24.99 of toilet paper at BJ's, split three ways: $8.33 each (your share is $8.33 too).
@@ -20,7 +21,7 @@ const seed = async page => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
 };
-const split = page => page.getByRole('region', { name: 'Splitting this month' });
+const split = page => page.getByRole('region', { name: 'Who owes who' });
 const tile = (page, name) => split(page).getByText(name, { exact: true }).locator('xpath=following-sibling::dd');
 const row = (page, text) => split(page).locator('.gsplitrows li', { hasText: text });
 const btn = (page, name) => split(page).getByRole('button', { name: new RegExp(`^${name}:`) });
@@ -76,7 +77,7 @@ test('the card with marks has no accessibility violations in both themes, and at
 
 test('the line under the store says what is still owed, and Settled once every row is marked', async ({ page }) => {
   await seed(page);
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought'); await openSplit(page); // the split card folds again when the view changes
   const line = page.locator('.gstoremoney');
   await expect(line).toHaveText('Bought $24.99 · Your share $8.33 · Owed to you $8.33');
   await btn(page, 'Mark paid').click();

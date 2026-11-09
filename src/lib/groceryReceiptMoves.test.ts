@@ -23,6 +23,13 @@ describe('planReceipt moves', () => {
     expect(p.moves.map(m => [m.id, m.from, m.usual, m.to])).toEqual([['eggs', 'Aldi', 'Aldi', "BJ's"], ['oil', '', '', "BJ's"], ['milk', 'Aldi', 'Aldi', "BJ's"]]);
     expect(p.makeUsual).toBe(false);
   });
+  it('the usual-store box is on by default only when every moved item has no usual store, and a choice wins', () => {
+    const onlyOil: Choice[] = [{ itemId: null, include: false }, { itemId: 'oil', include: true }, { itemId: null, include: false }, { itemId: null, include: false }];
+    expect(planReceipt(receipt, onlyOil, items, null, [], where({ makeUsual: null })).makeUsual).toBe(true);
+    expect(planReceipt(receipt, all, items, null, [], where({ makeUsual: null })).makeUsual).toBe(false);
+    expect(planReceipt(receipt, onlyOil, items, null, [], where({ makeUsual: false })).makeUsual).toBe(false);
+    expect(planReceipt(receipt, onlyOil, items, null, [], where({ at: null, makeUsual: null })).makeUsual).toBe(false);
+  });
   it('has no moves when no store is known, and leaves out unticked and unmatched lines', () => {
     expect(planReceipt(receipt, all, items, null, [], where({ at: null })).moves).toEqual([]);
     expect(planReceipt(receipt, all, items, null).moves).toEqual([]);

@@ -4,6 +4,8 @@ import type { Receipt, ReceiptLine, ReceiptUnit } from '../shared/receipt.js';
 import { MAX_ITEMS, MAX_PRICES, centsText, cleanQty, lineTotal, money, parseDollars } from './grocery.js';
 import { groupOfStore } from './grocerySettle.js';
 
+export { applySavedNames } from './groceryAliases.js'; // saved receipt names map a scanned line to its item before any model guess (brief receipt-rename-memory)
+
 /* ---------- Receipt scan (brief receipt-scan): from the lines on a receipt and the person's choices to the grocery writes, and the total check. Pure; the sheet calls
    `planReceipt`, and `applyPlan` / `restoreSnapshot` run it through the store actions that already exist (so the usual price and count rules are the same as
    typing them). Nothing here reads the photo. ---------- */
@@ -17,7 +19,12 @@ export type Step =
   | { kind: 'tax'; store: string; cents: number };
 
 /** An item the person added from the sheet (brief receipt-add-item): it exists only in the sheet until Apply creates it. Its id starts with `new:` so a choice can point at it like any item. */
-export interface Staged { id: string; n: string; store: string; qty: number; cents: number | null; unit?: GroceryUnit }
+/** `atNew`: the item goes to the store Apply is adding from this receipt, whatever name that store ends up with (the sheet swaps it for the name, or Anywhere when the store is not added). */
+export interface Staged { id: string; n: string; store: string; qty: number; cents: number | null; unit?: GroceryUnit; atNew?: true }
+/** The Store choice in the Add to list form that means "the store this receipt is adding" (no real store name can contain it). */
+export const NEW_STORE = '\u0001new';
+/** A staged item with its store spelled out: `atNew` items take `newStore` (null: the store is not being added, so Anywhere). */
+export const stagedAt = (x: Staged, newStore: string | null): Staged => (x.atNew ? { ...x, store: newStore ?? '' } : x);
 export const STAGED_PREFIX = 'new:';
 export const isStaged = (id: string | null | undefined): boolean => !!id && id.startsWith(STAGED_PREFIX);
 /** The form's text fields for a new item: the draft the person edits before it is staged. `store` '' is Anywhere. */
@@ -25,8 +32,8 @@ export interface ItemDraft { n: string; store: string; qty: string; price: strin
 
 /** An item Apply marks as bought at the receipt's store (brief receipt-bought-at). `from`: where it counts this month now ('' is Anywhere); `usual`: its usual store (what At home shows); `splitChanges`: the new store's sharing group is not the old one's, so the people it is split with change. */
 export interface Move { id: string; name: string; from: string; usual: string; to: string; splitChanges: boolean }
-/** Where the receipt was bought and what the month already says: `at` is the receipt's store (null: none known); `makeUsual` also changes the items' usual store; `lines` is the month's lines. */
-export interface Where { at: string | null; makeUsual: boolean; g: Grocery; lines: Readonly<Record<string, GroceryLine>> }
+/** Where the receipt was bought and what the month already says: `at` is the receipt's store (null: none known); `makeUsual` also changes the items' usual store (null: not chosen yet, so it is on only when every moved item's usual store is Anywhere); `lines` is the month's lines. */
+export interface Where { at: string | null; makeUsual: boolean | null; g: Grocery; lines: Readonly<Record<string, GroceryLine>> }
 
 export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null }
 /** `notes` says why a ticked line was left out of the writes (by line index): a weight that cannot be matched to the item's unit. */
@@ -102,7 +109,7 @@ export function planReceipt(receipt: Receipt, choices: readonly Choice[], listIt
   const taxOn = taxStore !== null && (receipt.taxCents ?? 0) > 0;
   if (taxOn) steps.push({ kind: 'tax', store: taxStore, cents: receipt.taxCents! });
   const moves = where?.at ? movesFor(steps, items, where.at, where) : [];
-  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, notes, moves, makeUsual: !!where?.makeUsual && moves.length > 0, untick: [] };
+  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, notes, moves, makeUsual: moves.length > 0 && (where?.makeUsual ?? moves.every(m => !m.usual)), untick: [] };
 }
 
 /** The items of the plan that are not already bought at `at` this month. An item added from the sheet keeps the store its own form chose; an item with a split of its own (or one on its line) keeps it whatever the store. */
@@ -153,18 +160,20 @@ export function checkText(c: Check): { ok: boolean; text: string } {
 export interface GroceryApi {
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   setGroceryGot(month: string, id: string, on: boolean): boolean;
+  markGroceryFromReceipt?(month: string, id: string): void; // the line says a receipt ticked it, so a later receipt does not list it as missing
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
   setGroceryTax(month: string, store: string, cents: number | null): void;
   restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void;
-  updateGroceryItem(id: string, patch: Partial<{ qty: number; cents: number | null; store: string }>): string | null;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; qty: number; cents: number | null; store: string; aliases: string[] }>): string | null;
   setGroceryLineStore(month: string, id: string, store: string | null): string | null;
   makeGroceryStoreUsual(month: string, id: string): string | null;
   removeGroceryStore?(name: string, opts?: { quiet?: boolean }): string | null;
 }
 /** `created`: ids of the items Apply made from staged ones, which Undo removes (left out when there are none). */
-export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; created?: string[] }
+/** `names` and `aliases` (brief receipt-rename-memory): each item Apply renamed or gave receipt names, as it was ([] is none); Undo puts them back. */
+export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; created?: string[]; names?: Record<string, string>; aliases?: Record<string, string[]> }
 
 /** What Apply is about to change, so Undo can put it back: each touched line as it is now (null: none), each item's usual count and price, and the store's tax. */
 export function takeSnapshot(plan: Plan, month: string, lines: Record<string, GroceryLine>, items: readonly GroceryItem[], tax: Record<string, number> | undefined, created: readonly string[] = []): Snapshot {
@@ -185,6 +194,7 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
   for (const s of plan.steps) {
     if (s.kind === 'tax') { api.setGroceryTax(month, s.store, s.cents); continue; }
     if (!api.setGroceryGot(month, s.id, true)) continue; // false: nothing changed (sync still loading)
+    api.markGroceryFromReceipt?.(month, s.id);
     const move = plan.moves.find(m => m.id === s.id);
     if (move) api.setGroceryLineStore(month, s.id, move.to);
     if (s.kind === 'single') { api.setGroceryQty(month, s.id, s.qty); api.setGroceryCents(month, s.id, s.cents); } else api.setGroceryPrices(month, s.id, s.prices);
@@ -196,6 +206,8 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
 }
 
 export function restoreSnapshot(snap: Snapshot, api: GroceryApi): void {
+  for (const [id, n] of Object.entries(snap.names ?? {})) api.updateGroceryItem(id, { n });
+  for (const [id, aliases] of Object.entries(snap.aliases ?? {})) api.updateGroceryItem(id, { aliases });
   // An item's usual store goes back before its line: changing a usual store pins the item's bought lines to the store they were counted at, and a line put back first
   // (one ticked before the receipt) would be pinned to the receipt's store. Restored after, the line is simply put back as it was.
   for (const [id, u] of Object.entries(snap.usual)) if (u.store !== undefined) api.updateGroceryItem(id, u);

@@ -5,6 +5,7 @@ import pg from 'pg';
 import { pinSslMode } from '../db/sslMode.ts';
 import { PERSONAS, personaAuthId, personaById } from '../qa/personas.ts';
 import { scenariosForPersona } from '../qa/scenarios.ts';
+import { seedToday } from '../qa/seedDay.ts';
 import { SEED_EXERCISE_IDS, seedPersona } from '../qa/seedPersona.ts';
 import { buildPersonaRows } from '../qa/seedPlan.ts';
 import type { PiiCrypto } from './piiCrypto.ts';
@@ -143,7 +144,7 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
           const client = await owner().connect();
           try {
             const now = new Date();
-            await seedPersona(client, config.pii ?? CLEAR, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, now), now);
+            await seedPersona(client, config.pii ?? CLEAR, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, seedToday(now, (ctx.body as { today?: unknown } | undefined)?.today)), now);
           } finally {
             client.release();
           }

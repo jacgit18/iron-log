@@ -71,6 +71,25 @@ describe('copyCatalogRecipe', () => {
   });
 });
 
+describe('makeMealFromPair', () => {
+  const two = () => { st().saveRecipe(draft); st().saveRecipe({ ...draft, n: 'Rice', cat: 'carbs' }); const [a, b] = st().recipes; return [a!.id, b!.id] as const; };
+  it('builds one meal linked to both, and a second press opens that meal instead of adding another', () => {
+    const [a, b] = two();
+    const first = st().makeMealFromPair(a, b);
+    expect(first).toHaveProperty('id');
+    expect(st().recipes).toHaveLength(3);
+    const again = st().makeMealFromPair(b, a);
+    expect(again).toEqual(first);
+    expect(st().recipes).toHaveLength(3);
+  });
+  it('refuses a pair with a sauce in it and adds nothing', () => {
+    st().saveRecipe(draft); st().saveRecipe({ ...draft, n: 'Salsa', cat: 'sauces' });
+    const [a, b] = st().recipes;
+    expect(st().makeMealFromPair(a!.id, b!.id)).toEqual({ error: 'Salsa is a sauce, so it can’t be one part of a meal.' });
+    expect(st().recipes).toHaveLength(2);
+  });
+});
+
 describe('removeRecipe', () => {
   it('removes it and Undo puts it back where it was', () => {
     st().saveRecipe(draft); st().saveRecipe({ ...draft, n: 'Second' });
@@ -80,6 +99,32 @@ describe('removeRecipe', () => {
     expect(st().removed?.scope).toBe('recipes');
     expect(st().removed!.restore()).toBe(true);
     expect(st().recipes.map(r => r.id)).toEqual([first!.id, second!.id]);
+  });
+});
+
+describe('undoCatalogCopy', () => {
+  it('takes back a Library copy, and does not touch a recipe you wrote', () => {
+    useAppStore.setState({ removed: null });
+    st().saveRecipe(draft);
+    expect(st().undoCatalogCopy(st().recipes[0]!.id)).toBe(false);
+    st().copyCatalogRecipe(lib);
+    const copyId = st().recipes.find(r => r.from)!.id;
+    expect(st().undoCatalogCopy(copyId)).toBe(true);
+    expect(st().recipes.map(r => r.n)).toEqual(['Chili']);
+    expect(st().removed).toBeNull();
+  });
+  it('leaves a meal that already used the copy resolving as a plain line, not a link to a missing recipe', async () => {
+    const { linkedRecipe } = await import('../lib/recipeSuggest.js');
+    st().copyCatalogRecipe(lib);
+    const cid = st().recipes[0]!.id;
+    expect(st().saveRecipe({ n: 'Salad', cat: 'protein', ing: [{ n: 'Garlic Dressing', amt: '1 serving', q: 1, rid: cid }], steps: [] })).toBeNull();
+    expect(st().recipes.find(r => r.n === 'Salad')!.ing[0]).toHaveProperty('rid', cid);
+    expect(st().undoCatalogCopy(cid)).toBe(true);
+    const salad = st().recipes.find(r => r.n === 'Salad')!;
+    expect(salad.ing[0]!.n).toBe('Garlic Dressing');
+    expect(salad.ing[0]).not.toHaveProperty('rid');
+    expect(salad.ing[0]).not.toHaveProperty('q');
+    expect(linkedRecipe(salad.ing[0]!, st().recipes)).toBeUndefined();
   });
 });
 
@@ -224,5 +269,73 @@ describe('setRecipeChips', () => {
     expect(st().cfg.recipeChips).toEqual({ hide: ['drinks'] });
     st().setRecipeChips(undefined);
     expect('recipeChips' in st().cfg).toBe(false);
+  });
+});
+
+describe('setFoodTypes (the Review types screen)', () => {
+  const food = (n: string) => ({ n, cat: 'ready' as const, ing: [], steps: [], kcal: 100, p: 5 });
+  const seed = () => { st().saveRecipe(food('Whole milk')); st().saveRecipe(food('Egg')); st().saveRecipe(food('Lasagna')); st().saveRecipe(draft); };
+  const ids = () => Object.fromEntries(st().recipes.map(r => [r.n, r.id]));
+  it('saves every choice in one go and leaves other recipes alone', () => {
+    seed();
+    const i = ids();
+    const r = st().setFoodTypes({ [i['Whole milk']!]: 'drink', [i['Egg']!]: 'ingredient', [i['Lasagna']!]: 'ready', [i['Chili']!]: 'drink' });
+    expect(r.changed).toBe(3);
+    expect(st().recipes.map(x => x.type)).toEqual(['drink', 'ingredient', 'ready', undefined]); // the protein recipe never gets a type
+  });
+  it('saves several labels as `uses` beside the Type, and Undo takes both back', () => {
+    seed();
+    const i = ids();
+    const r = st().setFoodTypes({ [i['Egg']!]: 'ingredient', [i['Whole milk']!]: 'drink' }, { [i['Egg']!]: ['ingredient', 'ready'] });
+    expect(st().recipes.find(x => x.n === 'Egg')).toMatchObject({ type: 'ingredient', uses: ['ingredient', 'ready'] });
+    expect(st().recipes.find(x => x.n === 'Whole milk')!.uses).toBeUndefined();
+    expect(r.undo()).toBe(true);
+    expect(st().recipes.some(x => 'uses' in x || 'type' in x)).toBe(false);
+  });
+  it('does not overwrite a food that already has a type', () => {
+    seed();
+    const i = ids();
+    st().setFoodTypes({ [i['Egg']!]: 'ingredient' });
+    expect(st().setFoodTypes({ [i['Egg']!]: 'drink' }).changed).toBe(0);
+    expect(st().recipes.find(x => x.n === 'Egg')!.type).toBe('ingredient');
+  });
+  it('Undo puts the whole batch back to untyped, and refuses once a food changed since', () => {
+    seed();
+    const i = ids();
+    const r = st().setFoodTypes({ [i['Whole milk']!]: 'drink', [i['Egg']!]: 'ingredient' });
+    expect(r.undo()).toBe(true);
+    expect(st().recipes.every(x => !('type' in x))).toBe(true);
+    const again = st().setFoodTypes({ [i['Whole milk']!]: 'drink' });
+    st().saveRecipe({ ...st().recipes.find(x => x.n === 'Whole milk')!, type: 'ready' });
+    expect(again.undo()).toBe(false);
+    expect(st().recipes.find(x => x.n === 'Whole milk')!.type).toBe('ready');
+  });
+  it('keeps the type when the food is saved again from its form', () => {
+    st().saveRecipe({ ...food('Kefir'), type: 'drink' });
+    const k = st().recipes[0]!;
+    expect(k.type).toBe('drink');
+    expect(st().saveRecipe({ ...k, kcal: 120 })).toBeNull();
+    expect(st().recipes[0]).toMatchObject({ type: 'drink', kcal: 120 });
+  });
+});
+
+describe('toggleRecipeFav (brief recipes-find-type-tabs)', () => {
+  it('stars and unstars a recipe, and an edit keeps the star', () => {
+    st().saveRecipe(draft);
+    const id = st().recipes[0]!.id;
+    st().toggleRecipeFav(id);
+    expect(st().recipes[0]!.fav).toBe(true);
+    expect(st().saveRecipe({ ...draft, id, n: 'Chili 2' })).toBeNull();
+    expect(st().recipes[0]).toMatchObject({ n: 'Chili 2', fav: true });
+    st().toggleRecipeFav(id);
+    expect(st().recipes[0]).not.toHaveProperty('fav');
+    st().toggleRecipeFav('nope'); // an unknown id changes nothing
+    expect(st().recipes).toHaveLength(1);
+  });
+  it('does not mark a library copy Edited when only the star changes', () => {
+    st().copyCatalogRecipe(lib);
+    st().toggleRecipeFav(st().recipes[0]!.id);
+    expect(st().recipes[0]!.fav).toBe(true);
+    expect(st().recipes[0]!.edited).toBeUndefined();
   });
 });

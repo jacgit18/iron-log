@@ -120,10 +120,10 @@ describe('role guards: a plain signed-in account', () => {
     const url = await listen(createApp({ db }));
     expect((await fetch(`${url}/api/issues`, { headers: plain })).status).toBe(403);
     expect((await fetch(`${url}/api/accounts`, { headers: plain })).status).toBe(403);
-    expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
-    expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
+    expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422); // open to everyone signed in (2026-11-08): an empty body reaches the route's own check, a restored admin check would give 403
+    expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422);
     expect((await fetch(`${url}/api/receipts`, { headers: plain })).status).toBe(403);
-    expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).toBe(403); // admin only, though /api/foods itself is for everyone
+    expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).toBe(503); // everyone signed in may ask; with no USDA key in this app the route itself answers 503 (a lost sign-in gate would give 401, a restored admin check 403)
     expect((await fetch(`${url}/api/backups`, { headers: { ...plain, 'x-client-version': 'dev' } })).status).toBe(402);
   });
   it('is let through to the routes every account has', async () => {

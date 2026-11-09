@@ -5,7 +5,7 @@ import { DAILY_MAX, HOLD_MS, TIMEOUT_MS, USDA_URL, type FoodDeps } from './foodS
 import { cleanGtin, hitForGtin } from '../src/shared/barcode.ts';
 import type { FoodHit } from '../src/shared/foods.ts';
 
-// Barcode lookup (brief barcode-scan), mounted at /api/foods/barcode behind sign-in, the admin check and a per-user limit. The phone reads the code; the server asks
+// Barcode lookup (brief barcode-scan), mounted at /api/foods/barcode behind sign-in and a per-user limit (open to every account since 2026-11-07). The phone reads the code; the server asks
 // USDA FoodData Central for Branded foods with that code and answers with the one product whose own code is exactly the scanned one (src/shared/barcode.ts), in the
 // same shape a typed search gives. Nothing is stored. The code is never logged: a failure line names only the status or error. Answers (including "not found") are
 // held in this instance's memory for an hour so a repeat scan does not spend the shared key's allowance. When USDA has no such product and OFF_CONTACT is set, Open

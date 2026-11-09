@@ -1,12 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// First-action tiles on an empty Groceries list (At home) and an empty Recipes list (Mine). Each tile starts an action that already exists.
+// First-action tiles on an empty Groceries list (Inventory) and an empty Recipes list (Mine). Each tile starts an action that already exists.
 const noViolations = async page => {
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 };
-const groceries = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-home'); };
+const groceries = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-inventory'); };
 const recipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const tiles = page => page.locator('.emptytiles button');
 
@@ -27,7 +27,7 @@ test('empty Groceries: Set up sharing opens Sharing; Browse recipes opens Recipe
   await page.click('#groc-tile-recipes');
   await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
   await page.click('#daily-grocery');
-  await page.click('#groc-view-home');
+  await page.click('#groc-view-inventory');
   await page.click('#groc-tile-add');
   await page.fill('#groc-name', 'Eggs');
   await page.click('#groc-add');

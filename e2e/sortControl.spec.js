@@ -11,7 +11,7 @@ const seed = page => page.addInitScript(() => {
 });
 const open = async page => {
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   return page.locator('.exlib');
 };
 const names = lib => lib.locator('.exrow b').allTextContents();

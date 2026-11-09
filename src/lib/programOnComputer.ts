@@ -1,27 +1,13 @@
-import { LS } from './storage.js';
-
-// The "Program on a computer" tip (brief: briefs/program-on-computer): building a program is easier on a bigger screen, so a phone or tablet
-// is told once and can send itself the link. The card shows on the Program tab until dismissed; the Settings row is always there on touch
-// screens. Nothing here mentions a price or a plan (the Android app carries none, ADR 065 and ADR 078): the shared text is the address only.
-const KEY = 'hideprogramcomputer';
-
-export const CARD_TEXT = 'Planning a program is easier on a computer. Open loadbearer.app there, then use your phone in the gym.';
+// "Program on a computer" (brief: briefs/program-on-computer): building a program is easier on a bigger screen, so a phone or tablet can send itself
+// the link. Step 4 of the Program tab's guide card (`programGuide.ts`) and the Settings row (touch screens) both use the button; the floating tip
+// this file once drove was folded into the guide (brief: briefs/program-tab-clarity). Nothing here mentions a price or a plan (the Android app
+// carries none, ADR 065 and ADR 078): the shared text is the address only.
 export const ROW_TITLE = 'Build programs on a computer';
 export const ROW_TEXT = 'A bigger screen makes planning easier. Open loadbearer.app there, then train with your phone.';
 export const SEND_LABEL = 'Send me the link';
 export const COPIED_LABEL = 'Link copied';
 export const COPY_FAILED = 'Copy failed. Open loadbearer.app on a computer.';
 export const SHARE_TEXT = 'Build your program on a computer:';
-
-export const programCardDismissed = (): boolean => LS.get(KEY) === 1;
-export const dismissProgramCard = () => { LS.set(KEY, 1); };
-
-export interface CardInputs { touch: boolean; programTab: boolean; waitingForSignIn: boolean; installHintShowing: boolean; dismissed: boolean }
-
-/** Pure rule: a touch screen, on the Program tab, once the person is in, never beside the install hint, until dismissed. */
-export function showProgramCard({ touch, programTab, waitingForSignIn, installHintShowing, dismissed }: CardInputs): boolean {
-  return touch && programTab && !waitingForSignIn && !installHintShowing && !dismissed;
-}
 
 /** The Settings row: every touch screen, whatever was dismissed. A computer never sees it. */
 export const showProgramRow = (touch: boolean): boolean => touch;
@@ -45,4 +31,4 @@ export async function sendLink(origin: string, env: SendEnv): Promise<SendOutcom
 
 /** The wording must never carry money talk: checked in the unit test over every string the tip shows or shares. */
 export const MONEY_WORDS = /\b(price|prices|pricing|plan|plans|subscribe|subscription|upgrade|paid|pay|plus|pro|free|trial|billing)\b|\$\d/i;
-export const ALL_TEXT = [CARD_TEXT, ROW_TITLE, ROW_TEXT, SEND_LABEL, COPIED_LABEL, COPY_FAILED, SHARE_TEXT, 'Not now'];
+export const ALL_TEXT = [ROW_TITLE, ROW_TEXT, SEND_LABEL, COPIED_LABEL, COPY_FAILED, SHARE_TEXT];

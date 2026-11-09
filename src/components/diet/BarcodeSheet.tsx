@@ -9,7 +9,7 @@ import './BarcodeSheet.css';
 
 const POLL_MS = 250;
 
-// Scan barcode (brief barcode-scan): admin only. A live camera view; each quarter second the browser's reader looks at the frame, and the first valid product code is
+// Scan barcode (brief barcode-scan): for everyone signed in (no AI). A live camera view; each quarter second the browser's reader looks at the frame, and the first valid product code is
 // looked up (GET /api/foods/barcode) and handed back to the food search box as a pick. A miss (brief barcode-miss-ladder) shows what was tried, makes typing the name
 // the free main choice and offers the AI label photo second, with its cost, only when the person taps it. Scanning stops on a failure so the same code is not asked again and again; "Scan
 // again" starts it. No camera (or refused): a photo of the barcode is read instead. The camera stream is stopped when the sheet closes; nothing is stored.
@@ -92,7 +92,8 @@ export default function BarcodeSheet() {
     return () => clearTimeout(t);
   }, [looking]);
 
-  const typeName = () => { closeModal(); setTimeout(() => document.getElementById(SEARCH_BOX_IDS.find(id => document.getElementById(id)) ?? '')?.focus(), 0); };
+  const onType = modal?.onType as (() => void) | undefined; // set by a caller that shows its own search box again (the nutrition board's add sheet)
+  const typeName = () => { closeModal(); if (onType) { onType(); return; } setTimeout(() => document.getElementById(SEARCH_BOX_IDS.find(id => document.getElementById(id)) ?? '')?.focus(), 0); };
   const miss = fail === 'notfound' && !looking;
   const allowance = currentAllowance();
   const usedUp = labelUsedUp(allowance);

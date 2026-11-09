@@ -1,0 +1,38 @@
+@layer base, components;
+@layer components {
+/* The first-time guide card (ProgramGuide.tsx): four short steps in a row on a wide screen, stacked on a phone. */
+.proguide {
+  margin-bottom: var(--sp-12);
+  max-width: none;
+  border-color: var(--accent);
+}
+.proguide ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pg;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: var(--sp-12);
+}
+.proguide li {
+  counter-increment: pg;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+.proguide li::before {
+  content: counter(pg);
+  font-weight: 700;
+  font-size: var(--fs-xl);
+  color: var(--accent);
+}
+.proguide .pcactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  align-items: center;
+  margin-top: var(--sp-6);
+}
+}

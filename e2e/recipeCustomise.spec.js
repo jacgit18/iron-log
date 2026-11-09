@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // Customising a recipe (brief recipe-customise, form laid out again in recipe-form-mobile-desktop): an Alternative for what you use, a skip saved earlier, and ingredient names from
 // your Groceries items. The rules are node tests (recipePantry, recipeSuggest); this covers the form fields, the crossed-out and
@@ -6,7 +7,7 @@ import { test, expect } from './fixtures.js';
 // store test (recipesSlice.test.ts), not a browser one.
 const atHome = async (page, name) => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-inventory'); await page.click('#groc-edit');
   await page.fill('#groc-name', name); await page.click('#groc-add');
   await expect(page.locator('#groc-name')).toHaveValue('');
   await page.click('#groc-edit');
@@ -14,7 +15,7 @@ const atHome = async (page, name) => {
 };
 const newRecipe = async (page, name) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
 };
 
@@ -28,12 +29,12 @@ test('an ingredient with an Alternative stays itself and counts as at home when 
   await expect(swapped).toContainText('white wine vinegar');
   await expect(swapped.locator('.rc-state')).toHaveText('Have');
   await expect(page.getByText('1 of 1 at home')).toBeVisible();
-  await page.getByRole('button', { name: 'Add missing to To get' }).click();
+  await page.getByRole('button', { name: 'Add missing to Shopping' }).click();
   await expect(page.getByText('Everything is at home.')).toBeVisible();
   // and it survives a reload, with the form still holding it
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chimichurri/ }).click();
+  await page.locator('.rc-row', { hasText: /Chimichurri/ }).click();
   await expect(page.getByText('(or apple cider vinegar)')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Alternative for ingredient 1')).toHaveValue('apple cider vinegar');
@@ -47,7 +48,7 @@ test('an ingredient skipped before still shows Skipped, has no Skip checkbox, an
   });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /Chimichurri/ }).click();
+  await page.locator('.rc-row', { hasText: /Chimichurri/ }).click();
   await expect(page.locator('.rc-ing', { has: page.getByText('parsley') }).locator('.rc-state')).toHaveText('Skipped');
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel(/^Skip ingredient/)).toHaveCount(0);
@@ -69,7 +70,7 @@ test('typing an ingredient offers your Groceries items, and a chosen one is pinn
   await field.fill('Chicken thighs'); // what choosing the suggestion does
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('1 of 1 at home')).toBeVisible();
-  await expect(page.getByLabel('At home item for Chicken thighs')).not.toHaveValue('');
+  await expect(page.getByLabel('Inventory item for Chicken thighs')).not.toHaveValue('');
 });
 
 test('a name with no suggestion still saves as typed', async ({ page }) => {
