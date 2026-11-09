@@ -1,4 +1,4 @@
-import { MAX_PLAN_ITEMS, PLAN_SLOTS } from '../shared/diet.js';
+import { MAX_PLAN_ITEMS, PLAN_SLOTS, samePlanItem } from '../shared/diet.js';
 import type { PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { servingNumbers } from './dietLog.js';
@@ -70,7 +70,7 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   const { s: _old, ...rest } = it;
   const moved: PlanItem = { ...rest, ...(slot ? { s: slot } : {}) };
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
-  if (target.some(x => x.k === moved.k && x.id === moved.id)) return { plan: null, error: 'That is already on this day.' }; // the same rule as addItem: once a day, whatever the meal
+  if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
   if (toDay !== fromDay && target.length >= MAX_PLAN_ITEMS) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };
   const from = (plan[fromDay] ?? []).filter((_, i) => i !== index);
   const next: Plan = { ...plan };

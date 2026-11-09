@@ -65,12 +65,17 @@ describe('moveItem', () => {
     const r = moveItem({ [D]: [pi('chili', 'dinner')] }, D, 0, D2, 'dinner', TODAY);
     expect(r.plan).toEqual({ [D2]: [{ k: 'r', id: 'chili', s: 'dinner' }] });
   });
-  it('refuses a repeat on the day (any meal), a full day and a day outside the window', () => {
-    expect(moveItem(plan, D, 1, D2, 'lunch', TODAY).error).toMatch(/already on this day/);
-    expect(moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'dinner')] }, D, 0, D2, 'lunch', TODAY).error).toMatch(/already on this day/);
+  it('refuses a repeat in the same meal, a full day and a day outside the window', () => {
+    expect(moveItem(plan, D, 1, D2, 'lunch', TODAY).error).toMatch(/already in that meal/);
+    expect(moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'lunch')] }, D, 0, D2, 'lunch', TODAY).error).toMatch(/already in that meal/);
     const full = { [D]: [pi('chili')], [D2]: Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `r${i}` })) };
     expect(moveItem(full, D, 0, D2, 'dinner', TODAY).error).toMatch(/hold 8/);
     expect(moveItem(plan, D, 0, '2099-03-01', 'dinner', TODAY).error).toMatch(/two weeks/);
+  });
+  it('allows the same food in another meal of the day, as adding does', () => {
+    const r = moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'dinner')] }, D, 0, D2, 'lunch', TODAY);
+    expect(r.error).toBeNull();
+    expect(r.plan![D2]).toEqual([{ k: 'r', id: 'chili', s: 'dinner' }, { k: 'r', id: 'chili', s: 'lunch' }]);
   });
   it('can set an item to no meal', () => {
     const r = moveItem(plan, D, 0, D, undefined, TODAY);

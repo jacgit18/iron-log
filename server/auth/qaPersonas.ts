@@ -7,6 +7,7 @@ import { PERSONAS, personaAuthId, personaById } from '../qa/personas.ts';
 import { scenariosForPersona } from '../qa/scenarios.ts';
 import { SEED_EXERCISE_IDS, seedPersona } from '../qa/seedPersona.ts';
 import { buildPersonaRows } from '../qa/seedPlan.ts';
+import { seedToday } from '../qa/seedDay.ts';
 import type { PiiCrypto } from './piiCrypto.ts';
 
 /* ---------- QA test accounts: an admin switches to a seeded account and back (brief: qa-persona-picker) ----------
@@ -143,7 +144,7 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
           const client = await owner().connect();
           try {
             const now = new Date();
-            await seedPersona(client, config.pii ?? CLEAR, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, now), now);
+            await seedPersona(client, config.pii ?? CLEAR, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, seedToday(now, (ctx.body as { today?: unknown } | undefined)?.today)), now);
           } finally {
             client.release();
           }

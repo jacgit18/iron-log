@@ -2359,10 +2359,10 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Tap a card, press Move to… and pick Lunch. Tap it again, press Move to… and pick another day.',
       'On a wide screen drag a card into another meal.',
-      'Try to move a card to a day that already holds 8 items, and to a day that already has the same food in another meal.',
+      'Try to move a card to a day that already holds 8 items, and into a meal that already has the same food (then into another meal of that day that has it).',
     ],
     expected: [
-      'The card moves to the meal or the day you picked and the bars of both days follow. A food already on that day is refused with "That is already on this day.", whatever the meal.',
+      'The card moves to the meal or the day you picked and the bars of both days follow. A food already in that meal is refused with "That is already in that meal."; the same food in another meal of that day is allowed, as adding it is.',
       'Dragging does the same.',
       'A full day refuses with "A day can hold 8 things. Remove one to add another."',
     ],
