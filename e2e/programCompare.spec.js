@@ -19,7 +19,10 @@ const open = async page => {
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   return page.locator('.cmpbody');
 };
-const count = async (body, label) => Number((await body.locator('.cmpchips').first().getByRole('button', { name: new RegExp(`^${label} \\d+$`) }).innerText()).match(/(\d+)$/)[1]);
+const show = body => body.getByRole('combobox', { name: 'Show rows' });
+const optionText = (body, label) => show(body).locator('option', { hasText: new RegExp(`^${label}( \\(\\d+\\))?$`) }).first().textContent();
+const count = async (body, label) => Number((await optionText(body, label)).match(/\((\d+)\)$/)[1]);
+const pick = async (body, label) => show(body).selectOption({ label: await optionText(body, label) });
 
 test('on a phone the section is collapsed until it is opened, and closes again; on a computer it is a tab that is always open', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
@@ -45,24 +48,24 @@ test('every day lists both programs, the counts add up, and a status filter hide
   // one row per exercise: a paired exercise shows both programs in its row, an only-in exercise says so on the side that lacks it
   await expect(body.locator('.cmprow')).toHaveCount(all);
   for (const [label, tag] of [['Same', 'Same'], ['Changed', 'Changed'], ['Phase differs', 'Phase differs']]) {
-    await body.getByRole('button', { name: new RegExp(`^${label} \\d+$`) }).click();
+    await pick(body, label);
     const tags = await body.locator('.cmprow .tag').allTextContents();
     expect(tags.every(t => t === tag), `${label}: only ${tag} rows`).toBe(true);
   }
-  await body.getByRole('button', { name: /^Any difference/ }).click();
+  await pick(body, 'Any difference');
   expect((await body.locator('.cmprow .tag').allTextContents()).includes('Same')).toBe(false);
-  await body.getByRole('button', { name: /^All \d+$/ }).click();
+  await pick(body, 'All');
   expect(await count(body, 'All')).toBe(all); // a filter never changes the counts
 });
 
-test('changing the day clears the phase filter, so a pressed chip always shows', async ({ page }) => {
+test('changing the day clears the phase filter, so the dropdown never holds a missing phase', async ({ page }) => {
   const body = await open(page);
-  const phases = body.getByRole('group', { name: 'Phase' }).getByRole('button');
-  await phases.nth(1).click();
-  await expect(phases.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  const phase = body.getByRole('combobox', { name: 'Phase' });
+  const first = await phase.locator('option').nth(1).getAttribute('value');
+  await phase.selectOption(first);
+  await expect(phase).toHaveValue(first);
   await page.locator('.cmpdays button').nth(3).click();
-  await expect(phases.first()).toHaveText('Any phase');
-  await expect(phases.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(phase).toHaveValue('');
 });
 
 test('a saved copy on the other side compares as the same, and the same program twice says so', async ({ page }) => {
@@ -83,7 +86,7 @@ test('nothing in the panel is editable and nothing is written', async ({ page })
   const before = await stored();
   await expect(body.locator('.cmpaligned .draghandle, .cmpaligned .edbtns, .cmpaligned button')).toHaveCount(0);
   await page.locator('.cmpdays button').nth(2).click();
-  await body.getByRole('button', { name: 'Any phase' }).click();
+  await body.getByRole('combobox', { name: 'Phase' }).selectOption('');
   await body.getByLabel('First program').selectOption('B');
   expect(await stored()).toBe(before);
 });
@@ -128,21 +131,21 @@ test('wide: the two programs are columns; phone: the second program\'s line sits
 test('on a phone the filters fold behind a Filter button; on a wide screen they stay in view', async ({ page }) => {
   let body = await open(page);
   await expect(body.getByRole('button', { name: /^Filter/ })).toBeHidden();
-  await expect(body.getByRole('group', { name: 'Show rows' })).toBeVisible();
+  await expect(show(body)).toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
   body = await open(page);
   const button = body.getByRole('button', { name: /^Filter/ });
   await expect(button).toBeVisible();
   await expect(button).toHaveAttribute('aria-expanded', 'false');
-  await expect(body.getByRole('group', { name: 'Show rows' })).toBeHidden();
+  await expect(show(body)).toBeHidden();
   await expect(body.getByRole('group', { name: 'Compare day' })).toBeVisible(); // the day strip stays
   await button.click();
   await expect(button).toHaveAttribute('aria-expanded', 'true');
-  await body.getByRole('button', { name: /^Any difference/ }).click();
+  await pick(body, 'Any difference');
   await expect(button).toHaveText(/Filter · 1 on/);
   await button.click();
-  await expect(body.getByRole('group', { name: 'Show rows' })).toBeHidden();
+  await expect(show(body)).toBeHidden();
   expect(await body.locator('.cmprow .tag').allTextContents()).not.toContain('Same'); // a folded filter still applies
 });
 
@@ -176,7 +179,7 @@ test('All days lists every day under its own heading, and a filter applies to al
   expect(heads[0]).toBe('Day 1');
   const all = await count(body, 'All');
   await expect(body.locator('.cmprow')).toHaveCount(all); // the chip counts are the sum over every day
-  await body.getByRole('button', { name: /^Same \d+$/ }).click();
+  await pick(body, 'Same');
   expect((await body.locator('.cmprow .tag').allTextContents()).every(t => t === 'Same')).toBe(true);
   await dayButtons.nth(1).click(); // back to one day: no day headings
   await expect(body.locator('.cmpdayhead')).toHaveCount(0);

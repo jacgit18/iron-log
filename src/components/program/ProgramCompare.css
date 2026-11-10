@@ -60,7 +60,7 @@
 .cmpbar span {
   min-width: 2px;
 }
-.cmpdays,.cmpchips {
+.cmpdays,.cmpsel {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-4);
@@ -69,7 +69,7 @@
   font-size: var(--fs-2xs);
   color: var(--muted);
 }
-.cmpday[aria-pressed="true"],.cmpchip[aria-pressed="true"] {
+.cmpday[aria-pressed="true"] {
   background: var(--accent-fill);
   color: var(--accent-ink);
   border-color: transparent;
