@@ -49,6 +49,13 @@ const keyOfGroup = (group: string): NutrientKey | undefined => {
   return paren !== g ? GROUPS[paren] : undefined;
 };
 
+/** Keys whose DSLD row can carry the weight of a salt, chelate or phosphate ("Choline Bitartrate", "Chromium Picolinate", "Riboflavin-5-Phosphate") rather than the nutrient: such a row is listed, not counted, unless its name is the nutrient itself. */
+const COMPOUND_KEYS: readonly NutrientKey[] = ['choline', 'chromium', 'manganese', 'molybdenum', 'riboflavin'];
+const plainName = (name: string, group: string): boolean => {
+  const n = name.trim().toLowerCase(), g = group.trim().toLowerCase();
+  return !g || n === g.replace(/\s*\(.*\)$/, '') || n === (g.match(/\(([^)]*)\)$/)?.[1] ?? '').trim() || n === g;
+};
+
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const text = (v: unknown, max: number): string | undefined => (typeof v === 'string' && v.trim() ? v.trim().replace(/\s+/g, ' ').slice(0, max) : undefined);
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
@@ -96,13 +103,13 @@ export function mapDsldLabel(raw: unknown): SupplementLabel | null {
     const group = text(r.ingredientGroup, 120) ?? '';
     const category = typeof r.category === 'string' ? r.category.toLowerCase() : '';
     const a = amountOf(r);
-    const key = category === 'blend' ? undefined : keyOfGroup(group || name || '');
+    const key = category === 'blend' ? undefined : keyOfGroup(group || name || '') ?? (name && name !== group ? keyOfGroup(name) : undefined); // a bare group such as "Vitamin B5" falls back to the row's name
     const unit = a ? unitOf(a.rawUnit) : undefined;
     // Folate: the label may state the DFE total with the folic acid inside it. The folic acid amount is what the upper limit counts, so it wins; DFE only when nothing else is given.
     const nested = Array.isArray(r.nestedRows) ? r.nestedRows.filter(isObj) : [];
     const folic = key === 'folate' ? nested.map(n => ({ n, a: amountOf(n) })).find(x => x.a && keyOfGroup(text(x.n.ingredientGroup, 80) ?? '') === 'folate' && unitOf(x.a.rawUnit) === 'mcg') : undefined;
     const use: { amount: number; unit: NutrientUnit | undefined } | undefined = folic?.a ? { amount: folic.a.amount, unit: 'mcg' } : a ? { amount: a.amount, unit } : undefined;
-    const fits = key && use?.unit && (use.unit !== 'IU' || IU_KEYS.includes(key)) && !rows.some(x => x.key === key);
+    const fits = key && use?.unit && (!COMPOUND_KEYS.includes(key) || plainName(name ?? '', group)) && (use.unit !== 'IU' || IU_KEYS.includes(key)) && !rows.some(x => x.key === key);
     if (fits && key && use?.unit) rows.push({ key, amount: round3(use.amount), unit: use.unit });
     else addOther(name, a);
     if (category === 'blend') for (const n of nested) { const na = amountOf(n); if (na) addOther(text(n.name, 120), na); }

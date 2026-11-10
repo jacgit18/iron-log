@@ -90,8 +90,8 @@ describe('the eight added nutrients in the vendor maps', () => {
       .toEqual({ choline: 400, manganese: 2.3, molybdenum: 45, biotin: 30, chromium: 35, pantothenicAcid: 5, riboflavin: 1.3, thiamin: 1.2 });
   });
   it('drops a value over each nutrient cap and scales the rest to the grams eaten', () => {
-    expect(cleanMicro({ choline: 35001, manganese: 111, molybdenum: 20001, biotin: 601, chromium: 701, pantothenicAcid: 101, riboflavin: 27, thiamin: 25 })).toBeNull();
-    expect(cleanMicro({ choline: 35000, manganese: 110, molybdenum: 20000, biotin: 600, chromium: 700, pantothenicAcid: 100, riboflavin: 26, thiamin: 24 })).toMatchObject({ choline: 35000, thiamin: 24 });
+    expect(cleanMicro({ choline: 35001, manganese: 111, molybdenum: 20001, biotin: 20001, chromium: 2001, pantothenicAcid: 2001, riboflavin: 1001, thiamin: 1001 })).toBeNull();
+    expect(cleanMicro({ choline: 35000, manganese: 110, molybdenum: 20000, biotin: 5000, chromium: 2000, pantothenicAcid: 2000, riboflavin: 1000, thiamin: 100 })).toMatchObject({ choline: 35000, thiamin: 100, biotin: 5000 });
     expect(scaleMicro({ thiamin: 0.4, chromium: 3, choline: 100 }, 1.5)).toEqual({ choline: 150, chromium: 4.5, thiamin: 0.6 });
   });
   it('a food that lists none of the eight is unchanged', () => {

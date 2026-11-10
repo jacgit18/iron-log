@@ -6,7 +6,7 @@ import type { TargetKey } from '../shared/nutrientKeys.js';
    for toxicity), fiber has none either, and sodium's figure is a Chronic Disease Risk Reduction level, a level to stay under, not an upper limit. Nothing built on this table may warn.
    `recommended`: the lowest and highest adult figure (men and women 19 and over, not pregnant or lactating), shown as a range because it depends on age and sex. `basis`: 'AI' (an
    Adequate Intake: set where evidence is thinner than for a requirement) or 'RDA' (a Recommended Dietary Allowance). `stayUnder` is set only for sodium. `cap` is a plausibility cap for
-   one entry, set at 20 times the larger of the adult recommended amount and the stay-under level, because there is no limit to derive one from; an amount over it is dropped as a misread. */
+   one entry, set at no less than 20 times the larger of the adult recommended amount and the stay-under level, because there is no limit to derive one from; an amount over it is dropped as a misread. The five added 2026-11-10 (thiamin, riboflavin, biotin, pantothenic acid, chromium) sit well above that, at real supplement doses, so a scanned label is not dropped. */
 
 export interface NutrientTarget {
   key: TargetKey;
@@ -41,15 +41,15 @@ export const NUTRIENT_TARGETS: NutrientTarget[] = [
     scopeNote: '2,300 mg is a Chronic Disease Risk Reduction level: reduce intake if it is above, for people 14 and older. It is a level to stay under, not an upper limit. Counts food and supplements.', cap: 46000, source: NASEM_SODIUM },
   // brief supplement-more-nutrients: five more with no upper limit; ODS pages read 2026-11-10 (the fact sheet says why no limit was set). One row per line group so parallel branches merge.
   { key: 'biotin', label: 'Biotin', unit: 'mcg', recommended: { min: 30, max: 30 }, basis: 'AI', recommendedNote: 'Adequate Intake for adults 19 and over',
-    scopeNote: 'There is no upper limit: there is no evidence in humans that biotin is toxic at high intakes. Counts food and supplements. Biotin in a blood test can read falsely; that is a lab matter, not a limit.', cap: 600, source: `${ODS}Biotin-HealthProfessional/ (Table 1, read ${READ2})` },
+    scopeNote: 'There is no upper limit: there is no evidence in humans that biotin is toxic at high intakes. Counts food and supplements. Biotin in a blood test can read falsely; that is a lab matter, not a limit.', cap: 20000, source: `${ODS}Biotin-HealthProfessional/ (Table 1, read ${READ2})` },
   { key: 'chromium', label: 'Chromium', unit: 'mcg', recommended: { min: 20, max: 35 }, basis: 'AI', recommendedNote: 'Adequate Intake for adults 19 and over: 35 mcg for men and 25 mcg for women up to 50, 30 mcg and 20 mcg from 51',
-    scopeNote: 'There is no upper limit: no adverse effects have been linked to high intakes from food or supplements. Counts food and supplements; chromium in food varies widely, so a day can read low.', cap: 700, source: `${ODS}Chromium-HealthProfessional/ (Table 1, read ${READ2})` },
+    scopeNote: 'There is no upper limit: no adverse effects have been linked to high intakes from food or supplements. Counts food and supplements; chromium in food varies widely, so a day can read low.', cap: 2000, source: `${ODS}Chromium-HealthProfessional/ (Table 1, read ${READ2})` },
   { key: 'pantothenicAcid', label: 'Pantothenic acid (vitamin B5)', unit: 'mg', recommended: { min: 5, max: 5 }, basis: 'AI', recommendedNote: 'Adequate Intake for adults 19 and over',
-    scopeNote: 'There is no upper limit: there are no reports of pantothenic acid toxicity in humans at high intakes. Counts food and supplements.', cap: 100, source: `${ODS}PantothenicAcid-HealthProfessional/ (Table 1, read ${READ2})` },
+    scopeNote: 'There is no upper limit: there are no reports of pantothenic acid toxicity in humans at high intakes. Counts food and supplements.', cap: 2000, source: `${ODS}PantothenicAcid-HealthProfessional/ (Table 1, read ${READ2})` },
   { key: 'riboflavin', label: 'Riboflavin (vitamin B2)', unit: 'mg', recommended: { min: 1.1, max: 1.3 }, basis: 'RDA', recommendedNote: 'Recommended Dietary Allowance for adults 19 and over: 1.3 mg for men, 1.1 mg for women',
-    scopeNote: 'There is no upper limit: no adverse effects were reported from high intakes from food or supplements. Counts food and supplements.', cap: 26, source: `${ODS}Riboflavin-HealthProfessional/ (Table 1, read ${READ2})` },
+    scopeNote: 'There is no upper limit: no adverse effects were reported from high intakes from food or supplements. Counts food and supplements.', cap: 1000, source: `${ODS}Riboflavin-HealthProfessional/ (Table 1, read ${READ2})` },
   { key: 'thiamin', label: 'Thiamin (vitamin B1)', unit: 'mg', recommended: { min: 1.1, max: 1.2 }, basis: 'RDA', recommendedNote: 'Recommended Dietary Allowance for adults 19 and over: 1.2 mg for men, 1.1 mg for women',
-    scopeNote: 'There is no upper limit: no adverse effects were reported from high intakes (50 mg a day or more) from food or supplements. Counts food and supplements.', cap: 24, source: `${ODS}Thiamin-HealthProfessional/ (Table 1, read ${READ2})` },
+    scopeNote: 'There is no upper limit: no adverse effects were reported from high intakes (50 mg a day or more) from food or supplements. Counts food and supplements.', cap: 1000, source: `${ODS}Thiamin-HealthProfessional/ (Table 1, read ${READ2})` },
 ];
 
 const BY_KEY = new Map(NUTRIENT_TARGETS.map(r => [r.key, r]));

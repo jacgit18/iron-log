@@ -23,11 +23,12 @@ export const MICRO_MAX: Record<NutrientKey, number> = {
   calcium: 20000, choline: 35000, copper: 100000, folate: 10000, iodine: 11000, iron: 450, magnesium: 3500, manganese: 110, molybdenum: 20000, niacin: 350, phosphorus: 30000, selenium: 4000,
   vitaminA: 30000, vitaminB6: 1000, vitaminC: 20000, vitaminD: 1000, vitaminE: 10000, zinc: 400,
   potassium: 68000, vitaminB12: 48, vitaminK: 2400, fiber: 760, sodium: 46000, // no limit to derive these from: 20 times the larger recommended amount (sodium: the 2,300 mg level), see `nutrientTargets.ts`
-  biotin: 600,
-  chromium: 700,
-  pantothenicAcid: 100,
-  riboflavin: 26,
-  thiamin: 24,
+  biotin: 20000, // the five added 2026-11-10 are capped above real supplement doses (a biotin 10,000 mcg or B-complex thiamin 100 mg label is normal), not at 20 times the recommended amount
+
+  chromium: 2000,
+  pantothenicAcid: 2000,
+  riboflavin: 1000,
+  thiamin: 1000,
 };
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;

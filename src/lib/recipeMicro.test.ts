@@ -99,3 +99,16 @@ describe('a meal rolls them up from its parts', () => {
     expect(list[2]!.micro).toEqual({ calcium: 200, iron: 4 });
   });
 });
+
+// Brief supplement-more-nutrients: the eight added keys roll up like the first 20 (kept only when every counted part lists them).
+describe('a meal rolls up the eight added nutrients', () => {
+  it('sums thiamin and choline from both parts and drops chromium that only one part lists', () => {
+    const a = food('a', { thiamin: 0.4, choline: 100, chromium: 5 }), b = food('b', { thiamin: 0.2, choline: 50 });
+    const r = mealRollup(meal([{ rid: 'a', q: 1 }, { rid: 'b', q: 2 }]), [a, b])!;
+    expect(r.per.micro).toEqual({ choline: 200, thiamin: 0.8 });
+  });
+  it('the recipe normaliser keeps a cleaned amount of each and drops one over its cap', () => {
+    const r = normRecipe({ ...food('a'), micro: { biotin: 300, manganese: 2.3, molybdenum: 45, riboflavin: 1.3, pantothenicAcid: 5, chromium: 35, manganese2: 1, thiamin: 99999 } })!;
+    expect(r.micro).toEqual({ manganese: 2.3, molybdenum: 45, biotin: 300, chromium: 35, pantothenicAcid: 5, riboflavin: 1.3 });
+  });
+});

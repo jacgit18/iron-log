@@ -81,6 +81,19 @@ describe('mapDsldLabel on real DSLD labels', () => {
     expect(names).toContain('Pantethine');
     expect(names).toContain('Alpha-Glycerophosphocholine');
   });
+  it('a salt or phosphate row is listed, not counted: "Choline Bitartrate" under group Choline, "Riboflavin-5-Phosphate" under a B2 group', () => {
+    const l = mapDsldLabel({ ingredientRows: [
+      { name: 'Choline Bitartrate', ingredientGroup: 'Choline', category: 'vitamin', quantity: [{ quantity: 250, unit: 'mg' }] },
+      { name: 'Riboflavin-5-Phosphate', ingredientGroup: 'Vitamin B2 (riboflavin 5-phosphate)', category: 'vitamin', quantity: [{ quantity: 3, unit: 'mg' }] },
+      { name: 'Chromium', ingredientGroup: 'Chromium', category: 'mineral', quantity: [{ quantity: 100, unit: 'mcg' }] },
+    ] })!;
+    expect(l.rows).toEqual([{ key: 'chromium', amount: 100, unit: 'mcg' }]);
+    expect(l.other.map(o => o.name)).toEqual(['Choline Bitartrate', 'Riboflavin-5-Phosphate']);
+  });
+  it('a bare group "Vitamin B5" with the row name "Pantothenic Acid" counts like "Pantothenic Acid (Vitamin B5)"', () => {
+    const l = mapDsldLabel({ ingredientRows: [{ name: 'Pantothenic Acid', ingredientGroup: 'Vitamin B5', category: 'vitamin', quantity: [{ quantity: 10, unit: 'mg' }] }] })!;
+    expect(l.rows).toEqual([{ key: 'pantothenicAcid', amount: 10, unit: 'mg' }]);
+  });
   it('a limit nutrient row with no stated amount is still "amount not stated"', () => {
     const l = mapDsldLabel({ ingredientRows: [{ name: 'Choline', ingredientGroup: 'Choline', category: 'vitamin', quantity: [{ quantity: 0, unit: 'NP' }] }] })!;
     expect(l.rows).toEqual([]);

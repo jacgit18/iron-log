@@ -31,8 +31,8 @@ describe('planFill: the eight added nutrients (brief supplement-more-nutrients)'
     for (const k of ['manganese', 'molybdenum', 'biotin', 'chromium', 'pantothenicAcid', 'riboflavin', 'thiamin']) expect(keys, k).toContain(k);
     expect(p.lines.find(l => l.key === 'chromium')).toMatchObject({ change: 'new', fromLabel: { amount: 100, unit: 'mcg' }, label: 'Chromium' });
     expect(p.lines.find(l => l.key === 'thiamin')?.label).toBe('Thiamin (vitamin B1)');
-    expect(keys.indexOf('manganese')).toBeLessThan(keys.indexOf('zinc')); // limit keys first, then the targets
-    expect(keys.indexOf('zinc')).toBeLessThan(keys.indexOf('biotin'));
+    expect(keys.indexOf('manganese')).toBeLessThan(keys.indexOf('molybdenum')); // limit keys first, then the targets
+    expect(keys.indexOf('molybdenum')).toBeLessThan(keys.indexOf('biotin'));
     expect(p.changes).toBe(true);
   });
   it('Fill from label replaces a typed thiamin amount and keeps a nutrient the label omits', () => {
