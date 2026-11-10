@@ -1,0 +1,36 @@
+@layer base, components;
+@layer components {
+.iaseg {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--r-md);
+  background: var(--sunk);
+}
+.iaseg .btn {
+  flex: 1;
+  min-height: 44px;
+  border-color: transparent;
+  background: transparent;
+}
+.iaseg .btn[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--line);
+}
+.iahelp {
+  margin: var(--sp-6) 0 0;
+}
+.iaday {
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.1;
+}
+.iaday small {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.iaday.today {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+}

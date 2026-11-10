@@ -53,10 +53,10 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
   },
-  // Puts an exercise on the Ideas to try list (a shared video's exercise lands there on its own). False when it is already listed or the data is not ready; no flag or modal change.
+  // Puts an exercise at the front of the Ideas to try list (a shared video's exercise lands there on its own; a hand-typed idea goes last). False when it is already listed or the data is not ready; no flag or modal change.
   addIdeaToTry(ex) {
     if (get().blocked() || !get().cfg.ex[ex] || get().experiments.some(x => x.ex === ex)) return false;
-    get().setExperiments([...get().experiments, { id: uid('E'), ex, ph: null, note: '' }]);
+    get().setExperiments([{ id: uid('E'), ex, ph: null, note: '' }, ...get().experiments]); // the front: the video just shared is the first card
     return true;
   },
   // The exercise id a sheet's choice stands for, adding it to the library first when it is new: a catalog pick joins with its snapshot
@@ -213,6 +213,16 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex: e.ex, ph: e.ph ?? null }]; });
     if (ok) flag(`Added ${exInfo(get().cfg, e.ex).n} to Day ${col}`);
     return ok;
+  },
+  addIdeaToDay(entryId, col) {
+    const e = get().experiments.find(x => x.id === entryId); const before = new Set((get().week.extra || []).map(x => x.id));
+    if (!e || !get().addToDay(entryId, col)) return false;
+    const added = (get().week.extra || []).find(x => !before.has(x.id)); if (!added) return false;
+    get().noteRemoved('experiments', `${exInfo(get().cfg, e.ex).n} to Day ${col} this week`, () => {
+      if (!(get().week.extra || []).some(x => x.id === added.id)) return false; // already gone, or another week is shown
+      get().removeExtra(added.id); get().dismissRemoved(); return true;
+    }, { verb: 'Added', undone: `Removed from Day ${col}` });
+    return true;
   },
   removeExtra(slotId) {
     const s = get().slotById(slotId); if (!s || !s.experiment) return;

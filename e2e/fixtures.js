@@ -22,6 +22,11 @@ export const test = base.extend({
 export const seedExperiments = (page, exercises = ['hack']) => page.addInitScript(items => {
   localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items }));
 }, exercises.map((ex, i) => ({ id: 'E' + i, ex, ph: 'hyp', note: '' })));
+// Ideas to try: Add opens the day sheet; "This week only" is the sheet's default, so tapping a day adds the card to the viewed week.
+export const addIdeaToDay = async (page, card, day) => {
+  await card.getByRole('button', { name: /^Add /, exact: false }).first().click();
+  await page.getByRole('dialog').getByRole('button', { name: `Day ${day}`, exact: true }).click();
+};
 // Done and skipped cards are folded into a closed "Finished (N)" bar below the day's open cards; open it (once) and return the row list.
 export const openFinished = async (page, day = 1) => {
   const bar = page.locator(`#finished-bar-${day}`);

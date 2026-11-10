@@ -1,4 +1,4 @@
-import { test, expect, seedExperiments, openFinished } from './fixtures.js';
+import { test, expect, seedExperiments, openFinished, addIdeaToDay } from './fixtures.js';
 
 // A card's Move to, Skip and Remove sit behind a ⋯ button in its top-right corner.
 const first = page => page.locator('#col-1 article.card').first();
@@ -60,8 +60,7 @@ test('on an experiment card Remove needs a second tap, keeps its panel open mean
   await page.goto('/');
   const entry = page.locator('.explist .expcard');
   const name = (await entry.locator('.rmname').innerText()).trim();
-  await entry.locator('select').selectOption('1');
-  await entry.getByRole('button', { name: /^This week only: add .* to Day 1$/ }).click();
+  await addIdeaToDay(page, entry, 1);
   const card = page.locator('#col-1 article.card').filter({ hasText: name }).first();
   const more = card.getByRole('button', { name: /^More actions:/ });
   await more.click();

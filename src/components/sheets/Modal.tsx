@@ -16,6 +16,7 @@ import MoveSheet from './MoveSheet.js';
 import NewProgramSheet from './NewProgramSheet.js';
 import ImportSheet from './ImportSheet.js';
 import HelpSheet from './HelpSheet.js';
+import IdeaAddSheet from './IdeaAddSheet.js';
 import ShareSheet from './ShareSheet.js';
 import RestDateSheet from './RestDateSheet.js';
 import BarcodeSheet from '../diet/BarcodeSheet.js';
@@ -71,6 +72,7 @@ export default function Modal() {
     case 'receipt': return <ReceiptSheet />;
     case 'receiptview': return <ReceiptViewer key={String((modal.receipt as { id?: string } | undefined)?.id ?? '')} />;
     case 'recipefilters': return <RecipeFilters />;
+    case 'ideaadd': return <IdeaAddSheet key={String(modal.id ?? '')} id={String(modal.id ?? '')} />;
     case 'help': return <HelpSheet />;
     case 'share': return <ShareSheet title={String(modal.title ?? '')} url={String(modal.url ?? '')} />;
     default: return null;

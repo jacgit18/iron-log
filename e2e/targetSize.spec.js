@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, seedExperiments } from './fixtures.js';
 
 // Every pointer target is at least 44x44 CSS px on a phone. axe does not check this (see ux/DESIGN-SYSTEM.md), so it is checked here by size.
 const TABS = ['Board', 'Daily', 'Progress', 'Program', 'Settings'];
@@ -28,6 +28,8 @@ async function small(page) {
 
 test('phone 390x844: every button, field and tab is at least 44x44 on each tab', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await seedExperiments(page, ['hack', 'facepull', 'latpd', 'chestpress', 'bbrow', 'dbcurl', 'legcurl']); // seven ideas: the filter row shows
+  await page.goto('/');
   for (const t of TABS) {
     await page.getByRole('tab', { name: t, exact: true }).click();
     expect(await small(page), `${t} has targets under 44px`).toEqual([]);

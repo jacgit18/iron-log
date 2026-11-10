@@ -1,0 +1,43 @@
+@layer base, components;
+@layer components {
+.ideafilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+  margin: var(--sp-8) 0;
+}
+.ifsearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  flex: 0 1 280px;
+}
+.ifsearch .field {
+  flex: 1;
+  min-width: 160px;
+}
+.ifpills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.ifclear {
+  min-height: 44px;
+}
+@media (max-width:700px) {
+  .ifsearch {
+    flex: 1 1 100%;
+  }
+  .ifcount {
+    flex: none;
+    margin: 0;
+    align-self: flex-end;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+}

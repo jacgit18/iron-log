@@ -132,6 +132,8 @@ export interface LibrarySlice {
   deleteExercise(exId: string): string | null;
   deleteExperiment(id: string): void;
   addToDay(entryId: string, col: number): boolean;
+  /** Adds an idea to a day of this week and offers Undo (the sheet's This week only); Undo takes out only the card just added. */
+  addIdeaToDay(entryId: string, col: number): boolean;
   removeExtra(slotId: string): void;
   addWarmup(n: string, rx: string): boolean;
   /** `d` is the Stretches day it was removed from, where its Undo shows. */
@@ -290,12 +292,12 @@ export interface SettingsSlice {
 /** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out); `oneTime` (quick add on Shopping) makes a When-out item that is out, which is the only way `every` is read. */
 export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string; unit?: GroceryUnit | ''; oneTime?: boolean }
 
-/** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
-export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
+/** What the last single-item delete took out (or, with `verb`, what an add put in): `text` is the notice ("Removed <text>."), `restore` puts it back. */
+export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void; /** The bold first word of the notice (default Removed); an Undo of an add says Added. */ verb?: string; /** The flag Undo shows (default Put back); an Undo of an add says Removed. */ undone?: string }
 
 export interface RemovedSlice {
   removed: Removed | null;
-  noteRemoved(scope: string, text: string, restore: () => boolean | void): void;
+  noteRemoved(scope: string, text: string, restore: () => boolean | void, opts?: { verb?: string; undone?: string }): void;
   undoRemoved(): void;
   /** Drop the Undo; with a scope, only when it belongs to that list. */
   dismissRemoved(scope?: string): void;
