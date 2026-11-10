@@ -52,13 +52,14 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
     if (!upc || !syncing || pick) { setUpcState('idle'); return; }
     let live = true;
     setUpcState('looking');
-    void lookupSupplementBarcode(upc).then(r => {
+    // Typing a UPC digit by digit passes through shorter numbers that happen to pass the check digit (about 1 in 10 at 8 digits): wait for a pause before asking the server, which counts a miss against the daily cap.
+    const wait = setTimeout(() => void lookupSupplementBarcode(upc).then(r => {
       if (!live) return;
       if (r.ok && r.listing) { setPick({ kind: 'catalog', item: r.listing }); setExact(true); setScanned(null); setScan(null); setErr(''); setQ(r.listing.name); setUpcState('idle'); return; }
       const steps = r.ok ? scanSearchSteps(r.product) : [];
       if (r.ok && steps.length) { setScan({ product: r.product, steps, step: 0 }); setUpcState('idle'); setQ(steps[0]!); } else setUpcState(r.ok ? 'notfound' : r.reason);
-    });
-    return () => { live = false; };
+    }), 500);
+    return () => { live = false; clearTimeout(wait); };
   }, [upc, syncing, pick]);
   const cat = cat0.status === 'ready' && extra ? { ...cat0, items: [...cat0.items, ...extra.items], more: extra.more } : cat0;
   const loadMore = () => {
