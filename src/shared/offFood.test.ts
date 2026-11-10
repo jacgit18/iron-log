@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { offHit } from './offFood.js';
+import { offHit, offName } from './offFood.js';
 
 // Answers captured from the live Open Food Facts product API on 2026-11-05 (fields trimmed to the ones read).
 const ALDI = { status: 1, product: { code: '4099100063851', product_name: 'Woven Whole Wheat Crackers', brands: 'Aldi', serving_quantity: 28, nutriments: { 'energy-kcal_100g': 428.571428571429, proteins_100g: 7.14285714285714, carbohydrates_100g: 71.4285714285714, fat_100g: 14.2857142857143 } } };
@@ -31,5 +31,17 @@ describe('offHit', () => {
 
   it('answers null for a product that is not found and never throws on odd input', () => {
     for (const odd of [null, undefined, 3, 'x', [], {}, { status: 0 }, { status: 0, product: ALDI.product }, { status: 1 }, { status: 1, product: 'x' }, { status: 1, product: { product_name: 'x', nutriments: 'x' } }]) expect(offHit(odd, '00000000000017')).toBeNull();
+  });
+});
+
+describe('offName (supplement scan: name and brand only)', () => {
+  it('reads the name and the first brand, without needing nutrition', () => {
+    expect(offName({ status: 1, product: { product_name: ' Amino  Energy ', brands: 'Optimum Nutrition, ON' } })).toEqual({ name: 'Amino Energy', brand: 'Optimum Nutrition' });
+    expect(offName({ status: 1, product: { product_name: 'Plain' } })).toEqual({ name: 'Plain' });
+  });
+  it('is null for an unknown product, a product with no name or junk', () => {
+    expect(offName({ status: 0 })).toBeNull();
+    expect(offName({ status: 1, product: { brands: 'X' } })).toBeNull();
+    expect(offName(null)).toBeNull();
   });
 });

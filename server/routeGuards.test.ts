@@ -30,7 +30,7 @@ const PUBLIC_WITH_AUTH: Record<string, string> = {
 // its check, push/fire.ts) and its token and limit tests live in the push tests.
 
 /** Mounted routers (app.use with a prefix) cannot be listed from the router, so each prefix is probed by hand. */
-const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'supplement-label', 'sync'];
+const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'supplement-barcode', 'supplement-label', 'sync'];
 
 let db: Kysely<DB>;
 let auth: ReturnType<typeof createAuth>;
