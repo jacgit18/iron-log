@@ -130,7 +130,21 @@ describe('mapDsld', () => {
       hit('40', 'Creatine Monohydrate', 'NOW Sports', 'Capsule'), hit('7', 'Creatine Monohydrate', 'Other Brand', 'Powder'),
     ]);
     expect(rows.map(r => r.id)).toEqual(['c:dsld:12', 'c:dsld:40', 'c:dsld:7']);
-    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand and form)']);
+    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand, form and label year)']);
+  });
+  it('keeps both label years of one product, with each one\'s year and UPC and no amounts', () => {
+    const hit = (id: string, entryDate: string, upcSku: string, extra: Record<string, unknown> = {}) =>
+      ({ _id: id, _source: { fullName: 'Mega Men', brandName: 'Nature Made', physicalState: { langualCodeDescription: 'Tablet' }, entryDate, upcSku, ...extra } }) as DsldHit;
+    const { rows, skipped } = mapDsld([
+      hit('300', '2020-05-01', '031604026505', { allIngredients: [{ name: 'Zinc' }] }), hit('20', '2016-02-03', '031604026499'),
+      hit('21', '2016-09-09', '031604000000'), hit('9', 'n/a', ''),
+    ]);
+    expect(rows.map(r => [r.id, r.data])).toEqual([
+      ['c:dsld:300', { form: 'Tablet', entryYear: 2020, upc: '031604026505' }],
+      ['c:dsld:20', { form: 'Tablet', entryYear: 2016, upc: '031604026499' }],
+      ['c:dsld:9', { form: 'Tablet' }],
+    ]);
+    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand, form and label year)']);
   });
   it('keeps id, name, brand and form only, and skips what it cannot use', () => {
     const hit = (id: unknown, src: Record<string, unknown>) => ({ _id: id, _source: src }) as DsldHit;
