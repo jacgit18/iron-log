@@ -51,9 +51,9 @@ export async function readMark(client) {
 /** Marks the database. Inside the caller's transaction. */
 export const setMark = (client, mark) => client.query("do $$ begin execute format('comment on database %I is %L', current_database(), $m$" + mark + "$m$); end $$");
 
-// Not user data: dbmate's record of applied migrations, and the exercise, stretch and supplement catalog (imported, not made by users).
+// Not user data: dbmate's record of applied migrations, the exercise, stretch and supplement catalog, and the supplement UPC table (imported, not made by users; the UPC crawl takes about a day to redo).
 // What `reset` (staging) and `reset` (QA) leave in place when they empty a database.
-export const KEEP_TABLES = ['schema_migrations', 'catalog_items'];
+export const KEEP_TABLES = ['schema_migrations', 'catalog_items', 'supplement_upcs'];
 
 /** Every table `reset` empties, as quoted `"schema"."table"` names: all base tables in public and auth except KEEP_TABLES. */
 export async function userTables(client) {
