@@ -145,6 +145,8 @@ describe('prod-db.sh', () => {
     writeFileSync(log, '');
     expect((await run(['upcs', '--limit', '50'])).calls).toEqual([`upcs --limit 50 url=${URL}`]);
     writeFileSync(log, '');
+    expect((await run(['upcs', '--apply', '--count'])).calls).toEqual([`upcs --apply --count url=${URL}`]); // a count writes nothing either
+    writeFileSync(log, '');
     expect((await run(['upcs', '--apply', '--limit', '50'])).calls).toEqual([`upcs --apply --limit 50 url=${URL}`]); // a limited run writes nothing, so no backup
   });
 

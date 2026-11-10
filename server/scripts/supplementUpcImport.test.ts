@@ -3,7 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 import type { DsldHit } from './catalogImport.ts';
-import { crawlUpcs, importUpcs, upcOfLabel } from './supplementUpcImport.ts';
+import { dsldAliases } from './catalogImport.ts';
+import { crawlScope, crawlUpcs, importUpcs, PRIORITY_BRANDS, slimHit, upcOfLabel } from './supplementUpcImport.ts';
 
 const hit = (id: string, name: string, entryDate = '2020-01-01', brand = 'Brand'): DsldHit => ({ _id: id, _source: { fullName: name, brandName: brand, physicalState: { langualCodeDescription: 'Tablet' }, entryDate } });
 const labels = (upcs: Record<string, string | null | Error>) => async (id: string) => {
@@ -45,6 +46,36 @@ describe('crawlUpcs', () => {
     const asked: string[] = [];
     await crawlUpcs(hits, { fetchLabel: async id => { asked.push(id); return {}; }, limit: 2, concurrency: 1 });
     expect(asked).toEqual(['5', '6']);
+  });
+});
+
+describe('a crawl limited to a scope', () => {
+  const hits = [hit('1', 'Old Fish Oil', '2015-01-01', 'Thorne Research'), hit('2', 'Old Zinc', '2015-01-01', 'Nobody Co'), hit('3', 'New Zinc', '2024-01-01', 'Nobody Co'), hit('4', 'Collagen', '2016-01-01', 'Sports Research'), hit('5', 'New Creatine', '2023-06-01', 'Thorne HealthTech')];
+  const scope = { since: 2022, brands: PRIORITY_BRANDS };
+  it('keeps recent labels and every label of a priority brand (a name that starts with it, any case), and drops the rest', () => {
+    expect(crawlScope(hits, new Map([['3', '']]), scope)).toEqual({ onMarket: 5, inScope: 4, priorityBrand: 3, cached: 1, toRead: 3 });
+    expect(crawlScope(hits, new Map())).toMatchObject({ inScope: 5, priorityBrand: 0 });
+  });
+  it('reads the priority brands first and asks only about labels in scope', async () => {
+    const asked: string[] = [];
+    const r = await crawlUpcs(hits, { fetchLabel: async id => { asked.push(id); return { upcSku: `0 0000${id}` }; }, scope, concurrency: 1 });
+    expect(asked).toEqual(['1', '4', '5', '3']);
+    expect(r).toMatchObject({ inScope: 4, asked: 4 });
+  });
+  it('does not remove rows when it runs limited, and does when it saw every label', async () => {
+    const { db, stop } = await startTestDatabase();
+    try {
+      await db.insertInto('catalog_items').values({ id: 'c:dsld:1', kind: 'supplement', source: 'dsld', license: 'test', name: 'x' }).execute();
+      await db.insertInto('supplement_upcs').values({ upc: '00000000000009', catalog_id: 'c:dsld:1' }).execute();
+      const pairs = new Map([['00000000000001', 'c:dsld:1']]);
+      expect(await importUpcs(db, pairs, { apply: true, prune: false })).toMatchObject({ added: 1, removed: 0 });
+      expect(await importUpcs(db, pairs, { apply: true })).toMatchObject({ added: 0, removed: 1 });
+    } finally { await stop(); }
+  }, 120_000);
+  it('keeps the same catalog rows after the results are slimmed for the cache file', () => {
+    const full = hits.map(h => ({ ...h, _source: { ...h._source, upcSku: 'x', bigField: 'y'.repeat(500) } }));
+    expect([...dsldAliases(hits.map(slimHit))]).toEqual([...dsldAliases(full)]);
+    expect(JSON.stringify(slimHit(full[0]!)).length).toBeLessThan(250);
   });
 });
 
