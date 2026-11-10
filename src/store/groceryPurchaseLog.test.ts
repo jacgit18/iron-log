@@ -122,3 +122,13 @@ describe('a month saved before the log', () => {
     expect(lib.normGroceryMonth(JSON.parse(JSON.stringify(m)))).toEqual(m); // a save and load changes nothing
   });
 });
+
+describe('a past month', () => {
+  it('still lists an item you ran out of, so its purchases show on Bought and in the month total', () => {
+    st().setGroceryGot(mk(), MILK, true);
+    st().setGroceryHave(mk(), MILK, false);
+    const m = month();
+    expect(lib.onList(st().grocery, m, false).map(i => i.id)).toEqual([MILK]);
+    expect(lib.tally(lib.onList(st().grocery, m, false), m).spent).toBe(500);
+  });
+});

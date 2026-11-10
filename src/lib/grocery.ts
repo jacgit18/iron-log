@@ -162,7 +162,7 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean, used?: Readon
   g.items.filter(i => {
     const l = m.lines[i.id];
     if (live) return !l?.have && !(used?.has(i.id) && !l?.got); // a used one-time item is only on the month it was bought in
-    return l?.got === true || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id);
+    return l?.got === true || !!l?.buys?.length || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id); // an item you ran out of keeps the purchases it closed
   });
 
 /** The At home ticks a new month starts with (ADR 079): the items you have (ticked Have, or bought) in the latest earlier month that has any, still in the catalogue.
