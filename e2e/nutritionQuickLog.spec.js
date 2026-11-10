@@ -120,6 +120,7 @@ test('a scanned food is logged to the day the scan began on, even if another day
   const scanned = page.getByRole('group', { name: 'Scanned food' });
   await expect(scanned).toBeVisible();
   await page.locator('.nb-col[data-day="2026-09-25"]').getByRole('button', { name: /^Fri 25/ }).click(); // another day, before saving
+  await expect(scanned.getByText('Logs to today, the day you scanned on.')).toBeVisible(); // the panel says where it will log
   await scanned.getByRole('button', { name: 'Save and log it' }).click();
   await expect(page.getByText(/Saved Almond milk \(Silk\) as .* and logged it\./)).toBeVisible();
   await expect(page.locator('.nb-col.today .nb-eat')).toHaveCount(1);

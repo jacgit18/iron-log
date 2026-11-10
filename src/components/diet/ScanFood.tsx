@@ -5,7 +5,7 @@ import { ateEntry, entryText } from '../../lib/dietLog.js';
 import { FOOD_TYPE_LABEL, FOOD_TYPES } from '../../shared/recipes.js';
 import { withMicro } from '../../shared/foodMicro.js';
 import { defaultGrams, hitLabel, type FoodHit } from '../../shared/foods.js';
-import { ymd } from '../../shared/dates.js';
+import { fmtDayDate, ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { FoodType } from '../../types.ts';
@@ -43,6 +43,7 @@ export default function ScanFood({ hit, day, onDone, onCancel }: { hit: FoodHit;
   return (
     <div className="dt-lookuppick" role="group" aria-label="Scanned food">
       <p>{hitLabel(hit)}</p>
+      <p className="note">Logs to {day === today ? 'today' : fmtDayDate(day)}, the day you scanned on.</p>
       <div className="seg" role="group" aria-label="Type">
         {FOOD_TYPES.map(t => <button key={t} type="button" className={type === t ? 'on' : ''} aria-pressed={type === t} onClick={() => setType(t)}>{FOOD_TYPE_LABEL[t]}</button>)}
       </div>
