@@ -27,6 +27,7 @@ test.describe('admin session', () => {
     await expect(disc).toHaveAttribute('aria-expanded', 'false'); // closed as it opens
     await disc.click();
     await sheet.getByRole('button', { name: '+ Add a nutrient' }).click();
+    await sheet.getByLabel('Nutrient 1').selectOption({ label: 'Calcium' }); // a new row starts on the first nutrient of the picker (Thiamin)
     await sheet.getByLabel('Amount 1').fill('180');
     await sheet.getByRole('button', { name: '+ Add a nutrient' }).click();
     await sheet.getByLabel('Nutrient 2').selectOption({ label: 'Vitamin B12' });
@@ -137,6 +138,7 @@ test('a person who is not an admin can type amounts like everyone (released 2026
   await fillOneOff(sheet);
   await sheet.getByRole('button', { name: /Vitamins and minerals \(optional\)/ }).click();
   await sheet.getByRole('button', { name: '+ Add a nutrient' }).click();
+  await sheet.getByLabel('Nutrient 1').selectOption({ label: 'Calcium' }); // a new row starts on the first nutrient of the picker (Thiamin)
   await sheet.getByLabel('Amount 1').fill('180');
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);

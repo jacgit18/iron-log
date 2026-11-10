@@ -70,3 +70,30 @@ describe('fmtAmount', () => {
     expect(fmtAmount(2.3333)).toBe('2.33');
   });
 });
+
+// Brief supplement-more-nutrients, PR 2: the eight added nutrients ride the generic totals code. Limit nutrients are rows with a status; the five targets never warn.
+describe('the eight added nutrients', () => {
+  const added: SupplementItem = { id: 'a', n: 'Blend', slot: 'morning', nutrients: [
+    { key: 'manganese', amount: 15, unit: 'mg' }, { key: 'thiamin', amount: 12, unit: 'mg' }, { key: 'choline', amount: 500, unit: 'mg' }, { key: 'biotin', amount: 5, unit: 'mg' },
+  ] };
+  const taken = { [day]: { a: true as const } };
+  it('puts choline and manganese in the limit rows, with the limit, status and scope note of their tables', () => {
+    const v = totalsView([added], taken, day, 'taken');
+    expect(v.rows.map(r => r.key)).toEqual(['choline', 'manganese']);
+    expect(v.rows[0]).toMatchObject({ figure: '500 mg', limitText: 'Limit 3,500 mg', status: 'under' });
+    expect(v.rows[1]).toMatchObject({ figure: '15 mg', limitText: 'Limit 11 mg', status: 'over', statusText: 'Over the limit by 4 mg' });
+    expect(v.rows[1]!.scopeNote).toContain('counts both');
+  });
+  it('puts thiamin and biotin under no upper limit, never over, and converts a biotin row in mg to mcg', () => {
+    const v = totalsView([added], taken, day, 'taken');
+    expect(v.targets.map(t => t.key)).toEqual(['biotin', 'thiamin']);
+    expect(v.targets[0]).toMatchObject({ figure: '5,000 mcg', statusText: '16,667% of the recommended amount' });
+    expect(v.targets[1]).toMatchObject({ figure: '12 mg', statusText: 'Above the recommended range' });
+    expect(v.targets.every(t => t.scopeNote.startsWith('There is no upper limit'))).toBe(true);
+  });
+  it('warns about the limit nutrient only', () => {
+    const w = limitWarning([added], taken, day);
+    expect(w).toContain('Manganese');
+    expect(w).not.toMatch(/Thiamin|Biotin|Choline/);
+  });
+});

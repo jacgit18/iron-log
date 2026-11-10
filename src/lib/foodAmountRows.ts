@@ -2,8 +2,8 @@ import { MICRO_MAX, MICRO_UNIT, cleanMicro } from '../shared/foodMicro.js';
 import type { Micro } from '../shared/foodMicro.js';
 import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
 import type { NutrientKey } from '../shared/nutrientKeys.js';
-import { FORM_KEYS } from './nutrientFormKeys.js';
 import { nutrientLabel } from './nutrientInfo.js';
+import { nextFreePickerKey } from './nutrientPickerGroups.js';
 
 /* ---------- Typed vitamin and mineral amounts on a food (brief type-food-amounts) ----------
    The One-off food form and the Ready-made form show a food's amounts as rows (nutrient, amount, unit) and turn them back into a `Micro` on save. `filled` marks a row that came
@@ -21,7 +21,7 @@ export const rowsFromMicro = (m: Micro | undefined, filled: boolean): AmountRow[
   NUTRIENT_KEYS.flatMap(key => (m?.[key] !== undefined ? [{ key, amount: String(m[key]), unit: MICRO_UNIT[key], ...(filled ? { filled: true } : {}) }] : []));
 
 /** The first nutrient without a row, for "+ Add a nutrient". */
-export const nextFreeKey = (rows: AmountRow[]): NutrientKey | undefined => FORM_KEYS.find(k => !rows.some(r => r.key === k));
+export const nextFreeKey = (rows: AmountRow[]): NutrientKey | undefined => nextFreePickerKey(rows.map(r => r.key));
 
 /** The rows a save would keep: when calories no longer match the ones the filled rows came with, the untouched filled rows go and `cleared` says so. */
 export function liveRows(rows: AmountRow[], kcal: number, kcalFrom: number | undefined): { rows: AmountRow[]; cleared: boolean } {
