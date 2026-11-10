@@ -36,14 +36,15 @@
   width: 16px;
   height: 16px;
 }
+/* Compact keeps the host's own display, margin and hit-area rules (the Board's `.exname a`), so it never moves the line it sits on. */
 .watch-compact {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-4);
   font-size: var(--fs-xs);
   color: var(--accent);
 }
 .watch-compact .watch-play {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-block: -4px;
   width: 15px;
   height: 15px;
 }

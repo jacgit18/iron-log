@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
-import Icon from '../Icon.js';
-import { videoLabel } from '../../lib/data.js';
+import WatchLink from '../WatchLink.jsx';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
@@ -58,7 +57,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       <BackBar onBack={onBack} />
       <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} /></div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
-      {recipe.url && <p className="note"><a className="rc-video" href={recipe.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(recipe.url)}: ${recipe.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(recipe.url)}</a></p>}
+      {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
