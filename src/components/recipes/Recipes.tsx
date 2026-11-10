@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
+import FilterSelect from '../FilterSelect.jsx';
 import FoodTypeReview from './FoodTypeReview.js';
 import Icon from '../Icon.js';
 import RecipeDetail from './RecipeDetail.js';
@@ -187,9 +188,11 @@ export default function Recipes() {
       {src === 'mine' && <RecipeQuickRow picks={picks} onOpen={openRecipe} />}
       <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
       <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
-        <div className="rc-chips" role="group" aria-label="Category">
-          <button type="button" aria-pressed={cat === null} onClick={() => setCat(null)}>All</button>
-          {chips.map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
+        <FilterSelect label="Category" value={cat ?? ''} onChange={v => setCat(v === '' ? null : v as RecipeCategory)}>
+          <option value="">All categories</option>
+          {chips.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
+        </FilterSelect>
+        <div className="rc-chips">
           {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
           <button type="button" className="rc-manage" onClick={() => useAppStore.getState().openModal({ type: 'recipefilters' })}>Manage filters</button>
         </div>

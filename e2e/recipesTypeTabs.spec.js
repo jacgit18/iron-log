@@ -55,20 +55,20 @@ test('a tab with nothing in it names the next step', async ({ page }) => {
 test('Filters is closed at first, and what is under it still filters and keeps the counts honest', async ({ page }) => {
   await open(page);
   await expect(page.locator('#recipes-filters')).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.getByRole('group', { name: 'Category' })).toBeHidden();
+  await expect(page.getByLabel('Category', { exact: true })).toBeHidden();
   await page.click('#recipes-filters');
-  await expect(page.getByRole('group', { name: 'Category' })).toBeVisible();
+  await expect(page.getByLabel('Category', { exact: true })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Tags', exact: true })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Nutrition', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Can make' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Manage filters' })).toBeVisible();
   await expect(page.getByLabel('Sort')).toBeVisible();
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Protein' }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
   expect((await titles(page)).sort()).toEqual(['Chicken bowl', 'Lentil soup']);
   await expect(page.locator('#recipes-tab-meals')).toHaveText('Meals2');
   await expect(page.locator('#recipes-tab-drinks')).toHaveText('Drinks0');
   await page.click('#recipes-filters');
-  await expect(page.getByRole('group', { name: 'Category' })).toBeHidden();
+  await expect(page.getByLabel('Category', { exact: true })).toBeHidden();
   expect((await titles(page)).sort()).toEqual(['Chicken bowl', 'Lentil soup']); // a hidden filter still applies
 });
 
@@ -179,7 +179,7 @@ for (const [w, h] of [[1440, 900], [375, 812]]) {
     await page.click('#recipes-new');
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(' | ')}`)).toEqual([]);
-    const small = await page.locator('.rc-tabs button, .rc-quick button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-chips button').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
+    const small = await page.locator('.rc-tabs button, .rc-quick button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-chips button, .rc-filterbar select, .fselx').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
     expect(small).toEqual([]);
   });
 }
