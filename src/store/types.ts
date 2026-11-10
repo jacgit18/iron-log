@@ -113,6 +113,8 @@ export interface BodySlice {
 export interface LibrarySlice {
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
+  /** Adds an exercise to the Ideas to try list unless it is already there; returns whether it was added. */
+  addIdeaToTry(ex: string): boolean;
   /** The exercise id a sheet's choice stands for, adding it to the library first when it is new. */
   resolveExerciseChoice(d: ExerciseChoice & ExerciseExtras, chosen: string): string;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
