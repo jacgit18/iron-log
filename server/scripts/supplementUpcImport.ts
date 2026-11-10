@@ -79,7 +79,8 @@ export interface CrawlScopeCounts { onMarket: number; inScope: number; priorityB
 export function crawlScope(hits: DsldHit[], known: Map<string, string>, scope?: LabelScope): CrawlScopeCounts {
   const { ids } = scopedIds(hits, scope);
   const cached = ids.filter(id => known.has(id)).length;
-  const priorityBrand = scope ? hits.filter(h => isPriorityBrand(h, scope.brands) && ids.includes(String(h._id))).length : 0;
+  const wanted = new Set(ids);
+  const priorityBrand = scope ? hits.filter(h => isPriorityBrand(h, scope.brands) && wanted.has(String(h._id))).length : 0;
   return { onMarket: dsldAliases(hits).size, inScope: ids.length, priorityBrand, cached, toRead: ids.length - cached };
 }
 
