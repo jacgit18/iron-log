@@ -12,9 +12,18 @@ const board = page => page.locator('.nb');
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const status = page => board(page).locator('.nb-msg');
 const nutrition = openNutrition;
+// A day's planned card moved to today (the add sheet no longer plans on today, so a test that needs a planned card on today plans a day ahead and moves it, which is also how a person does it).
+const moveToToday = async (page, name, from) => {
+  const c = col(page, from);
+  await c.locator('.wb-card', { hasText: name }).click();
+  await c.getByRole('button', { name: `Move ${name}`, exact: true }).click();
+  await c.getByRole('group', { name: `Move ${name} to` }).getByRole('button', { name: 'Thu, Sep 24' }).click();
+  await todayCol(page).locator('.nb-dayname').click();
+};
 // Picks a day on the board (by its name), opens the add sheet's Recipes or Saved meals way and plans into a meal.
 const planRecipe = async (page, name, day, meal = 'Dinner') => {
-  if (day) await col(page, day).locator('.nb-dayname').click();
+  if (!day || day === '2026-09-24') { await planRecipe(page, name, TOMORROW, meal); await moveToToday(page, name, TOMORROW); return; }
+  await col(page, day).locator('.nb-dayname').click();
   const sheet = await openAdd(page, 'Recipes');
   await sheet.getByRole('group', { name: 'Which meal' }).getByRole('button', { name: meal, exact: true }).click();
   await sheet.getByLabel('Find a recipe').fill(name);
