@@ -59,7 +59,7 @@ describe('qa-db.mjs', () => {
     expect(out.status).toBe(0);
     expect(out.stdout).toContain('would empty: "auth"."session" (1 rows)');
     expect(out.stdout).toContain('would empty: "public"."users" (1 rows)');
-    expect(out.stdout).toContain('keeping: schema_migrations, catalog_items');
+    expect(out.stdout).toContain('keeping: schema_migrations, catalog_items, supplement_upcs');
     expect(out.stdout).not.toContain('"public"."catalog_items"');
     expect(out.stdout).toContain('Dry run');
     expect(await count('auth."session"')).toBe(1);
