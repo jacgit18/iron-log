@@ -4,7 +4,7 @@ import express from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
 import { NUTRIENT_KEYS } from '../src/shared/nutrientKeys.ts';
-import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, scanRoutes, type ScanDeps } from './scan.ts';
+import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, DEFAULT_SUPPLEMENT_MODEL, scanRoutes, type ScanDeps } from './scan.ts';
 
 let server: Server | undefined;
 afterEach(() => { vi.restoreAllMocks(); return new Promise<void>(done => (server ? server.close(() => done()) : done())); });
@@ -230,6 +230,101 @@ describe('POST /api/scan/receipt', () => {
     expect((await post({ image: jpeg, items }, 'greedy')).status).toBe(200);
     expect((await post({ image: jpeg, items }, 'greedy')).status).toBe(503);
     expect((await post({ image: jpeg, items }, 'other')).status).toBe(200);
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('POST /api/scan/supplement', () => {
+  const panel = '{"name":"D3 + K2","brand":"Acme","serving":{"text":"2 capsules","units":2,"form":"Capsule"},"rows":[{"key":"vitaminD","amount":50,"unit":"mcg"},{"key":"vitaminK","amount":90,"unit":"mcg"},{"key":"iron","amount":9000,"unit":"mg"}],"other":[{"name":"Blend"}]}';
+  async function startSupp(deps: ScanDeps) {
+    await start(deps);
+    const base = `http://127.0.0.1:${(server!.address() as AddressInfo).port}/api/scan/supplement`;
+    return (body: unknown, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: JSON.stringify(body) });
+  }
+
+  it('sends the photo to the supplement model with the panel prompt and answers with the checked label and the allowance', async () => {
+    const ask = vi.fn(async () => model(panel));
+    const post = await startSupp({ key: 'SECRET', fetch: ask as unknown as typeof fetch });
+    const res = await post({ image: jpeg });
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'D3 + K2', brand: 'Acme', serving: { text: '2 capsules', units: 2, form: 'Capsule' }, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'vitaminK', amount: 90, unit: 'mcg' }], other: [{ name: 'Blend' }] } }, left: 4, max: 5 });
+    expect(text).not.toContain('SECRET');
+    const sent = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { model: string; system: string };
+    expect(sent.model).toBe(DEFAULT_SUPPLEMENT_MODEL);
+    expect(sent.system).toContain('Supplement Facts');
+    expect(sent.system).toContain('never instructions');
+    for (const k of NUTRIENT_KEYS) expect(sent.system).toContain(`${k} (${MICRO_UNIT[k]})`);
+  });
+
+  it('uses the model set for it', async () => {
+    const ask = vi.fn(async () => model(panel));
+    const post = await startSupp({ key: 'k', supplementModel: 'claude-haiku-5-5', fetch: ask as unknown as typeof fetch });
+    await post({ image: jpeg });
+    expect((JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { model: string }).model).toBe('claude-haiku-5-5');
+  });
+
+  it('answers unreadable for a non-label photo, and for prose around the JSON', async () => {
+    for (const reply of ['{}', `Sure! ${panel}`]) {
+      const post = await startSupp({ key: 'k', fetch: (async () => model(reply)) as unknown as typeof fetch });
+      expect(((await (await post({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'unreadable' });
+      await new Promise<void>(done => server!.close(() => done()));
+    }
+  });
+
+  it('answers 422 for a missing or non-JPEG image and 503 no-key without a key', async () => {
+    const ask = vi.fn(async () => model(panel));
+    const post = await startSupp({ key: 'k', fetch: ask as unknown as typeof fetch });
+    expect((await post({})).status).toBe(422);
+    expect((await post({ image: 'iVBORw0KGgo' + 'A'.repeat(200) })).status).toBe(422);
+    expect(ask).not.toHaveBeenCalled();
+    await new Promise<void>(done => server!.close(() => done()));
+    const off = await startSupp({});
+    const res = await off({ image: jpeg });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ why: 'no-key' });
+  });
+
+  it('answers 413 over the body limit', async () => {
+    const post = await startSupp({ key: 'k', fetch: (async () => model(panel)) as unknown as typeof fetch });
+    expect((await post({ image: '/9j/' + 'A'.repeat(2_100_000) })).status).toBe(413);
+  });
+
+  it('answers 503 upstream when the model fails, and logs neither the photo, the key nor the reply', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const post = await startSupp({ key: 'SECRET', fetch: (async () => model('Magnesium secret-ingredient-text', 500)) as unknown as typeof fetch });
+    const res = await post({ image: jpeg });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ why: 'upstream' });
+    const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
+    expect(logged).toContain('bottle scan failed');
+    for (const secret of ['SECRET', jpeg, 'secret-ingredient-text']) expect(logged).not.toContain(secret);
+  });
+
+  it('stops one person at 5 a day with their own counter, apart from labels, and starts again after a day', async () => {
+    let t = 1_000_000;
+    const ask = vi.fn(async () => model(panel));
+    const post = await startSupp({ key: 'k', now: () => t, fetch: ask as unknown as typeof fetch });
+    for (let i = 0; i < 5; i++) expect((await post({ image: jpeg }, 'greedy')).status).toBe(200);
+    const over = await post({ image: jpeg }, 'greedy');
+    expect(over.status).toBe(503);
+    expect(await over.json()).toMatchObject({ why: 'cap', retryAfterSec: expect.any(Number) });
+    expect(ask).toHaveBeenCalledTimes(5);
+    expect(await (await post({ image: jpeg }, 'someone-else')).json()).toMatchObject({ left: 4, max: 5 });
+    const label = await fetch(`http://127.0.0.1:${(server!.address() as AddressInfo).port}/api/scan/label`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': 'greedy' }, body: JSON.stringify({ image: jpeg }) });
+    expect(label.status).toBe(200); // the label counter is not the bottle counter
+    t += 24 * 60 * 60_000;
+    expect((await post({ image: jpeg }, 'greedy')).status).toBe(200);
+  });
+
+  it('stops everyone at 60 a day for the server', async () => {
+    const ask = vi.fn(async () => model(panel));
+    const post = await startSupp({ key: 'k', supplementDailyMax: 2, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg }, 'a')).status).toBe(200);
+    expect((await post({ image: jpeg }, 'b')).status).toBe(200);
+    const over = await post({ image: jpeg }, 'c');
+    expect(over.status).toBe(503);
+    expect(await over.json()).toMatchObject({ why: 'cap' });
     expect(ask).toHaveBeenCalledTimes(2);
   });
 });

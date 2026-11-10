@@ -176,11 +176,14 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
 
   /* Supplement library and schedule: Morning, Noon, Night. The same list every day; ticks are kept per date. */
   // From the Supplements tab: a new supplement straight into a section.
-  addSupplement(slot, name, dose) {
+  // `opts` (brief supplement-label-scan): amounts, serving size and brand read from a bottle's label, cleaned like any typed rows; left out, it is added exactly as before.
+  addSupplement(slot, name, dose, opts = {}) {
     if (!SLOTS.some(([k]) => k === slot)) return false;
     const n = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (!n) { flag('Give the supplement a name'); return false; }
     const dz = String(dose || '').trim().slice(0, 40);
-    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}) }); });
+    const brand = String(opts.brand || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); });
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
   // `dose`, when typed (the Supplements tab's add form), replaces the saved one.

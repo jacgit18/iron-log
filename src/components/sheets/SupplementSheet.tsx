@@ -8,6 +8,9 @@ import ArmedButton from '../ArmedButton.jsx';
 import { nutrientLabel } from '../../lib/nutrientInfo.js';
 import NutrientRows from '../supplements/NutrientRows.js';
 import { LabelCompare } from '../supplements/LabelPreview.js';
+import ScanBottle from '../supplements/ScanBottle.js';
+import { SUPPLEMENT_SCAN_TEXT } from '../../lib/scanPhoto.js';
+import type { SupplementLabel } from '../../shared/dsldLabel.js';
 import { planFill } from '../../lib/supplementLabelFill.js';
 import { isDsldCatalogId, useSupplementLabel } from '../../hooks/useSupplementLabel.js';
 import PortionStepper from '../supplements/PortionStepper.js';
@@ -30,9 +33,11 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
   const [err, setErr] = useState('');
   // Fill from label (brief supplement-label-amounts): read the label on request, show it beside the rows in the form, change the form only on Replace (Save still keeps it).
   const [asked, setAsked] = useState(false); const [replaced, setReplaced] = useState(false);
+  const [scanned, setScanned] = useState<SupplementLabel | null>(null); // Scan label (brief supplement-label-scan): the bottle's panel read from a photo, shown in the same compare view
   const { state: lab, retry } = useSupplementLabel(asked ? cur?.catalogId : null);
   const units = Number(d.units);
-  const plan = lab.status === 'ready' ? planFill({ nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ...(units > 0 ? { serving: { units, ...(d.form ? { form: d.form } : {}) } } : {}) }, lab.label) : null;
+  const label = scanned ?? (asked && lab.status === 'ready' ? lab.label : null);
+  const plan = label ? planFill({ nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ...(units > 0 ? { serving: { units, ...(d.form ? { form: d.form } : {}) } } : {}) }, label) : null;
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   return (
     <Sheet>
@@ -56,13 +61,17 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
           <h3 className="ssgh" id="ssg-amt">What is in one serving</h3>
           <NutrientRows rows={d.nutrients} onChange={nutrients => up({ nutrients })} />
           {cur && isDsldCatalogId(cur.catalogId) && !asked && <button type="button" className="btn sm" onClick={() => { setAsked(true); setReplaced(false); }}>Fill from label</button>}
+          {!cur?.catalogId && !scanned && <ScanBottle label="Scan label" onRead={l => { setScanned(l); setReplaced(false); setD(x => (x.n.trim() ? x : { ...x, n: l.name.slice(0, 60) })); }} />}
           {asked && lab.status === 'loading' && <p className="note" role="status">Reading the label...</p>}
           {asked && lab.status === 'failed' && (
             <p className="note" role="status">Could not load this product's amounts. You can type them in the rows above. <button type="button" className="btn sm" onClick={retry}>Try again</button> <button type="button" className="btn sm" onClick={() => setAsked(false)}>Close</button></p>
           )}
-          {asked && lab.status === 'ready' && plan && (
-            <LabelCompare label={lab.label} plan={plan} onCancel={() => setAsked(false)}
-              onReplace={() => { up({ nutrients: plan.result.nutrients.map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), units: plan.result.serving ? String(plan.result.serving.units) : d.units, form: plan.result.serving?.form ?? d.form }); setAsked(false); setReplaced(true); }} />
+          {label && plan && (
+            <>
+            {scanned && <p className="note" role="status">{SUPPLEMENT_SCAN_TEXT.check} Check that every row on the bottle is here.</p>}
+            <LabelCompare label={label} plan={plan} onCancel={() => { setAsked(false); setScanned(null); }}
+              onReplace={() => { up({ nutrients: plan.result.nutrients.map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), units: plan.result.serving ? String(plan.result.serving.units) : d.units, form: plan.result.serving?.form ?? d.form }); setAsked(false); setScanned(null); setReplaced(true); }} />
+            </>
           )}
           {replaced && <p className="note" role="status">Label amounts are in the rows above. Press Save to keep them.</p>}
         </section>
