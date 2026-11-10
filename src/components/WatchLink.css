@@ -5,7 +5,6 @@
   text-decoration: none;
   font-weight: 600;
 }
-/* Compact keeps the host's own display, margin and hit-area rules (the Board's `.exname a`), so it never moves the line it sits on. */
 .watch-play {
   display: inline-flex;
   align-items: center;
@@ -37,12 +36,12 @@
   width: 16px;
   height: 16px;
 }
+/* Compact keeps the host's own display, margin and hit-area rules (the Board's `.exname a`), so it never moves the line it sits on. */
 .watch-compact {
   font-size: var(--fs-xs);
   color: var(--accent);
 }
-.watch-compact /* Compact keeps the host's own display, margin and hit-area rules (the Board's `.exname a`), so it never moves the line it sits on. */
-.watch-play {
+.watch-compact .watch-play {
   display: inline-flex;
   vertical-align: middle;
   margin-block: -4px;
