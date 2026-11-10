@@ -8,12 +8,13 @@ import { cardWeek, cardLogs, type CardWeek } from '../../lib/cardView.js';
 import { logButtonLabel } from '../../lib/loggedEntry.js';
 import { movedFromLabel } from '../../lib/movedFromLabel.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
-import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
 import { shownNote } from '../../lib/exerciseNote.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
+import WatchLink from '../WatchLink.jsx';
 import { useSwipeCard } from './useSwipeCard.js';
 import type { CardState, SwipeAction } from '../../lib/swipe.js';
 import './Card.css';
@@ -156,7 +157,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
                 )}
                 <div className="exlabel">
                   <h4 className="exh" id={`h-${s.id}-${idx}`}>{ex.n}</h4>
-                  {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(ex.url)}</a>}
+                  {ex.url && <WatchLink url={ex.url} name={ex.n} size="compact" />}
                 </div>
               </div>
               {isk && <div className="iskiprow"><span className="skiptag">Skipped this week</span><button type="button" className="btn sm ghost" id={`undoskip-${s.id}-${idx}`} aria-label={`Undo skip for ${ex.n}`} onClick={() => skipItem(s.id, idx)}>Undo skip</button></div>}
