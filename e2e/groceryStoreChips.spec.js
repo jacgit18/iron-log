@@ -44,6 +44,51 @@ test('chips filter to one store, All shows one column, and no store leaves an em
   await expect(stores(page)).toHaveCount(3);
 });
 
+// All plus 4 or more stores is one dropdown (brief filter-dropdowns); All plus 3 stays chips (the tests above). A unit test cannot catch the wired list, the fallback or the page width.
+const SIX = {
+  stores: ['Costco', "Trader Joe's", 'Aldi', 'Lidl', 'Target', 'Safeway'],
+  items: ['Costco', "Trader Joe's", 'Aldi', 'Lidl', 'Target', 'Safeway'].flatMap((s, i) => [item(`a${i}`, `A${i}`, s), item(`b${i}`, `B${i}`, s)]),
+  groups: [],
+};
+const pick = page => page.getByRole('combobox', { name: 'Store', exact: true });
+
+test('with six stores the Store filter is a dropdown with counts: it filters, All and × clear it, and a store with nothing left falls back to All', async ({ page }) => {
+  await open(page, { lines: {}, pulled: [] }, SIX);
+  await expect(page.getByRole('group', { name: 'Store' })).toHaveCount(0); // no chips
+  await expect(pick(page)).toBeVisible();
+  await expect(pick(page).locator('option')).toHaveText(['All (12)', 'Costco (2)', "Trader Joe's (2)", 'Aldi (2)', 'Lidl (2)', 'Target (2)', 'Safeway (2)']);
+  await expect(stores(page)).toHaveCount(6);
+  await pick(page).selectOption({ label: 'Lidl (2)' });
+  await expect(stores(page)).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Clear Store filter' })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear Store filter' }).click();
+  await expect(stores(page)).toHaveCount(6);
+  await pick(page).selectOption({ label: 'Aldi (2)' });
+  await page.getByLabel('Have A2').click(); await page.getByLabel('Have B2').click();
+  await expect(stores(page)).toHaveCount(5); // Aldi is gone, All is back
+  await expect(pick(page)).toHaveValue('');
+  await pick(page).selectOption({ label: 'Costco (2)' });
+  await pick(page).selectOption({ label: 'All (10)' });
+  await expect(stores(page)).toHaveCount(5);
+  await page.setViewportSize({ width: 375, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+  expect((await pick(page).boundingBox()).height).toBeGreaterThanOrEqual(43.5); // the select is a 44px target on a phone
+});
+
+test('Inventory uses the same dropdown with six stores, and the chips stay for three', async ({ page }) => {
+  await open(page, { lines: {}, pulled: [] }, SIX);
+  await page.click('#groc-view-inventory');
+  await expect(pick(page)).toBeVisible();
+  await pick(page).selectOption({ label: 'Target (2)' });
+  await expect(page.locator('li.ghome')).toHaveCount(2);
+  await page.click('#groc-view-shopping'); await page.click('#groc-view-inventory');
+  await expect(pick(page)).toHaveValue(''); // leaving the view resets it
+  await open(page, MONTH, CATALOGUE);
+  await page.click('#groc-view-inventory');
+  await expect(page.getByRole('group', { name: 'Store' })).toBeVisible(); // All plus 3 stores: chips
+  await expect(pick(page)).toHaveCount(0);
+});
+
 test('a chip whose store has nothing left falls back to All, and leaving the view resets it', async ({ page }) => {
   await open(page);
   await chip(page, /^Aldi/).click();

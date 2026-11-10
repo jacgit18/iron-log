@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem } from '../types.ts';
-import { ALL_CHIP, DETAILS_OPEN_FROM, chipGroups, chipsOf, detailsStartOpen, haveCount, haveMonthText, hasNoPrice, resolveChip, showChips, storeChip } from './groceryChips.js';
+import { ALL_CHIP, DETAILS_OPEN_FROM, asDropdown, chipGroups, chipOptionText, chipToValue, chipsOf, detailsStartOpen, haveCount, haveMonthText, hasNoPrice, resolveChip, showChips, storeChip, valueToChip } from './groceryChips.js';
 
 const item = (id: string, store: string): GroceryItem => ({ id, n: id, store, qty: 1, cents: 100, every: true, out: false });
 const groups = [
@@ -72,5 +72,31 @@ describe('Inventory counts', () => {
   });
   it('makes one chip per store with its item count', () => {
     expect(chipsOf(groups).map(c => c.count)).toEqual([4, 3, 1]);
+  });
+});
+
+describe('asDropdown', () => {
+  const n = (k: number) => Array.from({ length: k }, (_, i) => ({ key: `k${i}`, label: `L${i}`, count: i }));
+  it('keeps chips for four options or fewer (All plus up to 3 stores)', () => {
+    expect(asDropdown(n(1))).toBe(false);
+    expect(asDropdown(n(3))).toBe(false);
+    expect(asDropdown(n(4))).toBe(false);
+  });
+  it('becomes a dropdown for five options or more (All plus 4 stores)', () => {
+    expect(asDropdown(n(5))).toBe(true);
+    expect(asDropdown(n(9))).toBe(true);
+  });
+});
+
+describe('dropdown mapping', () => {
+  it('writes counts in brackets', () => {
+    expect(chipOptionText({ key: ALL_CHIP, label: 'All', count: 12 })).toBe('All (12)');
+    expect(chipOptionText({ key: 's:Aldi', label: 'Aldi', count: 1 })).toBe('Aldi (1)');
+  });
+  it('maps All to the empty value and back, and leaves stores alone', () => {
+    expect(chipToValue(ALL_CHIP)).toBe('');
+    expect(valueToChip('')).toBe(ALL_CHIP);
+    expect(valueToChip(chipToValue('s:Aldi'))).toBe('s:Aldi');
+    expect(valueToChip(chipToValue('s:'))).toBe('s:'); // Anywhere is not All
   });
 });
