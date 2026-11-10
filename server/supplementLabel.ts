@@ -18,7 +18,7 @@ export interface SupplementLabelDeps { fetch?: typeof fetch; now?: () => number 
 /** The label of one DSLD product, null when NIH has none (404, or a record with no ingredient rows). Throws on a timeout, a refusal or a body that is not a label record. */
 export async function askDsld(dsldId: number, { fetch: ask = fetch, timeoutMs = TIMEOUT_MS }: { fetch?: typeof fetch; timeoutMs?: number } = {}): Promise<SupplementLabel | null> {
   if (!Number.isSafeInteger(dsldId) || dsldId < 0) throw new Error('bad id'); // only a whole number reaches the address
-  const r = await ask(`${DSLD_URL}/${String(dsldId)}`, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json' } });
+  const r = await ask(`${DSLD_URL}/${String(dsldId)}`, { signal: AbortSignal.timeout(timeoutMs), redirect: 'error', headers: { accept: 'application/json' } });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`upstream ${r.status}`);
   const body: unknown = await r.json(); // junk throws here: "could not ask", not "not there"
