@@ -12,11 +12,20 @@ const key = process.env.USDA_API_KEY, contact = process.env.OFF_CONTACT;
 if (!key) throw new Error('USDA_API_KEY is not set (run scripts/supplement-barcode-coverage.sh)');
 const DSLD = 'https://api.ods.od.nih.gov/dsld/v9';
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+// A rate limit (429) or a server hiccup waits and tries again (Retry-After when sent, else 5, 15, 30 s); other failures throw to the caller, which notes them and carries on.
 const json = async (url: string, headers: Record<string, string> = {}): Promise<unknown> => {
-  const r = await fetch(url, { headers: { accept: 'application/json', ...headers }, signal: AbortSignal.timeout(15000) });
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch(url, { headers: { accept: 'application/json', ...headers }, signal: AbortSignal.timeout(15000) });
+    if (r.status === 404) return null;
+    if ((r.status === 429 || r.status >= 500) && attempt < 3) {
+      const wait = Number(r.headers.get('retry-after')) || [5, 15, 30][attempt]!;
+      console.error(`  (HTTP ${r.status}, waiting ${wait} s)`);
+      await sleep(wait * 1000);
+      continue;
+    }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
 };
 
 const args = process.argv.slice(2);
@@ -38,7 +47,9 @@ else if (dsld >= 0) {
 
 const rows: string[] = [];
 let named = 0, listed = 0, n = 0;
+let errored = 0;
 for (const raw of upcs) {
+  try {
   const gtin = cleanGtin(raw.replace(/[\s-]/g, ''));
   n++;
   if (!gtin) { rows.push(`${raw} | not a valid code`); continue; }
@@ -48,7 +59,7 @@ for (const raw of upcs) {
   found = nameForGtin(await json(u.toString()), gtin); await sleep(300);
   if (found) who = 'USDA';
   else if (contact) {
-    found = offName(await json(`https://world.openfoodfacts.org/api/v2/product/${gtin}.json?fields=code,product_name,brands`, { 'user-agent': `Loadbearer/1.0 (${contact})` })); await sleep(300);
+    found = offName(await json(`https://world.openfoodfacts.org/api/v2/product/${gtin}.json?fields=code,product_name,brands`, { 'user-agent': `Loadbearer/1.0 (${contact})` })); await sleep(1200);
     if (found) who = 'OFF';
   }
   let listing = '';
@@ -65,7 +76,9 @@ for (const raw of upcs) {
     listing = ` | listing ${ok ? 'YES' : 'no'} | "${q}" -> ${top[0] ?? 'nothing'}`;
   }
   rows.push(`${raw} | ${who}${listing}`);
+  } catch (err) { errored++; rows.push(`${raw} | could not ask: ${err instanceof Error ? err.message : 'failed'}`); }
 }
+
 console.log(rows.join('\n'));
-console.log(`\n${named} of ${n} UPCs got a name; ${listed} of those named a listing in the top three results.`);
-console.log(named < 8 * n / 20 ? 'BELOW THE KILL LINE (under 8 in 20 named): stop and tell the owner.' : listed < 5 * n / 20 ? 'BELOW THE KILL LINE (under 5 in 20 listed): stop and tell the owner.' : 'Above the kill lines.');
+console.log(`\n${named} of ${n} UPCs got a name${errored ? ` (${errored} could not be asked: run again later)` : ''}; ${listed} of those named a listing in the top three results.`);
+console.log(errored > n / 4 ? 'INCONCLUSIVE: too many UPCs could not be asked (a rate limit or a bad key). Wait a few minutes and run again.' : named < 8 * n / 20 ? 'BELOW THE KILL LINE (under 8 in 20 named): stop and tell the owner.' : listed < 5 * n / 20 ? 'BELOW THE KILL LINE (under 5 in 20 listed): stop and tell the owner.' : 'Above the kill lines.');
