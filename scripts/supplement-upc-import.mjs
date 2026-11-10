@@ -1,6 +1,6 @@
-// npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--all] [--count] [--refresh-hits]
+// npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--only-brands] [--all] [--count] [--refresh-hits]
 // Fills supplement_upcs (the UPC on a bottle mapped to its supplement row; brief supplement-barcode-search, ADR 117) from the NIH label database, one label at a time, 3 at once, backing off on a rate limit. NIH allows
-// roughly 1,000 requests an hour (seen 2026-11-10), so the default reads only labels entered since 2022 plus every label of the priority brands (Thorne, Sports Research and other big sellers; --brand adds more, repeatable);
+// roughly 1,000 requests an hour (seen 2026-11-10), so the default reads only labels entered since 2025 plus every label of the priority brands (Thorne, Sports Research and other big sellers; --brand adds more, repeatable; --only-brands drops the built-in list so only the --brand names count, and the year rule is off unless --since is given);
 // --all reads every on-market label (about 122,000: days). --count prints how many labels a run would read and stops. A scoped run adds and changes rows but never removes any; --all also removes UPCs no label carries.
 // Resumable: each label read is kept in the cache file (default .cache/dsld-upcs.tsv, not committed), and the downloaded search results in .cache/dsld-upcs.hits.json (reused for 7 days, --refresh-hits downloads again).
 // Run after catalog:import. Dry run unless --apply is given; it writes as the owner in DATABASE_URL and writes nothing unless every label was read. Run with tsx.
@@ -12,12 +12,13 @@ import { fetchDsld } from '../server/scripts/catalogImport.ts';
 import { crawlScope, crawlUpcs, importUpcs, labelUrl, PRIORITY_BRANDS, slimHit } from '../server/scripts/supplementUpcImport.ts';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
-const { values } = parseArgs({ options: { apply: { type: 'boolean', default: false }, limit: { type: 'string' }, cache: { type: 'string', default: '.cache/dsld-upcs.tsv' }, since: { type: 'string', default: '2022' }, brand: { type: 'string', multiple: true, default: [] }, all: { type: 'boolean', default: false }, count: { type: 'boolean', default: false }, 'refresh-hits': { type: 'boolean', default: false } } });
+const { values } = parseArgs({ options: { apply: { type: 'boolean', default: false }, limit: { type: 'string' }, cache: { type: 'string', default: '.cache/dsld-upcs.tsv' }, since: { type: 'string' }, brand: { type: 'string', multiple: true, default: [] }, all: { type: 'boolean', default: false }, 'only-brands': { type: 'boolean', default: false }, count: { type: 'boolean', default: false }, 'refresh-hits': { type: 'boolean', default: false } } });
 const url = process.env.DATABASE_URL;
 const limit = values.limit === undefined ? undefined : Number(values.limit);
-const since = Number(values.since);
-if (!url || (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) || !(Number.isInteger(since) && since >= 1990 && since <= 2100)) { console.error('Usage: npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--all] [--count] [--refresh-hits]   (DATABASE_URL must be set)'); process.exit(2); }
-const scope = values.all ? undefined : { since, brands: [...PRIORITY_BRANDS, ...values.brand.map(b => b.trim().toLowerCase()).filter(Boolean)] };
+const since = values.since === undefined ? (values['only-brands'] ? undefined : 2025) : Number(values.since); // --only-brands alone: no year rule
+if (!url || (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) || (since !== undefined && !(Number.isInteger(since) && since >= 1990 && since <= 2100))) { console.error('Usage: npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--only-brands] [--all] [--count] [--refresh-hits]   (DATABASE_URL must be set)'); process.exit(2); }
+if (values['only-brands'] && !values.all && !values.brand.some(b => b.trim())) { console.error('--only-brands needs at least one --brand name (for example --brand thorne --brand "sports research")'); process.exit(2); }
+const scope = values.all ? undefined : { since, brands: [...(values['only-brands'] ? [] : PRIORITY_BRANDS), ...values.brand.map(b => b.trim().toLowerCase()).filter(Boolean)] };
 const target = new URL(url);
 console.log(JSON.stringify({ msg: values.apply ? 'writing' : 'dry run (add --apply to write)', database: `${target.hostname}${target.pathname}`, cache: values.cache }));
 
@@ -57,7 +58,7 @@ if (!hits) {
 
 const counts = crawlScope(hits, known, scope);
 const hours = Math.ceil(counts.toRead / 1000);
-console.log(JSON.stringify({ msg: scope ? `scope: labels since ${since} plus ${scope.brands.length} priority brands (--all for everything)` : 'scope: every on-market label', ...counts, estimate: counts.toRead ? `about ${hours} hour${hours === 1 ? '' : 's'} at 1,000 requests an hour (a guess from one run)` : 'nothing left to read' }));
+console.log(JSON.stringify({ msg: scope ? `scope: ${since === undefined ? 'no year rule' : `labels since ${since}`}, plus ${scope.brands.length} brand${scope.brands.length === 1 ? '' : 's'} (--all for everything)` : 'scope: every on-market label', ...counts, estimate: counts.toRead ? `about ${hours} hour${hours === 1 ? '' : 's'} at 1,000 requests an hour (a guess from one run)` : 'nothing left to read' }));
 if (values.count) process.exit(0);
 
 const crawl = await crawlUpcs(hits, {
