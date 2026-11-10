@@ -5,7 +5,6 @@ import { PNG, photo } from './receiptHelpers.js';
 // receiptsClient.test.ts); this covers the wiring a unit test cannot: the unticked box saving nothing, the ticked one saving once with the reviewed values,
 // Cancel saving nothing, the Receipts page at its address with Back and reload, the viewer, a note, Delete, and a failed save keeping the prices with Try again.
 // Both routes are stubbed: no photo leaves the test.
-const asAdmin = page => page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true'));
 const add = async (page, n) => { await page.fill('#groc-name', n); await page.click('#groc-add'); await expect(page.locator('#groc-name')).toHaveValue(''); };
 const setup = async page => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
@@ -53,13 +52,13 @@ const scan = async page => {
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
 };
 
-test('a person who is not an admin sees no Receipts button and no Keep box', async ({ page }) => {
+test('a person who is not an admin sees the Receipts button (released to everyone 2026-11-10)', async ({ page }) => {
   await setup(page);
-  await expect(page.locator('#groc-receipts')).toHaveCount(0);
+  await expect(page.locator('#groc-receipts')).toBeAttached();
 });
 
-test.describe('as an admin', () => {
-  test.beforeEach(async ({ page }) => { await asAdmin(page); await page.reload(); await setup(page); await scanAnswer(page); });
+test.describe('for everyone, with no admin flag', () => {
+  test.beforeEach(async ({ page }) => { await setup(page); await scanAnswer(page); });
 
   test('the box is off by default: Apply without it, and Cancel with it, save nothing; Apply with it saves once with the reviewed values', async ({ page }) => {
     const api = await receiptsApi(page);
@@ -125,6 +124,26 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('#rcs-empty')).toBeVisible();
     expect(api.rows).toHaveLength(0);
+  });
+
+  test('Download all gives one zip with receipts.csv and each photo', async ({ page }) => {
+    await receiptsApi(page);
+    for (let i = 0; i < 2; i++) {
+      await scan(page);
+      await page.getByRole('dialog').getByLabel('Keep a copy of this photo').check();
+      await page.getByRole('dialog').getByRole('button', { name: /Apply/ }).click();
+      await expect(page.getByText('Photo saved. Find it under Receipts.')).toBeVisible();
+    }
+    await page.click('#groc-receipts');
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#rcs-all')]);
+    expect(download.suggestedFilename()).toMatch(/^receipts-\d{4}-\d{2}-\d{2}\.zip$/);
+    const bytes = await (await import('node:fs/promises')).readFile(await download.path());
+    expect(bytes.subarray(0, 2).toString()).toBe('PK');
+    const text = bytes.toString('latin1');
+    expect(text).toContain('receipts.csv');
+    expect(text).toContain('receipt-2026-09-24-bjs.jpg');
+    expect(text).toContain('receipt-2026-09-24-bjs-2.jpg');
+    await expect(page.locator('#rcs-all-note')).toHaveText('Downloaded all your saved receipts.');
   });
 
   test('a failed save keeps the prices applied, says the photo was not saved, and Try again saves it', async ({ page }) => {

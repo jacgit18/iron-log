@@ -262,8 +262,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/supplement-barcode', rateLimit(limits.foods, undefined, byUser), supplementBarcodeRoutes({ ...foods, db }));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): everyone signed in (owner, 2026-11-08), per-user limit and daily caps in scan.ts; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
-  // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
-  if (db) app.use('/api/receipts', requireAdmin, rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
+  // Saved receipt photos (brief receipt-save-photo): everyone signed in (owner, 2026-11-10), per-user limit, 200 receipts and 60 MB per account; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
+  if (db) app.use('/api/receipts', rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.

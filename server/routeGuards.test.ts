@@ -124,7 +124,6 @@ describe('role guards: a plain signed-in account', () => {
     expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422); // open to everyone signed in (2026-11-08): an empty body reaches the route's own check, a restored admin check would give 403
     expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422);
     expect((await fetch(`${url}/api/scan/supplement`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422); // bottle scan: the same open-to-everyone-signed-in guard
-    expect((await fetch(`${url}/api/receipts`, { headers: plain })).status).toBe(403);
     expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).toBe(503); // everyone signed in may ask; with no USDA key in this app the route itself answers 503 (a lost sign-in gate would give 401, a restored admin check 403)
     expect((await fetch(`${url}/api/backups`, { headers: { ...plain, 'x-client-version': 'dev' } })).status).toBe(402);
     if (ADMIN_ONLY) expect((await fetch(`${url}/api/billing/checkout`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
@@ -132,6 +131,7 @@ describe('role guards: a plain signed-in account', () => {
   it('is let through to the routes every account has', async () => {
     const url = await listen(createApp({ db }));
     expect((await fetch(`${url}/api/me`, { headers: plain })).status).toBe(200);
+    expect((await fetch(`${url}/api/receipts`, { headers: plain })).status).toBe(200); // saved receipts: open to everyone signed in (2026-11-10), each account sees only its own rows
   });
 });
 
