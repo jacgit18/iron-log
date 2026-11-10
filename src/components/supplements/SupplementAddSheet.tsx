@@ -1,9 +1,12 @@
 import type { SupplementSlot } from '../../types.ts';
 import { useEffect, useState, type FormEvent } from 'react';
+import type { CatalogItem } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { afterSheetClose } from '../../lib/backNav.js';
 import { MIN_LETTERS, useCatalogSearch } from '../../hooks/useCatalogSearch.js';
 import { useSupplementLabel } from '../../hooks/useSupplementLabel.js';
+import { searchCatalog } from '../../sync/catalog.js';
+import { signIn as devHeaders } from '../../sync/devUser.js';
 import { pickerOptions, type PickerChoice } from '../../lib/picker.js';
 import { isTouchScreen } from '../../lib/revealField.js';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
@@ -14,7 +17,7 @@ import Sheet from '../Sheet.js';
 import { LabelAmounts } from './LabelPreview.js';
 import './SupplementAddSheet.css';
 
-const SHOWN = 8; const SHOWN_MORE = 30;
+const SHOWN = 8; const SHOWN_MORE = 500; // every result fetched so far, once Show more is pressed
 
 // The one way to add a supplement (brief supplement-add-redesign): one search over yours and the catalog, the label of the picked product
 // before Add, one time of day, a dose. `backToManage`: opened from Manage, so closing it reopens that editor.
@@ -26,7 +29,17 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
   const [q, setQ] = useState(''); const [pick, setPick] = useState<PickerChoice | null>(null);
   const [slot, setSlot] = useState<SupplementSlot>('morning'); const [dose, setDose] = useState('');
   const [all, setAll] = useState(false); const [err, setErr] = useState('');
-  const { state: cat, retry: retrySearch } = useCatalogSearch('supplement', q, !pick);
+  const { state: cat0, retry: retrySearch } = useCatalogSearch('supplement', q, !pick);
+  // Later pages of the same search (the server answers 30 at a time), kept with the words they answer; a new search drops them.
+  const [more, setMore] = useState<{ q: string; items: CatalogItem[]; more: boolean; busy: boolean } | null>(null);
+  const extra = more && more.q === q.trim() ? more : null;
+  const cat = cat0.status === 'ready' && extra ? { ...cat0, items: [...cat0.items, ...extra.items], more: extra.more } : cat0;
+  const loadMore = () => {
+    if (cat.status !== 'ready') return;
+    const words = q.trim(); const offset = cat.items.length;
+    setMore({ q: words, items: extra?.items ?? [], more: true, busy: true });
+    void searchCatalog(words, offset, devHeaders).then(r => setMore(m => (m && m.q === words ? (r.ok ? { q: words, items: [...(extra?.items ?? []), ...r.items], more: r.more, busy: false } : { ...m, busy: false }) : m)));
+  };
   const { state: lab, retry: retryLabel } = useSupplementLabel(pick?.kind === 'catalog' ? pick.item.id : null);
   const fill = lab.status === 'ready' ? planFill({}, lab.label).result : undefined;
   const o = pickerOptions(q, oneOfEach(items).map(i => mineOption(i, syncing)), cat.status === 'ready' ? newestFirst(cat.items) : [],
@@ -79,7 +92,7 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
       <form id="suppadd-form" noValidate onSubmit={add} className="sas">
         <label className="field">Name or brand
           <input id="suppadd-q" type="search" autoComplete="off" maxLength={100} value={q} placeholder="e.g. creatine, Nature Made" autoFocus={!isTouchScreen()}
-            onChange={e => { setQ(e.target.value); setPick(null); setErr(''); setAll(false); }} />
+            onChange={e => { setQ(e.target.value); setPick(null); setErr(''); setAll(false); setMore(null); }} />
         </label>
         {!pick && (
           <>
@@ -93,6 +106,7 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
               </ul>
             )}
             {hidden > 0 && !all && <button type="button" className="btn sm ghost sasmore" onClick={() => setAll(true)}>Show {hidden} more</button>}
+            {(all || hidden === 0) && cat.status === 'ready' && cat.more && <button type="button" className="btn sm ghost sasmore" disabled={!!extra?.busy} onClick={loadMore}>{extra?.busy ? 'Loading…' : 'Show more results'}</button>}
           </>
         )}
         {pick && (
@@ -116,7 +130,7 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
           ))}
         </fieldset>
         <label className="field">Dose (optional)<input id="suppadd-dose" type="text" placeholder="e.g. 5 g" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} /></label>
-        {!pick || pick.kind !== 'catalog' ? <button type="button" className="btn sm ghost sasfull" id="suppadd-full" onClick={() => useAppStore.getState().openModal({ type: 'supplement', from: backToManage ? 'manage' : undefined })}>Open the full form, with amounts</button> : null}
+        {!pick || pick.kind !== 'catalog' ? <button type="button" className="btn sm ghost sasfull" id="suppadd-full" onClick={() => useAppStore.getState().openModal({ type: 'supplement', from: backToManage ? 'manage' : undefined, draft: { n: pick?.kind === 'create' ? pick.name : typed, slot, dose } })}>Open the full form, with amounts</button> : null}
         {err && <p className="note err" role="alert">{err}</p>}
       </form>
       <div className="actions">

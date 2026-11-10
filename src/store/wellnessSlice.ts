@@ -1,7 +1,7 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
-import { SLOTS, newSupplementId } from '../lib/supplements.js';
+import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
 import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
 import { normPortion } from '../lib/supplementPortion.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
@@ -11,7 +11,6 @@ import { goalMetNow, trackWater } from '../lib/waterReminder.js';
 import { ymd } from '../shared/dates.js';
 
 // The same supplement: name and brand, any case (a catalog supplement has a brand; your own has none).
-const sameSupplement = (x: { n: string; brand?: string }, n: string, brand?: string) => x.n.toLowerCase() === n.toLowerCase() && (x.brand || '').toLowerCase() === (brand || '').toLowerCase();
 
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const r1 = (n: number) => Math.round(n * 10) / 10;

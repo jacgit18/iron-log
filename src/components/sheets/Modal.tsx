@@ -7,7 +7,7 @@ import ExerciseSheet from './ExerciseSheet.js';
 import DayAddSheet from './DayAddSheet.js';
 import { StretchSheet, StretchExpSheet } from './StretchSheets.js';
 import SupplementAddSheet from '../supplements/SupplementAddSheet.js';
-import SupplementSheet from './SupplementSheet.js';
+import SupplementSheet, { type SupplementDraft } from './SupplementSheet.js';
 import ExperimentSheet from './ExperimentSheet.js';
 import MoveSheet from './MoveSheet.js';
 import NewProgramSheet from './NewProgramSheet.js';
@@ -45,7 +45,7 @@ export default function Modal() {
     case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
     case 'suppadd': return <SupplementAddSheet backToManage={modal.from === 'manage'} />;
-    case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} backToManage={modal.from === 'manage'} />;
+    case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} backToManage={modal.from === 'manage'} draft={modal.draft as SupplementDraft | undefined} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'moveprog': return <MoveSheet key={`move-${modal.idx}`} idx={modal.idx as number} />;

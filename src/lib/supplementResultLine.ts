@@ -1,6 +1,6 @@
 import type { CatalogItem, SupplementItem } from '../types.ts';
 import type { MineOption } from './picker.js';
-import { slotLabel } from './supplements.js';
+import { sameSupplement, slotLabel } from './supplements.js';
 
 // The lines of the supplement add sheet's results (brief supplement-add-redesign): what tells two listings of one product apart.
 
@@ -24,6 +24,5 @@ export const mineOption = (i: SupplementItem, syncing: boolean): MineOption => (
 
 /** Your own items with one entry per supplement (instances taken at several times of day share a name and brand). */
 export const oneOfEach = (items: SupplementItem[]): SupplementItem[] => {
-  const seen = new Set<string>();
-  return items.filter(i => { const k = `${i.n.toLowerCase()}\u0000${(i.brand || '').toLowerCase()}`; if (seen.has(k)) return false; seen.add(k); return true; });
+  return items.filter((i, k) => items.findIndex(j => sameSupplement(j, i.n, i.brand)) === k);
 };

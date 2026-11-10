@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { openSupplementEditor } from './nutritionBoardHelpers.js';
+import { openNutrition, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // Brief supplement-add-redesign: one add sheet on Manage, one search over yours and the catalog, results that tell two label years of one product apart, the label before Add, one time of day,
 // and Back closing the sheet. The result line, the add plan and the import mapping are node tests (supplementResultLine.test.ts, supplementAddPlan.test.ts, catalogImport.test.ts); this covers the wiring a
@@ -127,4 +127,61 @@ test('the add sheet has no accessibility violations', async ({ page }) => {
   await sheet(page).getByRole('button', { name: /2020 label/ }).click();
   await expect(sheet(page).locator('.lblrows')).toBeVisible();
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
+});
+
+test('the full form opens with what was typed, the time of day and the dose', async ({ page }) => {
+  await open(page);
+  await page.locator('#suplib-add').click();
+  await sheet(page).locator('#suppadd-q').fill('Zzyzx tonic');
+  await sheet(page).getByLabel('Night').check();
+  await page.fill('#suppadd-dose', '2 drops');
+  await page.click('#suppadd-full');
+  await expect(page.locator('#supp-name')).toHaveValue('Zzyzx tonic');
+  await expect(page.getByLabel('Dose (optional)')).toHaveValue('2 drops');
+  await expect(page.getByLabel('On the schedule')).toHaveValue('night');
+});
+
+test('Enter with results listed asks for a pick and adds nothing', async ({ page }) => {
+  await open(page);
+  await page.locator('#suplib-add').click();
+  await sheet(page).locator('#suppadd-q').fill('mega men');
+  await expect(sheet(page).getByRole('button', { name: /2020 label/ })).toBeVisible();
+  await sheet(page).locator('#suppadd-q').press('Enter');
+  await expect(sheet(page).getByRole('alert')).toContainText('Pick a result');
+  await expect(sheet(page)).toBeVisible();
+});
+
+test('a search with more than one page offers Show more results', async ({ page }) => {
+  await open(page);
+  const mk = (a, n) => Array.from({ length: n }, (_, i) => ({ id: `c:dsld:${a + i}`, name: `Zinc ${a + i}`, brand: 'Bulk', data: { form: 'Tablet' } }));
+  await page.route('**/api/catalog/search?*', route => {
+    const offset = Number(new URL(route.request().url()).searchParams.get('offset'));
+    return json(200, { ok: true, items: offset ? mk(2000, 5) : mk(1000, 30), more: !offset })(route);
+  });
+  await page.locator('#suplib-add').click();
+  await sheet(page).locator('#suppadd-q').fill('zinc');
+  await sheet(page).getByRole('button', { name: /^Show \d+ more$/ }).click();
+  await sheet(page).getByRole('button', { name: 'Show more results' }).click();
+  await expect(sheet(page).getByRole('button', { name: /Zinc 2004/ })).toBeVisible();
+  await expect(sheet(page).getByRole('button', { name: 'Show more results' })).toHaveCount(0);
+});
+
+test('a failed search says so and offers Try again', async ({ page }) => {
+  await open(page);
+  await page.route('**/api/catalog/search?*', json(500, { ok: false }));
+  await page.locator('#suplib-add').click();
+  await sheet(page).locator('#suppadd-q').fill('mega men');
+  await expect(sheet(page).getByText('The catalog could not be loaded.')).toBeVisible();
+  await expect(sheet(page).getByRole('button', { name: 'Try again' })).toBeVisible();
+});
+
+test('without syncing, the sheet adds your own supplement and says there is no catalog', async ({ page }) => {
+  await openNutrition(page);
+  await openSupplementEditor(page); // the fixture's local mode: no sign-in, no catalog
+  await page.locator('#suplib-add').click();
+  await sheet(page).locator('#suppadd-q').fill('Local tonic');
+  await expect(sheet(page).getByText('No catalog here: this device keeps its own supplements only.')).toBeVisible();
+  await page.click('#suppadd-go');
+  await expect(sheet(page)).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Local tonic']);
 });

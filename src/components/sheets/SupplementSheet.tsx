@@ -19,11 +19,14 @@ const firstRow = (rows: NutrientDraft[]) => { const r = rows.find(x => Number(x.
 
 // Add or edit a supplement in the library: name, dose, note, when it is on the schedule, and what is in one serving (the rows behind the Totals sheet).
 // `backToManage`: it was opened from the library inside the Manage sheet, so closing it (saved, removed or cancelled) reopens that editor instead of leaving you on the board.
-export default function SupplementSheet({ id, backToManage }: { id?: string | null; backToManage?: boolean }) {
+/** What the add sheet had typed when it opened the full form (a new supplement only). */
+export interface SupplementDraft { n?: string; slot?: SupplementSlot; dose?: string }
+
+export default function SupplementSheet({ id, backToManage, draft }: { id?: string | null; backToManage?: boolean; draft?: SupplementDraft }) {
   const s = useAppStore.getState();
   useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
   const cur = id ? s.supp.items.find(x => x.id === id) : null;
-  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : '', dose: cur ? cur.dose || '' : '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : 'morning', nutrients: (cur?.nutrients || []).map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), portion: cur?.portion ?? 1, units: cur?.serving ? String(cur.serving.units) : '', form: cur?.serving?.form || '' }));
+  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : draft?.n ?? '', dose: cur ? cur.dose || '' : draft?.dose ?? '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : draft?.slot ?? 'morning', nutrients: (cur?.nutrients || []).map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), portion: cur?.portion ?? 1, units: cur?.serving ? String(cur.serving.units) : '', form: cur?.serving?.form || '' }));
   const [err, setErr] = useState('');
   // Fill from label (brief supplement-label-amounts): read the label on request, show it beside the rows in the form, change the form only on Replace (Save still keeps it).
   const [asked, setAsked] = useState(false); const [replaced, setReplaced] = useState(false);
