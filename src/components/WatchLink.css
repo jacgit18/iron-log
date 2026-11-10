@@ -36,9 +36,13 @@
   width: 16px;
   height: 16px;
 }
-/* Compact keeps the host's own display, margin and hit-area rules (the Board's `.exname a`), so it never moves the line it sits on. */
+/* Compact takes its font size from the row it sits in (the Board's `.exname a` is the smaller one) and carries its own 44px hit area, made with padding and negative margin so the line does not move (the same trick as `.exname a` and `.exmain a`). */
 .watch-compact {
-  font-size: var(--fs-xs);
+  display: inline-block;
+  padding: 14px var(--sp-6);
+  margin-block: -14px;
+  min-height: 44px;
+  box-sizing: border-box;
   color: var(--accent);
 }
 .watch-compact .watch-play {
