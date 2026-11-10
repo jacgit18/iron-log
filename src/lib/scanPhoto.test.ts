@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentAllowance, resetAllowance } from './labelAllowance.js';
-import { fitSize, MAX_SIDE, SCAN_TEXT, scanLabel } from './scanPhoto.js';
+import { fitSize, MAX_SIDE, SCAN_TEXT, scanLabel, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
+import { currentSupplementAllowance, resetSupplementAllowance } from './supplementAllowance.js';
 
 describe('fitSize', () => {
   it('shrinks the long side to the maximum and keeps the shape', () => {
@@ -62,5 +63,50 @@ describe('scanLabel', () => {
     expect(await scanLabel(new Blob(['x']))).toEqual({ ok: false, reason: 'offline' });
     g.createImageBitmap = async () => { throw new Error('bad image'); };
     expect(await scanLabel(new Blob(['x']))).toEqual({ ok: false, reason: 'photo' });
+  });
+});
+
+describe('SUPPLEMENT_SCAN_TEXT', () => {
+  it('has plain words for every failure and the unreadable result, and the add never depends on the scan', () => {
+    for (const k of ['offline', 'limit', 'unavailable', 'photo', 'unreadable', 'cap', 'check'] as const) expect(SUPPLEMENT_SCAN_TEXT[k].length).toBeGreaterThan(10);
+    expect(SUPPLEMENT_SCAN_TEXT.unreadable).toBe('Could not read the amounts. Try a closer, flatter photo, or type them in the supplement\u2019s sheet.');
+    expect(SUPPLEMENT_SCAN_TEXT.cap).toBe('Bottle scans are used up for today. Type the amounts instead.');
+    expect(SUPPLEMENT_SCAN_TEXT.check).toBe('Read from your photo. Check each amount against the bottle.');
+  });
+});
+
+describe('scanSupplement', () => {
+  const g = globalThis as Record<string, unknown>;
+  const saved = { fetch: g.fetch, createImageBitmap: g.createImageBitmap, document: g.document, __APP_VERSION__: g.__APP_VERSION__ };
+  let url = '';
+  const answer = (status: number, body: unknown = {}) => { g.fetch = async (u: string) => { url = u; return new Response(JSON.stringify(body), { status }); }; };
+  beforeEach(() => {
+    g.__APP_VERSION__ = 'test';
+    g.createImageBitmap = async () => ({ width: 4000, height: 3000, close() {} });
+    g.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {} }), toBlob: (done: (b: Blob) => void) => done(new Blob([new Uint8Array(1000).fill(0xff)])) }) };
+    resetSupplementAllowance(); vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => { Object.assign(g, saved); resetSupplementAllowance(); });
+
+  it('posts to the supplement route, re-checks the label and remembers the count', async () => {
+    answer(200, { ok: true, result: { kind: 'ok', label: { name: 'D', serving: null, rows: [{ key: 'zinc', amount: 5, unit: 'mg' }, { key: 'bogus', amount: 1, unit: 'mg' }], other: [] } }, left: 4, max: 5 });
+    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'D', serving: null, rows: [{ key: 'zinc', amount: 5, unit: 'mg' }], other: [] } } });
+    expect(url).toBe('/api/scan/supplement');
+    expect(currentSupplementAllowance()).toEqual({ left: 4, max: 5 });
+  });
+  it('maps cap, 429, other failures, a thrown fetch and an unopenable photo to plain reasons', async () => {
+    answer(503, { ok: false, why: 'cap', retryAfterSec: 60 });
+    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'cap' });
+    expect(currentSupplementAllowance()?.left).toBe(0);
+    answer(429); expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'limit' });
+    answer(503, { why: 'no-key' }); expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'unavailable' });
+    g.fetch = async () => { throw new TypeError('network'); };
+    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'offline' });
+    g.createImageBitmap = async () => { throw new Error('bad image'); };
+    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'photo' });
+  });
+  it('reads an odd answer as unavailable, never a throw', async () => {
+    g.fetch = async () => new Response('not json', { status: 200 });
+    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'unavailable' });
   });
 });

@@ -147,6 +147,7 @@ describe('the policy and the system agree', () => {
     expect(text).toMatch(/Anthropic \(AI service that reads the photo/);
     expect(text).toContain('artificial intelligence (AI)');
     expect(text).toContain('Scan label');
+    expect(text).toContain('Scan the bottle’s label');
     expect(text).toContain('Scan receipt');
     // the per-account scan count (brief: scans open to everyone, PR 804): the policy says it is open to every signed-in account and the count is in memory only.
     expect(text).toContain('open to every signed-in account');
