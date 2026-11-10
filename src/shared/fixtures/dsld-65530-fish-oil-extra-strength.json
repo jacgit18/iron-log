@@ -1,0 +1,153 @@
+{
+ "id": 65530,
+ "fullName": "Omega-3 Extra Strength EPA",
+ "brandName": "NutraSea hp",
+ "upcSku": "8 50652 00012 1",
+ "entryDate": "2016-10-22",
+ "servingSizes": [
+  {
+   "minQuantity": 4,
+   "unit": "Softgel(s)"
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Calories",
+   "category": "other",
+   "ingredientGroup": "Calories",
+   "quantity": [
+    {
+     "quantity": 45,
+     "unit": "Calorie(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Calories from Fat",
+     "category": "other",
+     "ingredientGroup": "Calories",
+     "quantity": [
+      {
+       "quantity": 46,
+       "unit": "Calorie(s)"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "Total Fat",
+   "category": "fat",
+   "ingredientGroup": "Fat (unspecified)",
+   "quantity": [
+    {
+     "quantity": 4.5,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Saturated Fat",
+     "category": "fat",
+     "ingredientGroup": "Saturated fat",
+     "quantity": [
+      {
+       "quantity": 1,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Polyunsaturated Fat",
+     "category": "fat",
+     "ingredientGroup": "Polyunsaturated Fat",
+     "quantity": [
+      {
+       "quantity": 3,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Monounsaturated Fat",
+     "category": "fat",
+     "ingredientGroup": "Monounsaturated Fat",
+     "quantity": [
+      {
+       "quantity": 1,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "Protein",
+   "category": "protein",
+   "ingredientGroup": "Protein (unspecified)",
+   "quantity": [
+    {
+     "quantity": 1,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Fish Oil",
+   "category": "fat",
+   "ingredientGroup": "Fish Oil",
+   "notes": "Fish Oil (Form: Anchovies, Sardines, and Mackerel) ",
+   "quantity": [
+    {
+     "quantity": 4.5,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Omega-3 Fatty Acids",
+     "category": "fatty acid",
+     "ingredientGroup": "Omega-3",
+     "notes": "Omega-3 Fatty Acids (Form: EPA, DHA)",
+     "quantity": [
+      {
+       "quantity": 2,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": [
+      {
+       "name": "Eicosapentaenoic Acid",
+       "category": "fatty acid",
+       "ingredientGroup": "EPA (Eicosapentaenoic Acid)",
+       "quantity": [
+        {
+         "quantity": 1.5,
+         "unit": "Gram(s)"
+        }
+       ],
+       "nestedRows": []
+      },
+      {
+       "name": "Docosahexaenoic Acid",
+       "category": "fatty acid",
+       "ingredientGroup": "DHA (Docosahexaenoic Acid)",
+       "quantity": [
+        {
+         "quantity": 500,
+         "unit": "mg"
+        }
+       ],
+       "nestedRows": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

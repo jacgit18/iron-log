@@ -184,8 +184,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const n = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (!n) { flag('Give the supplement a name'); return false; }
     const dz = String(dose || '').trim().slice(0, 40);
     const brand = String(opts.brand || '').trim().replace(/\s+/g, ' ').slice(0, 60);
-    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
-    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); });
+    const nutrients = nutrientsOf(opts.nutrients), ingredients = ingredientsOf(opts.ingredients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}) }); });
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
   // `dose`, when typed (the Supplements tab's add form), replaces the saved one.
@@ -266,8 +266,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
     const slot = opts.slot && SLOTS.some(([k]) => k === opts.slot) ? opts.slot : ''; const dz = String(opts.dose || '').trim().slice(0, 40);
     // The label's amounts (brief supplement-label-amounts) are cleaned like any typed rows and become the supplement's own (ADR 026); none given adds it exactly as before.
-    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
-    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id, ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); })) return null;
+    const nutrients = nutrientsOf(opts.nutrients), ingredients = ingredientsOf(opts.ingredients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id, ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}) }); })) return null;
     flag(`Added ${n}`); return null;
   },
   // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id

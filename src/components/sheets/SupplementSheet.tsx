@@ -43,7 +43,7 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
   const { state: lab, retry } = useSupplementLabel(asked ? cur?.catalogId : null);
   const units = Number(d.units);
   const label = scanned ?? (asked && lab.status === 'ready' ? lab.label : null);
-  const plan = label ? planFill({ nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ...(units > 0 ? { serving: { units, ...(d.form ? { form: d.form } : {}) } } : {}) }, label) : null;
+  const plan = label ? planFill({ nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ingredients: rowsOf(d.ingredients), ...(units > 0 ? { serving: { units, ...(d.form ? { form: d.form } : {}) } } : {}) }, label) : null;
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   return (
     <Sheet>
@@ -79,7 +79,7 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
             <>
             {scanned && <p className="note" role="status">{SUPPLEMENT_SCAN_TEXT.check} Check that every row on the bottle is here.</p>}
             <LabelCompare label={label} plan={plan} onCancel={() => { setAsked(false); setScanned(null); }}
-              onReplace={() => { up({ nutrients: plan.result.nutrients.map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), units: plan.result.serving ? String(plan.result.serving.units) : d.units, form: plan.result.serving?.form ?? d.form }); setAsked(false); setScanned(null); setReplaced(true); }} />
+              onReplace={() => { up({ nutrients: plan.result.nutrients.map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), ingredients: draftsOf(plan.result.ingredients), units: plan.result.serving ? String(plan.result.serving.units) : d.units, form: plan.result.serving?.form ?? d.form }); setAsked(false); setScanned(null); setReplaced(true); }} />
             </>
           )}
           {replaced && <p className="note" role="status">Label amounts are in the rows above. Press Save to keep them.</p>}

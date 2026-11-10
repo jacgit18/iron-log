@@ -1,0 +1,28 @@
+{
+ "id": 323467,
+ "fullName": "Caffeine",
+ "brandName": "Kaged Muscle",
+ "upcSku": "0 13189 94208 5",
+ "entryDate": "2025-02-23",
+ "servingSizes": [
+  {
+   "minQuantity": 1,
+   "unit": "Capsule(s)"
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "PurCaf",
+   "category": "non-nutrient/non-botanical",
+   "ingredientGroup": "Caffeine",
+   "notes": "organic caffeine",
+   "quantity": [
+    {
+     "quantity": 200,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  }
+ ]
+}

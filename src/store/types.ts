@@ -420,7 +420,7 @@ export interface WellnessSlice {
   promoteStretchExp(id: string): boolean;
   removeStretchExtra(id: string): void;
   /** `nutrients`, `serving` and `brand` are read from a bottle's label (brief supplement-label-scan); left out, it is added with none. */
-  addSupplement(slot: SupplementSlot, name: string, dose?: string, opts?: { nutrients?: SupplementNutrient[]; serving?: SupplementServing; brand?: string }): boolean;
+  addSupplement(slot: SupplementSlot, name: string, dose?: string, opts?: { nutrients?: SupplementNutrient[]; ingredients?: SupplementIngredient[]; serving?: SupplementServing; brand?: string }): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
   /** Adds another instance of one of yours (same name, brand and catalog id; its own id, section and ticks) to a section, e.g. a second dose later in the day. `dose` replaces the copied one when typed. */
   addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;
@@ -431,7 +431,7 @@ export interface WellnessSlice {
   setIngredientLimit(name: string, limit: { kind: string; amount: string | number; unit: string } | null): string | null;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
   /** `nutrients` and `serving` are one serving's amounts read from its label (brief supplement-label-amounts); left out, it is added with none. */
-  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string; nutrients?: SupplementNutrient[]; serving?: SupplementServing }): string | null;
+  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string; nutrients?: SupplementNutrient[]; ingredients?: SupplementIngredient[]; serving?: SupplementServing }): string | null;
   saveSupplement(d: SupplementForm): string | null;
   deleteSupplement(id: string): void;
   moveSupplement(id: string, dir: number): void;
