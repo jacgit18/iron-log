@@ -21,6 +21,7 @@
     "grocery:shares": "tsx scripts/grocery-shares.mjs",
     "own:exercises": "tsx scripts/own-exercises.mjs",
     "catalog:import": "tsx scripts/catalog-import.mjs",
+    "catalog:upcs": "tsx scripts/supplement-upc-import.mjs",
     "prod:db": "scripts/prod-db.sh",
     "play:release": "scripts/play-release.sh",
     "build:server": "node scripts/build-server.mjs",

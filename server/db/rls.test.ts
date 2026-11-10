@@ -312,6 +312,35 @@ describe('catalog', () => {
   });
 });
 
+// The supplement UPC table (ADR 117): like the catalog, no user_id, read by every signed-in account, written only by the owner (the crawler).
+describe('supplement_upcs', () => {
+  beforeEach(async () => {
+    await owner.deleteFrom('supplement_upcs').execute();
+    await owner.deleteFrom('catalog_items').where('id', '=', 'c:dsld:77').execute();
+    await owner.insertInto('catalog_items').values({ id: 'c:dsld:77', kind: 'supplement', source: 'dsld', license: 'US government data', name: 'Zinc' }).execute();
+    await owner.insertInto('supplement_upcs').values({ upc: '00074306800046', catalog_id: 'c:dsld:77' }).execute();
+  });
+  afterAll(async () => { await owner.deleteFrom('supplement_upcs').execute(); });
+
+  it('every signed-in account reads it, and with nobody signed in nothing is visible', async () => {
+    for (const id of [A, B]) expect(await asUser(id, trx => count(trx as never, 'supplement_upcs'))).toBe(1);
+    expect(await count(app, 'supplement_upcs')).toBe(0);
+  });
+
+  it('the API role cannot add, change or delete a row, even signed in', async () => {
+    expect(await refusal(asUser(A, trx => sql`insert into supplement_upcs (upc, catalog_id) values ('00000000000001', 'c:dsld:77')`.execute(trx)))).toMatch(/permission denied/);
+    expect(await refusal(asUser(A, trx => sql`update supplement_upcs set catalog_id = 'c:dsld:77'`.execute(trx)))).toMatch(/permission denied/);
+    expect(await refusal(asUser(A, trx => sql`delete from supplement_upcs`.execute(trx)))).toMatch(/permission denied/);
+  });
+
+  it('a code is 14 digits and points at a catalog row that exists', async () => {
+    const add = (upc: string, id: string) => refusal(sql`insert into supplement_upcs (upc, catalog_id) values (${upc}, ${id})`.execute(owner));
+    expect(await add('74306800046', 'c:dsld:77')).toMatch(/check constraint/);
+    expect(await add('0007430680004X', 'c:dsld:77')).toMatch(/check constraint/);
+    expect(await add('00000000000002', 'c:dsld:404')).toMatch(/foreign key/);
+  });
+});
+
 // A table added in a later migration must be covered. This is what stops one being forgotten.
 describe('every table is covered (a forgotten table fails here)', () => {
   it('each table in public has row-level security on, and the API role has no delete, truncate or history access', async () => {

@@ -70,3 +70,6 @@ android/*.gradle
 android/gradle.properties
 android/manifest-checksum.txt
 android/store_icon.png
+
+# The UPC crawler's resume file (npm run catalog:upcs)
+.cache/

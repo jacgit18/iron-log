@@ -182,8 +182,8 @@ export async function fetchDsld({ fetchJson, sleep = async () => {}, log = () =>
   return [...out.values()];
 }
 
-/** Maps DSLD products to catalog rows: name, brand, form, label year and UPC (ADR 029, amended: no ingredients, no amounts). */
-export function mapDsld(hits: DsldHit[]): Mapped {
+/** One row per readable DSLD label, before labels of one product are merged (name, brand, form, label year; ADR 029, amended: no ingredients, no amounts). */
+function dsldRows(hits: DsldHit[]): { rows: CatalogRow[]; skipped: string[] } {
   const rows: CatalogRow[] = []; const skipped: string[] = []; const seen = new Set<string>();
   for (const h of hits) {
     const id = String(h?._id ?? '');
@@ -203,17 +203,37 @@ export function mapDsld(hits: DsldHit[]): Mapped {
     if (upc && upc.length <= 40) data.upc = upc;
     rows.push({ id: `c:dsld:${id}`, kind: 'supplement', name, brand: brand && brand.length <= 300 ? brand : null, data });
   }
-  // DSLD keeps one label per version, size and UPC, so the same product shows many times (121,959 labels, 93,851 products on
-  // 2026-10-11). Versions of one label are one thing to a user: keep one row per name, brand, form and label year (any case), the lowest
-  // DSLD id, which stays the same from one import to the next while that label is on the market. The year is in the key so that an old
-  // and a new label of one product (different amounts) both list (brief supplement-add-redesign).
-  const keyOf = (r: CatalogRow) => `${r.name.toLowerCase()}\u0000${(r.brand ?? '').toLowerCase()}\u0000${r.data.form ?? ''}\u0000${r.data.entryYear ?? ''}`;
-  const numId = (r: CatalogRow) => Number(r.id.slice('c:dsld:'.length));
+  return { rows, skipped };
+}
+
+// DSLD keeps one label per version, size and UPC, so the same product shows many times (121,959 labels, 93,851 products on
+// 2026-10-11). Versions of one label are one thing to a user: keep one row per name, brand, form and label year (any case), the lowest
+// DSLD id, which stays the same from one import to the next while that label is on the market. The year is in the key so that an old
+// and a new label of one product (different amounts) both list (brief supplement-add-redesign).
+const keyOf = (r: CatalogRow) => `${r.name.toLowerCase()}\u0000${(r.brand ?? '').toLowerCase()}\u0000${r.data.form ?? ''}\u0000${r.data.entryYear ?? ''}`;
+const numId = (r: CatalogRow) => Number(r.id.slice('c:dsld:'.length));
+
+/** The row kept for each key: the lowest DSLD id. */
+function keptByKey(rows: CatalogRow[]): Map<string, CatalogRow> {
   const best = new Map<string, CatalogRow>();
   for (const r of rows) { const k = keyOf(r); const cur = best.get(k); if (!cur || numId(r) < numId(cur)) best.set(k, r); }
+  return best;
+}
+
+/** Maps DSLD products to catalog rows: name, brand, form, label year and UPC (ADR 029, amended: no ingredients, no amounts). */
+export function mapDsld(hits: DsldHit[]): Mapped {
+  const { rows, skipped } = dsldRows(hits);
+  const best = keptByKey(rows);
   const merged = rows.length - best.size;
   if (merged) skipped.push(`${merged} more labels of a product already listed (same name, brand, form and label year)`);
   return { rows: rows.filter(r => best.get(keyOf(r)) === r), unmapped: {}, skipped };
+}
+
+/** For every readable DSLD label, the catalog id of the row kept for it (its own id when it is the one kept). The UPC crawler (supplementUpcImport.ts) points each label's UPC at that row. */
+export function dsldAliases(hits: DsldHit[]): Map<string, string> {
+  const { rows } = dsldRows(hits);
+  const best = keptByKey(rows);
+  return new Map(rows.map(r => [r.id.slice('c:dsld:'.length), best.get(keyOf(r))!.id]));
 }
 
 export interface ImportOptions {
