@@ -1,3 +1,5 @@
+import { isSkipMark } from './skipMark.js';
+
 // Progress on one page (wide screens): the sections down the page, the rail that jumps to them, and how each maps to an address. Pure, so the
 // mapping is unit-tested; src/components/progress/OnePage.tsx does the DOM side.
 
@@ -36,4 +38,4 @@ export function currentSection(tops: Readonly<Record<string, number | undefined>
 
 /** Whether there is anything to chart: a logged lift or a body weight. When not, the overview shows one empty tile. */
 export const hasProgressData = (logs: Readonly<Record<string, readonly unknown[] | undefined>>, bodyCount: number): boolean =>
-  bodyCount > 0 || Object.values(logs).some(l => !!l && l.length > 0);
+  bodyCount > 0 || Object.values(logs).some(l => !!l && l.some(e => !isSkipMark(e as { auto?: boolean; n?: string })));

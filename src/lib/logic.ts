@@ -1,4 +1,5 @@
 import { applySplits } from './boardSplit.js';
+import { SKIPPED_NOTE, isSkipMark } from './skipMark.js';
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp, validStep } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
@@ -187,6 +188,7 @@ export function volText(e: LogEntry): string {
 }
 export function describe(e: LogEntry | null | undefined): string {
   if (!e) return '';
+  if (isSkipMark(e)) return 'Skipped';
   const S = e.sets!; if (!isUniform(e) && !S.every(x => x.w === S[0].w)) return volText(e);
   const load = e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'bodyweight'; return `${load} · ${volText(e)}`;
 }
@@ -576,6 +578,8 @@ export function planRows(cfg: Cfg, logs: Logs, it: CardItem, ph: PhaseKey | null
    shows in Progress. Unchecking removes that entry, and logging real numbers for the slot that week
    replaces it. Returns only the exercises whose entries changed: {exId: entries}. */
 export const AUTO_NOTE = 'From check-off';
+/** The note on the entry a skip writes for the day it was skipped (an auto entry with no numbers, so stats and last-session lookups ignore it). */
+export { SKIPPED_NOTE };
 const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
 // The day a board was worked: the earliest date among this week's log entries for the cards in it.
 export function dayDate(cards: Slot[], logs: Logs, wk: string): string | null {
@@ -597,15 +601,23 @@ export function autoLogs(cfg: Cfg, logs: Logs, slots: Slot[], before: WeekIn, af
     let unticked = false;
     s.items.forEach((it, i) => {
       const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
-      if (was === now) return;
-      const L = out[it.ex] || logs[it.ex] || [];
-      if (now) {
-        if (L.some(here)) return; // already logged for this card this week
-        out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
-      } else {
+      const wasSk = isSkipped(s, before) || isItemSkipped(s, i, before), nowSk = isSkipped(s, after) || isItemSkipped(s, i, after);
+      if (was === now && wasSk === nowSk) return;
+      let L = out[it.ex] || logs[it.ex] || [];
+      const isMark = (e: LogEntry) => e.auto && e.n === SKIPPED_NOTE && here(e);
+      if (wasSk && !nowSk && L.some(isMark)) { L = L.filter(e => !isMark(e)); out[it.ex] = L; } // skipped no more: its entry goes
+      if (was !== now) {
+        if (now) {
+          if (L.some(here)) return; // already logged for this card this week
+          out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
+          return;
+        }
         unticked = true;
         const keep = L.filter(e => !((removeLogged || e.auto) && here(e)));
-        if (keep.length !== L.length) out[it.ex] = keep;
+        if (keep.length !== L.length) { out[it.ex] = keep; L = keep; }
+      }
+      if (nowSk && !wasSk && !L.some(here)) { // skipped: say so in the log for that day, unless a session is already logged for the card
+        out[it.ex] = [...L, { id: newEntryId(), d: date, ph: phaseOf(cfg, after, s, i), slot: s.id, wk, auto: true as const, n: SKIPPED_NOTE, updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
       }
     });
     // A check-off logged under an exercise the card no longer has (it was changed in the Program tab) goes too.
