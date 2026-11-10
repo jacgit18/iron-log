@@ -138,7 +138,7 @@ export async function parseExcelExport(buffer: ArrayBuffer, cfg: Cfg): Promise<E
   const excel = { settings, skipped, newExercises: Object.values(newEx).map(e => e.n) };
   const full = readDataSheets(X, rows);
   if (full) {
-    // A whole-backup workbook: every table is there, so it imports exactly like the JSON data file.
+    // A workbook with the data sheets: the tables it has import like the JSON data file; stretches, supplements, recipes, food log and groceries are not in a workbook, so those stay as they are here.
     const data = normalizeData({ ...full, exportedAt, logs, body });
     return { ...data, excel: { ...excel, complete: true } };
   }
