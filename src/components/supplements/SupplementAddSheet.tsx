@@ -11,7 +11,10 @@ import { pickerOptions, type PickerChoice } from '../../lib/picker.js';
 import { isTouchScreen } from '../../lib/revealField.js';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 import { planAddMine } from '../../lib/supplementAddPlan.js';
+import { lookupSupplementBarcode } from '../../lib/supplementBarcodeClient.js';
+import { fromBarcodeText, scanSearchSteps, suppBarcodeText, typedUpc, type SuppBarcodeFailure } from '../../lib/supplementBarcodeQuery.js';
 import { planFill } from '../../lib/supplementLabelFill.js';
+import type { ProductName } from '../../shared/barcode.js';
 import { catalogLine, mineOption, newestFirst, oneOfEach, upcLine } from '../../lib/supplementResultLine.js';
 import Sheet from '../Sheet.js';
 import { LabelAmounts } from './LabelPreview.js';
@@ -21,24 +24,51 @@ const SHOWN = 8; const SHOWN_MORE = 500; // every result fetched so far, once Sh
 
 // The one way to add a supplement (brief supplement-add-redesign): one search over yours and the catalog, the label of the picked product
 // before Add, one time of day, a dose. `backToManage`: opened from Manage, so closing it reopens that editor.
-export default function SupplementAddSheet({ backToManage }: { backToManage?: boolean }) {
+//
+// Barcode (brief supplement-barcode-search): NIH cannot search by UPC, so a scanned or typed UPC becomes a product name (server/supplementBarcode.ts) and the name fills the search; the
+// person still picks the listing. `scanned`: the product a scan just found (the camera sheet replaced this one and reopened it); `startQ`: the text to come back to when the camera was closed.
+export default function SupplementAddSheet({ backToManage, scanned, startQ }: { backToManage?: boolean; scanned?: ProductName; startQ?: string }) {
   const s = useAppStore.getState();
   const syncing = useAppStore(x => x.sync !== null);
   const items = useAppStore(x => x.supp.items);
   useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
-  const [q, setQ] = useState(''); const [pick, setPick] = useState<PickerChoice | null>(null);
+  const [scan, setScan] = useState(() => { const steps = scanned ? scanSearchSteps(scanned) : []; return scanned && steps.length ? { product: scanned, steps, step: 0 } : null; });
+  const [q, setQ] = useState(() => scan?.steps[0] ?? startQ ?? ''); const [pick, setPick] = useState<PickerChoice | null>(null);
+  const upc = typedUpc(q); // a typed UPC is looked up instead of searched
+  const [upcState, setUpcState] = useState<'idle' | 'looking' | SuppBarcodeFailure>('idle');
   const [slot, setSlot] = useState<SupplementSlot>('morning'); const [dose, setDose] = useState('');
   const [all, setAll] = useState(false); const [err, setErr] = useState('');
-  const { state: cat0, retry: retrySearch } = useCatalogSearch('supplement', q, !pick);
+  const { state: cat0, retry: retrySearch } = useCatalogSearch('supplement', q, !pick && !upc);
   // Later pages of the same search (the server answers 30 at a time), kept with the words they answer; a new search drops them.
   const [more, setMore] = useState<{ q: string; items: CatalogItem[]; more: boolean; busy: boolean } | null>(null);
   const extra = more && more.q === q.trim() ? more : null;
+  // A typed UPC: ask for the product's name, then search for it like a scan.
+  useEffect(() => {
+    if (!upc || !syncing || pick) { setUpcState('idle'); return; }
+    let live = true;
+    setUpcState('looking');
+    void lookupSupplementBarcode(upc).then(r => {
+      if (!live) return;
+      const steps = r.ok ? scanSearchSteps(r.product) : [];
+      if (r.ok && steps.length) { setScan({ product: r.product, steps, step: 0 }); setUpcState('idle'); setQ(steps[0]!); } else setUpcState(r.ok ? 'notfound' : r.reason);
+    });
+    return () => { live = false; };
+  }, [upc, syncing, pick]);
   const cat = cat0.status === 'ready' && extra ? { ...cat0, items: [...cat0.items, ...extra.items], more: extra.more } : cat0;
   const loadMore = () => {
     if (cat.status !== 'ready') return;
     const words = q.trim(); const offset = cat.items.length;
     setMore({ q: words, items: extra?.items ?? [], more: true, busy: true });
     void searchCatalog(words, offset, devHeaders).then(r => setMore(m => (m && m.q === words ? (r.ok ? { q: words, items: [...(extra?.items ?? []), ...r.items], more: r.more, busy: false } : { ...m, busy: false }) : m)));
+  };
+  // A name from a barcode source can carry a brand the catalog spells differently: when brand and name find nothing, try the name alone.
+  useEffect(() => {
+    if (!scan || pick || cat0.status !== 'ready' || cat0.searching || cat0.items.length || q !== scan.steps[scan.step] || scan.step + 1 >= scan.steps.length) return;
+    setScan({ ...scan, step: scan.step + 1 }); setQ(scan.steps[scan.step + 1]!);
+  }, [scan, pick, cat0, q]);
+  const scanCamera = () => {
+    const later = (p: ProductName | undefined) => setTimeout(() => useAppStore.getState().openModal({ type: 'suppadd', ...(backToManage ? { from: 'manage' } : {}), ...(p ? { scanned: p } : { q }) }), 0); // after the camera sheet has closed itself
+    useAppStore.getState().openModal({ type: 'suppscan', onFound: (p: ProductName) => later(p), onBack: () => later(undefined) });
   };
   const { state: lab, retry: retryLabel } = useSupplementLabel(pick?.kind === 'catalog' ? pick.item.id : null);
   const fill = lab.status === 'ready' ? planFill({}, lab.label).result : undefined;
@@ -51,7 +81,8 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
     : searching ? 'Searching the catalog…'
     : cat.status === 'failed' ? (cat.reason === 'offline' ? 'The catalog needs a connection.' : cat.reason === 'refused' ? 'The catalog is not available to this account.' : 'The catalog could not be loaded.')
     : !syncing && q.trim() ? 'No catalog here: this device keeps its own supplements only.' : '';
-  const noResults = !!q.trim() && !searching && !o.mine.shown.length && !o.catalog.shown.length && cat.status !== 'failed';
+  const upcNote = upc && upcState !== 'idle' ? (upcState === 'looking' ? 'Looking up the barcode...' : suppBarcodeText(upcState)) : '';
+  const noResults = !upc && !!q.trim() && !searching && !o.mine.shown.length && !o.catalog.shown.length && cat.status !== 'failed';
   const heldItem = pick?.kind === 'mine' ? items.find(i => i.id === pick.id) : undefined;
   const typed = q.trim().replace(/\s+/g, ' ');
   const canAdd = !!pick || !!typed;
@@ -92,9 +123,12 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
       <form id="suppadd-form" noValidate onSubmit={add} className="sas">
         <label className="field">Name or brand
           <input id="suppadd-q" type="search" autoComplete="off" maxLength={100} value={q} placeholder="e.g. creatine, Nature Made" autoFocus={!isTouchScreen()}
-            onChange={e => { setQ(e.target.value); setPick(null); setErr(''); setAll(false); setMore(null); }} />
+            onChange={e => { setQ(e.target.value); setScan(null); setPick(null); setErr(''); setAll(false); setMore(null); }} />
         </label>
-        {!pick && (
+        {syncing && !pick && <button type="button" className="btn sm" id="suppadd-scan" onClick={scanCamera}>Scan barcode</button>}
+        {!pick && upcNote && <p className={`note${upcState === 'looking' ? '' : ' err'}`} role="status">{upcNote}</p>}
+        {!pick && !upcNote && scan && <p className="note" role="status">{fromBarcodeText(scan.product)}</p>}
+        {!pick && !upc && (
           <>
             {note && <p className={`note${cat.status === 'failed' ? ' err' : ''}`} role="status">{note}{cat.status === 'failed' && cat.reason !== 'refused' && <> <button type="button" className="btn sm ghost" onClick={retrySearch}>Try again</button></>}</p>}
             {noResults && <p className="note">No match.</p>}
