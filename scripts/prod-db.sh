@@ -145,7 +145,8 @@ case "$cmd" in
     URL="$(owner_url)"; where
     # --limit is passed through for a trial; a limited run writes nothing, so it never needs a backup.
     extra=(${args[@]+"${args[@]}"})
-    if $apply; then backup; DATABASE_URL="$URL" $CATALOG_UPCS --apply ${extra[@]+"${extra[@]}"}
+    limited=false; for a in ${extra[@]+"${extra[@]}"}; do [ "$a" = "--limit" ] && limited=true; done
+    if $apply; then $limited || backup; DATABASE_URL="$URL" $CATALOG_UPCS --apply ${extra[@]+"${extra[@]}"}
     else DATABASE_URL="$URL" $CATALOG_UPCS ${extra[@]+"${extra[@]}"}; fi ;;
   injury-default)
     URL="$(owner_url)"
