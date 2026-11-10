@@ -22,7 +22,6 @@ import './SplitSection.js';
 import './StoreTax.js';
 import './StoreMoney.js';
 import { useEffect, useState } from 'react';
-import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { monthKey } from '../../lib/grocery.js';
@@ -54,8 +53,7 @@ export default function Grocery() {
   const [priceFor, setPriceFor] = useState<string | null>(null); // the item whose price field the tick notice's Add price opens on Bought
   const routed = pageOf(useRoutePath(), 'daily/grocery'); // #/daily/grocery/bought/history wins over the default (the old #/daily/grocery/spend lands there)
   const routedView = routed?.split('/')[0] ?? null; // `bought/history` is the Bought view's second switch
-  const receiptsOn = useFeature('receipts');
-  const showReceipts = routed === 'receipts' && receiptsOn; // the saved receipts page (brief receipt-save-photo): admin only, and a reload of its address falls back to the list for anyone else
+  const showReceipts = routed === 'receipts'; // the saved receipts page (brief receipt-save-photo), released to everyone 2026-11-10
   const view = (routedView && VIEWS.includes(routedView) ? routedView : chosen) as View;
   const inner: BoughtView = view === 'bought' && routed === 'bought/history' ? 'history' : 'month';
   const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); }; // leaving Bought, or pressing it, starts at This month
