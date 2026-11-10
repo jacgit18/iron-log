@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addingTo, basisOf, dayGroups, dayView, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf } from './nutritionBoard.js';
+import { addFlows, addingTo, toolbarFlows, basisOf, dayGroups, dayView, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -85,6 +85,12 @@ describe('the toolbar and what can be added', () => {
     expect(addFlows('2026-11-07', TODAY)).toEqual([]);
     expect(addFlows('2026-11-10', TODAY)).toEqual(['meals', 'recipes']);
     expect(addFlows(TODAY, TODAY)).toEqual(expect.arrayContaining(['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes']));
+  });
+  it('the toolbar shortcuts follow the day: today logs, a day ahead plans, last week has none, and each is a way the add sheet offers', () => {
+    expect(toolbarFlows(TODAY, TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
+    expect(toolbarFlows('2026-11-12', TODAY)).toEqual(['recipes', 'meals']);
+    expect(toolbarFlows('2026-11-07', TODAY)).toEqual([]);
+    for (const d of ['2026-11-07', TODAY, '2026-11-12']) for (const f of toolbarFlows(d, TODAY)) expect(addFlows(d, TODAY)).toContain(f);
   });
 });
 

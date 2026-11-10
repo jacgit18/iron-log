@@ -162,12 +162,12 @@ export default defineConfig({
         // The phone's launch splash reads this one fixed value, so it matches the dark theme (the app's own first paint follows the chosen theme).
         background_color: '#1E2326',
         categories: ['health', 'fitness', 'sports'],
-        // Long-press the home-screen icon (Android). Each opens the app on a tab (the store reads ?open=, lib/viewState.ts) or, for Nutrition, on an address (#/daily/nutrition, lib/route.ts); Android allows four.
+        // Long-press the home-screen icon (Android). Each opens the app on a tab (the store reads ?open=, lib/viewState.ts) or, for Nutrition, on an address (#/daily/nutrition, lib/route.ts); Android allows four. Their icons are in public/shortcut-icons/ (scripts/make-shortcut-icons.mjs), outside icons/ so server/appLabel.ts leaves them alone.
         shortcuts: [
-          { name: "Today's workout", short_name: 'Today', url: './?open=board', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
-          { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
-          { name: 'Progress', short_name: 'Progress', url: './?open=progress', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
-          { name: 'Nutrition', short_name: 'Nutrition', url: './#/daily/nutrition', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: "Today's workout", short_name: 'Today', url: './?open=board', icons: [{ src: 'shortcut-icons/today.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'shortcut-icons/daily.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Progress', short_name: 'Progress', url: './?open=progress', icons: [{ src: 'shortcut-icons/progress.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Nutrition', short_name: 'Nutrition', url: './#/daily/nutrition', icons: [{ src: 'shortcut-icons/nutrition.png', sizes: '192x192', type: 'image/png' }] },
         ],
         // Android's share sheet lists the app for a shared link or text; the page opens at ./?share_url=... and the app shows a "Save this link" sheet (lib/shareTarget.ts).
         share_target: { action: './', method: 'GET', enctype: 'application/x-www-form-urlencoded', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },

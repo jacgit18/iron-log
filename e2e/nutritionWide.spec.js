@@ -2,14 +2,14 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 import { closeSupplementEditor, openManage, openSupplementEditor, openTargets } from './nutritionBoardHelpers.js';
 
-// What a unit test cannot catch: the Nutrition week board's seven day columns sit side by side in the page container from 1280px (one column with a day stepper below it); only a real layout shows it.
+// What a unit test cannot catch: the Nutrition week board's seven day columns sit side by side in the page container from 1440px (one column with a day stepper below it); only a real layout shows it.
 const boxes = page => page.evaluate(() => {
   const r = s => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, right: b.right }; };
   return { board: r('.wb-board'), vw: innerWidth };
 });
 const open = async page => { await page.goto('/#/daily/nutrition'); await expect(page.locator('#nb-h')).toBeVisible(); };
 
-for (const w of [1280, 1920, 2560]) {
+for (const w of [1440, 1920, 2560]) {
   test(`at ${w}px the seven days of the board are side by side and fill the page container`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);
@@ -29,7 +29,7 @@ for (const w of [1280, 1920, 2560]) {
   });
 }
 
-for (const w of [375, 768, 1024, 1279]) {
+for (const w of [375, 768, 1024, 1279, 1439]) {
   test(`at ${w}px Nutrition shows one day with the day stepper`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);

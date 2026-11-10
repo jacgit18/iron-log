@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // android/twa-manifest.json is the Bubblewrap config for the Play build. It must say what the web manifest says, and it must not turn on billing.
@@ -34,10 +34,12 @@ describe('android/twa-manifest.json', () => {
     expect(twa.shareTarget.params.url).toBe('share_url'); // what src/lib/shareTarget.ts reads
   });
   it('lists the same launcher shortcuts as the web manifest (Android allows four)', () => {
-    const web = [...manifestBlock.matchAll(/\{ name: (?:'([^']+)'|"([^"]+)"), short_name: '([^']+)', url: '\.\/([^']*)'/g)].map(m => ({ name: m[1] ?? m[2], shortName: m[3], target: m[4] }));
-    const wrapper = twa.shortcuts.map(s => ({ name: s.name, shortName: s.shortName, target: s.url.replace('https://loadbearer.app/', '') }));
+    const web = [...manifestBlock.matchAll(/\{ name: (?:'([^']+)'|"([^"]+)"), short_name: '([^']+)', url: '\.\/([^']*)', icons: \[\{ src: '([^']+)'/g)].map(m => ({ name: m[1] ?? m[2], shortName: m[3], target: m[4], icon: m[5] }));
+    const wrapper = twa.shortcuts.map(s => ({ name: s.name, shortName: s.shortName, target: s.url.replace('https://loadbearer.app/', ''), icon: s.chosenIconUrl.replace('https://loadbearer.app/', '') }));
     expect(web).toHaveLength(4);
     expect(wrapper).toEqual(web);
+    for (const s of web) expect(existsSync(new URL(`../public/${s.icon}`, import.meta.url)), s.icon).toBe(true);
+    for (const s of web) expect(s.icon).toMatch(/^shortcut-icons\/[a-z]+\.png$/); // outside icons/, which server/appLabel.ts rewrites to the QA or Staging copy
     for (const s of twa.shortcuts) expect(s.url).toMatch(/^https:\/\/loadbearer\.app\/(\?open=(board|daily|progress|program|plans|settings)|#\/[a-z]+(\/[a-z]+)*)$/);
   });
   it('sells nothing: no Play Billing feature', () => {

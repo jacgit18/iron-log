@@ -1,6 +1,7 @@
 import type { SupplementSlot } from '../../types.ts';
 import { useEffect, useState, type FormEvent } from 'react';
 import type { CatalogItem } from '../../types.ts';
+import type { SupplementLabel } from '../../shared/dsldLabel.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { afterSheetClose } from '../../lib/backNav.js';
 import { MIN_LETTERS, useCatalogSearch } from '../../hooks/useCatalogSearch.js';
@@ -18,6 +19,8 @@ import type { ProductName } from '../../shared/barcode.js';
 import { catalogLine, mineOption, newestFirst, oneOfEach, upcLine } from '../../lib/supplementResultLine.js';
 import Sheet from '../Sheet.js';
 import { LabelAmounts } from './LabelPreview.js';
+import ScanBottle from './ScanBottle.js';
+import { SUPPLEMENT_SCAN_TEXT } from '../../lib/scanPhoto.js';
 import './SupplementAddSheet.css';
 
 const SHOWN = 8; const SHOWN_MORE = 500; // every result fetched so far, once Show more is pressed
@@ -26,18 +29,19 @@ const SHOWN = 8; const SHOWN_MORE = 500; // every result fetched so far, once Sh
 // before Add, one time of day, a dose. `backToManage`: opened from Manage, so closing it reopens that editor.
 //
 // Barcode (brief supplement-barcode-search): NIH cannot search by UPC, so a scanned or typed UPC becomes a product name (server/supplementBarcode.ts) and the name fills the search; the
-// person still picks the listing. `scanned`: the product a scan just found (the camera sheet replaced this one and reopened it); `startQ`: the text to come back to when the camera was closed.
-export default function SupplementAddSheet({ backToManage, scanned, startQ }: { backToManage?: boolean; scanned?: ProductName; startQ?: string }) {
+// person still picks the listing. `found`: the product a barcode scan just found (the camera sheet replaced this one and reopened it); `startQ`: the text to come back to when the camera was closed.
+export default function SupplementAddSheet({ backToManage, found, startQ }: { backToManage?: boolean; found?: ProductName; startQ?: string }) {
   const s = useAppStore.getState();
   const syncing = useAppStore(x => x.sync !== null);
   const items = useAppStore(x => x.supp.items);
   useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
-  const [scan, setScan] = useState(() => { const steps = scanned ? scanSearchSteps(scanned) : []; return scanned && steps.length ? { product: scanned, steps, step: 0 } : null; });
+  const [scan, setScan] = useState(() => { const steps = found ? scanSearchSteps(found) : []; return found && steps.length ? { product: found, steps, step: 0 } : null; });
   const [q, setQ] = useState(() => scan?.steps[0] ?? startQ ?? ''); const [pick, setPick] = useState<PickerChoice | null>(null);
   const upc = typedUpc(q); // a typed UPC is looked up instead of searched
   const [upcState, setUpcState] = useState<'idle' | 'looking' | SuppBarcodeFailure>('idle');
   const [slot, setSlot] = useState<SupplementSlot>('morning'); const [dose, setDose] = useState('');
   const [all, setAll] = useState(false); const [err, setErr] = useState('');
+  const [scanned, setScanned] = useState<SupplementLabel | null>(null); // the bottle's label read from a photo (brief supplement-label-scan); only for a new supplement, never with a catalog pick
   const { state: cat0, retry: retrySearch } = useCatalogSearch('supplement', q, !pick && !upc);
   // Later pages of the same search (the server answers 30 at a time), kept with the words they answer; a new search drops them.
   const [more, setMore] = useState<{ q: string; items: CatalogItem[]; more: boolean; busy: boolean } | null>(null);
@@ -67,11 +71,12 @@ export default function SupplementAddSheet({ backToManage, scanned, startQ }: { 
     setScan({ ...scan, step: scan.step + 1 }); setQ(scan.steps[scan.step + 1]!);
   }, [scan, pick, cat0, q]);
   const scanCamera = () => {
-    const later = (p: ProductName | undefined) => setTimeout(() => useAppStore.getState().openModal({ type: 'suppadd', ...(backToManage ? { from: 'manage' } : {}), ...(p ? { scanned: p } : { q }) }), 0); // after the camera sheet has closed itself
+    const later = (p: ProductName | undefined) => setTimeout(() => useAppStore.getState().openModal({ type: 'suppadd', ...(backToManage ? { from: 'manage' } : {}), ...(p ? { found: p } : { q }) }), 0); // after the camera sheet has closed itself
     useAppStore.getState().openModal({ type: 'suppscan', onFound: (p: ProductName) => later(p), onBack: () => later(undefined) });
   };
   const { state: lab, retry: retryLabel } = useSupplementLabel(pick?.kind === 'catalog' ? pick.item.id : null);
   const fill = lab.status === 'ready' ? planFill({}, lab.label).result : undefined;
+  const scanFill = scanned ? planFill({}, scanned).result : undefined;
   const o = pickerOptions(q, oneOfEach(items).map(i => mineOption(i, syncing)), cat.status === 'ready' ? newestFirst(cat.items) : [],
     { byBrand: true, serverFiltered: !(cat.status === 'ready' && cat.searching), max: all ? SHOWN_MORE : SHOWN });
   const hidden = o.mine.hidden + o.catalog.hidden;
@@ -87,8 +92,9 @@ export default function SupplementAddSheet({ backToManage, scanned, startQ }: { 
   const typed = q.trim().replace(/\s+/g, ' ');
   const canAdd = !!pick || !!typed;
 
-  const choose = (c: PickerChoice) => { setPick(c); setErr(''); if (c.kind === 'mine') setQ(items.find(i => i.id === c.id)?.n ?? q); else if (c.kind === 'catalog') setQ(c.item.name); else setQ(c.name); };
+  const choose = (c: PickerChoice) => { setPick(c); setErr(''); if (c.kind !== 'create') setScanned(null); if (c.kind === 'mine') setQ(items.find(i => i.id === c.id)?.n ?? q); else if (c.kind === 'catalog') setQ(c.item.name); else setQ(c.name); };
   const clear = () => { setPick(null); setErr(''); };
+  const read = (l: SupplementLabel) => { setScanned(l); setErr(''); setQ(cur => (cur.trim() ? cur : l.name.slice(0, 60))); }; // the name box keeps what was typed; it takes the photo's name only while empty
   // Add: one of yours moves into the time of day or gets another instance, a catalog product joins your library in it with its label's amounts, anything else is a new supplement.
   const add = (e: FormEvent) => {
     e.preventDefault();
@@ -107,7 +113,7 @@ export default function SupplementAddSheet({ backToManage, scanned, startQ }: { 
     if (!pick && (o.mine.shown.length || o.catalog.shown.length)) { setErr('Pick a result, or pick “Add … as a new supplement”.'); return; }
     const name = pick?.kind === 'create' ? pick.name : typed;
     if (!slot) { setErr('Pick Morning, Noon or Night for a new supplement, or open the full form to keep it in the library only.'); return; }
-    if (s.addSupplement(slot, name, dose)) s.closeModal(); else setErr(`Could not add ${name}. You may already have it in ${slotLabel(slot)}.`);
+    if (s.addSupplement(slot, name, dose, scanFill && scanned ? { nutrients: scanFill.nutrients, ...(scanFill.serving ? { serving: scanFill.serving } : {}), ...(scanned.brand ? { brand: scanned.brand } : {}) } : undefined)) s.closeModal(); else setErr(`Could not add ${name}. You may already have it in ${slotLabel(slot)}.`);
   };
   const row = (key: string, choice: PickerChoice, name: string, meta?: string, badge?: string) => (
     <li key={key}>
@@ -132,6 +138,7 @@ export default function SupplementAddSheet({ backToManage, scanned, startQ }: { 
           <>
             {note && <p className={`note${cat.status === 'failed' ? ' err' : ''}`} role="status">{note}{cat.status === 'failed' && cat.reason !== 'refused' && <> <button type="button" className="btn sm ghost" onClick={retrySearch}>Try again</button></>}</p>}
             {noResults && <p className="note">No match.</p>}
+            {noResults && !scanned && <ScanBottle label="Scan the bottle’s label" onRead={read} />}
             {(o.mine.shown.length > 0 || o.catalog.shown.length > 0 || o.create) && (
               <ul className="sasresults" aria-label="Results">
                 {o.mine.shown.map(m => row(`m-${m.id}`, { kind: 'mine', id: m.id }, m.name, m.meta, m.badge))}
@@ -152,9 +159,18 @@ export default function SupplementAddSheet({ backToManage, scanned, startQ }: { 
             {pick.kind === 'catalog' && <p className="note">{[catalogLine(pick.item), upcLine(pick.item)].filter(Boolean).join(' · ')}. From the catalog: it joins your supplements.</p>}
             {pick.kind === 'mine' && heldItem && <p className="note">{heldItem.slot ? `Yours, in ${slotLabel(heldItem.slot)}. Adding it to another time of day makes another instance.` : 'Yours, in the library only. Adding it schedules it.'}</p>}
             {pick.kind === 'create' && <p className="note">A new supplement of your own.</p>}
+            {pick.kind === 'create' && !scanned && <ScanBottle label="Scan the bottle’s label" onRead={read} />}
             {pick.kind === 'catalog' && lab.status === 'loading' && <p className="note" role="status">Reading the label... Add now and it is added without amounts.</p>}
             {pick.kind === 'catalog' && lab.status === 'failed' && <p className="note" role="status">Could not load this product's amounts. You can type them in the supplement's sheet. <button type="button" className="btn sm" onClick={retryLabel}>Try again</button></p>}
             {pick.kind === 'catalog' && lab.status === 'ready' && <LabelAmounts label={lab.label} />}
+          </div>
+        )}
+        {scanned && (!pick || pick.kind === 'create') && (
+          <div className="sasbox">
+            <h3 className="sasboxname">{scanned.name || 'Your bottle'}</h3>
+            <p className="note" role="status">{SUPPLEMENT_SCAN_TEXT.check} Check that every row on the bottle is here.</p>
+            <LabelAmounts label={scanned} />
+            <ScanBottle label="Retake" onRead={read} />
           </div>
         )}
         <fieldset className="sasslot">

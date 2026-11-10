@@ -2,7 +2,7 @@ import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
-import { FEDB_EQUIPMENT, FEDB_MUSCLES, fetchDsld, importCatalog, mapDsld, mapFedb, type CatalogRow, type DsldHit } from './catalogImport.ts';
+import { dsldAliases, FEDB_EQUIPMENT, FEDB_MUSCLES, fetchDsld, importCatalog, mapDsld, mapFedb, type CatalogRow, type DsldHit } from './catalogImport.ts';
 
 // A few rows shaped like free-exercise-db's exercises.json.
 const ex = (id: string, over: Record<string, unknown> = {}) => ({
@@ -223,5 +223,14 @@ describe('importCatalog', () => {
     await run(rows('B'), true, true);
     expect((await all()).find(r => r.id === 'c:dsld:1')!.retired_at).toBeNull();
     await expect(run([{ ...rows('C')[0]!, id: 'c:dsld:2' }])).rejects.toThrow(/not a c:fedb: id/);
+  });
+});
+
+describe('dsldAliases', () => {
+  it('points every label at the row the import keeps for it (same name, brand, form and label year: the lowest id)', () => {
+    const hit = (id: string, entryDate: string) => ({ _id: id, _source: { fullName: 'Mega Men', brandName: 'Nature Made', physicalState: { langualCodeDescription: 'Tablet' }, entryDate } }) as DsldHit;
+    const a = dsldAliases([hit('300', '2020-05-01'), hit('20', '2016-02-03'), hit('21', '2016-09-09'), hit('301', '2020-06-01'), { _id: 'x', _source: {} } as DsldHit]);
+    expect([...a]).toEqual([['300', 'c:dsld:300'], ['20', 'c:dsld:20'], ['21', 'c:dsld:20'], ['301', 'c:dsld:300']]);
+    expect(mapDsld([hit('300', '2020-05-01'), hit('301', '2020-06-01')]).rows.map(r => r.id)).toEqual(['c:dsld:300']); // the same keys mapDsld keeps
   });
 });

@@ -46,7 +46,7 @@ export default function Modal() {
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
-    case 'suppadd': return <SupplementAddSheet backToManage={modal.from === 'manage'} scanned={modal.scanned as ProductName | undefined} startQ={modal.q as string | undefined} />;
+    case 'suppadd': return <SupplementAddSheet backToManage={modal.from === 'manage'} found={modal.found as ProductName | undefined} startQ={modal.q as string | undefined} />;
     case 'suppscan': return <SupplementBarcodeSheet />;
     case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} backToManage={modal.from === 'manage'} draft={modal.draft as SupplementDraft | undefined} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;

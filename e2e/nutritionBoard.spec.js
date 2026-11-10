@@ -46,6 +46,18 @@ test('the toolbar names its day, starts on today and follows the day you tap; la
   await expect(page.locator('.nb-target')).toHaveText('Adding to Thu 24 · today');
   await col(page, '2026-09-26').getByRole('button', { name: /^Sat 26/ }).click();
   await expect(page.locator('.nb-target')).toHaveText('Adding to Sat 26');
+  const bar = page.locator('.nb-toolbar');
+  await expect(bar.getByRole('button', { name: 'Recipes', exact: true })).toBeVisible(); // a day ahead plans: its own shortcuts, so the toolbar keeps its shape
+  await expect(bar.getByRole('button', { name: 'Saved meals', exact: true })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Quick add' })).toHaveCount(0);
+  const edge = sel => page.locator(sel).evaluate(e => { const c = getComputedStyle(e); return { border: c.borderColor, ring: c.boxShadow }; });
+  const picked = await edge('.nb-col[data-day="2026-09-26"]'), todayEdge = await edge('.nb-col.today');
+  expect(picked.ring).not.toBe('none'); expect(todayEdge.ring).toBe('none'); // the accent ring marks only the picked day
+  await bar.getByRole('button', { name: 'Recipes', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Recipes' })).toBeVisible();
+  await closeSheet(page);
+  await col(page, '2026-09-24').getByRole('button', { name: /^Thu 24/ }).click();
+  await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible(); // back on today: log shortcuts
   await page.getByRole('button', { name: 'Last week', exact: true }).click();
   await expect(page.locator('#nb-add')).toHaveCount(0);
   await expect(page.locator('.nb-toolbar')).toContainText('read-only');
@@ -249,12 +261,12 @@ test.describe('on a phone', () => {
     });
   }
 
-  test('on a day ahead only Add food shows; on last week the food buttons are gone', async ({ page }) => {
+  test('on a day ahead Add food shows with Recipes and Saved meals; on last week the food buttons are gone', async ({ page }) => {
     await openNutrition(page);
     const step = page.getByRole('group', { name: 'Day stepper' });
     await step.getByRole('button', { name: 'Next day' }).click();
     await expect(page.locator('#nb-add')).toBeVisible();
-    await expect(page.locator('.nb-tbtns .btn')).toHaveCount(1);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['+ Add food', 'Recipes', 'Saved meals']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-20');
     await expect(page.locator('#nb-add')).toHaveCount(0);
     await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();

@@ -3,7 +3,7 @@ import { bwSorted, goalStatus } from '../../lib/body.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
-import { addingTo, dayView, foodEditable, longDay, onBoard, weekDays, weekLabel, weekOf, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, onBoard, toolbarFlows, weekDays, weekLabel, weekOf, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -20,7 +20,7 @@ import './NutritionBoard.css';
 const NO_PLAN: Plan = {};
 const NO_MEALS: SavedMeal[] = [];
 
-// Nutrition as one week board (brief nutrition-board): a week switcher (Last week, This week, Next week), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1280 px).
+// Nutrition as one week board (brief nutrition-board): a week switcher (Last week, This week, Next week), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1440 px).
 // Each day holds five meters (calories, protein, fat, supplements, water), its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
@@ -86,9 +86,7 @@ export default function NutritionBoard() {
         {editable ? (
           <div className="nb-tbtns">
             <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>+ Add food</button>
-            {day === today && <button type="button" className="btn" onClick={scan}>Scan barcode</button>}
-            {day === today && <button type="button" className="btn" onClick={() => open('quick')}>Quick add</button>}
-            {day === today && <button type="button" className="btn" onClick={() => open('oneoff')}>One-off food</button>}
+            {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
           </div>
         ) : <span className="note">Last week&apos;s food cannot be changed. Supplements and water can.</span>}
       </div>
