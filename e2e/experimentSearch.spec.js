@@ -12,16 +12,17 @@ test('searching narrows the long workout list by name or note, says when nothing
   await expect(cards).toHaveCount(7);
   await page.fill('#exp-q', 'slow'); // a note
   await expect(cards).toHaveCount(1);
-  await expect(page.locator('.experiments [role=status]')).toContainText('1 of 7 exercises');
+  await expect(page.locator('.experiments [role=status]')).toContainText('1 of 7 ideas');
   await page.fill('#exp-q', 'zzz');
   await expect(cards).toHaveCount(0);
-  await expect(page.locator('.experiments')).toContainText('No exercise matches');
+  await expect(page.locator('.experiments')).toContainText('No idea matches');
   await page.getByRole('button', { name: 'Clear' }).click();
   await expect(cards).toHaveCount(7);
 
   // Then it forgets its text when the list gets short, so it does not come back filled in.
   await page.fill('#exp-q', 'slow');
   await expect(cards).toHaveCount(1);
+  await cards.first().getByRole('button', { name: /^More actions for/ }).click();
   await cards.first().getByRole('button', { name: /delete/i }).click();
   await cards.first().getByRole('button', { name: /delete/i }).click();
   await expect(page.locator('#exp-q')).toHaveCount(0); // six left: the search is gone and the whole list shows

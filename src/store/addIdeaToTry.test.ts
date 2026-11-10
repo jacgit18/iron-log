@@ -19,4 +19,15 @@ describe('addIdeaToTry', () => {
     expect(st().addIdeaToTry('no-such-exercise')).toBe(false);
     expect(st().experiments).toEqual([]);
   });
+  it('puts a shared idea first and a typed one last', () => {
+    const a = st().createExercise({ nn: 'Cable Lateral Raise', nu: '' });
+    const b = st().createExercise({ nn: 'Hack Squat Hold', nu: '' });
+    const c = st().createExercise({ nn: 'Spider Curl', nu: '' });
+    st().addIdeaToTry(a); st().addIdeaToTry(b);
+    expect(st().experiments.map(x => x.ex)).toEqual([b, a]); // the newest share is first
+    expect(st().saveExperiment({ id: '', ex: c, nu: '', ne: '', ph: null, note: '' } as never)).toBeNull();
+    expect(st().experiments.map(x => x.ex)).toEqual([b, a, c]); // + Add idea still appends
+    expect(st().addIdeaToTry(a)).toBe(false);
+    expect(st().experiments.map(x => x.ex)).toEqual([b, a, c]);
+  });
 });

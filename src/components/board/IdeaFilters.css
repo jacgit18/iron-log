@@ -1,0 +1,46 @@
+@layer base, components;
+@layer components {
+.ideafilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+  margin: var(--sp-8) 0;
+}
+.ifsearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  flex: 0 1 280px;
+}
+.ifsearch .field {
+  flex: 1;
+  min-width: 160px;
+}
+.ifpills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.ifclear {
+  min-height: 44px;
+}
+@media (max-width:700px) {
+  .ifsearch {
+    flex: 1 1 100%;
+  }
+  /* the count sits inside the search box, at its right edge, so the row below keeps its width for the dropdowns */
+  .ifcount {
+    position: absolute;
+    right: var(--sp-12);
+    bottom: var(--sp-12);
+    margin: 0;
+    pointer-events: none;
+  }
+  .ifsearch input {
+    padding-right: 96px;
+  }
+}
+}

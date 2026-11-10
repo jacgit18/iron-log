@@ -1,12 +1,14 @@
 import { test, expect, seedExperiments } from './fixtures.js';
 
-// Both Experiments lists use one card: Delete needs a second tap (the card is marked while armed), and Undo brings it back.
+// The Workout card (Status-forward, ⋯ menu) and the Stretches card: Delete needs a second tap (the card is marked while armed), and Undo brings it back.
 test('a workout experiment card arms Delete, deletes on the second tap and Undo brings it back', async ({ page }) => {
   await page.goto('/');
   await seedExperiments(page, ['hack']);
   await page.goto('/');
   const card = page.locator('.explist .expcard');
   await expect(card).toHaveCount(1);
+  await expect(card.getByRole('button', { name: /^(Edit|Delete)/ })).toHaveCount(1); // Edit by name; Delete is behind the ⋯ menu
+  await card.getByRole('button', { name: /^More actions for/ }).click();
   await card.getByRole('button', { name: /delete/i }).click();
   await expect(card).toHaveClass(/removing/);
   await expect(card.locator('.rmtag')).toContainText('tap Delete again');

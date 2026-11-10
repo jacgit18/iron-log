@@ -8,7 +8,7 @@ let seq = 0;
 
 export const removedSlice = (set: StoreSet, get: StoreGet, flag: Flag): RemovedSlice => ({
   removed: null,
-  noteRemoved(scope, text, restore) { set({ removed: { id: ++seq, scope, text, restore } }); },
+  noteRemoved(scope, text, restore, verb) { set({ removed: { id: ++seq, scope, text, restore, ...(verb ? { verb } : {}) } }); },
   undoRemoved() {
     const r = get().removed; if (!r) return;
     set({ removed: null });

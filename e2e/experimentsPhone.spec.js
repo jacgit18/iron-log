@@ -14,8 +14,8 @@ test('the Experiments strip snaps and peeks, its buttons are 44px and the page s
   expect(b.x).toBeGreaterThan(a.x + a.width - 1); // side by side
   expect(b.x).toBeLessThan(375); // the second card starts inside the screen
   expect(b.x + b.width).toBeGreaterThan(375); // and runs past it, so the strip reads as scrollable
-  for (const btn of await cards.first().locator('.actions .btn, .actions select').all()) {
-    expect((await btn.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  for (const btn of await cards.first().locator('button, a').all()) {
+    expect((await btn.boundingBox()).height, await btn.innerText()).toBeGreaterThanOrEqual(44); // the name, Add and ⋯
   }
   const snap = await cards.first().evaluate(el => [getComputedStyle(el).scrollSnapAlign, getComputedStyle(el.parentElement).scrollSnapType]);
   expect(snap[0]).toBe('start'); expect(snap[1]).toMatch(/^x/); // computed, proximity is the default and prints as plain x

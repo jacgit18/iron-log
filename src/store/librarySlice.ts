@@ -53,10 +53,10 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
   },
-  // Puts an exercise on the Ideas to try list (a shared video's exercise lands there on its own). False when it is already listed or the data is not ready; no flag or modal change.
+  // Puts an exercise at the front of the Ideas to try list (a shared video's exercise lands there on its own; a hand-typed idea goes last). False when it is already listed or the data is not ready; no flag or modal change.
   addIdeaToTry(ex) {
     if (get().blocked() || !get().cfg.ex[ex] || get().experiments.some(x => x.ex === ex)) return false;
-    get().setExperiments([...get().experiments, { id: uid('E'), ex, ph: null, note: '' }]);
+    get().setExperiments([{ id: uid('E'), ex, ph: null, note: '' }, ...get().experiments]); // the front: the video just shared is the first card
     return true;
   },
   // The exercise id a sheet's choice stands for, adding it to the library first when it is new: a catalog pick joins with its snapshot

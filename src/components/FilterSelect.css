@@ -1,0 +1,50 @@
+@layer base, components;
+@layer components {
+/* The pill is 32px on a phone and 44px on a desktop; the select and the × are always 44px tall, reaching past the pill, so the touch target holds. */
+.fsel {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 32px;
+  border: 1px solid var(--field-line);
+  /* token-ok: a pill */
+  border-radius: 999px;
+  background: var(--surface);
+  max-width: 100%;
+}
+.fsel select {
+  min-height: 44px;
+  margin-block: -6px;
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  padding-inline: var(--sp-10);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: inherit;
+}
+.fsel.on {
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.fsel.on select {
+  padding-right: var(--sp-2);
+}
+.fselx {
+  min-width: 44px;
+  min-height: 44px;
+  margin-block: -6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+@media (min-width:701px) {
+  .fsel {
+    min-height: 44px;
+  }
+  .fsel select, .fselx {
+    margin-block: 0;
+  }
+}
+}

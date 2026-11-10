@@ -290,12 +290,12 @@ export interface SettingsSlice {
 /** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out); `oneTime` (quick add on Shopping) makes a When-out item that is out, which is the only way `every` is read. */
 export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string; unit?: GroceryUnit | ''; oneTime?: boolean }
 
-/** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
-export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
+/** What the last single-item delete took out (or, with `verb`, what an add put in): `text` is the notice ("Removed <text>."), `restore` puts it back. */
+export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void; /** The bold first word of the notice (default Removed); an Undo of an add says Added. */ verb?: string }
 
 export interface RemovedSlice {
   removed: Removed | null;
-  noteRemoved(scope: string, text: string, restore: () => boolean | void): void;
+  noteRemoved(scope: string, text: string, restore: () => boolean | void, verb?: string): void;
   undoRemoved(): void;
   /** Drop the Undo; with a scope, only when it belongs to that list. */
   dismissRemoved(scope?: string): void;
