@@ -318,6 +318,9 @@ export interface CatalogData {
   instructions?: string[];
   /** Supplements (DSLD): the product's form, e.g. Capsule, Powder. */
   form?: string;
+  /** Supplements (DSLD): the year the label was entered and the product's UPC, so two labels of one product can be told apart (brief supplement-add-redesign). No amounts: those are read on demand. */
+  entryYear?: number;
+  upc?: string;
   /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
   recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number };
 }

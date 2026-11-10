@@ -35,6 +35,8 @@ export function normTaken(t: any): Taken {
   });
   return out;
 }
+/** The same supplement: name and brand, any case (instances of one supplement share both). */
+export const sameSupplement = (x: { n: string; brand?: string }, n: string, brand?: string) => x.n.toLowerCase() === n.toLowerCase() && (x.brand || '').toLowerCase() === (brand || '').toLowerCase();
 export const scheduled = (items: SupplementItem[]) => items.filter(i => i.slot);
 export function slotTally(items: SupplementItem[], taken: Taken, date: string, slot: string) {
   const l = items.filter(i => i.slot === slot); const t = taken[date] || {};

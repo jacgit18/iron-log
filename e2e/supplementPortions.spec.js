@@ -9,7 +9,7 @@ const dialog = page => page.getByRole('dialog');
 const value = page => page.locator('#supp-portion-value');
 
 async function newSupplement(page, name, { mg, units } = {}) {
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill(name);
   if (mg) {
     await page.locator('#supp-add-nutrient').click();
@@ -51,9 +51,11 @@ test('a product in two sections keeps its own capsules in each and shares its nu
   await openSupplementEditor(page);
   await newSupplement(page, 'Mag glycinate', { mg: 200, units: 2 });
   await saveSheet(page);
-  await page.getByRole('combobox', { name: 'Add to Night' }).fill('mag');
-  await page.getByRole('option', { name: /Mag glycinate/ }).first().click();
-  await page.click('#suppadd-night');
+  await page.click('#suplib-add');
+  await page.fill('#suppadd-q', 'mag');
+  await page.getByRole('dialog').getByRole('button', { name: /Mag glycinate/ }).first().click();
+  await page.getByRole('dialog').getByLabel('Night').check();
+  await page.click('#suppadd-go');
   await page.getByRole('button', { name: 'Edit Mag glycinate in Night' }).click();
   await expect(value(page)).toHaveText('2 capsules'); // a new intake starts at one serving
   await page.locator('#supp-portion-less').click();

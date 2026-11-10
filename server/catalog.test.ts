@@ -97,6 +97,16 @@ describe('GET /api/catalog/search (supplements)', () => {
     expect(ids(await search('?kind=supplement&q=now'))).toEqual(['c:dsld:3', 'c:dsld:4', 'c:dsld:2']);
   });
 
+  it('lists two label years of one product, each with its year and UPC', async () => {
+    const row = (id: number, year: number, upc: string) => ({ id: `c:dsld:${id}`, kind: 'supplement', source: 'dsld', license: 'x', name: 'Mega Men', brand: 'Nature Made', data: JSON.stringify({ form: 'Tablet', entryYear: year, upc }) });
+    await db.insertInto('catalog_items').values([row(900, 2020, '031604026505'), row(901, 2016, '031604026499')]).execute();
+    const r = await search('?kind=supplement&q=mega%20men');
+    expect(r.body.items.map(i => [i.id, i.data])).toEqual([
+      ['c:dsld:900', { form: 'Tablet', entryYear: 2020, upc: '031604026505' }],
+      ['c:dsld:901', { form: 'Tablet', entryYear: 2016, upc: '031604026499' }],
+    ]);
+  });
+
   it('finds the same product with the brand first or last, ignoring apostrophes and punctuation', async () => {
     expect(ids(await search('?kind=supplement&q=natures%20way%20fish'))).toEqual(['c:dsld:7']);
     expect(ids(await search('?kind=supplement&q=fish%20oil%20nature%27s%20way'))).toEqual(['c:dsld:7']);

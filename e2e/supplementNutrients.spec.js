@@ -9,7 +9,7 @@ const dialog = page => page.getByRole('dialog');
 const asAdmin = async page => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 
 async function addSupplement(page, name, rows) {
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill(name);
   for (const [i, [nutrient, amount, unit]] of rows.entries()) {
     await page.locator('#supp-add-nutrient').click();
@@ -33,7 +33,7 @@ test('a day with no nutrient data has a Totals sheet that says what to do and no
   await asAdmin(page);
   await openNutrition(page);
   await openSupplementEditor(page);
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill('Plain');
   await page.getByRole('button', { name: 'Save' }).click();
   await closeSupplementEditor(page);

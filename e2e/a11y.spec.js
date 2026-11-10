@@ -55,7 +55,7 @@ test('supplement library has no accessibility violations', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-supplements');
   await openSupplementEditor(page); // the library shows under the schedule in Manage
-  await page.click('#suplib-new');
+  await page.click('#suplib-add'); await page.click('#suppadd-full');
   await page.fill('#supp-name', 'Vitamin D3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('.exlib .exrow b', { hasText: 'Vitamin D3' })).toBeVisible();

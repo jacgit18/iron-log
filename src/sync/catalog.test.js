@@ -10,6 +10,12 @@ describe('cleanCatalogItem', () => {
       .toEqual({ id: 'c:fedb:A', name: 'A', data: { eq: 'barbell', muscles: { p: ['quads'], mob: true }, level: 'beginner' } });
     expect(cleanCatalogItem({ id: 'c:fedb:A', name: 'A', data: { eq: 'constructor' } })).toEqual({ id: 'c:fedb:A', name: 'A', data: {} });
   });
+  it('keeps a supplement\'s label year and UPC when they are sane, and drops them when not', () => {
+    expect(cleanCatalogItem({ id: 'c:dsld:5', name: 'Mega Men', brand: 'Nature Made', data: { form: 'Tablet', entryYear: 2020, upc: ' 031604026505 ' } }))
+      .toEqual({ id: 'c:dsld:5', name: 'Mega Men', brand: 'Nature Made', data: { form: 'Tablet', entryYear: 2020, upc: '031604026505' } });
+    expect(cleanCatalogItem({ id: 'c:dsld:5', name: 'M', data: { entryYear: '2020', upc: 5 } })).toEqual({ id: 'c:dsld:5', name: 'M', data: {} });
+    expect(cleanCatalogItem({ id: 'c:dsld:5', name: 'M', data: { entryYear: 1066 } })).toEqual({ id: 'c:dsld:5', name: 'M', data: {} });
+  });
   it('refuses an item without a c: id or a name', () => {
     for (const bad of [null, [], { id: 'squat', name: 'A' }, { id: 'c:fedb:A', name: ' ' }, { id: 'c:' + 'x'.repeat(100), name: 'A' }]) expect(cleanCatalogItem(bad)).toBeNull();
   });

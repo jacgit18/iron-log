@@ -11,7 +11,7 @@ const FOOD = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); });
 
 async function addSupplement(page, name, rows) {
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill(name);
   for (const [i, [nutrient, amount, unit]] of rows.entries()) {
     await page.locator('#supp-add-nutrient').click();
@@ -44,7 +44,7 @@ async function setUp(page) {
 test('the supplement form offers the five nutrients without an upper limit after the fifteen', async ({ page }) => {
   await openNutrition(page);
   await openSupplementEditor(page);
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-add-nutrient').click();
   const options = await page.getByLabel('Nutrient 1').locator('option').allTextContents();
   expect(options).toHaveLength(20);

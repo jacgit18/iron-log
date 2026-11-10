@@ -1,23 +1,5 @@
 @layer base, components;
 @layer components {
-/* Supplements tab add row (ADR 036): the picker takes the full width, then dose and Add; its notes wrap under them. */
-.suppadd {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-6) var(--sp-8);
-  align-items: flex-end;
-}
-.suppadd .picker {
-  flex: 1 1 100%;
-}
-.suppadd>.field {
-  flex: 1 1 140px;
-  min-width: 0;
-}
-.suppadd>.note {
-  flex: 1 1 100%;
-  margin: 0;
-}
 /* Supplements and Water on a phone: the same flat pattern as Groceries (Grocery.css). Sections sit in one panel with hairline
    dividers, not cards inside a card; a row is a 44px tap target; the panel gives its width to the list. */
 .sstop {
@@ -115,14 +97,6 @@
   flex: none;
   min-height: 44px;
   margin-left: auto;
-}
-.sslot .suppadd {
-  border-top: 1px solid var(--line);
-  padding-top: var(--sp-12);
-  margin-top: var(--sp-4);
-}
-.sslot .suppadd .btn,.sslot .suppadd .field input {
-  min-height: 44px;
 }
 
 /* Water */

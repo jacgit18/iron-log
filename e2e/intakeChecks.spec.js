@@ -12,14 +12,14 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorag
 test('the form says to enter the elemental amount', async ({ page }) => {
   await openNutrition(page);
   await openSupplementEditor(page);
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await expect(dialog(page)).toContainText('Enter the elemental amount the Supplement Facts panel lists (for example magnesium, not magnesium oxide).');
 });
 
 test('supplements alone show an average and no target verdict; a logged food adds the target line, apart from the limit words', async ({ page }) => {
   await openNutrition(page);
   await openSupplementEditor(page);
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill('Zinc cap');
   await page.locator('#supp-add-nutrient').click();
   await page.getByLabel('Nutrient 1').selectOption({ label: 'Zinc' });

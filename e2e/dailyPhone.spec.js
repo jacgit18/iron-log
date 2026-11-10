@@ -6,8 +6,9 @@ import { closeSupplementEditor, openSupplementEditor } from './nutritionBoardHel
 const open = async page => { await page.setViewportSize({ width: 320, height: 700 }); await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const addOne = async (page, n, dose) => {
   await openSupplementEditor(page);
-  await page.fill('#suppname-morning', n); await page.fill('#suppdose-morning', dose);
-  await page.click('#suppadd-morning');
+  await page.click('#suplib-add');
+  await page.fill('#suppadd-q', n); await page.fill('#suppadd-dose', dose);
+  await page.click('#suppadd-go');
   await expect(page.locator('.srow', { hasText: n })).toHaveCount(1); // really added, so the checks below are not vacuous
   await closeSupplementEditor(page);
 };

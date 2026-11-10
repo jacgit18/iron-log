@@ -85,7 +85,7 @@ test('adding a supplement from the library in Manage returns to the editor with 
   await openNutrition(page);
   await openManage(page);
   await page.locator('#sched-edit').click();
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.fill('#supp-name', 'Vitamin D3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('#suplib-h')).toBeVisible(); // back in the editor, not on the board
@@ -97,7 +97,7 @@ test('phone Back from a supplement opened in the library closes it, then Manage,
   await openNutrition(page);
   await openManage(page);
   await page.locator('#sched-edit').click();
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await expect(page.locator('#supp-name')).toBeVisible();
   await page.goBack();
   await expect(page.locator('#supp-name')).toHaveCount(0);

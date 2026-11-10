@@ -27,11 +27,13 @@ test('a supplement already in Morning gets a second instance in Night, ticked an
   await open(page);
   const night = page.getByRole('group', { name: 'Night' });
   const morning = page.getByRole('group', { name: 'Morning' });
-  await page.getByRole('combobox', { name: 'Add to Night' }).fill('fish');
-  await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Fish Oil/ }).click();
-  await expect(page.getByText('Adds another Fish Oil to Night, so you can take it more than once a day.')).toBeVisible();
-  await page.fill('#suppdose-night', '2 g');
-  await page.click('#suppadd-night');
+  await page.click('#suplib-add');
+  await page.fill('#suppadd-q', 'fish');
+  await page.getByRole('dialog').getByRole('button', { name: /Fish Oil/ }).click();
+  await expect(page.getByText('Yours, in Morning. Adding it to another time of day makes another instance.')).toBeVisible();
+  await page.getByRole('dialog').getByLabel('Night').check();
+  await page.fill('#suppadd-dose', '2 g');
+  await page.click('#suppadd-go');
   await expect(night.locator('.srow')).toContainText(['Fish Oil2 g']);
   await expect(morning.locator('.srow')).toContainText(['Fish Oil1 g']); // still in Morning
   await night.getByRole('checkbox').check();
