@@ -30,7 +30,7 @@ const noViolations = async page => {
 
 test('Diet is on Nutrition for everyone; with no goal weight it asks for one and still lets you type a target', async ({ page }) => {
   await nutrition(page);
-  await expect(todayCol(page)).toContainText('Nothing logged'); // the food log is today's column on the board
+  await expect(todayCol(page).locator('.nb-eat')).toHaveCount(0); // nothing eaten yet: no Also eaten list at all
   await openTargets(page);
   await expect(diet(page).getByRole('heading', { name: 'Targets and goal' })).toBeVisible();
   await expect(diet(page)).toContainText('Set a goal weight under Progress');
@@ -163,7 +163,7 @@ test('the food log follows the board: today is a separate day from yesterday (re
   await page.getByRole('button', { name: 'Fri 25, add food here' }).click(); // a day ahead: food is planned, not eaten, so no Eaten list
   await expect(page.locator('.nb-target')).toContainText('Adding to Fri 25');
   await expect(page.locator('.nb-col[data-day="2026-09-25"] .nb-eat')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Last week' }).click();
+  await page.getByRole('button', { name: 'Previous week' }).click();
   const yesterday = page.locator('.nb-col[data-day="2026-09-23"]');
   await expect(yesterday.locator('.nb-eat')).toHaveCount(0);
   await expect(page.locator('.nb-target')).toContainText('food is read-only'); // and nothing can be added to it

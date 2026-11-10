@@ -41,9 +41,21 @@ export function removeItem(plan: Plan, day: string, index: number): Plan {
 export function setPortion(plan: Plan, day: string, index: number, portion: number): Plan {
   const it = plan[day]?.[index];
   if (!it || it.k !== 'r' || !(portion >= 0.5 && portion <= 10) || portion * 2 !== Math.round(portion * 2)) return plan;
-  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}) };
+  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}), ...(it.e ? { e: it.e } : {}) };
   return { ...plan, [day]: plan[day]!.map((x, i) => (i === index ? next : x)) };
 }
+
+/** `plan` with the item at `index` of `day` marked eaten by the log entries `ids` (none clears it). */
+export function setEaten(plan: Plan, day: string, index: number, ids: string[]): Plan {
+  const it = plan[day]?.[index];
+  if (!it) return plan;
+  const { e: _old, ...rest } = it;
+  const next: PlanItem = ids.length ? { ...rest, e: ids } : rest;
+  return { ...plan, [day]: plan[day]!.map((x, i) => (i === index ? next : x)) };
+}
+
+/** Whether a planned item counts as eaten: one of the entries its check added is still in the log. */
+export const isEaten = (item: PlanItem, entries: readonly { id: string }[]): boolean => !!item.e?.some(id => entries.some(x => x.id === id));
 
 /** A planned item looked up: its name, the numbers it carries, and whether the recipe or meal is gone. */
 export interface Resolved { item: PlanItem; name: string; gone: boolean; kcal?: number; p?: number; c?: number; f?: number; portion: number; recipe?: Recipe; meal?: SavedMeal }

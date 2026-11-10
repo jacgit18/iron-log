@@ -63,13 +63,13 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await closeSheet(page);
   await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories planned: 350 / })).toBeVisible();
   await col(page, TOMORROW).locator('.wb-card', { hasText: 'Breakfast' }).click();
-  await expect(col(page, TOMORROW).getByRole('button', { name: 'Log Breakfast' })).toHaveCount(0);
+  await expect(col(page, TOMORROW).getByRole('checkbox', { name: /Breakfast as eaten/ })).toHaveCount(0);
   await expect(col(page, TOMORROW).getByRole('button', { name: 'Remove Breakfast' })).toBeVisible();
-  // today: plan the recipe, Log it, and it lands under Eaten
+  // today: plan the recipe and check it; it is not listed again under Also eaten
   await planRecipe(page, 'Chili', '2026-09-24');
-  await todayCol(page).getByText('Chili', { exact: true }).click();
-  await todayCol(page).getByRole('button', { name: 'Log Chili' }).click();
-  await expect(todayCol(page).locator('.nb-eat')).toHaveCount(2);
+  await todayCol(page).getByRole('checkbox', { name: 'Check Chili as eaten' }).click();
+  await expect(todayCol(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' })).toBeChecked();
+  await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // Oats, which was typed in, not planned
   await expect(status(page)).toContainText('Logged 1 from Chili.');
   await page.reload();
   await nutrition(page);
@@ -88,17 +88,19 @@ test('a recipe has a portion stepper', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Add missing ingredients to Shopping/ })).toHaveCount(0); // removed from Nutrition (brief nutrition-mobile-layout); the recipe keeps its own button
 });
 
-test('Last week, This week and Next week switch the week the board shows', async ({ page }) => {
+test('The week arrows move between Last week, This week and Next week, which switches the week the board shows', async ({ page }) => {
   await nutrition(page);
   const week = board(page).getByRole('group', { name: 'Week' });
   await expect(board(page).locator('.nb-col')).toHaveCount(7);
-  await expect(week.getByRole('button', { name: 'This week' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(board(page).locator('.nb-weekname')).toHaveText('This week');
   await expect(board(page).getByRole('status').filter({ hasText: 'This week · Sep' })).toBeVisible();
   await week.getByRole('button', { name: 'Next week' }).click();
-  await expect(week.getByRole('button', { name: 'Next week' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(board(page).locator('.nb-weekname')).toHaveText('Next week');
+  await expect(week.getByRole('button', { name: 'Next week' })).toHaveAttribute('aria-disabled', 'true'); // the end of the board
   await expect(board(page).locator('.nb-col')).toHaveCount(7);
   await expect(board(page).locator('.nb-col.today')).toHaveCount(0);
-  await week.getByRole('button', { name: 'Last week' }).click();
-  await expect(week.getByRole('button', { name: 'Last week' })).toHaveAttribute('aria-pressed', 'true');
+  await week.getByRole('button', { name: 'Previous week' }).click();
+  await week.getByRole('button', { name: 'Previous week' }).click();
+  await expect(board(page).locator('.nb-weekname')).toHaveText('Last week');
   await expect(board(page).locator('.nb-col')).toHaveCount(7);
 });

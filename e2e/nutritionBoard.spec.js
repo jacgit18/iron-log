@@ -20,24 +20,29 @@ const hash = page => page.evaluate(() => location.hash);
 test('Nutrition is one board with a week switcher; the old Water, Last 7 days and Food eaten panels are gone', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('.nb-col')).toHaveCount(7);
-  await expect(page.getByRole('group', { name: 'Week' }).getByRole('button')).toHaveText(['Last week', 'This week', 'Next week']);
+  await expect(page.getByRole('group', { name: 'Week' }).getByRole('button')).toHaveCount(2); // previous and next arrows, like the Board
+  await expect(page.locator('.nb-weekname')).toHaveText('This week');
   await expect(page.locator('#water-h, #water7-h, #sched-h')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Food eaten' })).toHaveCount(0);
   await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block moved into the Targets and goal sheet
-  await expect(page.getByRole('status').filter({ hasText: 'This week · Sep 24 to 30' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'This week · Sep 20 to 26' })).toBeVisible();
 });
 
-test('This week starts today; Last week and Next week show other seven days, so no day appears twice', async ({ page }) => {
+test('Weeks run Sunday to Saturday: This week holds today and the days before it; Last week and Next week show other seven days, so no day appears twice', async ({ page }) => {
   await openNutrition(page);
   const days = () => page.locator('.nb-col').evaluateAll(els => els.map(e => e.dataset.day));
-  expect((await days())[0]).toBe(TODAY);
-  await page.getByRole('button', { name: 'Last week', exact: true }).click();
+  const mine = await days();
+  expect(mine[0]).toBe('2026-09-20'); // Sunday
+  expect(mine[6]).toBe('2026-09-26'); // Saturday
+  expect(mine).toContain(TODAY);
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
   const last = await days();
-  expect(last[0]).toBe('2026-09-17');
-  expect(last[6]).toBe('2026-09-23');
+  expect(last[0]).toBe('2026-09-13');
+  expect(last[6]).toBe('2026-09-19');
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await page.getByRole('button', { name: 'Next week', exact: true }).click();
   const next = await days();
-  expect(next[0]).toBe('2026-10-01');
+  expect(next[0]).toBe('2026-09-27');
   expect(new Set([...last, ...next]).size).toBe(14);
 });
 
@@ -58,7 +63,7 @@ test('the toolbar names its day, starts on today and follows the day you tap; la
   await closeSheet(page);
   await col(page, '2026-09-24').getByRole('button', { name: /^Thu 24/ }).click();
   await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible(); // back on today: log shortcuts
-  await page.getByRole('button', { name: 'Last week', exact: true }).click();
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
   await expect(page.locator('#nb-add')).toHaveCount(0);
   await expect(page.locator('.nb-toolbar')).toContainText('read-only');
 });
@@ -168,12 +173,12 @@ test('supplements tick on today, last week and a day ahead, each with its own co
   await expect(col(page, TODAY)).toContainText('0 of 2 taken');
   await tick(TODAY, 'creatine').check();
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
-  await col(page, '2026-09-27').getByRole('group', { name: 'Supplements' }).getByLabel(/Magnesium/).check();
-  await expect(col(page, '2026-09-27')).toContainText('1 of 2 taken');
-  await page.getByRole('button', { name: 'Last week', exact: true }).click();
-  await tick('2026-09-20', 'creatine').check();
-  await tick('2026-09-20', 'magnesium').check();
-  await expect(col(page, '2026-09-20')).toContainText('2 of 2 taken');
+  await col(page, '2026-09-26').getByRole('group', { name: 'Supplements' }).getByLabel(/Magnesium/).check();
+  await expect(col(page, '2026-09-26')).toContainText('1 of 2 taken');
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
+  await tick('2026-09-19', 'creatine').check();
+  await tick('2026-09-19', 'magnesium').check();
+  await expect(col(page, '2026-09-19')).toContainText('2 of 2 taken');
   await page.getByRole('button', { name: 'This week', exact: true }).click();
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
 });
@@ -192,7 +197,7 @@ test('the Supplements meter sits before Water, fills as supplements are ticked, 
   await page.locator(`[id="nb-supp-${TODAY}-creatine"]`).check();
   await expect(meter(todayCol(page), 'Supplements')).toHaveAttribute('aria-label', 'Supplements taken: 1 of 2 taken');
   expect(await bar(todayCol(page)).evaluate(e => e.style.width)).toBe('50%');
-  await expect(col(page, '2026-09-27').locator('.wb-bar', { hasText: '0 of 2 taken' })).toBeVisible();
+  await expect(col(page, '2026-09-26').locator('.wb-bar', { hasText: '0 of 2 taken' })).toBeVisible();
 });
 
 test('a sheet adds one Back step and Back closes it; the page keeps its address', async ({ page }) => {
@@ -221,12 +226,12 @@ test.describe('on a phone', () => {
     expect(await pick.locator('optgroup').evaluateAll(g => g.map(x => x.label))).toEqual(['Last week', 'This week', 'Next week']);
     for (let i = 0; i < 7; i++) await step.getByRole('button', { name: 'Next day' }).click();
     await expect(pick).toHaveValue('2026-10-01');
-    await expect(page.getByRole('button', { name: 'Next week', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    for (let i = 0; i < 6; i++) await step.getByRole('button', { name: 'Next day' }).click();
-    await expect(pick).toHaveValue('2026-10-07'); // the end of next week
+    await expect(page.locator('.nb-weekname')).toHaveText('Next week');
+    for (let i = 0; i < 2; i++) await step.getByRole('button', { name: 'Next day' }).click(); // a disabled button cannot be clicked, so stop at the last day
+    await expect(pick).toHaveValue('2026-10-03'); // the Saturday that ends next week
     await expect(step.getByRole('button', { name: 'Next day' })).toHaveAttribute('aria-disabled', 'true');
-    for (let i = 0; i < 20; i++) await step.getByRole('button', { name: 'Previous day' }).click();
-    await expect(pick).toHaveValue('2026-09-17'); // seven days back
+    for (let i = 0; i < 20; i++) await step.getByRole('button', { name: 'Previous day' }).click(); // Oct 3 back to Sep 13
+    await expect(pick).toHaveValue('2026-09-13'); // the Sunday that starts last week
     await expect(step.getByRole('button', { name: 'Previous day' })).toHaveAttribute('aria-disabled', 'true');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
@@ -267,7 +272,7 @@ test.describe('on a phone', () => {
     await step.getByRole('button', { name: 'Next day' }).click();
     await expect(page.locator('#nb-add')).toBeVisible();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['+ Add food', 'Recipes', 'Saved meals']);
-    await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-20');
+    await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
     await expect(page.locator('#nb-add')).toHaveCount(0);
     await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();
   });

@@ -69,6 +69,7 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   if (!inWindow(toDay, today)) return { plan: null, error: 'You can plan today and the next two weeks.' };
   const { s: _old, ...rest } = it;
   const moved: PlanItem = { ...rest, ...(slot ? { s: slot } : {}) };
+  if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
   if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
   if (toDay !== fromDay && target.length >= MAX_PLAN_ITEMS) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };

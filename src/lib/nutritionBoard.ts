@@ -1,6 +1,5 @@
 import type { Boost, DietEntry, PlanSlot, Recipe, SavedMeal, Supplements } from '../types.ts';
-import { MAX_PLAN_AHEAD } from '../shared/diet.js';
-import { parseDate } from '../shared/dates.js';
+import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum } from './dietLog.js';
 import type { Plan } from './dietPlan.js';
 import { portionTag } from './supplementPortion.js';
@@ -10,31 +9,33 @@ import { HOT_OZ, TRAIN_OZ_PER_30, fmtOz, goalFor, sumOz } from './water.js';
 
 /* ---------- Nutrition as one week board (brief nutrition-board): which days a week holds, what a day's four meters show, which meal the add sheet starts on, what the Hydration and Supplements sections say. Pure; the board draws it. ---------- */
 
-/** 0 is this week (today and the six days after it), -1 last week (the seven days before today), 1 next week (the seven after this week). */
+/** Weeks are Sunday to Saturday, like the Board's: 0 is the week today is in, -1 the week before it, 1 the week after. Days before today in this week stay on it. */
 export type WeekOffset = -1 | 0 | 1;
 export const WEEK_OFFSETS: readonly WeekOffset[] = [-1, 0, 1];
 export const WEEK_NAME: Record<WeekOffset, string> = { '-1': 'Last week', '0': 'This week', '1': 'Next week' };
 
-/** Days from `today` that the board spans: seven back, and (with the plan window) up to MAX_PLAN_AHEAD ahead, which is the end of next week. */
-export const BACK_DAYS = 7;
-export const AHEAD_DAYS = MAX_PLAN_AHEAD;
-
 const days7 = (start: string): string[] => Array.from({ length: 7 }, (_, i) => shiftDay(start, i));
+/** The Sunday of the week `today` is in. */
+const sundayOf = (today: string): string => ymd(weekStartOf(parseDate(today)));
 
-/** The seven days of a week on the board. */
-export const weekDays = (today: string, offset: WeekOffset): string[] => days7(shiftDay(today, offset * 7));
+/** The seven days of a week on the board, Sunday first. The end of next week is at most 13 days ahead (today a Sunday), inside the plan window (MAX_PLAN_AHEAD). */
+export const weekDays = (today: string, offset: WeekOffset): string[] => days7(shiftDay(sundayOf(today), offset * 7));
 
 /** The week a day sits in. A day outside the board is clamped to the nearest end. */
 export function weekOf(today: string, day: string): WeekOffset {
-  return day < today ? -1 : day < shiftDay(today, 7) ? 0 : 1;
+  const sun = sundayOf(today);
+  return day < sun ? -1 : day < shiftDay(sun, 7) ? 0 : 1;
 }
 
-/** Whether a day is on the board at all: seven days back to the end of next week. */
-export const onBoard = (today: string, day: string): boolean => day >= shiftDay(today, -BACK_DAYS) && day <= shiftDay(today, AHEAD_DAYS);
+const firstDay = (today: string): string => shiftDay(sundayOf(today), -7);
+const lastDay = (today: string): string => shiftDay(sundayOf(today), 13);
+
+/** Whether a day is on the board at all: the first day of last week to the last day of next week. */
+export const onBoard = (today: string, day: string): boolean => day >= firstDay(today) && day <= lastDay(today);
 
 /** `day` moved by `delta` days and held inside the board (stepping stops at the ends). */
 export function stepDay(today: string, day: string, delta: number): string {
-  const lo = shiftDay(today, -BACK_DAYS), hi = shiftDay(today, AHEAD_DAYS);
+  const lo = firstDay(today), hi = lastDay(today);
   const next = shiftDay(day, delta);
   return next < lo ? lo : next > hi ? hi : next;
 }

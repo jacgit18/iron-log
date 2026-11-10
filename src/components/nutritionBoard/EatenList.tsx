@@ -5,14 +5,15 @@ import type { Micro } from '../../shared/foodMicro.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import EntryForm from '../diet/EntryForm.js';
 
-// What was eaten on a day, in one list (eaten food has no meal). Today's entries can be edited and deleted; last week's are read-only.
-export default function EatenList({ day, entries, editable, note }: { day: string; entries: { id: string; n: string; kcal: number; p: number; c?: number; f?: number; micro?: Micro }[]; editable: boolean; note: string | null }) {
+// What was eaten on a day, in one list (eaten food has no meal). Today's list (`also`) holds only food that is not a planned item, and says nothing when there is none: planned food shows its check in its meal. Today's entries can be edited and deleted; earlier days are read-only.
+export default function EatenList({ day, entries, editable, note, also = false }: { day: string; entries: { id: string; n: string; kcal: number; p: number; c?: number; f?: number; micro?: Micro }[]; editable: boolean; note: string | null; also?: boolean }) {
   const [editId, setEditId] = useState<string | null>(null);
+  if (also && entries.length === 0) return null;
   return (
     <div className="wb-slot nb-eaten">
-      <div className="wb-slothd"><b>Eaten</b><span>{entries.length ? `${entries.length} logged` : ''}</span></div>
+      <div className="wb-slothd"><b>{also ? 'Also eaten' : 'Eaten'}</b><span>{entries.length ? `${entries.length} logged` : ''}</span></div>
       {entries.length === 0 && <span className="nb-empty">Nothing logged</span>}
-      <ul className="nb-eatlist" aria-label={`Eaten on ${shortDay(day)}`}>
+      <ul className="nb-eatlist" aria-label={`${also ? 'Also eaten' : 'Eaten'} on ${shortDay(day)}`}>
         {entries.map(e => (
           <li key={e.id} className="nb-eat">
             {editId === e.id ? (

@@ -11,7 +11,7 @@ const SLOT_KEY = ['', ...ORDER];
 
 // A day's meals (brief nutrition-board): Breakfast, Lunch and Dinner always, with "Nothing planned" and no button when empty; Snack only when it holds something. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to, Log (today) and Remove;
 // drag moves it to another meal or day. Meals are the plan, so last week has none.
-export default function MealSections({ view, today, days, editable, onLog, onMsg }: { view: BoardDay; today: string; days: { id: string; label: string }[]; editable: boolean; onLog: (r: Resolved) => void; onMsg: (t: string) => void }) {
+export default function MealSections({ view, today, days, editable, onLog, onMsg }: { view: BoardDay; today: string; days: { id: string; label: string }[]; editable: boolean; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [moving, setMoving] = useState<string | null>(null);
   const st = () => useAppStore.getState();
