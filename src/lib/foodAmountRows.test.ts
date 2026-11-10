@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
 import { liveRows, microOfRows, nextFreeKey, rowsFromMicro } from './foodAmountRows.js';
 import type { AmountRow } from './foodAmountRows.js';
 
@@ -32,10 +33,11 @@ describe('rowsFromMicro and nextFreeKey', () => {
     expect(rowsFromMicro(undefined, true)).toEqual([]);
     expect(rowsFromMicro({ iron: 1 }, false)).toEqual([row('iron', '1', 'mg')]);
   });
-  it('offers the next nutrient with no row, and none when all 20 have one', () => {
-    expect(nextFreeKey([row('calcium', '1', 'mg')])).toBe('copper');
+  it('offers the next nutrient with no row, and none when all 28 have one', () => {
+    expect(nextFreeKey([row('calcium', '1', 'mg')])).toBe('choline');
     expect(nextFreeKey([])).toBe('calcium');
-    const all = rowsFromMicro(Object.fromEntries(['calcium', 'copper', 'folate', 'iodine', 'iron', 'magnesium', 'niacin', 'phosphorus', 'selenium', 'vitaminA', 'vitaminB6', 'vitaminC', 'vitaminD', 'vitaminE', 'zinc', 'potassium', 'vitaminB12', 'vitaminK', 'fiber', 'sodium'].map(k => [k, 1])), false);
+    const all = rowsFromMicro(Object.fromEntries(NUTRIENT_KEYS.map(k => [k, 1])), false);
+    expect(all).toHaveLength(28);
     expect(nextFreeKey(all)).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
-import { NUTRIENT_UNITS } from '../../shared/nutrientKeys.js';
+import { NUTRIENT_KEYS, NUTRIENT_UNITS } from '../../shared/nutrientKeys.js';
 import type { NutrientKey, NutrientUnit } from '../../shared/nutrientKeys.js';
-import { FORM_KEYS } from '../../lib/nutrientFormKeys.js';
+import { pickerGroups } from '../../lib/nutrientPickerGroups.js';
 import { nutrientLabel, nutrientUnit } from '../../lib/nutrientInfo.js';
 import { duplicateRowNotes, type NutrientRowDraft } from '../../lib/nutrientRowIssues.js';
 import './NutrientRows.css';
@@ -8,7 +8,7 @@ import './NutrientRows.css';
 // "What is in one serving" on the supplement sheet (brief supplement-nutrient-totals): nutrient, amount, unit per row. Amounts stay text while typing; the sheet turns them into numbers on save.
 export type NutrientDraft = NutrientRowDraft;
 const label = nutrientLabel;
-const NEXT_FREE = (rows: NutrientDraft[]): NutrientKey | undefined => FORM_KEYS.find(k => !rows.some(r => r.key === k));
+const NEXT_FREE = (rows: NutrientDraft[]): NutrientKey | undefined => NUTRIENT_KEYS.find(k => !rows.some(r => r.key === k));
 
 export default function NutrientRows({ rows, onChange }: { rows: NutrientDraft[]; onChange: (rows: NutrientDraft[]) => void }) {
   const free = NEXT_FREE(rows); // every nutrient already has a row: change a row's nutrient instead of adding a copy
@@ -20,7 +20,7 @@ export default function NutrientRows({ rows, onChange }: { rows: NutrientDraft[]
       {rows.map((r, i) => (
         <div key={i} className="nrow">
           <select aria-label={`Nutrient ${i + 1}`} value={r.key} onChange={e => { const key = e.target.value as NutrientKey; set(i, { key, unit: nutrientUnit(key) ?? r.unit }); }}>
-            {(FORM_KEYS.some(k => k === r.key) ? [...FORM_KEYS] : [...FORM_KEYS, r.key]).map(k => <option key={k} value={k}>{label(k)}</option>)}
+            {pickerGroups(r.key).map(g => <optgroup key={g.heading} label={g.heading}>{g.keys.map(k => <option key={k} value={k}>{label(k)}</option>)}</optgroup>)}
           </select>
           <input aria-label={`Amount ${i + 1}`} type="number" inputMode="decimal" min="0" step="any" value={r.amount} onChange={e => set(i, { amount: e.target.value })} />
           <select aria-label={`Unit ${i + 1}`} value={r.unit} onChange={e => set(i, { unit: e.target.value as NutrientUnit })}>

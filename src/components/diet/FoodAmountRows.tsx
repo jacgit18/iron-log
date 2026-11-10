@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FORM_KEYS } from '../../lib/nutrientFormKeys.js';
+import { pickerGroups } from '../../lib/nutrientPickerGroups.js';
 import type { NutrientKey } from '../../shared/nutrientKeys.js';
 import { AMOUNT_UNITS, microOfRows, nextFreeKey } from '../../lib/foodAmountRows.js';
 import type { AmountRow, AmountUnit } from '../../lib/foodAmountRows.js';
@@ -28,7 +28,7 @@ export default function FoodAmountRows({ idp, rows, onChange, perServing = false
           {rows.map((r, i) => (
             <div key={i} className="fa-row">
               <select aria-label={`Nutrient ${i + 1}`} value={r.key} onChange={e => { const key = e.target.value as NutrientKey; set(i, { key, unit: MICRO_UNIT[key] }); }}>
-                {(FORM_KEYS.includes(r.key) ? FORM_KEYS : [...FORM_KEYS, r.key]).map(k => <option key={k} value={k}>{nutrientLabel(k)}</option>)}
+                {pickerGroups(r.key).map(g => <optgroup key={g.heading} label={g.heading}>{g.keys.map(k => <option key={k} value={k}>{nutrientLabel(k)}</option>)}</optgroup>)}
               </select>
               <input aria-label={`Amount ${i + 1}`} type="number" inputMode="decimal" min="0" step="any" value={r.amount} onChange={e => set(i, { amount: e.target.value })} />
               <select aria-label={`Unit ${i + 1}`} value={r.unit} onChange={e => set(i, { unit: e.target.value as AmountUnit })}>

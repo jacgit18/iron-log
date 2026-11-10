@@ -41,14 +41,16 @@ async function setUp(page) {
   await eatSpinach(page);
 }
 
-test('the supplement form offers the five nutrients without an upper limit after the fifteen', async ({ page }) => {
+test('the supplement form groups all 28 nutrients under Vitamins, Minerals and Other', async ({ page }) => {
   await openNutrition(page);
   await openSupplementEditor(page);
   await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-add-nutrient').click();
-  const options = await page.getByLabel('Nutrient 1').locator('option').allTextContents();
-  expect(options).toHaveLength(20);
-  expect(options.slice(15)).toEqual(['Potassium', 'Vitamin B12', 'Vitamin K', 'Fiber', 'Sodium']);
+  const select = page.getByLabel('Nutrient 1');
+  expect(await select.locator('option').count()).toBe(28);
+  expect(await select.locator('optgroup').evaluateAll(gs => gs.map(g => g.label))).toEqual(['Vitamins', 'Minerals', 'Other']);
+  const last = await select.locator('optgroup').last().locator('option').allTextContents();
+  expect(last).toEqual(['Choline', 'Fiber']);
 });
 
 test('a supplement and a food add up under No upper limit, in words, with no warning and no over-limit colour', async ({ page }) => {
