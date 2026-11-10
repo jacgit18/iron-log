@@ -8,7 +8,13 @@ import SupplementsSection from './SupplementsSection.js';
 
 // One day of the board: its name (tap to pick it as the day the toolbar adds to), four meters, meals or the eaten list, Supplements and Hydration.
 // Last week has no meals (the plan holds no past days) and its food is read-only; supplements and water stay editable on every day.
-export default function DayColumn({ v, today, selected, days, onPick, onLog, onMsg }: { v: DayView; today: string; selected: boolean; days: { id: string; label: string }[]; onPick: () => void; onLog: (r: Resolved) => void; onMsg: (t: string) => void }) {
+/** Today's food that no planned item's check added: the planned items show their own check, so only the rest is listed. */
+const alsoEaten = (v: DayView) => {
+  const checked = new Set(v.plan.slots.flatMap(s => s.items.flatMap(x => x.r.item.e ?? [])));
+  return v.eaten.filter(e => !checked.has(e.id));
+};
+
+export default function DayColumn({ v, today, selected, days, onPick, onLog, onMsg }: { v: DayView; today: string; selected: boolean; days: { id: string; label: string }[]; onPick: () => void; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void }) {
   const editable = foodEditable(v.day, today);
   return (
     <div className={`wb-col nb-col${v.day === today ? ' today' : ''}${v.kind === 'past' ? ' past' : ''}${selected ? ' sel' : ''}`} data-day={v.day}>
@@ -17,7 +23,7 @@ export default function DayColumn({ v, today, selected, days, onPick, onLog, onM
       </div>
       <DayMeters v={v} />
       {v.kind !== 'past' && <MealSections view={v.plan} today={today} days={days} editable={editable} onLog={onLog} onMsg={onMsg} />}
-      {v.kind !== 'future' && <EatenList day={v.day} entries={v.eaten} editable={v.kind === 'today'} note={v.fatNote} />}
+      {v.kind !== 'future' && <EatenList day={v.day} entries={v.kind === 'today' ? alsoEaten(v) : v.eaten} editable={v.kind === 'today'} note={v.fatNote} also={v.kind === 'today'} />}
       <SupplementsSection day={v.day} />
       <HydrationSection day={v.day} today={today} />
     </div>

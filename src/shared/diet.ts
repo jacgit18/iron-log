@@ -82,7 +82,8 @@ export function normPlanItem(x: unknown): PlanItem | null {
   const x2 = o.x;
   const ok = o.k === 'r' && fin(x2) && x2 >= 0.5 && x2 <= 10 && x2 * 2 === Math.round(x2 * 2) && x2 !== 1;
   const slot = PLAN_SLOTS.find(t => t === o.s);
-  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}) };
+  const eaten = Array.isArray(o.e) ? [...new Set(o.e.map(v => str(v, MAX_DIET_ID)).filter((v): v is string => !!v))].slice(0, MAX_DIET_PER_DAY) : [];
+  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}), ...(eaten.length ? { e: eaten } : {}) };
 }
 
 /** Whether two planned items are the same food in the same meal; "no meal" is a meal of its own, so the same food may sit untagged and in a meal. */

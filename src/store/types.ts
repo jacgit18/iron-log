@@ -317,6 +317,8 @@ export interface DietSlice {
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
   removePlanItem(day: string, index: number): void;
+  setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
+  uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark
   setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
 

@@ -1,5 +1,5 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { addItem, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
+import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
 import { moveItem } from '../lib/weekBoard.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
@@ -125,6 +125,14 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   },
 
   removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index)); },
+
+  setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },
+
+  uncheckPlanItem(day, index) {
+    const ids = planOf(get)[day]?.[index]?.e ?? [];
+    ids.forEach(id => get().removeDietEntry(id, false));
+    putPlan(get, setEaten(planOf(get), day, index, []));
+  },
 
   setDietPace(pace, rate) {
     if (pace === 'custom') { const bad = rateError(rate ?? null); if (bad) return bad; }
