@@ -192,6 +192,20 @@ describe('importCatalog', () => {
     expect(await all()).toEqual(before);
   });
 
+  it('updates more than one batch of changed rows, keeps quotes and a missing brand, and logs progress', async () => {
+    const ids = Array.from({ length: 1100 }, (_, n) => `R${n}`);
+    const list = rows(...ids);
+    await run(list);
+    const edited = list.map((r, n) => ({ ...r, name: n === 7 ? `Bob's "Squat"` : `${r.name} v2`, brand: n % 2 ? null : 'Acme' }));
+    const lines: string[] = [];
+    const result = await importCatalog(db, { source: 'fedb', license: 'Unlicense', rows: edited, apply: true, log: m => lines.push(m) });
+    expect(result.changed).toHaveLength(1100);
+    const after = new Map((await all()).map(r => [r.id, r]));
+    expect(after.get('c:fedb:R7')).toMatchObject({ name: `Bob's "Squat"`, brand: null });
+    expect(after.get('c:fedb:R1000')).toMatchObject({ name: `${list[1000]!.name} v2`, brand: 'Acme' });
+    expect(lines.at(-1)).toBe('catalog:import: 1100 of 1100 changed rows written');
+  }, 60_000);
+
   it('updates a changed row in place: same id, new name and data', async () => {
     await run(rows('A'));
     const [a] = rows('A');
