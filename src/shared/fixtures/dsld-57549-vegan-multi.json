@@ -1,0 +1,15 @@
+{
+"fullName": "100% Vegan Complete MultiVitamin", "brandName": "Purely Inspired", "entryDate": "2016-03-24", "upcSku": "6 31656 60669 0",
+"servingSizes": [{"unit": "Tablet(s)", "minQuantity": 3}],
+"ingredientRows": [
+{"name": "Thiamine", "ingredientGroup": "Thiamin", "category": "vitamin", "quantity": [{"quantity": 2.25, "unit": "mg"}]},
+{"name": "Riboflavin", "ingredientGroup": "Riboflavin", "category": "vitamin", "quantity": [{"quantity": 2.55, "unit": "mg"}]},
+{"name": "Vitamin B6", "ingredientGroup": "Vitamin B6 (unspecified)", "category": "vitamin", "quantity": [{"quantity": 13, "unit": "mg"}]},
+{"name": "Vitamin B12", "ingredientGroup": "Vitamin B12", "category": "vitamin", "quantity": [{"quantity": 100, "unit": "mcg"}]},
+{"name": "Biotin", "ingredientGroup": "Biotin", "category": "vitamin", "quantity": [{"quantity": 375, "unit": "mcg"}]},
+{"name": "Pantothenic Acid", "ingredientGroup": "Pantothenic Acid (Vitamin B5)", "category": "vitamin", "quantity": [{"quantity": 15, "unit": "mg"}]},
+{"name": "Manganese", "ingredientGroup": "Manganese", "category": "mineral", "quantity": [{"quantity": 2, "unit": "mg"}]},
+{"name": "Chromium", "ingredientGroup": "Chromium", "category": "mineral", "quantity": [{"quantity": 150, "unit": "mcg"}]},
+{"name": "Choline", "ingredientGroup": "Choline", "category": "vitamin", "quantity": [{"quantity": 10, "unit": "mg"}]}
+]
+}

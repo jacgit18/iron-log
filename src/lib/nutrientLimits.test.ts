@@ -19,6 +19,11 @@ describe('nutrient limits table', () => {
     expect(r.label).not.toBe('');
     expect(r.scopeNote).not.toBe('');
   });
+  it('holds the figures read from the ODS fact sheets on 2026-11-10 (choline, manganese, molybdenum)', () => {
+    expect(limitOf('choline')).toMatchObject({ unit: 'mg', upper: 3500, recommended: { min: 425, max: 550 } });
+    expect(limitOf('manganese')).toMatchObject({ unit: 'mg', upper: 11, recommended: { min: 1.8, max: 2.3 } });
+    expect(limitOf('molybdenum')).toMatchObject({ unit: 'mcg', upper: 2000, recommended: { min: 45, max: 45 } });
+  });
   it('looks a row up by key', () => {
     expect(limitOf('magnesium')?.scope).toBe('supplements');
     expect(limitOf('vitaminD')?.upper).toBe(100);

@@ -9,7 +9,7 @@ export const MAX_NAME = 80;
 export const MAX_SERVING = 40;
 
 /** One label read: numbers per serving, optional ones left out when the label has none. */
-export interface LabelFill { name?: string; serving?: string; servingG?: number; servingsPerPack?: number; kcal: number; p: number; c?: number; f?: number; /** Vitamins and minerals per serving in mg or mcg, as printed (brief food-vitamins-minerals); only keys of the 15 in NUTRIENT_KEYS, each within MICRO_MAX. */ micro?: Micro }
+export interface LabelFill { name?: string; serving?: string; servingG?: number; servingsPerPack?: number; kcal: number; p: number; c?: number; f?: number; /** Vitamins and minerals per serving in mg or mcg, as printed (brief food-vitamins-minerals); only keys in NUTRIENT_KEYS, each within MICRO_MAX. */ micro?: Micro }
 
 /** `ok`: usable numbers. `per100g`: only a per-100 g column was printed (nothing is converted; the name may still help). `unreadable`: no calories or protein. */
 export type LabelResult = { kind: 'ok'; label: LabelFill } | { kind: 'per100g'; name?: string } | { kind: 'unreadable' };

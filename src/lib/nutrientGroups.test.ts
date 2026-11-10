@@ -37,6 +37,18 @@ describe('the table', () => {
   });
 });
 
+describe('groupFor, the eight added nutrients', () => {
+  const f = (year: number, sex?: 'female' | 'male') => ({ birthYear: year, ...(sex ? { sex } : {}) }) as never;
+  it('chromium changes at 51; choline, manganese and molybdenum carry the limit; the other four have none', () => {
+    expect(groupFor('chromium', f(1990, 'male'), '2026-11-10')).toMatchObject({ recommended: 35, group: 'men ages 19 to 50' });
+    expect(groupFor('chromium', f(1960, 'female'), '2026-11-10')).toMatchObject({ recommended: 20, group: 'women ages 51 and over' });
+    expect(groupFor('choline', f(1990, 'female'), '2026-11-10')).toMatchObject({ recommended: 425, upper: 3500, basis: 'AI' });
+    expect(groupFor('manganese', f(1990, 'male'), '2026-11-10')).toMatchObject({ recommended: 2.3, upper: 11 });
+    expect(groupFor('molybdenum', f(1990, 'male'), '2026-11-10')).toMatchObject({ recommended: 45, upper: 2000, basis: 'RDA' });
+    for (const k of ['thiamin', 'riboflavin', 'biotin', 'pantothenicAcid'] as const) expect(groupFor(k, f(1990, 'male'), '2026-11-10')?.upper, k).toBeUndefined();
+  });
+});
+
 describe('groupFor', () => {
   const today = '2026-11-09';
   it('picks the person\'s band and names it', () => {
