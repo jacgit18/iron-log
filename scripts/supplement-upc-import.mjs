@@ -1,19 +1,23 @@
-// npm run catalog:upcs -- [--apply] [--limit N] [--cache file]
-// Fills supplement_upcs (the UPC on a bottle mapped to its supplement row; brief supplement-barcode-search, ADR 117) from the NIH label database: reads every on-market label's UPC, one label at a time (about 122,000 calls, 3 at
-// once, backing off on a rate limit; hours to a day). Resumable: each label read is kept in the cache file (default .cache/dsld-upcs.tsv, not committed), so a stopped or partly failed run continues where it was.
+// npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--all] [--count] [--refresh-hits]
+// Fills supplement_upcs (the UPC on a bottle mapped to its supplement row; brief supplement-barcode-search, ADR 117) from the NIH label database, one label at a time, 3 at once, backing off on a rate limit. NIH allows
+// roughly 1,000 requests an hour (seen 2026-11-10), so the default reads only labels entered since 2022 plus every label of the priority brands (Thorne, Sports Research and other big sellers; --brand adds more, repeatable);
+// --all reads every on-market label (about 122,000: days). --count prints how many labels a run would read and stops. A scoped run adds and changes rows but never removes any; --all also removes UPCs no label carries.
+// Resumable: each label read is kept in the cache file (default .cache/dsld-upcs.tsv, not committed), and the downloaded search results in .cache/dsld-hits.json (reused for 7 days, --refresh-hits downloads again).
 // Run after catalog:import. Dry run unless --apply is given; it writes as the owner in DATABASE_URL and writes nothing unless every label was read. Run with tsx.
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 import { createDb } from '../server/db/connection.ts';
 import { fetchDsld } from '../server/scripts/catalogImport.ts';
-import { crawlUpcs, importUpcs, labelUrl } from '../server/scripts/supplementUpcImport.ts';
+import { crawlScope, crawlUpcs, importUpcs, labelUrl, PRIORITY_BRANDS, slimHit } from '../server/scripts/supplementUpcImport.ts';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
-const { values } = parseArgs({ options: { apply: { type: 'boolean', default: false }, limit: { type: 'string' }, cache: { type: 'string', default: '.cache/dsld-upcs.tsv' } } });
+const { values } = parseArgs({ options: { apply: { type: 'boolean', default: false }, limit: { type: 'string' }, cache: { type: 'string', default: '.cache/dsld-upcs.tsv' }, since: { type: 'string', default: '2022' }, brand: { type: 'string', multiple: true, default: [] }, all: { type: 'boolean', default: false }, count: { type: 'boolean', default: false }, 'refresh-hits': { type: 'boolean', default: false } } });
 const url = process.env.DATABASE_URL;
 const limit = values.limit === undefined ? undefined : Number(values.limit);
-if (!url || (limit !== undefined && !(Number.isInteger(limit) && limit > 0))) { console.error('Usage: npm run catalog:upcs -- [--apply] [--limit N] [--cache file]   (DATABASE_URL must be set)'); process.exit(2); }
+const since = Number(values.since);
+if (!url || (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) || !(Number.isInteger(since) && since >= 1990 && since <= 2100)) { console.error('Usage: npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--all] [--count] [--refresh-hits]   (DATABASE_URL must be set)'); process.exit(2); }
+const scope = values.all ? undefined : { since, brands: [...PRIORITY_BRANDS, ...values.brand.map(b => b.trim().toLowerCase()).filter(Boolean)] };
 const target = new URL(url);
 console.log(JSON.stringify({ msg: values.apply ? 'writing' : 'dry run (add --apply to write)', database: `${target.hostname}${target.pathname}`, cache: values.cache }));
 
@@ -37,18 +41,28 @@ if (existsSync(values.cache)) for (const line of readFileSync(values.cache, 'utf
 mkdirSync(dirname(values.cache), { recursive: true });
 log(`${known.size} labels already in the cache`);
 
-const hits = await fetchDsld({ fetchJson: getJson, sleep, log });
+// The search results (slimmed to the fields the crawl needs) are kept for a week, so a restart does not spend the hourly allowance on them again.
+const hitsFile = values.cache.replace(/\.tsv$/, '') + '.hits.json';
+let hits;
+if (!values['refresh-hits'] && existsSync(hitsFile) && Date.now() - statSync(hitsFile).mtimeMs < 7 * 86_400_000) { hits = JSON.parse(readFileSync(hitsFile, 'utf8')); log(`${hits.length} search results from ${hitsFile}`); }
+else { hits = (await fetchDsld({ fetchJson: getJson, sleep, log })).map(slimHit); writeFileSync(hitsFile, JSON.stringify(hits)); log(`${hits.length} search results saved to ${hitsFile}`); }
+
+const counts = crawlScope(hits, known, scope);
+const hours = Math.ceil(counts.toRead / 1000);
+console.log(JSON.stringify({ msg: scope ? `scope: labels since ${since} plus ${scope.brands.length} priority brands (--all for everything)` : 'scope: every on-market label', ...counts, estimate: `about ${hours} hour${hours === 1 ? '' : 's'} at 1,000 requests an hour (a guess from one run)` }));
+if (values.count) process.exit(0);
+
 const crawl = await crawlUpcs(hits, {
   fetchLabel: async id => { await sleep(150); return getJson(labelUrl(id)); },
-  known, limit, log,
+  known, limit, scope, log,
   learned: (id, upc) => appendFileSync(values.cache, `${id}\t${upc ?? ''}\n`),
 });
-console.log(JSON.stringify({ labelsRead: crawl.read, askedThisRun: crawl.asked, withoutUpc: crawl.withoutUpc, upcs: crawl.pairs.size, sharedUpcs: crawl.shared, failed: crawl.failed.length }));
+console.log(JSON.stringify({ labelsRead: crawl.read, askedThisRun: crawl.asked, withoutUpc: crawl.withoutUpc, inScope: crawl.inScope, upcs: crawl.pairs.size, sharedUpcs: crawl.shared, failed: crawl.failed.length }));
 if (crawl.failed.length || limit !== undefined) { console.log(JSON.stringify({ msg: crawl.failed.length ? 'some labels could not be read: nothing written; run again to resume' : '--limit given: a partial crawl, nothing written' })); process.exit(crawl.failed.length ? 1 : 0); }
 
 const db = createDb(url);
 try {
-  console.log(JSON.stringify(await importUpcs(db, crawl.pairs, { apply: values.apply })));
+  console.log(JSON.stringify(await importUpcs(db, crawl.pairs, { apply: values.apply, prune: !scope })));
 } catch (err) {
   console.error(JSON.stringify({ msg: 'catalog:upcs failed', error: err instanceof Error ? err.message : String(err) }));
   process.exitCode = 1;
