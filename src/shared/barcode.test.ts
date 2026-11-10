@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanGtin, gtinFromScan, hitForGtin, upcEToUpcA } from './barcode.js';
+import { cleanGtin, gtinFromScan, hitForGtin, nameForGtin, upcEToUpcA } from './barcode.js';
 
 describe('cleanGtin', () => {
   it('pads valid 8, 12, 13 and 14 digit codes to 14 digits', () => {
@@ -69,5 +69,21 @@ describe('hitForGtin', () => {
     expect(hitForGtin(null, '00016000275287')).toBeNull();
     expect(hitForGtin({ foods: 'x' }, '00016000275287')).toBeNull();
     expect(hitForGtin({ foods: [food(6, 16000275287)] }, '00016000275287')).toBeNull(); // a number, not a string
+  });
+});
+
+describe('nameForGtin (supplement scan: name and brand, no nutrition needed)', () => {
+  const foods = [
+    { description: 'OTHER', gtinUpc: '00074306800099', brandOwner: 'X' },
+    { description: ' Green  Vibrance ', gtinUpc: '74306800046', brandName: 'Vibrant Health', brandOwner: 'Owner Co' },
+  ];
+  it('takes the product whose own code is exactly the scan, with no calories or protein, brand name first', () => {
+    expect(nameForGtin({ foods }, '00074306800046')).toEqual({ name: 'Green Vibrance', brand: 'Vibrant Health' });
+  });
+  it('is null for a near match, a product with no name, or an unreadable answer', () => {
+    expect(nameForGtin({ foods: [foods[0]] }, '00074306800046')).toBeNull();
+    expect(nameForGtin({ foods: [{ description: '  ', gtinUpc: '00074306800046' }] }, '00074306800046')).toBeNull();
+    expect(nameForGtin(null, '00074306800046')).toBeNull();
+    expect(nameForGtin({ foods: 'x' }, '00074306800046')).toBeNull();
   });
 });

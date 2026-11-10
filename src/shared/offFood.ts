@@ -34,3 +34,13 @@ export function offHit(json: unknown, gtin: string): FoodHit | null {
     ...withMicro(offMicro(n)),
   };
 }
+
+/** The name and brand in an Open Food Facts answer (supplement scan: no nutrition needed), or null when the product is unknown or has no name. Never throws. */
+export function offName(json: unknown): { name: string; brand?: string } | null {
+  const root = obj(json);
+  const p = root?.status === 1 ? obj(root.product) : null;
+  const name = text(p?.product_name, 100);
+  if (!p || !name) return null;
+  const brand = text(typeof p.brands === 'string' ? p.brands.split(',')[0] : undefined, 60);
+  return { name, ...(brand ? { brand } : {}) };
+}
