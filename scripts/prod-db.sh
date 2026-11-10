@@ -8,7 +8,7 @@
 #                               a migration must be applied BEFORE the code that needs it goes live.
 #   migrate [--apply]           lists what waits; with --apply: a backup, then dbmate up, then the status again.
 #   catalog <source> [--apply]  npm run catalog:import against production (source: fedb): a dry run, or with --apply a backup, then the write.
-#   upcs [--apply] [--limit N] [--count] [--since YEAR] [--brand name] [--all]  npm run catalog:upcs against production (ADR 117): reads the NIH labels' UPCs (entered since 2022 plus the priority brands; --all reads all
+#   upcs [--apply] [--limit N] [--count] [--since YEAR] [--brand name] [--only-brands] [--all]  npm run catalog:upcs against production (ADR 117): reads the NIH labels' UPCs (entered since 2025 plus the priority brands; --all reads all
 #                               122,000, days at NIH's roughly 1,000 requests an hour) into supplement_upcs, resumable from .cache/dsld-upcs.tsv; --count only prints how many labels a run would read: a dry run that reads and counts, or with --apply a backup, then the write. Run it after `catalog dsld`.
 #   injury-default [--apply]    one-off (ADR 045): npm run keep:injury-prevention against production: a dry run, or with --apply a backup, then
 #                               the write (existing accounts keep Injury prevention on). Run right before deploying that change.

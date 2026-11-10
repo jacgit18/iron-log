@@ -22,6 +22,7 @@ import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { barcodeRoutes } from './foodBarcode.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { supplementBarcodeRoutes } from './supplementBarcode.ts';
 import { supplementLabelRoutes, type SupplementLabelDeps } from './supplementLabel.ts';
 import { receiptsRoutes } from './receipts.ts';
 import { scanRoutes, type ScanDeps } from './scan.ts';
@@ -257,6 +258,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
   // One catalog supplement's label amounts from NIH DSLD (brief supplement-label-amounts): everyone signed in, free API, per-user limit and daily cap in supplementLabel.ts.
   if (db) app.use('/api/supplement-label', rateLimit(limits.supplementLabel, undefined, byUser), supplementLabelRoutes(supplementLabel));
+  // A scanned supplement UPC to the product's name and brand (brief supplement-barcode-search): NIH cannot search by UPC. Everyone signed in, same USDA and Open Food Facts settings as the food barcode, own daily cap in supplementBarcode.ts.
+  if (db) app.use('/api/supplement-barcode', rateLimit(limits.foods, undefined, byUser), supplementBarcodeRoutes({ ...foods, db }));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): everyone signed in (owner, 2026-11-08), per-user limit and daily caps in scan.ts; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
   // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).

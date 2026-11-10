@@ -4,7 +4,7 @@ import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 import type { DsldHit } from './catalogImport.ts';
 import { dsldAliases } from './catalogImport.ts';
-import { crawlScope, crawlUpcs, importUpcs, PRIORITY_BRANDS, slimHit, upcOfLabel } from './supplementUpcImport.ts';
+import { crawlScope, crawlUpcs, importUpcs, isPriorityBrand, PRIORITY_BRANDS, slimHit, upcOfLabel } from './supplementUpcImport.ts';
 
 const hit = (id: string, name: string, entryDate = '2020-01-01', brand = 'Brand'): DsldHit => ({ _id: id, _source: { fullName: name, brandName: brand, physicalState: { langualCodeDescription: 'Tablet' }, entryDate } });
 const labels = (upcs: Record<string, string | null | Error>) => async (id: string) => {
@@ -50,17 +50,21 @@ describe('crawlUpcs', () => {
 });
 
 describe('a crawl limited to a scope', () => {
-  const hits = [hit('1', 'Old Fish Oil', '2015-01-01', 'Thorne Research'), hit('2', 'Old Zinc', '2015-01-01', 'Nobody Co'), hit('3', 'New Zinc', '2024-01-01', 'Nobody Co'), hit('4', 'Collagen', '2016-01-01', 'Sports Research'), hit('5', 'New Creatine', '2023-06-01', 'Thorne HealthTech')];
+  const hits = [hit('1', 'Old Fish Oil', '2015-01-01', 'Thorne Research'), hit('2', 'Old Zinc', '2015-01-01', 'Nobody Co'), hit('3', 'New Zinc', '2024-01-01', 'Nobody Co'), hit('4', 'Collagen', '2016-01-01', 'Sports Research'), hit('5', 'New Creatine', '2023-06-01', 'Thorne HealthTech'), hit('6', 'Old Magnesium', '2016-01-01', 'NOW'), hit('7', 'Old Iron', '2016-01-01', 'Nowhere Naturals')];
   const scope = { since: 2022, brands: PRIORITY_BRANDS };
   it('keeps recent labels and every label of a priority brand (a name that starts with it, any case), and drops the rest', () => {
-    expect(crawlScope(hits, new Map([['3', '']]), scope)).toEqual({ onMarket: 5, inScope: 4, priorityBrand: 3, cached: 1, toRead: 3 });
-    expect(crawlScope(hits, new Map())).toMatchObject({ inScope: 5, priorityBrand: 0 });
+    expect(crawlScope(hits, new Map([['3', '']]), scope)).toEqual({ onMarket: 7, inScope: 5, priorityBrand: 4, cached: 1, toRead: 4 });
+    expect(crawlScope(hits, new Map())).toMatchObject({ inScope: 7, priorityBrand: 0 });
+  });
+  it('matches a brand followed by punctuation, not one that only shares its first letters', () => {
+    const brand = (b: string) => isPriorityBrand(hit('9', 'x', '2016-01-01', b), ['pure encapsulations', 'now']);
+    expect([brand('Pure Encapsulations, LLC'), brand('NOW®'), brand('NOW Foods'), brand('Nowhere Naturals')]).toEqual([true, true, true, false]);
   });
   it('reads the priority brands first and asks only about labels in scope', async () => {
     const asked: string[] = [];
     const r = await crawlUpcs(hits, { fetchLabel: async id => { asked.push(id); return { upcSku: `0 0000${id}` }; }, scope, concurrency: 1 });
-    expect(asked).toEqual(['1', '4', '5', '3']);
-    expect(r).toMatchObject({ inScope: 4, asked: 4 });
+    expect(asked).toEqual(['1', '4', '5', '6', '3']);
+    expect(r).toMatchObject({ inScope: 5, asked: 5 });
   });
   it('does not remove rows when it runs limited, and does when it saw every label', async () => {
     const { db, stop } = await startTestDatabase();
