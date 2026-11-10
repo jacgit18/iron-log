@@ -39,9 +39,9 @@ test('a badge shows on rows with numbers, and the two chips narrow the list besi
   await expect(rows(page)).toHaveText(['Chili']);
   await nutrition(page).getByRole('button', { name: 'High protein' }).click();
   await expect(rows(page)).toHaveText(['Chili', 'Rice']);
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Carbs' }).click(); // with a category
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Carbs' }); // with a category
   await expect(rows(page)).toHaveText(['Rice']);
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'All categories' });
   await page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'Dinner' }).click(); // with a tag
   await expect(rows(page)).toHaveText(['Chili']); // Mystery has the tag but no calories: not matched, no error
   await nutrition(page).getByRole('button', { name: 'Under 500 kcal' }).click();

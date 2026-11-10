@@ -56,3 +56,17 @@ test('phone 390x844: the Log sheet has no target under 44px', async ({ page }) =
   await expect(page.locator('.sheet')).toBeVisible();
   expect(await small(page)).toEqual([]);
 });
+
+test.describe('filter dropdowns: Recipes', () => {
+  test('phone 390x844: Recipes with Filters open (Category dropdown, with a category chosen) has no target under 44px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'r1', n: 'Chili', cat: 'protein', servings: 2, minutes: 20, ing: [{ n: 'Beans', amt: '1 can' }], steps: ['Cook.'] }] })));
+    await page.reload();
+    await page.click('#tab-daily');
+    await page.click('#daily-recipes');
+    await expect(page.getByLabel('Category', { exact: true })).toBeVisible(); // the fixtures open the Filters disclosure
+    await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
+    await expect(page.getByRole('button', { name: 'Clear Category filter' })).toBeVisible();
+    expect(await small(page), 'Recipes filters have targets under 44px').toEqual([]);
+  });
+});
