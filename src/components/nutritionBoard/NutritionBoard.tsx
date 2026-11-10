@@ -9,6 +9,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
 import type { SavedMeal } from '../../types.ts';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
@@ -20,7 +21,7 @@ import './NutritionBoard.css';
 const NO_PLAN: Plan = {};
 const NO_MEALS: SavedMeal[] = [];
 
-// Nutrition as one week board (brief nutrition-board): a week switcher (Last week, This week, Next week), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1440 px).
+// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1440 px).
 // Each day holds five meters (calories, protein, fat, supplements, water), its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
@@ -52,15 +53,19 @@ export default function NutritionBoard() {
   const moveTargets = days.map(d => ({ id: d, label: longDay(d) }));
   const st = () => useAppStore.getState();
   const goWeek = (o: WeekOffset) => { setPicked(o === 0 ? today : weekDays(today, o)[0]!); setMsg(''); };
-  const log = (r: Resolved) => {
+  const log = (r: Resolved, index: number) => {
     const out = planLog(r, st().diet, today);
     if ('error' in out) { setMsg(out.error); return; }
     let done = 0, stopped: string | null = null;
+    const ids: string[] = [];
     for (const f of out.add) {
-      stopped = st().addDietEntry(entryFromFood(today, f)).error;
+      const added = st().addDietEntry(entryFromFood(today, f));
+      stopped = added.error;
       if (stopped) break;
+      if (added.id) ids.push(added.id);
       done++;
     }
+    if (ids.length) st().setPlanEaten(today, index, ids); // the planned item shows a check
     const left = out.left + (out.add.length - done - (stopped ? 1 : 0));
     setMsg(`Logged ${done} from ${r.name}.${stopped ? ` ${stopped}` : left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
   };
@@ -72,8 +77,11 @@ export default function NutritionBoard() {
     <section className="wb nb" aria-labelledby="nb-h">
       <div className="nb-head">
         <h2 id="nb-h" className="cond vh">Nutrition</h2>
-        <div className="seg nb-weeksw" role="group" aria-label="Week">
-          {WEEK_OFFSETS.map(o => <button key={o} type="button" aria-pressed={o === offset} onClick={() => goWeek(o)}>{WEEK_NAME[o]}</button>)}
+        <div className="weeknav nb-weeksw" role="group" aria-label="Week">
+          <button type="button" className="btn sm" aria-label="Previous week" aria-disabled={offset === WEEK_OFFSETS[0]} onClick={() => { if (offset > WEEK_OFFSETS[0]!) goWeek((offset - 1) as WeekOffset); }}><Icon name="chevron-left" /></button>
+          <span className="nb-weekname cond">{WEEK_NAME[offset]}</span>
+          <button type="button" className="btn sm" aria-label="Next week" aria-disabled={offset === WEEK_OFFSETS[WEEK_OFFSETS.length - 1]} onClick={() => { if (offset < WEEK_OFFSETS[WEEK_OFFSETS.length - 1]!) goWeek((offset + 1) as WeekOffset); }}><Icon name="chevron-right" /></button>
+          {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
         </div>
         <div className="nb-headbtns">
           <button type="button" className="btn sm" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}><span className="nb-short">Targets</span><span className="nb-long">Targets and goal</span></button>

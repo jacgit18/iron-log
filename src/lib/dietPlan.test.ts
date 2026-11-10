@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
 import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
-import { addItem, dayTotals, daysFrom, findMatches, inWindow, planLog, prunePlan, removeItem, resolve, setPortion, totalsText } from './dietPlan.js';
+import { normPlan } from '../shared/diet.js';
+import { moveItem } from './weekBoard.js';
+import { addItem, dayTotals, daysFrom, findMatches, inWindow, isEaten, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
 
 const today = '2026-10-30';
 const recipes: Recipe[] = [
@@ -94,5 +96,31 @@ describe('findMatches', () => {
   });
   it('keeps equal names in id order', () => {
     expect(findMatches([r('b', 'Soup'), r('a', 'soup')], '').map(x => x.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('a planned item checked as eaten', () => {
+  const plan = { [today]: [{ k: 'r', id: 'r1', s: 'lunch' }] } as Record<string, PlanItem[]>;
+  it('carries the ids of the entries its check added, and clears them', () => {
+    const on = setEaten(plan, today, 0, ['e1', 'e2']);
+    expect(on[today]![0]).toEqual({ k: 'r', id: 'r1', s: 'lunch', e: ['e1', 'e2'] });
+    expect(setEaten(on, today, 0, [])[today]![0]).toEqual({ k: 'r', id: 'r1', s: 'lunch' });
+    expect(setEaten(plan, today, 5, ['e1'])).toBe(plan);
+  });
+  it('counts as eaten only while one of its entries is still in the log', () => {
+    const item: PlanItem = { k: 'r', id: 'r1', e: ['e1', 'e2'] };
+    expect(isEaten(item, [{ id: 'e2' }])).toBe(true);
+    expect(isEaten(item, [{ id: 'x' }])).toBe(false);
+    expect(isEaten({ k: 'r', id: 'r1' }, [{ id: 'e1' }])).toBe(false);
+  });
+  it('survives a portion change and a move within the day, not a move to another day', () => {
+    const on = setEaten(plan, today, 0, ['e1']);
+    expect(setPortion(on, today, 0, 2)[today]![0]!.e).toEqual(['e1']);
+    expect(moveItem(on, today, 0, today, 'dinner', today).plan![today]![0]!.e).toEqual(['e1']);
+    expect(moveItem(on, today, 0, '2026-10-31', 'dinner', today).plan!['2026-10-31']![0]!.e).toBeUndefined();
+  });
+  it('is kept when the plan is cleaned, with junk ids dropped', () => {
+    const clean = normPlan({ [today]: [{ k: 'r', id: 'r1', e: ['e1', 'e1', 5, ''] }] }, today);
+    expect(clean[today]![0]!.e).toEqual(['e1']);
   });
 });

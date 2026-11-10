@@ -34,6 +34,12 @@
   min-height: 44px;
   justify-self: start;
 }
+.nb-weekname {
+  min-width: 110px;
+  text-align: center;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+}
 .nb-weeklab {
   margin: var(--sp-4) 0 var(--sp-8);
   color: var(--muted);
@@ -203,6 +209,46 @@
   --m-vit: #5fc9d2;
 }
 /* Phone (brief nutrition-mobile-layout): header B puts the short Targets and Manage buttons on one row (the Nutrition heading is visually hidden: the tab already says it) with the week switcher full width below; add-food A is Add food across the width over three equal buttons. Wide screens keep the long layout. */
+.nb-cardrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.nb-cardrow .wb-card {
+  flex: 1;
+  min-width: 0;
+}
+.nb-eatck {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nb-eatck i {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--muted);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-weight: 700;
+  color: transparent;
+}
+.nb-eatck[aria-checked="true"] i {
+  background: var(--m-supp);
+  border-color: var(--m-supp);
+  color: var(--bg);
+}
+.wb-cardwrap.eaten .wb-card {
+  border-color: var(--m-supp);
+}
 @media (max-width: 699px) {
   .nb-headbtns {
     order: 2;
@@ -210,14 +256,11 @@
   .nb-weeksw {
     order: 3;
     flex: 1 0 100%;
-    display: flex;
+    justify-content: space-between;
   }
   .nb-weeksw button {
-    flex: 1;
     min-height: 44px;
-    min-width: 0;
-    padding-inline: var(--sp-4);
-    white-space: normal;
+    min-width: 44px;
   }
   .nb-long {
     display: none;

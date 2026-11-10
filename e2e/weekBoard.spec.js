@@ -86,16 +86,19 @@ test('Move to changes the meal of a card, and a card can be moved to another day
   await expect(col(page, TOMORROW).getByText('Chili', { exact: true })).toBeVisible();
 });
 
-test('a planned card has Log only on today, and Log puts it under Eaten', async ({ page }) => {
+test('a planned card has a check box only on today; checking it marks it eaten and logs it, unchecking removes the log', async ({ page }) => {
   await seed(page);
   await plan(page, 'Chili');
   await plan(page, 'Chili', { day: TOMORROW });
   await col(page, TOMORROW).getByText('Chili', { exact: true }).click();
   await expect(col(page, TOMORROW).getByRole('button', { name: 'Remove Chili' })).toBeVisible();
-  await expect(col(page, TOMORROW).getByRole('button', { name: 'Log Chili' })).toHaveCount(0);
-  await today(page).getByText('Chili', { exact: true }).click();
-  await today(page).getByRole('button', { name: 'Log Chili' }).click();
-  await expect(today(page).locator('.nb-eat', { hasText: 'Chili' })).toBeVisible();
+  await expect(col(page, TOMORROW).getByRole('checkbox', { name: /as eaten/ })).toHaveCount(0);
+  const box = today(page).getByRole('checkbox', { name: 'Check Chili as eaten' });
+  await box.click();
+  await expect(today(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' })).toBeChecked();
+  await expect(today(page).locator('.nb-eat')).toHaveCount(0); // planned food is not listed again: its meal shows the check
+  await today(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' }).click();
+  await expect(today(page).getByRole('checkbox', { name: 'Check Chili as eaten' })).not.toBeChecked();
 });
 
 test('on a phone the board shows one day at a time, with a stepper', async ({ page }) => {

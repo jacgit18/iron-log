@@ -10,7 +10,7 @@ const view = (day: string, over: { diet?: DietEntry[]; supp?: Supplements; plan?
   dayView(day, TODAY, { plan: over.plan ?? {}, recipes: over.recipes ?? [], meals: [], diet: over.diet ?? [], supp: over.supp ?? supp(), body: [{ d: '2026-10-01', w: 160 }], targets });
 
 describe('week days', () => {
-  it('this week starts today; last week is the seven before; next week the seven after', () => {
+  it('weeks run Sunday to Saturday: this week holds today, last week the one before, next week the one after', () => {
     expect(weekDays(TODAY, 0)).toEqual(['2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14']);
     expect(weekDays(TODAY, -1)[0]).toBe('2026-11-01');
     expect(weekDays(TODAY, -1)[6]).toBe('2026-11-07');
@@ -29,13 +29,34 @@ describe('week days', () => {
   });
   it('labels a week and a month crossing', () => {
     expect(weekLabel(TODAY, -1)).toBe('Last week · Nov 1 to 7');
-    expect(weekLabel('2026-11-28', 0)).toBe('This week · Nov 28 to Dec 4');
+    expect(weekLabel('2026-12-01', 0)).toBe('This week · Nov 29 to Dec 5');
   });
   it('the dropdown has three groups of seven and marks today', () => {
     const g = dayGroups(TODAY);
     expect(g.map(x => x.label)).toEqual(['Last week', 'This week', 'Next week']);
     expect(g.every(x => x.days.length === 7)).toBe(true);
     expect(g[1]!.days[0]!.label).toBe('Sun 8 · today');
+  });
+});
+
+describe('a mid-week today', () => {
+  const THU = '2026-11-12';
+  it('this week still starts on Sunday, so the days before today stay on it', () => {
+    expect(weekDays(THU, 0)).toEqual(['2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14']);
+    expect(weekDays(THU, -1)[0]).toBe('2026-11-01');
+    expect(weekDays(THU, 1)[6]).toBe('2026-11-21');
+    expect(weekOf(THU, '2026-11-09')).toBe(0);
+    expect(weekOf(THU, '2026-11-15')).toBe(1);
+    expect(weekLabel(THU, 0)).toBe('This week · Nov 8 to 14');
+  });
+  it('the board runs from last Sunday to the Saturday after next; Saturday is a week end, Sunday the next start', () => {
+    expect(onBoard(THU, '2026-11-01')).toBe(true);
+    expect(onBoard(THU, '2026-10-31')).toBe(false);
+    expect(onBoard(THU, '2026-11-21')).toBe(true);
+    expect(onBoard(THU, '2026-11-22')).toBe(false);
+    expect(stepDay(THU, '2026-11-14', 1)).toBe('2026-11-15');
+    expect(weekOf('2026-11-14', '2026-11-14')).toBe(0); // Saturday is still this week; the next day starts next week
+    expect(weekOf('2026-11-14', '2026-11-15')).toBe(1);
   });
 });
 
