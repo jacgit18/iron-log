@@ -10,8 +10,8 @@ import { DSLD_API, dsldAliases, type DsldHit } from './catalogImport.ts';
 
 const LABEL_ID = /^[0-9]{1,20}$/;
 
-/** Brands whose labels are always crawled, whatever year (the owner's own: Thorne and Sports Research, then big sellers). A brand matches when the label's brand name starts with it, case-insensitively, so `thorne` covers Thorne, Thorne Research and Thorne HealthTech. */
-export const PRIORITY_BRANDS = ['thorne', 'sports research', 'nature made', 'now foods', 'garden of life', 'pure encapsulations', 'life extension', 'nordic naturals', 'jarrow', "doctor's best", 'solgar', 'optimum nutrition', 'centrum', 'one a day', 'nature\'s bounty', 'swanson', 'vitafusion', 'olly', 'transparent labs', 'momentous'];
+/** Brands whose labels are always crawled, whatever year (the owner's own: Thorne and Sports Research, then big sellers). A brand matches when the label's brand name is it or starts with it plus a space, case-insensitively, so `thorne` covers Thorne, Thorne Research and Thorne HealthTech, and `now` covers NOW (DSLD lists it as `now`) but not Nowhere Naturals. */
+export const PRIORITY_BRANDS = ['thorne', 'sports research', 'nature made', 'now', 'garden of life', 'pure encapsulations', 'life extension', 'nordic naturals', 'jarrow', "doctor's best", 'solgar', 'optimum nutrition', 'centrum', 'one a day', 'nature\'s bounty', 'swanson', 'vitafusion', 'olly', 'transparent labs', 'momentous'];
 
 /** What the search results say about a label (entry year and brand); `hits` carry no UPC. */
 const yearOf = (h: DsldHit) => Number(String((h._source as Record<string, unknown>).entryDate ?? '').slice(0, 4)) || 0;
@@ -25,7 +25,7 @@ export interface LabelScope {
 }
 
 /** True when the label's brand is one of the priority brands. */
-export const isPriorityBrand = (h: DsldHit, brands: string[]) => { const b = brandOf(h); return !!b && brands.some(p => b.startsWith(p.toLowerCase())); };
+export const isPriorityBrand = (h: DsldHit, brands: string[]) => { const b = brandOf(h); return !!b && brands.some(p => { const q = p.toLowerCase(); return b === q || b.startsWith(`${q} `); }); };
 
 /** True when a crawl limited to `scope` reads this label. */
 export const inScope = (h: DsldHit, { since, brands }: LabelScope) => isPriorityBrand(h, brands) || (since !== undefined && yearOf(h) >= since);
