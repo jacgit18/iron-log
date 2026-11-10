@@ -33,7 +33,7 @@ export default function Receipts() {
     const photos = new Map<string, Uint8Array>();
     for (const [i, r] of list.entries()) {
       setAll({ busy: true, text: `Getting photo ${i + 1} of ${list.length}...` });
-      const blob = await fetchPhoto(r.id);
+      const blob = await fetchPhoto(r.id, true); // patient: the per-minute limit is waited out, not counted as a missing photo
       if (!mounted.current) return;
       if (blob) photos.set(r.id, new Uint8Array(await blob.arrayBuffer()));
     }

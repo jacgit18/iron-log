@@ -6,7 +6,7 @@ import type { DB } from './db/types.ts';
 import { isJpegBase64 } from '../src/shared/scan.ts';
 
 // Saved receipt photos (brief receipt-save-photo): after Scan receipt the person may keep the picture. The app uploads it in a separate call after Apply,
-// never before, and only when the box was ticked. Mounted at /api/receipts behind sign-in, requireAdmin and a per-user limit (app.ts). The photo is bytes in the
+// never before, and only when the box was ticked. Mounted at /api/receipts behind sign-in and a per-user limit (app.ts). The photo is bytes in the
 // person's own row (row-level security, like backup_snapshots), never logged, never cached, never sent anywhere else. Not synced data: no seq, history or tombstone.
 
 /** Each account keeps at most this many receipts and bytes; past either, a save is refused (409) and nothing is deleted for them. */
@@ -86,7 +86,7 @@ export function receiptsRoutes({ db }: ReceiptsDeps): Router {
     res.json({ ok: true, ...out, maxReceipts: MAX_RECEIPTS, maxBytes: MAX_TOTAL_BYTES });
   });
 
-  // Keep one photo. Its own larger body parser runs here, after sign-in, the admin check and the per-user limit (app.ts skips the 100 kb one for this path).
+  // Keep one photo. Its own larger body parser runs here, after sign-in and the per-user limit (app.ts skips the 100 kb one for this path).
   router.post('/', express.json({ limit: BODY_LIMIT }), async (req, res) => {
     const clean = cleanReceipt(req.body);
     if (!clean.ok) return void res.status(422).json({ ok: false, error: clean.error });
