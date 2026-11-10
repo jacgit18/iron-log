@@ -11,6 +11,7 @@ import { signIn as devHeaders } from '../../sync/devUser.js';
 import { pickerOptions, type PickerChoice } from '../../lib/picker.js';
 import { isTouchScreen } from '../../lib/revealField.js';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
+import { toggleAddSlot } from '../../lib/supplementTimes.js';
 import { planAddMine } from '../../lib/supplementAddPlan.js';
 import { lookupSupplementBarcode } from '../../lib/supplementBarcodeClient.js';
 import { exactListingText, fromBarcodeText, scanSearchSteps, suppBarcodeText, typedUpc, type SuppBarcodeFailure } from '../../lib/supplementBarcodeQuery.js';
@@ -40,7 +41,7 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
   const [exact, setExact] = useState(!!listing); // the pick came from a barcode that matched one listing exactly
   const upc = typedUpc(q); // a typed UPC is looked up instead of searched
   const [upcState, setUpcState] = useState<'idle' | 'looking' | SuppBarcodeFailure>('idle');
-  const [slot, setSlot] = useState<SupplementSlot>('morning'); const [dose, setDose] = useState('');
+  const [slots, setSlots] = useState<SupplementSlot[]>(['morning']); const slot: SupplementSlot = slots[0] ?? ''; const [dose, setDose] = useState(''); // `slot` is the first time; any others get a copy of the entry made for it
   const [all, setAll] = useState(false); const [err, setErr] = useState('');
   const [scanned, setScanned] = useState<SupplementLabel | null>(null); // the bottle's label read from a photo (brief supplement-label-scan); only for a new supplement, never with a catalog pick
   const { state: cat0, retry: retrySearch } = useCatalogSearch('supplement', q, !pick && !upc);
@@ -102,21 +103,35 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
   const add = (e: FormEvent) => {
     e.preventDefault();
     if (pick?.kind === 'mine') {
-      const plan = planAddMine(items, pick.id, slot);
-      if (!plan) return;
-      if (plan.kind === 'exists') { setErr(plan.message); return; }
-      if (plan.kind === 'move' ? s.setSupplementSlot(plan.id, slot, dose) : s.addSupplementInstance(plan.id, slot, dose)) s.closeModal();
+      if (!slots.length) { setErr('Pick a time of day, or Library only.'); return; }
+      let done = false; let why = '';
+      for (const sl of slots) { // each picked time: a library-only one moves in, one scheduled elsewhere gets another instance, one already there is skipped
+        const plan = planAddMine(useAppStore.getState().supp.items, pick.id, sl);
+        if (!plan) return;
+        if (plan.kind === 'exists') { why ||= plan.message; continue; }
+        if (plan.kind === 'move' ? s.setSupplementSlot(plan.id, sl, dose) : s.addSupplementInstance(plan.id, sl, dose)) done = true;
+      }
+      if (done) s.closeModal(); else setErr(why || 'Could not add it.');
       return;
     }
     if (pick?.kind === 'catalog') {
+      if (!slots.length) { setErr('Pick a time of day, or Library only.'); return; }
       const m = s.addCatalogSupplement(pick.item, { slot, dose, ...(fill?.nutrients.length || fill?.serving ? { nutrients: fill.nutrients, serving: fill.serving } : {}) });
-      if (m) setErr(m); else if (useAppStore.getState().supp.items.some(i => i.catalogId === pick.item.id)) s.closeModal();
+      if (m) { setErr(m); return; }
+      const made = useAppStore.getState().supp.items.find(i => i.catalogId === pick.item.id);
+      if (!made) return;
+      slots.slice(1).forEach(sl => s.addSupplementInstance(made.id, sl, dose));
+      s.closeModal();
       return;
     }
     if (!pick && (o.mine.shown.length || o.catalog.shown.length)) { setErr('Pick a result, or pick “Add … as a new supplement”.'); return; }
     const name = pick?.kind === 'create' ? pick.name : typed;
     if (!slot) { setErr('Pick Morning, Noon or Night for a new supplement, or open the full form to keep it in the library only.'); return; }
-    if (s.addSupplement(slot, name, dose, scanFill && scanned ? { nutrients: scanFill.nutrients, ...(scanFill.serving ? { serving: scanFill.serving } : {}), ...(scanned.brand ? { brand: scanned.brand } : {}) } : undefined)) s.closeModal(); else setErr(`Could not add ${name}. You may already have it in ${slotLabel(slot)}.`);
+    if (s.addSupplement(slot, name, dose, scanFill && scanned ? { nutrients: scanFill.nutrients, ...(scanFill.serving ? { serving: scanFill.serving } : {}), ...(scanned.brand ? { brand: scanned.brand } : {}) } : undefined)) {
+      const made = useAppStore.getState().supp.items.find(i => i.n === name && i.slot === slot);
+      if (made) slots.slice(1).forEach(sl => s.addSupplementInstance(made.id, sl, dose));
+      s.closeModal();
+    } else setErr(`Could not add ${name}. You may already have it in ${slotLabel(slot)}.`);
   };
   const row = (key: string, choice: PickerChoice, name: string, meta?: string, badge?: string) => (
     <li key={key}>
@@ -178,9 +193,9 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
           </div>
         )}
         <fieldset className="sasslot">
-          <legend>Time of day</legend>
+          <legend>Time of day (pick every time you take it)</legend>
           {SLOT_OPTIONS.map(([k, l]) => (
-            <label key={k || 'lib'} className={`sasradio${slot === k ? ' on' : ''}`}><input type="radio" name="suppadd-slot" value={k} checked={slot === k} onChange={() => { setSlot(k); setErr(''); }} />{l}</label>
+            <label key={k || 'lib'} className={`sasradio${slots.includes(k) ? ' on' : ''}`}><input type="checkbox" name="suppadd-slot" value={k} checked={slots.includes(k)} onChange={() => { setSlots(cur => toggleAddSlot(cur, k)); setErr(''); }} />{l}</label>
           ))}
         </fieldset>
         <label className="field">Dose (optional)<input id="suppadd-dose" type="text" placeholder="e.g. 5 g" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} /></label>

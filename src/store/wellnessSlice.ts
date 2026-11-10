@@ -4,7 +4,8 @@ import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStre
 import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
 import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
 import { normPortion } from '../lib/supplementPortion.js';
-import type { StretchTier, SupplementSlot } from '../types.ts';
+import { planTimes } from '../lib/supplementTimes.js';
+import type { StretchTier, SupplementItem, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
 import { goalMetNow, trackWater } from '../lib/waterReminder.js';
@@ -207,6 +208,27 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
       s.items.splice(i + 1, 0, copy);
     });
   },
+  // Save from the sheet's time chips (brief supplement-split-times): the product of `id` ends up at `times`, each with its own amount. `planTimes` says what
+  // changes: new entries are copies (like addSupplementInstance), a time turned off is removed with its Undo notice. `dose` is written to every time.
+  saveSupplementTimes(id, times, dose) {
+    if (get().blocked()) return false;
+    const plan = planTimes(get().supp.items, id, times); if (!plan) return false;
+    const dz = String(dose || '').trim().slice(0, 40);
+    const cur = get().supp.items.find(x => x.id === id)!;
+    if (!get().mutateSupp(s => {
+      const put = (x: SupplementItem, portion: number) => { const p = normPortion(portion); if (p) x.portion = p; else delete x.portion; };
+      for (const m of plan.move) { const x = s.items.find(i => i.id === m.id); if (x) { x.slot = m.slot; put(x, m.portion); } }
+      for (const a of plan.add) {
+        const i = s.items.findIndex(x => x.id === a.from); if (i < 0) continue;
+        const copy: SupplementItem = { ...s.items[i], id: newSupplementId(s.items, s.items[i].n), slot: a.slot }; put(copy, a.portion);
+        s.items.splice(i + 1, 0, copy);
+      }
+      for (const m of plan.set) { const x = s.items.find(i => i.id === m.id); if (x) put(x, m.portion); }
+      for (const x of s.items) if (x.slot && sameSupplement(x, cur.n, cur.brand) && !plan.remove.includes(x.id)) { if (dz) x.dose = dz; else delete x.dose; }
+    })) return false;
+    for (const rid of plan.remove) get().removeSupplement(rid);
+    return true;
+  },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
   removeSupplement(id) {
     const x0 = get().supp.items.find(x => x.id === id); if (!x0 || !x0.slot) return false;
@@ -267,9 +289,10 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
         ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
-      // The same product in other sections shares one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
+      // The same product in other sections shares its name, one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
       if (cur) for (const x of s.items) {
         if (x.id === item.id || !sameSupplement(x, cur.n, cur.brand)) continue;
+        x.n = n; // a rename reaches every time of the product: the sheet shows them as one supplement, and Save groups them by name
         if (d.nutrients !== undefined) { if (nutrients.length) x.nutrients = nutrients.map(r => ({ ...r })); else delete x.nutrients; }
         if (d.serving !== undefined) { if (serving) x.serving = { ...serving }; else delete x.serving; }
       }

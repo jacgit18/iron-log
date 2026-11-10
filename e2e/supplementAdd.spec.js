@@ -133,6 +133,7 @@ test('the full form opens with what was typed, the time of day and the dose', as
   await open(page);
   await page.locator('#suplib-add').click();
   await sheet(page).locator('#suppadd-q').fill('Zzyzx tonic');
+  await sheet(page).getByLabel('Morning').uncheck(); // the times are checkboxes now: Morning is on by default
   await sheet(page).getByLabel('Night').check();
   await page.fill('#suppadd-dose', '2 drops');
   await page.click('#suppadd-full');
