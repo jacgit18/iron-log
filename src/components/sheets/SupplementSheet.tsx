@@ -6,7 +6,9 @@ import { SLOT_OPTIONS } from '../../lib/supplements.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { nutrientLabel } from '../../lib/nutrientInfo.js';
+import IngredientRows from '../supplements/IngredientRows.js';
 import NutrientRows from '../supplements/NutrientRows.js';
+import { draftsOf, rowsOf } from '../../lib/supplementIngredients.js';
 import { LabelCompare } from '../supplements/LabelPreview.js';
 import ScanBottle from '../supplements/ScanBottle.js';
 import { SUPPLEMENT_SCAN_TEXT } from '../../lib/scanPhoto.js';
@@ -32,7 +34,7 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
   const s = useAppStore.getState();
   useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
   const cur = id ? s.supp.items.find(x => x.id === id) : null;
-  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : draft?.n ?? '', dose: cur ? cur.dose || '' : draft?.dose ?? '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : draft?.slot ?? 'morning', nutrients: (cur?.nutrients || []).map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), portion: cur?.portion ?? 1, units: cur?.serving ? String(cur.serving.units) : '', form: cur?.serving?.form || '' }));
+  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : draft?.n ?? '', dose: cur ? cur.dose || '' : draft?.dose ?? '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : draft?.slot ?? 'morning', nutrients: (cur?.nutrients || []).map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), ingredients: draftsOf(cur?.ingredients), portion: cur?.portion ?? 1, units: cur?.serving ? String(cur.serving.units) : '', form: cur?.serving?.form || '' }));
   const [times, setTimes] = useState<TimeChoice[]>(() => (cur ? timesOf(s.supp.items, cur.id) : [])); // an existing supplement edits its times as chips; a new one picks one time below
   const [err, setErr] = useState('');
   // Fill from label (brief supplement-label-amounts): read the label on request, show it beside the rows in the form, change the form only on Replace (Save still keeps it).
@@ -46,7 +48,7 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
   return (
     <Sheet>
       <h2 className="cond">{cur ? (cur.catalogId ? cur.n : 'Edit supplement') : 'New supplement'}</h2>
-      <form id="supp-form" noValidate onSubmit={e => { e.preventDefault(); const units = Number(d.units); const m = s.saveSupplement({ ...d, serving: units > 0 ? { units, ...(d.form ? { form: d.form } : {}) } : null, ...(cur ? {} : { portion: d.portion }), nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])) }); if (m) setErr(m); else if (cur && times.length) s.saveSupplementTimes(cur.id, times, d.dose); }}>
+      <form id="supp-form" noValidate onSubmit={e => { e.preventDefault(); const units = Number(d.units); const m = s.saveSupplement({ ...d, serving: units > 0 ? { units, ...(d.form ? { form: d.form } : {}) } : null, ...(cur ? {} : { portion: d.portion }), nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ingredients: rowsOf(d.ingredients) }); if (m) setErr(m); else if (cur && times.length) s.saveSupplementTimes(cur.id, times, d.dose); }}>
         <section className="ssg" aria-labelledby="ssg-id">
           <h3 className="ssgh" id="ssg-id">The supplement</h3>
           {cur?.catalogId
@@ -66,6 +68,7 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
         <section className="ssg" aria-labelledby="ssg-amt">
           <h3 className="ssgh" id="ssg-amt">What is in one serving</h3>
           <NutrientRows rows={d.nutrients} onChange={nutrients => up({ nutrients })} />
+          <IngredientRows rows={d.ingredients} onChange={ingredients => up({ ingredients })} />
           {cur && isDsldCatalogId(cur.catalogId) && !asked && <button type="button" className="btn sm" onClick={() => { setAsked(true); setReplaced(false); }}>Fill from label</button>}
           {!cur?.catalogId && !scanned && <ScanBottle label="Scan label" onRead={l => { setScanned(l); setReplaced(false); setD(x => (x.n.trim() ? x : { ...x, n: l.name.slice(0, 60) })); }} />}
           {asked && lab.status === 'loading' && <p className="note" role="status">Reading the label...</p>}
