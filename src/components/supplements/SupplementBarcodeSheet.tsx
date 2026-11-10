@@ -3,18 +3,19 @@ import { useBarcodeCamera } from '../../hooks/useBarcodeCamera.js';
 import { lookupSupplementBarcode } from '../../lib/supplementBarcodeClient.js';
 import { suppBarcodeText, type SuppBarcodeFailure } from '../../lib/supplementBarcodeQuery.js';
 import type { ProductName } from '../../shared/barcode.js';
+import type { CatalogItem } from '../../types.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
 import './SupplementBarcodeSheet.css';
 
 // Scan a supplement's barcode (brief supplement-barcode-search): a live camera view; each quarter second the browser's reader looks at the frame and the first valid product code is asked of
-// /api/supplement-barcode, which answers the product's name and brand. They go back to the supplement add sheet as a search (`onFound`); the person picks the listing there. Close returns to the add
+// /api/supplement-barcode, which answers the product's name and brand, and the exact catalog listing when the UPC table has it. They go back to the supplement add sheet as a search (`onFound`); the person picks the listing there. Close returns to the add
 // sheet as it was (`onBack`). A miss or failure stops the scanning so the same code is not asked again; "Scan again" restarts it. No camera or reader: a photo of the barcode is read instead.
 // The stream is stopped when the sheet closes; nothing is stored.
 export default function SupplementBarcodeSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
-  const onFound = modal?.onFound as ((p: ProductName) => void) | undefined;
+  const onFound = modal?.onFound as ((p: ProductName, listing?: CatalogItem) => void) | undefined;
   const onBack = modal?.onBack as (() => void) | undefined;
   const photo = useRef<HTMLInputElement>(null);
   const busy = useRef(false); // one lookup at a time
@@ -29,7 +30,7 @@ export default function SupplementBarcodeSheet() {
     busy.current = true; setLooking(true); setFail(null);
     const r = await lookupSupplementBarcode(gtin);
     if (!mounted.current) return;
-    if (r.ok) { onFound?.(r.product); closeModal(); return; }
+    if (r.ok) { onFound?.(r.product, r.listing); closeModal(); return; }
     busy.current = false; setLooking(false); setScanning(false); setFail(r.reason);
   };
   const cam = useBarcodeCamera(gtin => { void finish(gtin); }, scanning && !looking);

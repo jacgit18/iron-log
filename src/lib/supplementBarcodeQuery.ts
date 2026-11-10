@@ -1,3 +1,4 @@
+import type { CatalogData, CatalogItem } from '../types.js';
 import { cleanGtin, type ProductName } from '../shared/barcode.js';
 import { BARCODE_TEXT, type BarcodeFailure } from './barcodeScan.js';
 
@@ -46,3 +47,17 @@ export const suppBarcodeText = (f: SuppBarcodeFailure): string => SUPP_BARCODE_T
 
 /** The line under a search filled from a barcode. */
 export const fromBarcodeText = (p: ProductName): string => `From the barcode: ${p.name}. Pick the listing that matches your bottle.`;
+
+/** The exact catalog listing a UPC maps to, read again from the server's answer (a DSLD catalog id, a name, an optional brand, the row's data object), or undefined when it is not one. */
+export function readListing(x: unknown): CatalogItem | undefined {
+  if (!x || typeof x !== 'object') return undefined;
+  const o = x as Record<string, unknown>;
+  const name = typeof o.name === 'string' ? o.name.trim().slice(0, 300) : '';
+  if (typeof o.id !== 'string' || !/^c:dsld:\d{1,20}$/.test(o.id) || !name) return undefined;
+  const brand = typeof o.brand === 'string' && o.brand.trim() ? o.brand.trim().slice(0, 300) : undefined;
+  const data = o.data && typeof o.data === 'object' && !Array.isArray(o.data) ? (o.data as CatalogData) : {};
+  return { id: o.id, name, ...(brand ? { brand } : {}), data };
+}
+
+/** The line under the add sheet when a barcode matched one listing exactly. */
+export const exactListingText = 'Found by barcode. Check the label amounts below, then Add.';

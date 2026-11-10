@@ -76,6 +76,36 @@ test('typing a UPC in the search box does the same, and an ordinary name is stil
   await expect(add(page).getByRole('list', { name: 'Results' }).getByRole('button').first()).toContainText('Mega Men');
 });
 
+// The UPC table (catalog:upcs) answers the exact listing: the sheet opens with it already picked and its label showing, with no list to choose from.
+const exact = { ok: true, name: 'Mega Men', brand: 'Nature Made', listing: { id: 'c:dsld:900', name: 'Mega Men', brand: 'Nature Made', data: { form: 'Tablet', entryYear: 2020 } } };
+
+test('a typed UPC the table knows picks that exact listing and shows its label, with no list to choose from', async ({ page }) => {
+  const asked = await open(page, exact);
+  await gotoSheet(page);
+  await add(page).locator('#suppadd-q').fill('0 31604 02650 9');
+  await expect(add(page)).toContainText('Found by barcode');
+  await expect(add(page).locator('#suppadd-q')).toHaveValue('Mega Men');
+  await expect(add(page).getByRole('list', { name: 'Results' })).toHaveCount(0);
+  await expect(add(page).locator('.lblrows')).toContainText('15 mg');
+  expect(asked).toEqual([`/api/supplement-barcode/${UPC}`]);
+  await add(page).locator('#suppadd-q').fill('mega'); // typing again drops the pick and the note: it is an ordinary search
+  await expect(add(page)).not.toContainText('Found by barcode');
+  await expect(add(page).getByRole('list', { name: 'Results' }).getByRole('button').first()).toContainText('Mega Men');
+});
+
+test('a scanned UPC the table knows comes back to the add sheet with the exact listing picked', async ({ page }) => {
+  await withReader(page, [{ rawValue: UPC, format: 'upc_a' }]); await noCamera(page);
+  await open(page, exact);
+  await gotoSheet(page);
+  await add(page).getByRole('button', { name: 'Scan barcode' }).click();
+  await camera(page).getByLabel('Barcode photo').setInputFiles(photo);
+  await expect(camera(page)).toHaveCount(0);
+  await expect(add(page)).toContainText('Found by barcode');
+  await expect(add(page).locator('.lblrows')).toContainText('15 mg');
+  await expect(add(page).getByRole('list', { name: 'Results' })).toHaveCount(0);
+  await expect(add(page).locator('#suppadd-go')).toBeEnabled();
+});
+
 test('a barcode that finds no product says so and the sheet stays usable for typing', async ({ page }) => {
   await open(page, { ok: false });
   await gotoSheet(page);

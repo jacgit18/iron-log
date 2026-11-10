@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import type { Kysely } from 'kysely';
+import type { CatalogData, CatalogItem } from '../src/types.ts';
+import { inUserTransaction } from './auth.ts';
+import type { DB } from './db/types.ts';
 import { dayCap } from './dayCap.ts';
 import { askOpenName } from './openFoodFacts.ts';
 import { DAILY_MAX, HOLD_MS, TIMEOUT_MS, USDA_URL, type FoodDeps } from './foodSearch.ts';
@@ -9,12 +13,21 @@ import { cleanGtin, nameForGtin, type ProductName } from '../src/shared/barcode.
 // in its search and the person picks the listing. Unlike the food route it needs no calories or protein (a vitamin has none worth the name). Same exact-code rule, same key and
 // settings (`foods`), its own daily counter. Nothing is stored; the code is never logged. A miss is held an hour so a repeat scan spends nothing; if Open Food Facts could not be asked
 // and USDA had nothing, the answer is "unavailable" (503) and nothing is held.
+// First of all, with a database, the UPC is looked up in supplement_upcs (filled by `npm run catalog:upcs`, ADR 117): a hit answers the exact catalog listing, costs nothing, needs no key and is not
+// counted against the daily cap. Only a miss goes on to the name lookup. A table that cannot be read is logged and treated as a miss.
 
 const ASK_FOR = 10;
 const HOLD_MAX = 500;
 const UNAVAILABLE = 'barcode lookup is not available right now';
 
-export function supplementBarcodeRoutes({ key, offContact, fetch: ask = fetch, now = Date.now }: FoodDeps = {}): Router {
+/** The live catalog row a UPC is mapped to, in the shape the catalog search answers, or null. Read as the signed-in account (row-level security). */
+export async function listingForUpc(db: Kysely<DB>, userId: string, gtin: string): Promise<CatalogItem | null> {
+  const row = await inUserTransaction(db, userId, trx => trx.selectFrom('supplement_upcs as u').innerJoin('catalog_items as c', 'c.id', 'u.catalog_id')
+    .select(['c.id', 'c.name', 'c.brand', 'c.data']).where('u.upc', '=', gtin).where('c.retired_at', 'is', null).executeTakeFirst());
+  return row ? { id: row.id, name: row.name, ...(row.brand ? { brand: row.brand } : {}), data: (row.data ?? {}) as CatalogData } : null;
+}
+
+export function supplementBarcodeRoutes({ key, offContact, fetch: ask = fetch, now = Date.now, db }: FoodDeps & { db?: Kysely<DB> } = {}): Router {
   const router = Router();
   const held = new Map<string, { at: number; found: ProductName | null }>();
   const daily = dayCap(now);
@@ -23,6 +36,12 @@ export function supplementBarcodeRoutes({ key, offContact, fetch: ask = fetch, n
     res.setHeader('Cache-Control', 'private, no-store');
     const gtin = cleanGtin(req.params.gtin);
     if (!gtin) return void res.status(422).json({ ok: false, error: 'that is not a product barcode' });
+    if (db) {
+      try {
+        const listing = await listingForUpc(db, String(res.locals.userId), gtin);
+        if (listing) return void res.json({ ok: true, name: listing.name, ...(listing.brand ? { brand: listing.brand } : {}), listing });
+      } catch (err) { console.warn(JSON.stringify({ msg: 'supplement upc table read failed', reason: err instanceof Error ? err.message : 'unknown' })); }
+    }
     if (!key) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
     const allowed = daily.take(String(res.locals.userId), DAILY_MAX); // counted on every valid code, held answer or not
     if (!allowed.ok) {

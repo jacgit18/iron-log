@@ -11,6 +11,12 @@ describe('lookupSupplementBarcode', () => {
     expect(await lookupSupplementBarcode('074306800046')).toEqual({ ok: true, product: { name: 'Green Vibrance', brand: 'Vibrant Health' } });
     expect(String((ask.mock.calls[0] as unknown[])[0])).toBe('/api/supplement-barcode/074306800046');
   });
+  it('returns the exact listing when the UPC table had it, and ignores one that is not a catalog listing', async () => {
+    vi.stubGlobal('fetch', reply(200, { ok: true, name: 'Omega-3', brand: 'Thorne', listing: { id: 'c:dsld:42', name: 'Omega-3', brand: 'Thorne', data: { form: 'Softgel' } } }));
+    expect(await lookupSupplementBarcode('074306800046')).toEqual({ ok: true, product: { name: 'Omega-3', brand: 'Thorne' }, listing: { id: 'c:dsld:42', name: 'Omega-3', brand: 'Thorne', data: { form: 'Softgel' } } });
+    vi.stubGlobal('fetch', reply(200, { ok: true, name: 'Omega-3', listing: { id: 'c:fedb:x', name: 'x' } }));
+    expect(await lookupSupplementBarcode('074306800046')).toEqual({ ok: true, product: { name: 'Omega-3' } });
+  });
   it('leaves the brand out when there is none', async () => {
     vi.stubGlobal('fetch', reply(200, { ok: true, name: 'Plain' }));
     expect(await lookupSupplementBarcode('074306800046')).toEqual({ ok: true, product: { name: 'Plain' } });

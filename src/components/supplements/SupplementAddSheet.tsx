@@ -13,7 +13,7 @@ import { isTouchScreen } from '../../lib/revealField.js';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 import { planAddMine } from '../../lib/supplementAddPlan.js';
 import { lookupSupplementBarcode } from '../../lib/supplementBarcodeClient.js';
-import { fromBarcodeText, scanSearchSteps, suppBarcodeText, typedUpc, type SuppBarcodeFailure } from '../../lib/supplementBarcodeQuery.js';
+import { exactListingText, fromBarcodeText, scanSearchSteps, suppBarcodeText, typedUpc, type SuppBarcodeFailure } from '../../lib/supplementBarcodeQuery.js';
 import { planFill } from '../../lib/supplementLabelFill.js';
 import type { ProductName } from '../../shared/barcode.js';
 import { catalogLine, mineOption, newestFirst, oneOfEach, upcLine } from '../../lib/supplementResultLine.js';
@@ -29,14 +29,15 @@ const SHOWN = 8; const SHOWN_MORE = 500; // every result fetched so far, once Sh
 // before Add, one time of day, a dose. `backToManage`: opened from Manage, so closing it reopens that editor.
 //
 // Barcode (brief supplement-barcode-search): NIH cannot search by UPC, so a scanned or typed UPC becomes a product name (server/supplementBarcode.ts) and the name fills the search; the
-// person still picks the listing. `found`: the product a barcode scan just found (the camera sheet replaced this one and reopened it); `startQ`: the text to come back to when the camera was closed.
-export default function SupplementAddSheet({ backToManage, found, startQ }: { backToManage?: boolean; found?: ProductName; startQ?: string }) {
+// person still picks the listing. `found` and `listing`: what a barcode scan just found, the product's name and (when the UPC table has it) the exact catalog listing, which opens already picked (the camera sheet replaced this one and reopened it); `startQ`: the text to come back to when the camera was closed.
+export default function SupplementAddSheet({ backToManage, found, listing, startQ }: { backToManage?: boolean; found?: ProductName; listing?: CatalogItem; startQ?: string }) {
   const s = useAppStore.getState();
   const syncing = useAppStore(x => x.sync !== null);
   const items = useAppStore(x => x.supp.items);
   useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
-  const [scan, setScan] = useState(() => { const steps = found ? scanSearchSteps(found) : []; return found && steps.length ? { product: found, steps, step: 0 } : null; });
-  const [q, setQ] = useState(() => scan?.steps[0] ?? startQ ?? ''); const [pick, setPick] = useState<PickerChoice | null>(null);
+  const [scan, setScan] = useState(() => { const steps = found && !listing ? scanSearchSteps(found) : []; return found && steps.length ? { product: found, steps, step: 0 } : null; });
+  const [q, setQ] = useState(() => listing?.name ?? scan?.steps[0] ?? startQ ?? ''); const [pick, setPick] = useState<PickerChoice | null>(() => (listing ? { kind: 'catalog', item: listing } : null));
+  const [exact, setExact] = useState(!!listing); // the pick came from a barcode that matched one listing exactly
   const upc = typedUpc(q); // a typed UPC is looked up instead of searched
   const [upcState, setUpcState] = useState<'idle' | 'looking' | SuppBarcodeFailure>('idle');
   const [slot, setSlot] = useState<SupplementSlot>('morning'); const [dose, setDose] = useState('');
@@ -53,6 +54,7 @@ export default function SupplementAddSheet({ backToManage, found, startQ }: { ba
     setUpcState('looking');
     void lookupSupplementBarcode(upc).then(r => {
       if (!live) return;
+      if (r.ok && r.listing) { setPick({ kind: 'catalog', item: r.listing }); setExact(true); setScanned(null); setScan(null); setErr(''); setQ(r.listing.name); setUpcState('idle'); return; }
       const steps = r.ok ? scanSearchSteps(r.product) : [];
       if (r.ok && steps.length) { setScan({ product: r.product, steps, step: 0 }); setUpcState('idle'); setQ(steps[0]!); } else setUpcState(r.ok ? 'notfound' : r.reason);
     });
@@ -71,8 +73,8 @@ export default function SupplementAddSheet({ backToManage, found, startQ }: { ba
     setScan({ ...scan, step: scan.step + 1 }); setQ(scan.steps[scan.step + 1]!);
   }, [scan, pick, cat0, q]);
   const scanCamera = () => {
-    const later = (p: ProductName | undefined) => setTimeout(() => useAppStore.getState().openModal({ type: 'suppadd', ...(backToManage ? { from: 'manage' } : {}), ...(p ? { found: p } : { q }) }), 0); // after the camera sheet has closed itself
-    useAppStore.getState().openModal({ type: 'suppscan', onFound: (p: ProductName) => later(p), onBack: () => later(undefined) });
+    const later = (p: ProductName | undefined, l?: CatalogItem) => setTimeout(() => useAppStore.getState().openModal({ type: 'suppadd', ...(backToManage ? { from: 'manage' } : {}), ...(p ? { found: p, ...(l ? { listing: l } : {}) } : { q }) }), 0); // after the camera sheet has closed itself
+    useAppStore.getState().openModal({ type: 'suppscan', onFound: (p: ProductName, l?: CatalogItem) => later(p, l), onBack: () => later(undefined) });
   };
   const { state: lab, retry: retryLabel } = useSupplementLabel(pick?.kind === 'catalog' ? pick.item.id : null);
   const fill = lab.status === 'ready' ? planFill({}, lab.label).result : undefined;
@@ -92,8 +94,8 @@ export default function SupplementAddSheet({ backToManage, found, startQ }: { ba
   const typed = q.trim().replace(/\s+/g, ' ');
   const canAdd = !!pick || !!typed;
 
-  const choose = (c: PickerChoice) => { setPick(c); setErr(''); if (c.kind !== 'create') setScanned(null); if (c.kind === 'mine') setQ(items.find(i => i.id === c.id)?.n ?? q); else if (c.kind === 'catalog') setQ(c.item.name); else setQ(c.name); };
-  const clear = () => { setPick(null); setErr(''); };
+  const choose = (c: PickerChoice) => { setPick(c); setExact(false); setErr(''); if (c.kind !== 'create') setScanned(null); if (c.kind === 'mine') setQ(items.find(i => i.id === c.id)?.n ?? q); else if (c.kind === 'catalog') setQ(c.item.name); else setQ(c.name); };
+  const clear = () => { setPick(null); setExact(false); setErr(''); };
   const read = (l: SupplementLabel) => { setScanned(l); setErr(''); setQ(cur => (cur.trim() ? cur : l.name.slice(0, 60))); }; // the name box keeps what was typed; it takes the photo's name only while empty
   // Add: one of yours moves into the time of day or gets another instance, a catalog product joins your library in it with its label's amounts, anything else is a new supplement.
   const add = (e: FormEvent) => {
@@ -129,7 +131,7 @@ export default function SupplementAddSheet({ backToManage, found, startQ }: { ba
       <form id="suppadd-form" noValidate onSubmit={add} className="sas">
         <label className="field">Name or brand
           <input id="suppadd-q" type="search" autoComplete="off" maxLength={100} value={q} placeholder="e.g. creatine, Nature Made" autoFocus={!isTouchScreen()}
-            onChange={e => { setQ(e.target.value); setScan(null); setPick(null); setErr(''); setAll(false); setMore(null); }} />
+            onChange={e => { setQ(e.target.value); setScan(null); setPick(null); setExact(false); setErr(''); setAll(false); setMore(null); }} />
         </label>
         {syncing && !pick && <button type="button" className="btn sm" id="suppadd-scan" onClick={scanCamera}>Scan barcode</button>}
         {!pick && upcNote && <p className={`note${upcState === 'looking' ? '' : ' err'}`} role="status">{upcNote}</p>}
@@ -157,6 +159,7 @@ export default function SupplementAddSheet({ backToManage, found, startQ }: { ba
               <button type="button" className="btn sm ghost" onClick={clear}>Change</button>
             </div>
             {pick.kind === 'catalog' && <p className="note">{[catalogLine(pick.item), upcLine(pick.item)].filter(Boolean).join(' · ')}. From the catalog: it joins your supplements.</p>}
+            {pick.kind === 'catalog' && exact && <p className="note" role="status">{exactListingText}</p>}
             {pick.kind === 'mine' && heldItem && <p className="note">{heldItem.slot ? `Yours, in ${slotLabel(heldItem.slot)}. Adding it to another time of day makes another instance.` : 'Yours, in the library only. Adding it schedules it.'}</p>}
             {pick.kind === 'create' && <p className="note">A new supplement of your own.</p>}
             {pick.kind === 'create' && !scanned && <ScanBottle label="Scan the bottle’s label" onRead={read} />}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromBarcodeText, scanSearchSteps, SUPP_BARCODE_TEXT, suppBarcodeText, typedUpc } from './supplementBarcodeQuery.js';
+import { exactListingText, fromBarcodeText, readListing, scanSearchSteps, SUPP_BARCODE_TEXT, suppBarcodeText, typedUpc } from './supplementBarcodeQuery.js';
 
 describe('typedUpc', () => {
   it('accepts a valid product code written plain, with spaces (NIH style) or with dashes', () => {
@@ -40,4 +40,16 @@ describe('messages', () => {
   it('names the product in the note under a filled search', () => {
     expect(fromBarcodeText({ name: 'Green Vibrance' })).toContain('Green Vibrance');
   });
+});
+
+describe('readListing', () => {
+  it('reads the listing the route answers and trims it', () => {
+    expect(readListing({ id: 'c:dsld:42', name: '  Omega-3 ', brand: ' Thorne ', data: { form: 'Softgel', entryYear: 2024 } })).toEqual({ id: 'c:dsld:42', name: 'Omega-3', brand: 'Thorne', data: { form: 'Softgel', entryYear: 2024 } });
+    expect(readListing({ id: 'c:dsld:7', name: 'Plain' })).toEqual({ id: 'c:dsld:7', name: 'Plain', data: {} });
+  });
+  it('refuses anything that is not a DSLD catalog listing, so an odd answer never becomes a pick', () => {
+    for (const bad of [null, 'x', [], {}, { id: 'c:dsld:1' }, { id: 'c:dsld:1', name: '  ' }, { id: 'c:fedb:Squat', name: 'Squat' }, { id: 'c:dsld:abc', name: 'x' }, { id: 5, name: 'x' }]) expect(readListing(bad), JSON.stringify(bad)).toBeUndefined();
+    expect(readListing({ id: 'c:dsld:1', name: 'x', data: [1] })).toEqual({ id: 'c:dsld:1', name: 'x', data: {} });
+  });
+  it('says what the person should do next', () => { expect(exactListingText).toMatch(/label amounts/); });
 });
