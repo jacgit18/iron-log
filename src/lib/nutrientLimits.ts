@@ -25,11 +25,14 @@ export interface NutrientLimit {
 }
 
 const ODS = 'NIH Office of Dietary Supplements, https://ods.od.nih.gov/factsheets/';
-const READ = '2026-11-08'; // the day every row below was read
+const READ = '2026-11-08'; // the day the first 15 rows below were read
+const READ2 = '2026-11-10'; // choline, manganese and molybdenum (brief supplement-more-nutrients)
 
 export const NUTRIENT_LIMITS: NutrientLimit[] = [
   { key: 'calcium', label: 'Calcium', unit: 'mg', upper: 2000, recommended: { min: 1000, max: 1200 }, recommendedNote: 'adults 19 and over; 1,200 mg for women 51+ and everyone 71+',
     scope: 'total', scopeNote: '2,000 mg is the limit for ages 51+; 2,500 mg for 19 to 50. Counts food and supplements.', sourceDate: READ, source: `${ODS}Calcium-HealthProfessional/ (Tables 1 and 3)` },
+  { key: 'choline', label: 'Choline', unit: 'mg', upper: 3500, recommended: { min: 425, max: 550 }, recommendedNote: 'Adequate Intake for adults 19 and over: 550 mg for men, 425 mg for women',
+    scope: 'total', scopeNote: 'Counts choline from food and supplements. The limit is based on low blood pressure and fishy body odor; it does not apply to people taking high doses under medical supervision.', sourceDate: READ2, source: `${ODS}Choline-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'copper', label: 'Copper', unit: 'mcg', upper: 10000, recommended: { min: 900, max: 900 }, recommendedNote: 'adults 19 and over',
     scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Copper-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'folate', label: 'Folate', unit: 'mcg', upper: 1000, recommended: { min: 400, max: 400 }, recommendedNote: 'mcg DFE (dietary folate equivalents) for adults 19 and over',
@@ -40,6 +43,10 @@ export const NUTRIENT_LIMITS: NutrientLimit[] = [
     scope: 'total', scopeNote: 'Counts food and supplements.', sourceDate: READ, source: `${ODS}Iron-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'magnesium', label: 'Magnesium', unit: 'mg', upper: 350, recommended: { min: 310, max: 420 }, recommendedNote: 'adults 19 and over, by age and sex',
     scope: 'supplements', scopeNote: 'The limit counts magnesium from supplements and medicines only, not magnesium in food and drink.', sourceDate: READ, source: `${ODS}Magnesium-HealthProfessional/ (Tables 1 and 3)` },
+  { key: 'manganese', label: 'Manganese', unit: 'mg', upper: 11, recommended: { min: 1.8, max: 2.3 }, recommendedNote: 'Adequate Intake for adults 19 and over: 2.3 mg for men, 1.8 mg for women',
+    scope: 'total', scopeNote: 'The fact sheet gives the limit as one figure for healthy adults, with no split between food and supplements, so this counts both. It does not apply to people taking supplemental manganese under medical supervision. Tea, nuts and whole grains are high in manganese.', sourceDate: READ2, source: `${ODS}Manganese-HealthProfessional/ (Tables 1 and 3)` },
+  { key: 'molybdenum', label: 'Molybdenum', unit: 'mcg', upper: 2000, recommended: { min: 45, max: 45 }, recommendedNote: 'adults 19 and over',
+    scope: 'total', scopeNote: 'The fact sheet gives the limit as one figure for healthy adults, with no split between food and supplements, so this counts both. It is based on animal studies of reproduction and fetal development, as there are no human studies.', sourceDate: READ2, source: `${ODS}Molybdenum-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'niacin', label: 'Niacin', unit: 'mg', upper: 35, recommended: { min: 14, max: 16 }, recommendedNote: 'mg NE (niacin equivalents) for adults 19 and over',
     scope: 'form', scopeNote: 'The limit is for niacin from supplements; it does not apply to niacin taken under medical supervision.', sourceDate: READ, source: `${ODS}Niacin-HealthProfessional/ (Tables 1 and 3)` },
   { key: 'phosphorus', label: 'Phosphorus', unit: 'mg', upper: 3000, recommended: { min: 700, max: 700 }, recommendedNote: 'adults 19 and over',

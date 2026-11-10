@@ -47,12 +47,19 @@ describe('POST /api/scan/label', () => {
     const sent = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { system: string; max_tokens: number };
     for (const k of NUTRIENT_KEYS) expect(sent.system).toContain(`${k} (${MICRO_UNIT[k]})`);
     expect(sent.system).toContain('never the percent of Daily Value');
-    expect(sent.max_tokens).toBe(700);
+    expect(sent.max_tokens).toBe(850);
   });
 
   it('answers with the checked amounts and drops what the model made up', async () => {
-    const post = await start({ key: 'k', fetch: (async () => model('{"kcal":120,"p":3,"micro":{"iron":4.5,"vitaminD":2,"choline":300,"zinc":99999}}')) as unknown as typeof fetch });
+    const post = await start({ key: 'k', fetch: (async () => model('{"kcal":120,"p":3,"micro":{"iron":4.5,"vitaminD":2,"lutein":300,"zinc":99999}}')) as unknown as typeof fetch });
     expect(((await (await post({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'ok', label: { kcal: 120, p: 3, micro: { iron: 4.5, vitaminD: 2 } } });
+  });
+
+  it('reads the eight added nutrients under fixed keys and checks each against its cap', async () => {
+    const post = await start({ key: 'k', fetch: (async () => model('{"kcal":120,"p":3,"micro":{"thiamin":1.2,"biotin":30,"choline":550,"manganese":2.3,"chromium":99999}}')) as unknown as typeof fetch });
+    expect(((await (await post({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'ok', label: { kcal: 120, p: 3, micro: { choline: 550, manganese: 2.3, biotin: 30, thiamin: 1.2 } } });
+    const big = await start({ key: 'k', fetch: (async () => model('{"kcal":0,"p":0,"micro":{"biotin":5000,"thiamin":100}}')) as unknown as typeof fetch });
+    expect(((await (await big({ image: jpeg })).json()) as { result: unknown }).result).toMatchObject({ label: { micro: { biotin: 5000, thiamin: 100 } } }); // a real supplement dose is kept
   });
 
   it('uses the model it is given', async () => {

@@ -2,7 +2,7 @@ import { NUTRIENT_KEYS, type NutrientKey, type NutrientUnit } from './nutrientKe
 
 /* ---------- One supplement's label, as the app reads it (brief supplement-label-amounts, ADR 029 amendment) ----------
    The contract between `/api/supplement-label/<catalog id>` and the app, plus the pure mapper from a label of the NIH Dietary Supplement Label Database (DSLD,
-   `/dsld/v9/label/<id>`) to it. One serving: the serving in words (and, for capsules, tablets and gummies, how many), the vitamins and minerals the app tracks in its own keys and
+   `/dsld/v9/label/<id>`) to it. One serving: the serving in words (and, for capsules, tablets and gummies, how many), the vitamins and minerals the app tracks (28) in its own keys and
    units, and everything else on the label, read-only. Nothing here guesses: an amount the label does not state is listed as "amount not stated", a unit with no standard conversion is
    kept as the label gives it (vitamin A and E in IU; the Totals sheet says it does not add them), and a nutrient the app does not track is listed, not counted. */
 
@@ -36,6 +36,10 @@ const GROUPS: Record<string, NutrientKey> = {
   calcium: 'calcium', copper: 'copper', folate: 'folate', iodine: 'iodine', iron: 'iron', magnesium: 'magnesium', niacin: 'niacin', phosphorus: 'phosphorus', selenium: 'selenium',
   'vitamin a': 'vitaminA', 'vitamin b6': 'vitaminB6', 'vitamin c': 'vitaminC', 'vitamin d': 'vitaminD', 'vitamin e': 'vitaminE', zinc: 'zinc',
   potassium: 'potassium', 'vitamin b12': 'vitaminB12', 'vitamin k': 'vitaminK', fiber: 'fiber', 'dietary fiber': 'fiber', sodium: 'sodium',
+  // brief supplement-more-nutrients. Group names read from live labels 2026-11-10: "Thiamin", "Vitamin B1 (Thiamine)", "Riboflavin", "Vitamin B2 (riboflavin 5-phosphate)", "Vitamin B7 (biotin)",
+  // "Pantothenic Acid (Vitamin B5)", "Vitamin B5 (Pantothenic Acid)". "Vitamin B5 (pantethine)" is a different form, so bare "vitamin b5" is left out and only the pantothenic acid spelling is mapped.
+  thiamin: 'thiamin', 'vitamin b1': 'thiamin', riboflavin: 'riboflavin', 'vitamin b2': 'riboflavin', biotin: 'biotin', 'vitamin b7': 'biotin',
+  'pantothenic acid': 'pantothenicAcid', 'vitamin b5 (pantothenic acid)': 'pantothenicAcid', choline: 'choline', chromium: 'chromium', molybdenum: 'molybdenum', manganese: 'manganese',
 };
 const keyOfGroup = (group: string): NutrientKey | undefined => {
   const g = group.trim().toLowerCase();
@@ -43,6 +47,13 @@ const keyOfGroup = (group: string): NutrientKey | undefined => {
   if (direct) return direct;
   const paren = g.replace(/\s*\(.*\)$/, ''); // "Vitamin B6 (Pyridoxine)"
   return paren !== g ? GROUPS[paren] : undefined;
+};
+
+/** Keys whose DSLD row can carry the weight of a salt, chelate or phosphate ("Choline Bitartrate", "Chromium Picolinate", "Riboflavin-5-Phosphate") rather than the nutrient: such a row is listed, not counted, unless its name is the nutrient itself. */
+const COMPOUND_KEYS: readonly NutrientKey[] = ['choline', 'chromium', 'manganese', 'molybdenum', 'riboflavin'];
+const plainName = (name: string, group: string): boolean => {
+  const n = name.trim().toLowerCase(), g = group.trim().toLowerCase();
+  return !g || n === g.replace(/\s*\(.*\)$/, '') || n === (g.match(/\(([^)]*)\)$/)?.[1] ?? '').trim() || n === g;
 };
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -92,13 +103,13 @@ export function mapDsldLabel(raw: unknown): SupplementLabel | null {
     const group = text(r.ingredientGroup, 120) ?? '';
     const category = typeof r.category === 'string' ? r.category.toLowerCase() : '';
     const a = amountOf(r);
-    const key = category === 'blend' ? undefined : keyOfGroup(group || name || '');
+    const key = category === 'blend' ? undefined : keyOfGroup(group || name || '') ?? (name && name !== group ? keyOfGroup(name) : undefined); // a bare group such as "Vitamin B5" falls back to the row's name
     const unit = a ? unitOf(a.rawUnit) : undefined;
     // Folate: the label may state the DFE total with the folic acid inside it. The folic acid amount is what the upper limit counts, so it wins; DFE only when nothing else is given.
     const nested = Array.isArray(r.nestedRows) ? r.nestedRows.filter(isObj) : [];
     const folic = key === 'folate' ? nested.map(n => ({ n, a: amountOf(n) })).find(x => x.a && keyOfGroup(text(x.n.ingredientGroup, 80) ?? '') === 'folate' && unitOf(x.a.rawUnit) === 'mcg') : undefined;
     const use: { amount: number; unit: NutrientUnit | undefined } | undefined = folic?.a ? { amount: folic.a.amount, unit: 'mcg' } : a ? { amount: a.amount, unit } : undefined;
-    const fits = key && use?.unit && (use.unit !== 'IU' || IU_KEYS.includes(key)) && !rows.some(x => x.key === key);
+    const fits = key && use?.unit && (!COMPOUND_KEYS.includes(key) || plainName(name ?? '', group)) && (use.unit !== 'IU' || IU_KEYS.includes(key)) && !rows.some(x => x.key === key);
     if (fits && key && use?.unit) rows.push({ key, amount: round3(use.amount), unit: use.unit });
     else addOther(name, a);
     if (category === 'blend') for (const n of nested) { const na = amountOf(n); if (na) addOther(text(n.name, 120), na); }
