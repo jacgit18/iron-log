@@ -35,6 +35,15 @@ describe('nutrient targets table', () => {
     expect(r('fiber').recommended).toEqual({ min: 21, max: 38 });
     expect(r('sodium')).toMatchObject({ recommended: { min: 1500, max: 1500 }, stayUnder: 2300 });
   });
+  it('holds the five figures read from the ODS fact sheets on 2026-11-10, none with a limit', () => {
+    const r = (k: string) => targetOf(k)!;
+    expect(r('thiamin')).toMatchObject({ unit: 'mg', recommended: { min: 1.1, max: 1.2 }, basis: 'RDA', cap: 24 });
+    expect(r('riboflavin')).toMatchObject({ unit: 'mg', recommended: { min: 1.1, max: 1.3 }, basis: 'RDA', cap: 26 });
+    expect(r('biotin')).toMatchObject({ unit: 'mcg', recommended: { min: 30, max: 30 }, basis: 'AI', cap: 600 });
+    expect(r('pantothenicAcid')).toMatchObject({ unit: 'mg', recommended: { min: 5, max: 5 }, basis: 'AI', cap: 100 });
+    expect(r('chromium')).toMatchObject({ unit: 'mcg', recommended: { min: 20, max: 35 }, basis: 'AI', cap: 700 });
+    for (const k of ['thiamin', 'riboflavin', 'biotin', 'pantothenicAcid', 'chromium']) expect(limitOf(k as never), k).toBeUndefined();
+  });
 });
 
 describe('the shared lookup', () => {

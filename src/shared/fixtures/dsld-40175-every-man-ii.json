@@ -1,0 +1,563 @@
+{
+ "fullName": "40+ Every Man II Multivitamin",
+ "brandName": "New Chapter",
+ "entryDate": "2015-01-23",
+ "upcSku": "",
+ "servingSizes": [
+  {
+   "unit": "Tablet(s)",
+   "minQuantity": 3
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Vitamin A",
+   "ingredientGroup": "Vitamin A",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 5000,
+     "unit": "IU"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin C",
+   "ingredientGroup": "Vitamin C",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 60,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin D3",
+   "ingredientGroup": "Vitamin D",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 1000,
+     "unit": "IU"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin E",
+   "ingredientGroup": "Vitamin E",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 30,
+     "unit": "IU"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin K",
+   "ingredientGroup": "Vitamin K (unspecified)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 80,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Thiamin",
+   "ingredientGroup": "Vitamin B1 (Thiamine)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 8,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Riboflavin",
+   "ingredientGroup": "Vitamin B2 (Riboflavin)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 5,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Niacin",
+   "ingredientGroup": "Niacin",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 20,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin B6",
+   "ingredientGroup": "Vitamin B6 (unspecified)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 10,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Folate",
+   "ingredientGroup": "Folate",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 200,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin B12",
+   "ingredientGroup": "Vitamin B12",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Biotin",
+   "ingredientGroup": "Vitamin B7 (biotin)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 300,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Pantothenic Acid",
+   "ingredientGroup": "Pantothenic Acid (Vitamin B5)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 25,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Calcium",
+   "ingredientGroup": "Calcium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 30,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Iodine",
+   "ingredientGroup": "Iodine",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 90,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Magnesium",
+   "ingredientGroup": "Magnesium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 10,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Zinc",
+   "ingredientGroup": "Zinc",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 15,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Selenium",
+   "ingredientGroup": "Selenium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 100,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Copper",
+   "ingredientGroup": "Copper",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 1.5,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Manganese",
+   "ingredientGroup": "Manganese",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 2,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Chromium",
+   "ingredientGroup": "Chromium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 100,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Molybdenum",
+   "ingredientGroup": "Molybdenum",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Prostate Support Blend",
+   "ingredientGroup": "Blend",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 180,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Saw Palmetto extract",
+     "ingredientGroup": "Saw Palmetto",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Pumpkin seed Oil",
+     "ingredientGroup": "Pumpkinseed Oil",
+     "category": "fat",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Nettle extract",
+     "ingredientGroup": "Stinging Nettle",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Stress/Energy Support Blend",
+   "ingredientGroup": "Blend (Herb/Botanical)",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 100,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "organic Schizandra",
+     "ingredientGroup": "Schisandra",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Maca",
+     "ingredientGroup": "Maca",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Chamomile",
+     "ingredientGroup": "Chamomile (unspecified)",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Cardio Support Blend",
+   "ingredientGroup": "Blend",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 100,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "organic Fenugreek",
+     "ingredientGroup": "Fenugreek",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Oregano",
+     "ingredientGroup": "oregano",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Grapeseed extract",
+     "ingredientGroup": "Grape ",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Hawthorn",
+     "ingredientGroup": "Hawthorn",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Digestive Support Blend",
+   "ingredientGroup": "Blend",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 80,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "organic Aloe",
+     "ingredientGroup": "Aloe",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Peppermint",
+     "ingredientGroup": "Peppermint",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Coriander",
+     "ingredientGroup": "Coriander",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Cardamom",
+     "ingredientGroup": "Cardamom",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Artichoke",
+     "ingredientGroup": "Artichoke",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Immune Support Blend",
+   "ingredientGroup": "Blend (Herb/Botanical)",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 60,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "European Elder (berry) extract",
+     "ingredientGroup": "European Elder",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Eleuthero",
+     "ingredientGroup": "Eleuthero",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Astragalus",
+     "ingredientGroup": "Astragalus",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Ginger (rhizome) hydroethanolic extract",
+   "ingredientGroup": "Ginger ",
+   "category": "botanical",
+   "quantity": [
+    {
+     "quantity": 9.6,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "organic Turmeric (rhizome) powder",
+   "ingredientGroup": "Turmeric",
+   "category": "botanical",
+   "quantity": [
+    {
+     "quantity": 9.6,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "organic Ginger (rhizome) supercritical extract",
+   "ingredientGroup": "Ginger ",
+   "category": "botanical",
+   "quantity": [
+    {
+     "quantity": 2.4,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "organic Turmeric (rhizome) supercritical extract",
+   "ingredientGroup": "Turmeric",
+   "category": "botanical",
+   "quantity": [
+    {
+     "quantity": 2.4,
+     "unit": "mg"
+    }
+   ]
+  }
+ ]
+}

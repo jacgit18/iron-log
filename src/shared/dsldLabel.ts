@@ -2,7 +2,7 @@ import { NUTRIENT_KEYS, type NutrientKey, type NutrientUnit } from './nutrientKe
 
 /* ---------- One supplement's label, as the app reads it (brief supplement-label-amounts, ADR 029 amendment) ----------
    The contract between `/api/supplement-label/<catalog id>` and the app, plus the pure mapper from a label of the NIH Dietary Supplement Label Database (DSLD,
-   `/dsld/v9/label/<id>`) to it. One serving: the serving in words (and, for capsules, tablets and gummies, how many), the vitamins and minerals the app tracks in its own keys and
+   `/dsld/v9/label/<id>`) to it. One serving: the serving in words (and, for capsules, tablets and gummies, how many), the vitamins and minerals the app tracks (28) in its own keys and
    units, and everything else on the label, read-only. Nothing here guesses: an amount the label does not state is listed as "amount not stated", a unit with no standard conversion is
    kept as the label gives it (vitamin A and E in IU; the Totals sheet says it does not add them), and a nutrient the app does not track is listed, not counted. */
 
@@ -36,6 +36,10 @@ const GROUPS: Record<string, NutrientKey> = {
   calcium: 'calcium', copper: 'copper', folate: 'folate', iodine: 'iodine', iron: 'iron', magnesium: 'magnesium', niacin: 'niacin', phosphorus: 'phosphorus', selenium: 'selenium',
   'vitamin a': 'vitaminA', 'vitamin b6': 'vitaminB6', 'vitamin c': 'vitaminC', 'vitamin d': 'vitaminD', 'vitamin e': 'vitaminE', zinc: 'zinc',
   potassium: 'potassium', 'vitamin b12': 'vitaminB12', 'vitamin k': 'vitaminK', fiber: 'fiber', 'dietary fiber': 'fiber', sodium: 'sodium',
+  // brief supplement-more-nutrients. Group names read from live labels 2026-11-10: "Thiamin", "Vitamin B1 (Thiamine)", "Riboflavin", "Vitamin B2 (riboflavin 5-phosphate)", "Vitamin B7 (biotin)",
+  // "Pantothenic Acid (Vitamin B5)", "Vitamin B5 (Pantothenic Acid)". "Vitamin B5 (pantethine)" is a different form, so bare "vitamin b5" is left out and only the pantothenic acid spelling is mapped.
+  thiamin: 'thiamin', 'vitamin b1': 'thiamin', riboflavin: 'riboflavin', 'vitamin b2': 'riboflavin', biotin: 'biotin', 'vitamin b7': 'biotin',
+  'pantothenic acid': 'pantothenicAcid', 'vitamin b5 (pantothenic acid)': 'pantothenicAcid', choline: 'choline', chromium: 'chromium', molybdenum: 'molybdenum', manganese: 'manganese',
 };
 const keyOfGroup = (group: string): NutrientKey | undefined => {
   const g = group.trim().toLowerCase();

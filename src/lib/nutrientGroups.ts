@@ -4,7 +4,7 @@ import type { Profile } from '../shared/profile.js';
 
 /* ---------- Recommended amounts and upper limits by age and sex, one row per nutrient (brief recommendations-by-age-sex) ----------
    Health information: every figure is copied from the NIH Office of Dietary Supplements (ODS) health professional fact sheet named in `source` (the National Academies' Dietary
-   Reference Intake tables), read 2026-11-09, never typed from memory. A band is one run of adult ages where nothing changes for a nutrient: the bands of the Recommended table and
+   Reference Intake tables), read 2026-11-09 (choline, manganese, molybdenum, biotin, chromium, pantothenic acid, riboflavin and thiamin: 2026-11-10), never typed from memory. A band is one run of adult ages where nothing changes for a nutrient: the bands of the Recommended table and
    of the Tolerable Upper Intake Level (UL) table, merged. `female` and `male` are the RDA, or the Adequate Intake (AI) for potassium, vitamin K and fiber; `ul` is the same for both
    sexes in every adult row read, and is left out where there is none (potassium, vitamin B12, vitamin K, fiber, sodium). Ages 19 and over only, not pregnant or lactating (those
    groups are out of scope). `nutrientGroups.test.ts` fails on a missing source, a gap or overlap between bands, or a figure that disagrees with the adult range in
@@ -39,6 +39,7 @@ export const NUTRIENT_GROUPS: NutrientGroups[] = [
     { from: 51, to: 70, female: 1200, male: 1000, ul: 2000 },
     { from: 71, female: 1200, male: 1200, ul: 2000 },
   ] },
+  { key: 'choline', basis: 'AI', source: ods('Choline', 'Tables 1 and 3'), bands: [{ from: 19, female: 425, male: 550, ul: 3500 }] },
   { key: 'copper', basis: 'RDA', source: ods('Copper', 'Tables 1 and 3'), bands: [{ from: 19, female: 900, male: 900, ul: 10000 }] },
   { key: 'folate', basis: 'RDA', source: ods('Folate', 'Tables 1 and 3'), bands: [{ from: 19, female: 400, male: 400, ul: 1000 }] },
   { key: 'iodine', basis: 'RDA', source: ods('Iodine', 'Tables 1 and 3'), bands: [{ from: 19, female: 150, male: 150, ul: 1100 }] },
@@ -50,6 +51,8 @@ export const NUTRIENT_GROUPS: NutrientGroups[] = [
     { from: 19, to: 30, female: 310, male: 400, ul: 350 },
     { from: 31, female: 320, male: 420, ul: 350 },
   ] },
+  { key: 'manganese', basis: 'AI', source: ods('Manganese', 'Tables 1 and 3'), bands: [{ from: 19, female: 1.8, male: 2.3, ul: 11 }] },
+  { key: 'molybdenum', basis: 'RDA', source: ods('Molybdenum', 'Tables 1 and 3'), bands: [{ from: 19, female: 45, male: 45, ul: 2000 }] },
   { key: 'niacin', basis: 'RDA', source: ods('Niacin', 'Tables 1 and 3'), bands: [{ from: 19, female: 14, male: 16, ul: 35 }] },
   { key: 'phosphorus', basis: 'RDA', source: ods('Phosphorus', 'Tables 1 and 3'), bands: [
     { from: 19, to: 70, female: 700, male: 700, ul: 4000 },
@@ -76,6 +79,14 @@ export const NUTRIENT_GROUPS: NutrientGroups[] = [
     { from: 51, female: 21, male: 30 },
   ] },
   { key: 'sodium', basis: 'AI', source: NASEM_SODIUM, bands: [{ from: 19, female: 1500, male: 1500 }] },
+  { key: 'biotin', basis: 'AI', source: ods('Biotin', 'Table 1'), bands: [{ from: 19, female: 30, male: 30 }] },
+  { key: 'chromium', basis: 'AI', source: ods('Chromium', 'Table 1'), bands: [
+    { from: 19, to: 50, female: 25, male: 35 },
+    { from: 51, female: 20, male: 30 },
+  ] },
+  { key: 'pantothenicAcid', basis: 'AI', source: ods('PantothenicAcid', 'Table 1'), bands: [{ from: 19, female: 5, male: 5 }] },
+  { key: 'riboflavin', basis: 'RDA', source: ods('Riboflavin', 'Table 1'), bands: [{ from: 19, female: 1.1, male: 1.3 }] },
+  { key: 'thiamin', basis: 'RDA', source: ods('Thiamin', 'Table 1'), bands: [{ from: 19, female: 1.1, male: 1.2 }] },
 ];
 
 const BY_KEY = new Map(NUTRIENT_GROUPS.map(r => [r.key, r]));

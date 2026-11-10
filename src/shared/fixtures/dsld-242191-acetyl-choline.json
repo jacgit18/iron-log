@@ -1,0 +1,69 @@
+{
+ "fullName": "Acetyl-Choline Brain Food",
+ "brandName": "NS Natural Stacks",
+ "entryDate": "2021-01-22",
+ "upcSku": "6 73869 56398 8",
+ "servingSizes": [
+  {
+   "unit": "Capsule(s)",
+   "minQuantity": 3
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Thiamine",
+   "ingredientGroup": "Thiamin",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 64,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "White Peony root extract",
+   "ingredientGroup": "White Peony",
+   "category": "botanical",
+   "quantity": [
+    {
+     "quantity": 383,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Acetyl-L-Carnitine HCl",
+   "ingredientGroup": "Acetyl L-Carnitine",
+   "category": "non-nutrient/non-botanical",
+   "quantity": [
+    {
+     "quantity": 319,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Pantethine",
+   "ingredientGroup": "Vitamin B5 (pantethine)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 287,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Alpha-Glycerophosphocholine",
+   "ingredientGroup": "Alpha-GPC",
+   "category": "non-nutrient/non-botanical",
+   "quantity": [
+    {
+     "quantity": 192,
+     "unit": "mg"
+    }
+   ]
+  }
+ ]
+}

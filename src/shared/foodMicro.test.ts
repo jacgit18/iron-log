@@ -24,7 +24,7 @@ describe('cleanMicro', () => {
     expect(Object.keys(cleanMicro({ zinc: 1, calcium: 1 })!)).toEqual(['calcium', 'zinc']);
   });
   it('drops unknown keys, zero, negative, text, not-a-number and an over-the-cap amount', () => {
-    expect(cleanMicro({ choline: 5, iron: 0, zinc: -1, calcium: '5', copper: NaN, magnesium: 3501 })).toBeNull();
+    expect(cleanMicro({ lutein: 5, iron: 0, zinc: -1, calcium: '5', copper: NaN, magnesium: 3501 })).toBeNull();
     expect(cleanMicro({ iron: 450, magnesium: 3500 })).toEqual({ iron: 450, magnesium: 3500 });
   });
   it('is null for anything that is not an object, or when nothing is left', () => {
@@ -74,5 +74,27 @@ describe('offMicro', () => {
     expect(offMicro({ calcium_100g: 0, iron_100g: '', zinc_100g: -1, magnesium_100g: 99 })).toBeUndefined(); // 99 g magnesium is far over the cap
     expect(offMicro(null)).toBeUndefined();
     expect(offMicro({ proteins_100g: 3 })).toBeUndefined();
+  });
+});
+
+// Brief supplement-more-nutrients: thiamin, riboflavin, biotin, pantothenic acid, choline, chromium, molybdenum, manganese.
+describe('the eight added nutrients in the vendor maps', () => {
+  const a = (o: Record<string, number>) => new Map(Object.entries(o));
+  it('USDA numbers 404, 405, 416, 410, 421, 1096, 1102, 315 carry in the table unit', () => {
+    expect(usdaMicro(a({ '404': 0.2, '405': 3.4, '416': 30.8, '410': 7.1, '421': 426, '1096': 2, '1102': 104, '315': 0.36 }))).toEqual({
+      choline: 426, manganese: 0.36, molybdenum: 104, biotin: 30.8, chromium: 2, pantothenicAcid: 7.1, riboflavin: 3.4, thiamin: 0.2,
+    });
+  });
+  it('Open Food Facts vitamin-b1, vitamin-b2, biotin, pantothenic-acid, choline, chromium, molybdenum, manganese (grams per 100 g) convert to mg or mcg', () => {
+    expect(offMicro({ 'vitamin-b1_100g': 0.0012, 'vitamin-b2_100g': '0.0013', biotin_100g: 0.00003, 'pantothenic-acid_100g': 0.005, choline_100g: 0.4, chromium_100g: 0.000035, molybdenum_100g: 0.000045, manganese_100g: 0.0023 }))
+      .toEqual({ choline: 400, manganese: 2.3, molybdenum: 45, biotin: 30, chromium: 35, pantothenicAcid: 5, riboflavin: 1.3, thiamin: 1.2 });
+  });
+  it('drops a value over each nutrient cap and scales the rest to the grams eaten', () => {
+    expect(cleanMicro({ choline: 35001, manganese: 111, molybdenum: 20001, biotin: 601, chromium: 701, pantothenicAcid: 101, riboflavin: 27, thiamin: 25 })).toBeNull();
+    expect(cleanMicro({ choline: 35000, manganese: 110, molybdenum: 20000, biotin: 600, chromium: 700, pantothenicAcid: 100, riboflavin: 26, thiamin: 24 })).toMatchObject({ choline: 35000, thiamin: 24 });
+    expect(scaleMicro({ thiamin: 0.4, chromium: 3, choline: 100 }, 1.5)).toEqual({ choline: 150, chromium: 4.5, thiamin: 0.6 });
+  });
+  it('a food that lists none of the eight is unchanged', () => {
+    expect(usdaMicro(a({ '301': 120 }))).toEqual({ calcium: 120 });
   });
 });

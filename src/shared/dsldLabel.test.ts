@@ -8,6 +8,11 @@ const ddrops = mapDsldLabel(fixture('dsld-320047-ddrops-d3.json'))!;
 const gummies = mapDsldLabel(fixture('dsld-276834-gummies-d3.json'))!;
 const megaIU = mapDsldLabel(fixture('dsld-66727-mega-men-iu.json'))!;
 const megaMcg = mapDsldLabel(fixture('dsld-219004-mega-men-mcg.json'))!;
+// Brief supplement-more-nutrients: trimmed copies of live labels (read 2026-11-10 from /dsld/v9/label/<id>).
+const momBaby = mapDsldLabel(fixture('dsld-288124-mom-baby-multi.json'))!;
+const everyMan = mapDsldLabel(fixture('dsld-40175-every-man-ii.json'))!;
+const vegan = mapDsldLabel(fixture('dsld-57549-vegan-multi.json'))!;
+const acetylCholine = mapDsldLabel(fixture('dsld-242191-acetyl-choline.json'))!;
 const row = (l: { rows: { key: string; amount: number; unit: string }[] }, key: string) => l.rows.find(r => r.key === key);
 
 describe('mapDsldLabel on real DSLD labels', () => {
@@ -37,11 +42,49 @@ describe('mapDsldLabel on real DSLD labels', () => {
     expect(row(megaMcg, 'vitaminD')).toEqual({ key: 'vitaminD', amount: 40, unit: 'mcg' });
     expect(row(megaMcg, 'vitaminE')).toEqual({ key: 'vitaminE', amount: 20.1, unit: 'mg' });
   });
-  it('lists the nutrients the app does not track, never counts them', () => {
+  it('counts the eight added nutrients (thiamin, riboflavin, biotin, pantothenic acid, choline, chromium, molybdenum, manganese) and no longer lists them as other', () => {
+    const keys = megaMcg.rows.map(r => r.key);
+    for (const k of ['thiamin', 'riboflavin', 'biotin', 'pantothenicAcid', 'choline', 'manganese', 'chromium', 'molybdenum']) expect(keys, k).toContain(k);
     const names = megaMcg.other.map(o => o.name);
-    for (const n of ['Thiamine', 'Riboflavin', 'Biotin', 'Pantothenic Acid', 'Choline', 'Manganese', 'Chromium', 'Molybdenum']) expect(names).toContain(n);
-    expect(megaMcg.rows.map(r => r.key)).not.toContain('thiamine');
-    expect(megaMcg.rows.length).toBeLessThanOrEqual(20);
+    for (const n of ['Thiamine', 'Riboflavin', 'Biotin', 'Pantothenic Acid', 'Choline', 'Manganese', 'Chromium', 'Molybdenum']) expect(names, n).not.toContain(n);
+    expect(megaMcg.rows.length).toBeLessThanOrEqual(28);
+  });
+  it('Every Man II: group names "Vitamin B1 (Thiamine)", "Vitamin B2 (Riboflavin)", "Vitamin B7 (biotin)", "Pantothenic Acid (Vitamin B5)", chromium, manganese, molybdenum', () => {
+    expect(row(everyMan, 'thiamin')).toEqual({ key: 'thiamin', amount: 8, unit: 'mg' });
+    expect(row(everyMan, 'riboflavin')).toEqual({ key: 'riboflavin', amount: 5, unit: 'mg' });
+    expect(row(everyMan, 'biotin')).toEqual({ key: 'biotin', amount: 300, unit: 'mcg' });
+    expect(row(everyMan, 'pantothenicAcid')).toEqual({ key: 'pantothenicAcid', amount: 25, unit: 'mg' });
+    expect(row(everyMan, 'chromium')).toEqual({ key: 'chromium', amount: 100, unit: 'mcg' });
+    expect(row(everyMan, 'manganese')).toEqual({ key: 'manganese', amount: 2, unit: 'mg' });
+    expect(row(everyMan, 'molybdenum')).toEqual({ key: 'molybdenum', amount: 50, unit: 'mcg' });
+  });
+  it('Vegan multivitamin: choline (group "Choline") is counted, with thiamin, riboflavin and "Vitamin B5 (Pantothenic Acid)" style groups', () => {
+    expect(row(vegan, 'choline')).toEqual({ key: 'choline', amount: 10, unit: 'mg' });
+    expect(row(vegan, 'thiamin')).toEqual({ key: 'thiamin', amount: 2.25, unit: 'mg' });
+    expect(row(vegan, 'riboflavin')).toEqual({ key: 'riboflavin', amount: 2.55, unit: 'mg' });
+    expect(row(vegan, 'biotin')).toEqual({ key: 'biotin', amount: 375, unit: 'mcg' });
+    expect(row(vegan, 'pantothenicAcid')).toEqual({ key: 'pantothenicAcid', amount: 15, unit: 'mg' });
+    expect(row(vegan, 'chromium')).toEqual({ key: 'chromium', amount: 150, unit: 'mcg' });
+  });
+  it('Mom and Baby multivitamin: "Vitamin B1 (Thiamine)", "Vitamin B5 (Pantothenic Acid)", "Vitamin B7 (biotin)", manganese and molybdenum', () => {
+    expect(row(momBaby, 'thiamin')?.amount).toBe(20);
+    expect(row(momBaby, 'pantothenicAcid')?.amount).toBe(20);
+    expect(row(momBaby, 'biotin')?.amount).toBe(300);
+    expect(row(momBaby, 'manganese')).toEqual({ key: 'manganese', amount: 3, unit: 'mg' });
+    expect(row(momBaby, 'molybdenum')).toEqual({ key: 'molybdenum', amount: 75, unit: 'mcg' });
+  });
+  it('a pantethine row ("Vitamin B5 (pantethine)") and Alpha-GPC are not pantothenic acid or choline: they stay listed', () => {
+    expect(row(acetylCholine, 'pantothenicAcid')).toBeUndefined();
+    expect(row(acetylCholine, 'choline')).toBeUndefined();
+    expect(row(acetylCholine, 'thiamin')).toEqual({ key: 'thiamin', amount: 64, unit: 'mg' });
+    const names = acetylCholine.other.map(o => o.name);
+    expect(names).toContain('Pantethine');
+    expect(names).toContain('Alpha-Glycerophosphocholine');
+  });
+  it('a limit nutrient row with no stated amount is still "amount not stated"', () => {
+    const l = mapDsldLabel({ ingredientRows: [{ name: 'Choline', ingredientGroup: 'Choline', category: 'vitamin', quantity: [{ quantity: 0, unit: 'NP' }] }] })!;
+    expect(l.rows).toEqual([]);
+    expect(l.other).toEqual([{ name: 'Choline' }]);
   });
   it('a blend with no stated amount is "amount not stated"; one with a total keeps it, and its stated parts are listed', () => {
     const blend = megaIU.other.find(o => o.name === 'Super Antioxidant Blend');
@@ -84,7 +127,7 @@ describe('the mapped rows through the Totals sheet (Done when 2)', () => {
 
 describe('cleanSupplementLabel (the app reads the server answer as untrusted)', () => {
   it('round-trips what the mapper makes', () => {
-    for (const l of [ddrops, gummies, megaIU, megaMcg]) expect(cleanSupplementLabel(JSON.parse(JSON.stringify(l)))).toEqual(l);
+    for (const l of [ddrops, gummies, megaIU, megaMcg, momBaby, everyMan, vegan, acetylCholine]) expect(cleanSupplementLabel(JSON.parse(JSON.stringify(l)))).toEqual(l);
   });
   it('drops unknown keys and units, bad amounts and repeated keys; rejects a non-label', () => {
     const c = cleanSupplementLabel({ name: 'x', serving: null, other: [{ name: '' }, { name: 'ok' }], rows: [{ key: 'iron', amount: 18, unit: 'mg' }, { key: 'iron', amount: 1, unit: 'mg' }, { key: 'bogus', amount: 1, unit: 'mg' }, { key: 'zinc', amount: -1, unit: 'mg' }, { key: 'zinc', amount: 5, unit: 'lb' }] })!;

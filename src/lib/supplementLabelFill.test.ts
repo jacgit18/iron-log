@@ -7,6 +7,7 @@ const fixture = (n: string) => mapDsldLabel(JSON.parse(readFileSync(new URL(`../
 const gummies = fixture('dsld-276834-gummies-d3.json');
 const ddrops = fixture('dsld-320047-ddrops-d3.json');
 const mega = fixture('dsld-219004-mega-men-mcg.json');
+const everyMan = fixture('dsld-40175-every-man-ii.json');
 
 describe('planFill: adding a catalog supplement (nothing there yet)', () => {
   it('every tracked label row is new, and the countable serving is saved with its form', () => {
@@ -20,6 +21,24 @@ describe('planFill: adding a catalog supplement (nothing there yet)', () => {
     expect(p.result).toEqual({ nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }] });
     expect(p.serving).toBeUndefined();
     expect(servingWords(ddrops)).toContain('1 drop');
+  });
+});
+
+describe('planFill: the eight added nutrients (brief supplement-more-nutrients)', () => {
+  it('a label import fills them as new rows, in table order, with the label units', () => {
+    const p = planFill({}, everyMan);
+    const keys = p.lines.map(l => l.key);
+    for (const k of ['manganese', 'molybdenum', 'biotin', 'chromium', 'pantothenicAcid', 'riboflavin', 'thiamin']) expect(keys, k).toContain(k);
+    expect(p.lines.find(l => l.key === 'chromium')).toMatchObject({ change: 'new', fromLabel: { amount: 100, unit: 'mcg' }, label: 'Chromium' });
+    expect(p.lines.find(l => l.key === 'thiamin')?.label).toBe('Thiamin (vitamin B1)');
+    expect(keys.indexOf('manganese')).toBeLessThan(keys.indexOf('zinc')); // limit keys first, then the targets
+    expect(keys.indexOf('zinc')).toBeLessThan(keys.indexOf('biotin'));
+    expect(p.changes).toBe(true);
+  });
+  it('Fill from label replaces a typed thiamin amount and keeps a nutrient the label omits', () => {
+    const p = planFill({ nutrients: [{ key: 'thiamin', amount: 1, unit: 'mg' }, { key: 'choline', amount: 50, unit: 'mg' }] }, everyMan);
+    expect(p.lines.find(l => l.key === 'thiamin')?.change).toBe('replace');
+    expect(p.lines.find(l => l.key === 'choline')?.change).toBe('kept');
   });
 });
 

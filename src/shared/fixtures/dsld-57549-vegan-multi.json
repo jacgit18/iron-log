@@ -1,0 +1,537 @@
+{
+ "fullName": "100% Vegan Complete MultiVitamin",
+ "brandName": "Purely Inspired",
+ "entryDate": "2016-03-24",
+ "upcSku": "6 31656 60669 0",
+ "servingSizes": [
+  {
+   "unit": "Tablet(s)",
+   "minQuantity": 3
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Vitamin A",
+   "ingredientGroup": "Vitamin A",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 7500,
+     "unit": "IU"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin C",
+   "ingredientGroup": "Vitamin C",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 90,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin D",
+   "ingredientGroup": "Vitamin D",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 1000,
+     "unit": "IU"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin E",
+   "ingredientGroup": "Vitamin E",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 45,
+     "unit": "IU"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin K",
+   "ingredientGroup": "Vitamin K",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 80,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Thiamine",
+   "ingredientGroup": "Thiamin",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 2.25,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Riboflavin",
+   "ingredientGroup": "Riboflavin",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 2.55,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Niacin",
+   "ingredientGroup": "Niacin",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 30,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin B6",
+   "ingredientGroup": "Vitamin B6 (unspecified)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 13,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Folic Acid",
+   "ingredientGroup": "Folate",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 500,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Vitamin B12",
+   "ingredientGroup": "Vitamin B12",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 100,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Biotin",
+   "ingredientGroup": "Biotin",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 375,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Pantothenic Acid",
+   "ingredientGroup": "Pantothenic Acid (Vitamin B5)",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 15,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Calcium",
+   "ingredientGroup": "Calcium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 330,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Iron",
+   "ingredientGroup": "Iron",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 10,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Magnesium",
+   "ingredientGroup": "Magnesium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 40,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Zinc",
+   "ingredientGroup": "Zinc",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 7,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Selenium",
+   "ingredientGroup": "Selenium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 90,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Copper",
+   "ingredientGroup": "Copper",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 1,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Manganese",
+   "ingredientGroup": "Manganese",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 2,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Chromium",
+   "ingredientGroup": "Chromium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 150,
+     "unit": "mcg"
+    }
+   ]
+  },
+  {
+   "name": "Sodium",
+   "ingredientGroup": "Sodium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 5,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Potassium",
+   "ingredientGroup": "Potassium",
+   "category": "mineral",
+   "quantity": [
+    {
+     "quantity": 37,
+     "unit": "mg"
+    }
+   ]
+  },
+  {
+   "name": "Organic Fruit and Veggie Blend",
+   "ingredientGroup": "Blend (Herb/Botanical)",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 500,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Apple",
+     "ingredientGroup": "Apple",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Kale",
+     "ingredientGroup": "Kale",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "sprouting Broccoli",
+     "ingredientGroup": "Broccoli",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Spinach",
+     "ingredientGroup": "Spinach",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Carrot",
+     "ingredientGroup": "Carrot ",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Parsley",
+     "ingredientGroup": "Parsley",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Beet",
+     "ingredientGroup": "Beet",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Green Cabbage",
+     "ingredientGroup": "Cabbage",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Blueberry",
+     "ingredientGroup": "Blueberry",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Raspberry",
+     "ingredientGroup": "Red Raspberry",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Strawberry",
+     "ingredientGroup": "Strawberry",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Tomato",
+     "ingredientGroup": "Tomato",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Probiotic and Enzyme Blend",
+   "ingredientGroup": "Blend (Combination)",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 108,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Amylase",
+     "ingredientGroup": "Amylase",
+     "category": "enzyme",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "Papain",
+     "ingredientGroup": "Papain",
+     "category": "enzyme",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "LactoSpore Bacillus coagulans",
+     "ingredientGroup": "Bacillus Coagulans",
+     "category": "bacteria",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Organic SuperFruit Blend",
+   "ingredientGroup": "Blend (Herb/Botanical)",
+   "category": "blend",
+   "quantity": [
+    {
+     "quantity": 95,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "organic Goji berry extract",
+     "ingredientGroup": "Goji",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Green Tea leaf extract",
+     "ingredientGroup": "Green Tea",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Mangosteen",
+     "ingredientGroup": "Mangosteen",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Acerola fruit extract",
+     "ingredientGroup": "Acerola",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    },
+    {
+     "name": "organic Cranberry fruit extract",
+     "ingredientGroup": "cranberry",
+     "category": "botanical",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "NP"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Choline",
+   "ingredientGroup": "Choline",
+   "category": "vitamin",
+   "quantity": [
+    {
+     "quantity": 10,
+     "unit": "mg"
+    }
+   ]
+  }
+ ]
+}
