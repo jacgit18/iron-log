@@ -576,6 +576,8 @@ export function planRows(cfg: Cfg, logs: Logs, it: CardItem, ph: PhaseKey | null
    shows in Progress. Unchecking removes that entry, and logging real numbers for the slot that week
    replaces it. Returns only the exercises whose entries changed: {exId: entries}. */
 export const AUTO_NOTE = 'From check-off';
+/** The note on the entry a skip writes for the day it was skipped (an auto entry with no numbers, so stats and last-session lookups ignore it). */
+export const SKIPPED_NOTE = 'Skipped';
 const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
 // The day a board was worked: the earliest date among this week's log entries for the cards in it.
 export function dayDate(cards: Slot[], logs: Logs, wk: string): string | null {
@@ -597,15 +599,23 @@ export function autoLogs(cfg: Cfg, logs: Logs, slots: Slot[], before: WeekIn, af
     let unticked = false;
     s.items.forEach((it, i) => {
       const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
-      if (was === now) return;
-      const L = out[it.ex] || logs[it.ex] || [];
-      if (now) {
-        if (L.some(here)) return; // already logged for this card this week
-        out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
-      } else {
+      const wasSk = isSkipped(s, before) || isItemSkipped(s, i, before), nowSk = isSkipped(s, after) || isItemSkipped(s, i, after);
+      if (was === now && wasSk === nowSk) return;
+      let L = out[it.ex] || logs[it.ex] || [];
+      const isMark = (e: LogEntry) => e.auto && e.n === SKIPPED_NOTE && here(e);
+      if (wasSk && !nowSk && L.some(isMark)) { L = L.filter(e => !isMark(e)); out[it.ex] = L; } // skipped no more: its entry goes
+      if (was !== now) {
+        if (now) {
+          if (L.some(here)) return; // already logged for this card this week
+          out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
+          return;
+        }
         unticked = true;
         const keep = L.filter(e => !((removeLogged || e.auto) && here(e)));
-        if (keep.length !== L.length) out[it.ex] = keep;
+        if (keep.length !== L.length) { out[it.ex] = keep; L = keep; }
+      }
+      if (nowSk && !wasSk && !L.some(here)) { // skipped: say so in the log for that day, unless a session is already logged for the card
+        out[it.ex] = [...L, { id: newEntryId(), d: date, ph: phaseOf(cfg, after, s, i), slot: s.id, wk, auto: true as const, n: SKIPPED_NOTE, updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
       }
     });
     // A check-off logged under an exercise the card no longer has (it was changed in the Program tab) goes too.

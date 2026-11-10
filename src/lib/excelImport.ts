@@ -3,7 +3,7 @@
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
 import { EX, PHASES, PH_KEYS, builtinsAreListed } from './data.js';
-import { weekSlots, weekProgram, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
+import { weekSlots, weekProgram, normWeek, setItemDone, AUTO_NOTE, SKIPPED_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
@@ -82,7 +82,7 @@ function readSessions(X: XLSX, sessions: Rows, cfg: Cfg) {
     const e: LogEntry = { d: String(d), ph: phaseKey(phase), w: num(w), s: num(s) };
     if (num(hold) != null) e.sec = num(hold); else e.r = num(reps);
     const sets = parseSetDetail(detail); if (sets) e.sets = sets;
-    if (note === AUTO_NOTE) e.auto = true; else if (note) e.n = String(note);
+    if (note === AUTO_NOTE) e.auto = true; else if (note === SKIPPED_NOTE) { e.auto = true; e.n = SKIPPED_NOTE; } else if (note) e.n = String(note);
     if (slot) e.slot = String(slot);
     if (WEEK_RE.test(String(wk))) e.wk = String(wk);
     if (UNSAFE_KEY.has(id)) { skipped++; continue; }

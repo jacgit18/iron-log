@@ -287,6 +287,31 @@ describe('check-offs log the planned numbers', () => {
     const realThisWeek = { ...real, d: '2026-09-21', wk: '2026-09-20' };
     expect(run({ hack: [realThisWeek] }, { done: { 'A-d3s1': true } }, {})).toEqual({}); // what you logged stays
   });
+  it('logs a skipped exercise as Skipped on the day, with no numbers', () => {
+    const out = run({}, {}, { skipped: { 'A-d3s1': true } });
+    expect(out.hack).toEqual([{ id: expect.stringMatching(/^L/), d: '2026-09-22', ph: 'hyp', slot: 'A-d3s1', wk: '2026-09-20', auto: true, n: 'Skipped', updatedAt: expect.any(String) }]);
+  });
+  it('logs only the skipped half of a superset', () => {
+    expect(Object.keys(run({}, {}, { skipped: { 'A-d2s5#1': true } }))).toEqual(['chestpress']);
+  });
+  it('replaces the check-off entry with Skipped when a done card is skipped, and drops it on un-skip', () => {
+    const tick = { d: '2026-09-21', ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk: '2026-09-20', auto: true };
+    const skipped = run({ hack: [tick] }, { done: { 'A-d3s1': true } }, { skipped: { 'A-d3s1': true } });
+    expect(skipped.hack).toHaveLength(1);
+    expect(skipped.hack[0]).toMatchObject({ n: 'Skipped', auto: true, d: '2026-09-22' });
+    expect(run({ hack: skipped.hack }, { skipped: { 'A-d3s1': true } }, {})).toEqual({ hack: [] });
+  });
+  it('does not mark Skipped over a session logged for that card this week', () => {
+    const logs = { hack: [{ d: '2026-09-21', ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk: '2026-09-20' }] };
+    expect(run(logs, {}, { skipped: { 'A-d3s1': true } })).toEqual({});
+  });
+  it('ticking a skipped card swaps Skipped for the check-off entry', () => {
+    const mark = { d: '2026-09-21', ph: 'hyp', slot: 'A-d3s1', wk: '2026-09-20', auto: true, n: 'Skipped' };
+    const out = run({ hack: [mark] }, { skipped: { 'A-d3s1': true } }, { done: { 'A-d3s1': true } });
+    expect(out.hack).toHaveLength(1);
+    expect(out.hack[0]).toMatchObject({ w: 270, auto: true });
+    expect(out.hack[0].n).toBeUndefined();
+  });
   it('does not raise the suggested weight or flag a stall on check-offs alone', () => {
     const a = (d, wk) => ({ d, ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk, auto: true });
     const logs = { hack: [a('2026-09-01', '2026-08-30'), a('2026-09-08', '2026-09-06'), a('2026-09-15', '2026-09-13')] };

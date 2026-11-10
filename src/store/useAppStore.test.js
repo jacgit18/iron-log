@@ -121,7 +121,7 @@ describe('checking off on the board', () => {
     st().checkCard('A-d3s1', true);
     st().skipCard('A-d3s1');
     expect(st().week.done['A-d3s1']).toBeUndefined();
-    expect(st().logs.hack).toEqual([]);
+    expect(st().logs.hack).toMatchObject([{ n: 'Skipped', auto: true, slot: 'A-d3s1' }]); // the planned entry becomes a Skipped one
     st().undoSkip();
     expect(st().week.skipped['A-d3s1']).toBeUndefined();
     expect(st().week.done['A-d3s1']).toBe(true);
@@ -159,6 +159,8 @@ describe('checking off on the board', () => {
     exIds.forEach(id => expect(st().logs[id]?.length, id).toBe(1));
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
+    expect(st().logs.hack).toMatchObject([{ n: 'Skipped', auto: true }]); // no numbers, just the skip
+    st().skipCard('A-d3s1'); // un-skip
     expect(st().logs.hack).toEqual([]);
   });
 });
