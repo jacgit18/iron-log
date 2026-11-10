@@ -17,6 +17,7 @@ const url = process.env.DATABASE_URL;
 const limit = values.limit === undefined ? undefined : Number(values.limit);
 const since = values.since === undefined ? (values['only-brands'] ? undefined : 2025) : Number(values.since); // --only-brands alone: no year rule
 if (!url || (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) || (since !== undefined && !(Number.isInteger(since) && since >= 1990 && since <= 2100))) { console.error('Usage: npm run catalog:upcs -- [--apply] [--limit N] [--cache file] [--since YEAR] [--brand name]... [--only-brands] [--all] [--count] [--refresh-hits]   (DATABASE_URL must be set)'); process.exit(2); }
+if (values['only-brands'] && !values.all && !values.brand.some(b => b.trim())) { console.error('--only-brands needs at least one --brand name (for example --brand thorne --brand "sports research")'); process.exit(2); }
 const scope = values.all ? undefined : { since, brands: [...(values['only-brands'] ? [] : PRIORITY_BRANDS), ...values.brand.map(b => b.trim().toLowerCase()).filter(Boolean)] };
 const target = new URL(url);
 console.log(JSON.stringify({ msg: values.apply ? 'writing' : 'dry run (add --apply to write)', database: `${target.hostname}${target.pathname}`, cache: values.cache }));
@@ -57,7 +58,7 @@ if (!hits) {
 
 const counts = crawlScope(hits, known, scope);
 const hours = Math.ceil(counts.toRead / 1000);
-console.log(JSON.stringify({ msg: scope ? `scope: ${since === undefined ? 'no year rule' : `labels since ${since}`}, plus ${scope.brands.length} priority brands (--all for everything)` : 'scope: every on-market label', ...counts, estimate: counts.toRead ? `about ${hours} hour${hours === 1 ? '' : 's'} at 1,000 requests an hour (a guess from one run)` : 'nothing left to read' }));
+console.log(JSON.stringify({ msg: scope ? `scope: ${since === undefined ? 'no year rule' : `labels since ${since}`}, plus ${scope.brands.length} brand${scope.brands.length === 1 ? '' : 's'} (--all for everything)` : 'scope: every on-market label', ...counts, estimate: counts.toRead ? `about ${hours} hour${hours === 1 ? '' : 's'} at 1,000 requests an hour (a guess from one run)` : 'nothing left to read' }));
 if (values.count) process.exit(0);
 
 const crawl = await crawlUpcs(hits, {
