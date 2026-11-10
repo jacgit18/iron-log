@@ -60,6 +60,7 @@ export default function SupplementAddSheet({ backToManage }: { backToManage?: bo
       if (m) setErr(m); else if (useAppStore.getState().supp.items.some(i => i.catalogId === pick.item.id)) s.closeModal();
       return;
     }
+    if (!pick && (o.mine.shown.length || o.catalog.shown.length)) { setErr('Pick a result, or pick “Add … as a new supplement”.'); return; }
     const name = pick?.kind === 'create' ? pick.name : typed;
     if (!slot) { setErr('Pick Morning, Noon or Night for a new supplement, or open the full form to keep it in the library only.'); return; }
     if (s.addSupplement(slot, name, dose)) s.closeModal(); else setErr(`Could not add ${name}. You may already have it in ${slotLabel(slot)}.`);
