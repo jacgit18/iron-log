@@ -284,7 +284,7 @@ function DataPanel() {
         </div>
       </details>
       <More about="export and import">
-        <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Ideas to try list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
+        <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Ideas to try list, stretches, supplements, groceries, recipes, your food log and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
       <ExportUpload />
       </details>
