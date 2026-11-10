@@ -1,30 +1,8 @@
 @layer base, components;
 @layer components {
-/* The month's money line over the list, and a shared store's line under its heading. */
-.gmoney {
-  margin: 0 0 var(--sp-8);
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
+/* A shared store's money line under its heading. */
 .gstoremoney {
   margin: var(--sp-4) 0 0;
   font-variant-numeric: tabular-nums;
-}
-/* With the split section folded below, the month's line is the way into it. */
-.gmoneybtn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  width: 100%;
-  min-height: 44px;
-  padding: var(--sp-4) var(--sp-8);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--sunk);
-  font: inherit;
-  font-size: var(--fs-sm);
-  text-align: left;
-  cursor: pointer;
 }
 }

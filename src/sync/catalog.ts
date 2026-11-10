@@ -24,6 +24,9 @@ export function cleanCatalogItem(raw: unknown): CatalogItem | null {
     data.muscles = { ...(p.length ? { p } : {}), ...(s.length ? { s } : {}), ...(d.muscles.mob === true ? { mob: true as const } : {}) };
   }
   for (const k of ['level', 'force', 'mechanic', 'category', 'form'] as const) { const v = text(d[k], 100); if (v) data[k] = v; }
+  const year = typeof d.entryYear === 'number' && Number.isInteger(d.entryYear) && d.entryYear >= 1990 && d.entryYear <= 2100 ? d.entryYear : null;
+  if (year) data.entryYear = year;
+  const upc = text(d.upc, 40); if (upc) data.upc = upc;
   return { id, name, ...(brand ? { brand } : {}), data };
 }
 

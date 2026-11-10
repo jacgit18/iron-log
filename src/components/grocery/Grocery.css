@@ -20,6 +20,9 @@
   /* At a large text size the three views wrap to a second row instead of running past the page edge. */
   flex-wrap: wrap;
   max-width: 100%;
+  /* On its own row under the heading, centred. */
+  flex: 1 1 100%;
+  justify-content: center;
 }
 .groc .gtop .seg button {
   min-height: 44px;
@@ -32,6 +35,12 @@
   background: none;
   color: var(--ink);
   border-bottom-color: var(--accent);
+}
+/* Three short words with their counts fit one row down to a 320px phone (brief groceries-spending-buttons-quick-add); at the largest text sizes the row still wraps rather than scroll sideways. */
+@media (max-width:400px) {
+  .groc .gtop .seg button {
+    padding: 0 var(--sp-10);
+  }
 }
 .gmonth {
   display: flex;
@@ -89,24 +98,6 @@
 }
 .gstore.done .gstorehead h3 {
   color: var(--accent);
-}
-/* Wide screens: the stores of To get and At home side by side, one column each (2 from 1100px, 3 from 1700px, never more columns than stores: the gcolsN class
-   caps it). Store order is the DOM order, so Tab goes column by column; a short store just ends early (no masonry). Under 1100px the sections stack as before. */
-@media (min-width:1100px) {
-  .gcols {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    gap: var(--sp-16) 32px;
-  }
-  .gcols2,.gcols3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (min-width:1700px) {
-  .gcols3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 .glist {
   list-style: none;
@@ -334,7 +325,10 @@
 .ghomebtns {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--sp-8);
+  max-width: 100%;
 }
 .gshareprompt {
   display: flex;
@@ -630,10 +624,24 @@ html:has(.gdock) body .toasts {
   justify-content: flex-end;
   gap: var(--sp-4) var(--sp-8);
 }
-.gstoremeta .btn,.gstorehead>.gall {
+.gstoremeta .btn {
   min-height: 44px;
 }
-.gstorehead:has(.gall) {
+.gfold {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.gstorehead:has(.gfold) {
   align-items: center;
 }
 

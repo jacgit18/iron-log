@@ -1,0 +1,40 @@
+@layer base, components;
+@layer components {
+/* Typed vitamin and mineral amounts on a food form (brief type-food-amounts): a closed disclosure that opens on tap, then rows of nutrient, amount and unit; Remove drops to its own line at 375 px. */
+.fa {
+  display: grid;
+  gap: var(--sp-8);
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-8);
+  margin-top: var(--sp-10);
+}
+.fa .fa-disc {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+}
+.fa .note {
+  margin: 0;
+}
+.fa-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 5.5rem) 4.5rem;
+  gap: var(--sp-6);
+}
+.fa-row select, .fa-row input {
+  min-height: 44px;
+  min-width: 0;
+}
+.fa-row .btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 44px;
+}
+.fa > .btn {
+  justify-self: start;
+  min-height: 44px;
+}
+}

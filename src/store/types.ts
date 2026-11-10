@@ -4,9 +4,10 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
-  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
+import type { Micro } from '../shared/foodMicro.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
@@ -37,7 +38,7 @@ export interface SlotForm {
 /** `cat`: a new stretch picked from the catalog in the sheet; it is saved with that catalog id and name (ADR 036). */
 export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string; cat?: CatalogItem | null }
 export interface StretchExpForm { id?: string; n: string; url?: string; note?: string; group?: string }
-export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string }
+export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string; /** What is in one serving; left out, an edit keeps what the item has. */ nutrients?: SupplementNutrient[]; /** Capsules or tablets in one serving; null clears it, left out keeps it. Shared by every section the product is in. */ serving?: SupplementServing | null; /** Servings taken each time (1 clears it), left out keeps what the item has. Per section. */ portion?: number }
 /** The log sheet's save: the entry plus the optional changes it can make along the way. */
 export interface LogForm {
   entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
@@ -112,9 +113,13 @@ export interface BodySlice {
 export interface LibrarySlice {
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
+  /** Adds an exercise to the Ideas to try list unless it is already there; returns whether it was added. */
+  addIdeaToTry(ex: string): boolean;
   /** The exercise id a sheet's choice stands for, adding it to the library first when it is new. */
   resolveExerciseChoice(d: ExerciseChoice & ExerciseExtras, chosen: string): string;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
+  /** Saves a Note field's text as the exercise's own note (trimmed, up to 200 characters; '' removes it); no write when unchanged. */
+  applyExerciseNote(ex: string, text: string | null | undefined): void;
   applyExerciseEq(ex: string, eq: EquipmentId | '' | null | undefined): void;
   addEquipment(name: string): EquipmentId | null;
   removeEquipment(id: string): boolean;
@@ -127,6 +132,8 @@ export interface LibrarySlice {
   deleteExercise(exId: string): string | null;
   deleteExperiment(id: string): void;
   addToDay(entryId: string, col: number): boolean;
+  /** Adds an idea to a day of this week and offers Undo (the sheet's This week only); Undo takes out only the card just added. */
+  addIdeaToDay(entryId: string, col: number): boolean;
   removeExtra(slotId: string): void;
   addWarmup(n: string, rx: string): boolean;
   /** `d` is the Stretches day it was removed from, where its Undo shows. */
@@ -282,15 +289,15 @@ export interface SettingsSlice {
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
 }
 
-/** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out). */
-export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string; unit?: GroceryUnit | '' }
+/** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out); `oneTime` (quick add on Shopping) makes a When-out item that is out, which is the only way `every` is read. */
+export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string; unit?: GroceryUnit | ''; oneTime?: boolean }
 
-/** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
-export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
+/** What the last single-item delete took out (or, with `verb`, what an add put in): `text` is the notice ("Removed <text>."), `restore` puts it back. */
+export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void; /** The bold first word of the notice (default Removed); an Undo of an add says Added. */ verb?: string; /** The flag Undo shows (default Put back); an Undo of an add says Removed. */ undone?: string }
 
 export interface RemovedSlice {
   removed: Removed | null;
-  noteRemoved(scope: string, text: string, restore: () => boolean | void): void;
+  noteRemoved(scope: string, text: string, restore: () => boolean | void, opts?: { verb?: string; undone?: string }): void;
   undoRemoved(): void;
   /** Drop the Undo; with a scope, only when it belongs to that list. */
   dismissRemoved(scope?: string): void;
@@ -300,29 +307,35 @@ export interface RemovedSlice {
 export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
-  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
-  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null }): string | null; // an error text, or null when saved
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null; micro?: Micro | null }): string | null; // an error text, or null when saved
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
-  saveDietMeal(name: string, entryIds: string[]): string | null; // makes a saved meal from those entries (replacing one of the same name); an error text, or null when saved
-  renameDietMeal(id: string, name: string): string | null; // an error text, or null
-  removeDietMeal(id: string): void; // Undo is offered (noteRemoved 'diet')
-  addPlanItem(day: string, kind: 'r' | 'm', id: string): string | null; // puts a recipe or saved meal on a day of the plan; an error text, or null
+  saveDietMeal(name: string, entryIds: string[]): string | null; // makes a Recipes meal from those entries (brief saved-meals-into-recipes); an error text, or null when saved
+  moveSavedMeals(): number; // copies each saved meal not yet moved into Recipes as a meal, once; the old list is left as it is (brief saved-meals-into-recipes); how many were made
+  addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
+  movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
   removePlanItem(day: string, index: number): void;
-  planToGroceries(days: string[]): { added: number; already: number; refused: string | null; recipes: number }; // the days' recipes' missing ingredients go to To get, each name once
   setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
 
 /** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
 export interface RecipesSlice {
   recipes: Recipe[];
+  recipesLoaded: boolean; // the recipes list has been read (from this browser, or pulled from the account): a write built on it before then could replace the account's list
   saveRecipes(): void;
+  toggleRecipeFav(id: string): void; // the star on a recipe (brief recipes-find-type-tabs); saved with the recipes
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
   renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
   removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
   setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
+  setFoodTypes(choices: Record<string, FoodType>, uses?: Record<string, RecipeUse[]>): { changed: number; undo: () => boolean }; // give ready-made foods a Type in one save (the review screen's Looks right); `undo` puts back the untyped state for the whole batch, false when something changed since
+  pairRecipes(aId: string, bId: string): string | null; // two recipes go with each other (both sides saved); an error text, or null
+  unpairRecipes(aId: string, bId: string): void; // takes the pair off both
+  makeMealFromPair(aId: string, bId: string): { id: string } | { error: string }; // a new meal linked to both, numbers rolled up
+  undoCatalogCopy(id: string): boolean; // takes back a Library copy made a moment ago, silently (no removed-note); false when it is gone or not a Library copy
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
   acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned
@@ -337,11 +350,14 @@ export interface GrocerySlice {
   setGrocery(data: GroceryData, deferRemoves?: boolean): string[]; // an import replaces everything; with deferRemoves the old months' paths are returned, not removed
   addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
-  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | '' }>): string | null;
+  markGroceryFromReceipt(month: string, id: string): void;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | ''; aliases: string[]; oneTime: boolean }>): string | null;
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
+  forgetGroceryAlias(id: string, text: string): void;
   addGroceryStore(name: string): string | null;
   removeGroceryStore(name: string, opts?: { quiet?: boolean }): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
+  setGroceryBudget(cents: number | null): boolean; // the monthly budget in cents (null clears it); false when it was refused or data is still loading
   setGroceryGot(month: string, id: string, on: boolean): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
   restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void; // one month line back exactly as it was, for Undo after a receipt is applied
   setGroceryHave(month: string, id: string, on: boolean): void; // the At home tick: had this month, so off that month's list (ADR 054)
@@ -400,13 +416,15 @@ export interface WellnessSlice {
   /** Moves a stretch experiment into your stretches (library only, in the default group); Undo reverses it. */
   promoteStretchExp(id: string): boolean;
   removeStretchExtra(id: string): void;
-  addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
+  /** `nutrients`, `serving` and `brand` are read from a bottle's label (brief supplement-label-scan); left out, it is added with none. */
+  addSupplement(slot: SupplementSlot, name: string, dose?: string, opts?: { nutrients?: SupplementNutrient[]; serving?: SupplementServing; brand?: string }): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
   /** Adds another instance of one of yours (same name, brand and catalog id; its own id, section and ticks) to a section, e.g. a second dose later in the day. `dose` replaces the copied one when typed. */
   addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;
   removeSupplement(id: string): boolean;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
-  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string }): string | null;
+  /** `nutrients` and `serving` are one serving's amounts read from its label (brief supplement-label-amounts); left out, it is added with none. */
+  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string; nutrients?: SupplementNutrient[]; serving?: SupplementServing }): string | null;
   saveSupplement(d: SupplementForm): string | null;
   deleteSupplement(id: string): void;
   moveSupplement(id: string, dir: number): void;

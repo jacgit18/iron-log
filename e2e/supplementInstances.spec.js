@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // The same supplement twice a day: picking one that is already scheduled adds another instance in the other section, each ticked on its own.
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -19,18 +20,20 @@ async function open(page) {
   await page.route('**/api/catalog/search?*', json(200, { ok: true, items: [], more: false }));
   await page.goto('/');
   await page.click('#tab-daily'); await page.click('#daily-supplements');
-  await page.click('#sched-edit');
+  await openSupplementEditor(page);
 }
 
 test('a supplement already in Morning gets a second instance in Night, ticked and removed on its own', async ({ page }) => {
   await open(page);
   const night = page.getByRole('group', { name: 'Night' });
   const morning = page.getByRole('group', { name: 'Morning' });
-  await page.getByRole('combobox', { name: 'Add to Night' }).fill('fish');
-  await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Fish Oil/ }).click();
-  await expect(page.getByText('Adds another Fish Oil to Night, so you can take it more than once a day.')).toBeVisible();
-  await page.fill('#suppdose-night', '2 g');
-  await page.click('#suppadd-night');
+  await page.click('#suplib-add');
+  await page.fill('#suppadd-q', 'fish');
+  await page.getByRole('dialog').getByRole('button', { name: /Fish Oil/ }).click();
+  await expect(page.getByText('Yours, in Morning. Adding it to another time of day makes another instance.')).toBeVisible();
+  await page.getByRole('dialog').getByLabel('Night').check();
+  await page.fill('#suppadd-dose', '2 g');
+  await page.click('#suppadd-go');
   await expect(night.locator('.srow')).toContainText(['Fish Oil2 g']);
   await expect(morning.locator('.srow')).toContainText(['Fish Oil1 g']); // still in Morning
   await night.getByRole('checkbox').check();

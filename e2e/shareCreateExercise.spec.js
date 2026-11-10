@@ -14,7 +14,9 @@ test('Create new exercise: the title fills the name, the link is saved, and it i
   await page.getByRole('dialog').getByLabel('Equipment').selectOption({ label: 'Cable' });
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByText('Saved as the video link for Cable Lateral Raise.')).toBeVisible();
+  await expect(page.getByText('It is also on your Ideas to try list.')).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('.explist .expcard').first()).toContainText('Cable Lateral Raise'); // a shared video's exercise lands first on Ideas to try
   await page.click('#tab-program');
   await page.getByRole('button', { name: 'Exercises', exact: true }).click();
   await expect(page.locator('.exlib .exrow .exmain b', { hasText: 'Cable Lateral Raise' })).toBeVisible();

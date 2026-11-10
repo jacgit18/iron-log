@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { gramsOf, rowGrams, servingsFor, totals, totalsNote, type MacroRow } from '../../lib/recipeMacros.js';
+import type { Micro } from '../../shared/foodMicro.js';
 import { defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from '../diet/useFoodHits.js';
 import './IngredientMacros.css';
 
 /** The recipe's numbers per serving, ready for the form's four fields. */
-export interface PerServing { kcal: number; p: number; c?: number; f?: number }
+export interface PerServing { kcal: number; p: number; c?: number; f?: number; micro?: Micro }
 interface Ing { n: string; amt?: string; skip?: true }
 interface Pick { hit: FoodHit | null; typed: string; open: boolean }
 

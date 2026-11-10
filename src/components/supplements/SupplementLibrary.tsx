@@ -3,7 +3,6 @@ import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
-import CatalogMatches from '../program/CatalogMatches.jsx';
 import { plainText } from '../../lib/picker.js';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
@@ -25,10 +24,10 @@ export default function SupplementLibrary() {
       <div className="inline spread">
         <h2 id="suplib-h" tabIndex={-1}>Supplement library</h2>
         <div className="inline">
-          <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
+          <button type="button" className="btn primary" id="suplib-add" onClick={() => openModal({ type: 'suppadd', from: 'manage' })}>+ Add</button>
         </div>
       </div>
-      <p className="note">Your supplements. Ones set to Morning, Noon or Night are on the schedule above every day; “Library only” ones are kept here to schedule later.</p>
+      <p className="note">Your supplements; + Add searches yours and the catalog. Ones set to Morning, Noon or Night are on the schedule above every day; “Library only” ones are kept here to schedule later.</p>
       <div className="filterbar" role="search">
         <label className="field">Search<input type="search" value={q} placeholder="Name or brand" onChange={e => setQ(e.target.value)} /></label>
         {sources && <label className="field">Source
@@ -64,7 +63,7 @@ export default function SupplementLibrary() {
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><Icon name="arrow-up" /></button>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><Icon name="arrow-down" /></button>
                     </>}
-                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
+                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id, from: 'manage' })}>Edit</button>
                   </div>
                 </div>
                 );
@@ -72,13 +71,8 @@ export default function SupplementLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">{syncing && needle && src !== 'custom' ? 'None of yours match. Add one from the catalog below, or with + New supplement.' : items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + New supplement.'}</p>}
+        {!shown.length && <p className="note">{syncing && needle && src !== 'custom' ? 'None of yours match. Find it in the catalog with + Add.' : items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + Add.'}</p>}
       </div>
-      {src !== 'custom' && (
-        <CatalogMatches kind="supplement" q={q} unit="products" source="Products from the NIH Dietary Supplement Label Database. Added as Library only, with no dose: edit one to schedule it."
-          mine={items.map(i => ({ id: i.id, name: i.n, ...(i.brand ? { brand: i.brand } : {}), ...(i.catalogId ? { catalogId: i.catalogId } : {}) }))}
-          meta={c => [c.brand, c.data.form].filter(Boolean).join(' · ') || 'No brand'} onAdd={c => useAppStore.getState().addCatalogSupplement(c)} />
-      )}
     </section>
   );
 }

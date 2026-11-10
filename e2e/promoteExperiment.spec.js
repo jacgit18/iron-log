@@ -1,6 +1,6 @@
 import { test, expect, seedExperiments } from './fixtures.js';
 
-// Experiments: To program opens the add-to-program sheet from the entry, and saving it takes the entry off the list; Undo puts it back.
+// Ideas to try: Add, then Every week (program) and a day, opens the add-to-program sheet from the entry, and saving it takes the entry off the list; Undo puts it back.
 test('To program on a workout experiment adds it to the program and takes it off the list', async ({ page }) => {
   await page.goto('/');
   await seedExperiments(page, ['hack']);
@@ -10,7 +10,9 @@ test('To program on a workout experiment adds it to the program and takes it off
   const name = (await card.locator('.rmname').innerText()).trim();
   const boardCards = page.locator('article.card');
   const before = await boardCards.count();
-  await card.getByRole('button', { name: /to program, Day/ }).click();
+  await card.getByRole('button', { name: /^Add /, exact: false }).first().click();
+  await page.getByRole('button', { name: 'Every week (program)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Day 1', exact: true }).click();
   await expect(page.locator('#slot-ex-0')).toHaveValue(name);
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   await expect(card).toHaveCount(0);

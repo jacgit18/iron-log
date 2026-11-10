@@ -121,7 +121,7 @@ describe('checking off on the board', () => {
     st().checkCard('A-d3s1', true);
     st().skipCard('A-d3s1');
     expect(st().week.done['A-d3s1']).toBeUndefined();
-    expect(st().logs.hack).toEqual([]);
+    expect(st().logs.hack).toMatchObject([{ n: 'Skipped', auto: true, slot: 'A-d3s1' }]); // the planned entry becomes a Skipped one
     st().undoSkip();
     expect(st().week.skipped['A-d3s1']).toBeUndefined();
     expect(st().week.done['A-d3s1']).toBe(true);
@@ -159,6 +159,8 @@ describe('checking off on the board', () => {
     exIds.forEach(id => expect(st().logs[id]?.length, id).toBe(1));
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
+    expect(st().logs.hack).toMatchObject([{ n: 'Skipped', auto: true }]); // no numbers, just the skip
+    st().skipCard('A-d3s1'); // un-skip
     expect(st().logs.hack).toEqual([]);
   });
 });
@@ -558,9 +560,11 @@ describe('experiment board', () => {
 
   it('adds, edits and deletes entries, and saves them', () => {
     const e = add('hack', 'hyp', 'try light');
-    expect(e).toMatchObject({ ex: 'hack', ph: 'hyp', note: 'try light' });
+    expect(e).toMatchObject({ ex: 'hack', ph: 'hyp', note: '' }); // the note belongs to the exercise, not the idea
+    expect(st().cfg.ex.hack.note).toBe('try light');
     expect(saved('experiments/main').items).toHaveLength(1);
     st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: '' });
+    expect(st().cfg.ex.hack?.note).toBeUndefined(); // emptying the field clears the exercise's note
     expect(st().experiments).toEqual([{ id: e.id, ex: 'hack', ph: 'strength', note: '' }]);
     st().deleteExperiment(e.id);
     expect(st().experiments).toEqual([]);

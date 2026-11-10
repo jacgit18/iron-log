@@ -12,7 +12,7 @@ import { isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import SortControl from '../SortControl.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
-import LibraryChip from './LibraryChip.jsx';
+import FilterSelect from '../FilterSelect.jsx';
 import YourEquipment from './YourEquipment.jsx';
 import './Library.css';
 
@@ -32,7 +32,7 @@ export default function ExerciseLibrary() {
   return (
     <section className="panel edpanel exlib exlibwide">
       <div className="inline spread">
-        <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
+        <h2 id="exlib-h" tabIndex={-1}>Exercises</h2>
         <div className="inline">
           <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
         </div>
@@ -43,21 +43,21 @@ export default function ExerciseLibrary() {
         <input className="libsearch" type="search" aria-label="Search" value={f.q} placeholder={`Search ${rows.length} exercises`} onChange={e => setF(x => ({ ...x, q: e.target.value }))} />
         <div className="libchips">
           <SortControl options={EXERCISE_SORTS} value={sort} onChange={setSort} />
-          <LibraryChip label="Equipment" value={f.eq} onChange={v => setF(x => ({ ...x, eq: v }))}>
+          <FilterSelect label="Equipment" value={f.eq} onChange={v => setF(x => ({ ...x, eq: v }))}>
             <option value="">All equipment</option>
             {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             <option value="none">Not set</option>
-          </LibraryChip>
-          <LibraryChip label="Muscle" value={f.muscle} onChange={v => setF(x => ({ ...x, muscle: v }))}>
+          </FilterSelect>
+          <FilterSelect label="Muscle" value={f.muscle} onChange={v => setF(x => ({ ...x, muscle: v }))}>
             <option value="">All muscles</option>
             {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
             <option value="untagged">Not tagged yet</option>
-          </LibraryChip>
-          {sources && <LibraryChip label="Source" value={f.src} onChange={v => setF(x => ({ ...x, src: v }))}>
+          </FilterSelect>
+          {sources && <FilterSelect label="Source" value={f.src} onChange={v => setF(x => ({ ...x, src: v }))}>
             <option value="">All sources</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
-          </LibraryChip>}
+          </FilterSelect>}
           {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
         </div>
         <span className="note" role="status">{resultText(shown.length, rows.length, filtering, 'exercises')}</span>

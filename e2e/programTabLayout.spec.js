@@ -115,9 +115,9 @@ test.describe('on a computer', () => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the tabs keep their names, the stepper and dropdown stay, and Compare sits above Saved programs', async ({ page }) => {
+  test('the tabs are one word each, the stepper and dropdown stay, and Compare sits above Saved programs', async ({ page }) => {
     await open(page);
-    await expect(tabs(page).getByRole('button')).toHaveText([/^ProgramsYour/, /^Exercise libraryEvery/, /^Stretch libraryStretches/]);
+    await expect(tabs(page).getByRole('button')).toHaveText([/^ProgramsYour/, /^ExercisesEvery/, /^StretchesStretches/]);
     await expect(page.getByRole('button', { name: 'Next day' })).toBeVisible();
     await expect(page.getByLabel('Day to edit')).toBeVisible();
     await expect(page.getByRole('group', { name: 'Jump to day' })).toHaveCount(0);
@@ -125,6 +125,18 @@ test.describe('on a phone', () => {
     const saved = await page.getByRole('heading', { name: 'Saved programs' }).boundingBox();
     expect(compare.y).toBeLessThan(saved.y);
   });
+
+  for (const width of [390, 320]) {
+    test(`the A | B switch is two equal halves that fill the card at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await open(page);
+      const seg = page.getByRole('group', { name: 'Program to edit' });
+      const [a, b] = await seg.getByRole('button').all();
+      const [box, ba, bb] = [await seg.boundingBox(), await a.boundingBox(), await b.boundingBox()];
+      expect(Math.abs(ba.width - bb.width)).toBeLessThan(1);
+      expect(ba.width + bb.width).toBeGreaterThan(box.width - 12); // the 3 px padding and the gap are all that is left
+    });
+  }
 
   test('a desktop-only address shows Programs on a phone', async ({ page }) => {
     await open(page, '/#/program/saved');

@@ -1,0 +1,67 @@
+@layer base, components;
+@layer components {
+.ideacard {
+  min-width: 0;
+}
+.ideastatus {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.ideaname {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.ideamuscles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+.ideachip {
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-pill);
+  background: var(--sunk);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.ideanote {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.ideafoot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-top: auto;
+}
+.ideaadd {
+  flex: 1;
+  min-height: 44px;
+}
+.ideamore {
+  min-width: 44px;
+  min-height: 44px;
+}
+.ideamenu {
+  display: flex;
+  gap: var(--sp-6);
+}
+.ideamenu .btn {
+  min-height: 44px;
+}
+}

@@ -30,7 +30,7 @@ export default function Receipts() {
   return (
     <>
       <div className="rcspagehead">
-        <button type="button" className="btn sm" id="rcs-back" onClick={() => goUp('daily/grocery/get')}>Back to groceries</button>
+        <button type="button" className="btn sm" id="rcs-back" onClick={() => goUp('daily/grocery/shopping')}>Back to groceries</button>
         <h2 id="rcs-h">Saved receipts</h2>
       </div>
       {state.kind === 'loading' && <p className="note" role="status">Loading...</p>}
@@ -44,7 +44,7 @@ export default function Receipts() {
         <>
           <p className="note" id="rcs-usage">{usageText(state.data)}</p>
           {state.data.receipts.length === 0 ? (
-            <p className="note" id="rcs-empty">No saved receipts yet. Tick Keep a copy of this photo when you scan one.</p>
+            <p className="note" id="rcs-empty">No saved receipts yet. When you scan a receipt, tick Keep a copy of this photo and it shows up here.</p>
           ) : groupByMonth(state.data.receipts).map(g => (
             <section key={g.month} className="rcsgroup" aria-labelledby={`rcs-m-${g.month}`}>
               <h3 id={`rcs-m-${g.month}`}>{monthLabel(g.month)}</h3>

@@ -1,0 +1,83 @@
+@layer base, components;
+@layer components {
+/* The label preview in the add form and the supplement sheet (brief supplement-label-amounts). Rows share a line with the amount; nothing scrolls sideways at 375 px. */
+.lbl {
+  display: grid;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0 0;
+  min-width: 0;
+}
+.lbl .note {
+  margin: 0;
+}
+.lblh {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.lblrows {
+  display: grid;
+  gap: var(--sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lblrows li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.lblrows li > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lblrows li > span:last-child {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.lblmore summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.lbltable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.lbltable th, .lbltable td {
+  padding: var(--sp-4) var(--sp-6) var(--sp-4) 0;
+  text-align: left;
+  font-weight: 400;
+  vertical-align: top;
+}
+.lbltable thead th, .lbltable tbody th {
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  .lbltable thead {
+    position: absolute;
+    left: -9999px;
+  }
+  .lbltable, .lbltable tbody, .lbltable tr {
+    display: block;
+  }
+  .lbltable tr {
+    padding: var(--sp-4) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .lbltable td, .lbltable th {
+    display: inline-block;
+    padding-right: var(--sp-8);
+  }
+  .lbltable td:nth-of-type(1)::before {
+    content: 'Now ';
+  }
+  .lbltable td:nth-of-type(2)::before {
+    content: 'Label ';
+  }
+}
+}

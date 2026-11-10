@@ -1,15 +1,25 @@
 import { useMemo, useState } from 'react';
 import { VIDEO_ERR, isVideoUrl } from '../../lib/data.js';
+import { withoutUsed } from '../../lib/grocery.js';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
+import { countedNote, foodCandidates, hasParts, linkError, mealRollup } from '../../lib/mealRollup.js';
+import { marksOf } from '../../lib/plate.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../lib/recipeTags.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
+import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
+import type { Recipe, RecipeCategory, RecipeIngredient, RecipeUse } from '../../types.ts';
+import CountsAsChips from './CountsAsChips.js';
+import UsedAsChips from './UsedAsChips.js';
+import { useCountsAs } from './useCountsAs.js';
 import IngredientList from './IngredientList.js';
+import { microKept } from '../../lib/foodMicroKept.js';
+import { withMicro } from '../../shared/foodMicro.js';
+import type { Micro } from '../../shared/foodMicro.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 import ServingSize from './ServingSize.js';
@@ -23,10 +33,18 @@ const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?
 // `start`: a name and link to begin a new recipe with (a link shared in from another app, lib/shareTarget.ts).
 export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
-  const items = useAppStore(s => s.grocery.items);
+  const groceryAll = useAppStore(s => s.grocery);
+  const groceryMonths = useAppStore(s => s.groceryMonths);
+  const items = useMemo(() => withoutUsed(groceryAll, groceryMonths).items, [groceryAll, groceryMonths]); // a used one-time item is not offered
   const sauces = useMemo(() => sauceCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the sauces and seasonings a line can link to
+  const { foods, meals } = useMemo(() => foodCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the foods and meals a line can link to, with an amount
   const [n, setN] = useState(recipe?.n ?? start?.title ?? '');
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
+  const [uses, setUsesNow] = useState<RecipeUse[]>(() => (recipe ? usesOf(recipe) : defaultUsesFor('other'))); // brief recipes-used-as-ingredients-tab: follows the category until one is pressed
+  const [usesPicked, setUsesPicked] = useState(!!recipe?.uses);
+  const pickUses = (next: RecipeUse[]) => { setUsesNow(next); setUsesPicked(true); };
+  const pickCat = (c: RecipeCategory) => { setCat(c); if (!usesPicked) setUsesNow(defaultUsesFor(c)); };
+  const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
   const [serving, setServing] = useState(recipe?.serving ?? '');
@@ -35,9 +53,13 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
   const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
+  // Vitamins and minerals per serving (brief recipes-vitamins-minerals) are never typed: they come from the ingredient calculator, kept only while calories are still the number they came with. A meal's come from its parts at save.
+  const [micro, setMicro] = useState<Micro | undefined>(recipe?.micro);
+  const [microKcal, setMicroKcal] = useState<number | undefined>(recipe?.kcal);
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [tagText, setTagText] = useState('');
   const [nutOpen, setNutOpen] = useState(false);
+  const [own, setOwn] = useState(recipe?.own === true); // Use my own numbers: the typed numbers stay and the roll-up from the linked parts is only a hint
   const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...refreshLink(i, recipes, recipe.id), amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
   const [lastServings, setLastServings] = useState<number | null>(recipe ? recipe.servings ?? null : 1); // the servings the amounts are for
   const [scaleNote, setScaleNote] = useState('');
@@ -62,8 +84,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
       cut: read.cut,
       rows: read.lines.map(l => {
         if ('old' in l) return l.old;
-        const r = l.row, o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items), rid = o?.rid ?? sauceFor(r.n, sauces)?.id;
-        return typedAmount<Row>({ n: r.n, amt: '', ...(r.sub ? { sub: r.sub } : {}), ...(home ? { home } : {}), ...(rid ? { rid } : {}), ...(o?.skip ? { skip: true as const } : {}) }, r.amt, lastServings);
+        const r = l.row, o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items), rid = o?.rid ?? sauceFor(r.n, sauces)?.id, q = o?.rid && o.q !== undefined ? o.q : undefined;
+        return typedAmount<Row>({ n: r.n, amt: '', ...(r.sub ? { sub: r.sub } : {}), ...(home ? { home } : {}), ...(rid ? { rid } : {}), ...(q !== undefined ? { q } : {}), ...(o?.skip ? { skip: true as const } : {}) }, r.amt, lastServings);
       }),
     };
   };
@@ -80,6 +102,11 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   };
   const showList = () => { const t = ingredientsToText(ing); setListText(t); setListBase(t); setListMode(true); setErr(''); };
 
+  const parts = hasParts({ ing: shownRows() }); // some line links to a food or meal with an amount
+  const roll = parts ? mealRollup({ id: recipe?.id, ing: shownRows(), servings: whole(servings) }, recipes) : null;
+  const rollText = roll && roll.counted > 0 ? [`${roll.per.kcal} kcal`, `${roll.per.p} g protein`, roll.per.c !== undefined && `${roll.per.c} g carbs`, roll.per.f !== undefined && `${roll.per.f} g fat`].filter(Boolean).join(' · ') : '';
+  const fromParts = parts && !own; // numbers shown and saved come from the parts
+
   const inUse = useMemo(() => tagCounts(recipes).filter(c => !tags.some(t => tagKey(t) === tagKey(c.tag))), [recipes, tags]); // tags other recipes have that this one does not: offered
   const starters = useMemo(() => starterTags(recipes, tags), [recipes, tags]); // Breakfast, Lunch, Dinner, Snack until a recipe uses them
   const addTag = (raw: string) => {
@@ -93,15 +120,18 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setTags([...tags, known ?? t]); setTagText(''); setErr('');
   };
 
+  const autoP = fromParts && roll && roll.counted > 0 ? roll.per.p : protein.trim() && Number.isFinite(Number(protein)) ? Number(protein) : undefined; // the protein Save will write: from the parts, else typed
+  const autoMarks = marksOf({ id: recipe?.id ?? '', n, cat, ing: shownRows().filter(i => i.n.trim()), steps: [], ...(autoP !== undefined ? { p: autoP } : {}) }, recipes);
   const pendingTag = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t : ''; }; // a tag typed but not added yet is kept on Save
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
     if (servingG.trim() && !(whole(servingG) && whole(servingG)! <= MAX_SERVING_G)) { setErr(`Grams per serving must be a whole number from 1 to ${MAX_SERVING_G}.`); return; }
-    const k = kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = protein.trim() ? cleanProtein(Number(protein)) : undefined;
+    const rolled = parts && !own && roll && roll.counted > 0 ? roll.per : null; // the meal's numbers come from its parts: they are saved into the same four fields everything else reads
+    const k = rolled ? cleanKcal(rolled.kcal) : kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = rolled ? cleanProtein(rolled.p) : protein.trim() ? cleanProtein(Number(protein)) : undefined;
     if (k === null) { setNutOpen(true); setErr('Calories per serving must be a number from 1 to 9,999.'); return; }
     if (pr === null) { setNutOpen(true); setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
-    const cb = carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = fat.trim() ? cleanGrams(Number(fat)) : undefined;
+    const cb = rolled ? (rolled.c !== undefined ? cleanGrams(rolled.c) : undefined) : carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = rolled ? (rolled.f !== undefined ? cleanGrams(rolled.f) : undefined) : fat.trim() ? cleanGrams(Number(fat)) : undefined;
     if (cb === null || ft === null) { setNutOpen(true); setErr('Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
     if (!isVideoUrl(url) || /\s/.test(url.trim())) { setErr(VIDEO_ERR); return; }
     const pending = pendingTag(), allTags = pending ? [...tags, pending] : tags;
@@ -109,8 +139,9 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     const fromList = listEdited ? listRows() : null;
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
-    const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(allTags.length ? { tags: allTags } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
+    const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
+    const microOut = rolled ? rolled.micro : parts ? undefined : microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, k ?? -1); // a meal on its own numbers keeps none
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -128,8 +159,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setIng(r.rows); setLastServings(v);
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
   };
-  const useNumbers = (per: PerServing) => {
-    setKcal(String(per.kcal)); setProtein(String(per.p));
+  const adoptNumbers = (per: PerServing) => {
+    setKcal(String(per.kcal)); setProtein(String(per.p)); setMicro(per.micro); setMicroKcal(per.kcal);
     if (per.c !== undefined) setCarbs(String(per.c));
     if (per.f !== undefined) setFat(String(per.f));
     setCalc(false); setErr('');
@@ -140,7 +171,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   // Renaming an ingredient drops its pin to an At home item (the pin was for the old name), unless the new name is exactly one of your
   // Groceries items. An ingredient with an Alternative is never pinned by its name, and changing the Alternative drops the pin: a pin outranks it in the match.
   // The same for the link to one of your sauces or seasonings: an exact name links it, any other name drops the link.
-  const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items), rid: sauceFor(name, sauces)?.id });
+  const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items), rid: sauceFor(name, sauces)?.id, q: undefined });
   // The picker's choice: a linked row, filling the empty row the form starts with instead of leaving it above. Returns the row's index.
   const addSauce = (s: Recipe): number => {
     if (ing.length >= MAX_INGREDIENTS && ing[ing.length - 1]!.n.trim()) return -1; // full: the picker says so
@@ -149,9 +180,25 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setIng(fill ? [...ing.slice(0, -1), row] : [...ing, row]); setErr('');
     return fill ? ing.length - 1 : ing.length;
   };
+  // The Food or meal picker's choice: a linked row with an amount of 1, filling the empty row the form starts with. Returns why it was refused, or null.
+  const addFood = (part: Recipe): string | null => {
+    if (ing.length >= MAX_INGREDIENTS && ing[ing.length - 1]!.n.trim()) return `A recipe holds at most ${MAX_INGREDIENTS} ingredients. Remove one to add another.`;
+    const bad = linkError(recipes, recipe?.id, part.id);
+    if (bad) return bad;
+    const last = ing[ing.length - 1], fill = !!last && !last.n.trim() && !last.amt.trim() && !last.sub, home = pinFor(part.n, undefined, items);
+    const row: Row = { n: part.n, amt: '', rid: part.id, q: 1, ...(home ? { home } : {}) };
+    if (!parts && recipe && (recipe.kcal !== undefined || recipe.p !== undefined)) setOwn(true); // an existing meal keeps its typed numbers until the person turns the switch off
+    setIng(fill ? [...ing.slice(0, -1), row] : [...ing, row]); setErr('');
+    return null;
+  };
+  const chooseOwn = (on: boolean) => {
+    setOwn(on);
+    if (on && roll && roll.counted > 0 && !kcal.trim() && !protein.trim()) adoptNumbers(roll.per); // nothing typed yet: start from the parts
+  };
   const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id), sauces), [activeText, items, recipes, recipe?.id, sauces]);
-  const nutLine = [kcal.trim() && `${kcal.trim()} kcal`, protein.trim() && `${protein.trim()} g protein`, carbs.trim() && `${carbs.trim()} g carbs`, fat.trim() && `${fat.trim()} g fat`].filter(Boolean).join(' · ') || 'Not set';
+  const typedLine = [kcal.trim() && `${kcal.trim()} kcal`, protein.trim() && `${protein.trim()} g protein`, carbs.trim() && `${carbs.trim()} g carbs`, fat.trim() && `${fat.trim()} g fat`].filter(Boolean).join(' · ') || 'Not set';
+  const nutLine = fromParts ? rollText || typedLine : typedLine;
   const sv = whole(servings);
   const servingsLine = sv && sv <= 99 ? `Amounts are for ${sv} serving${sv === 1 ? '' : 's'}.` : '';
 
@@ -190,26 +237,35 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
           </fieldset>
           <div className="rc-meta">
             <label>Category
-              <select value={cat} onChange={e => setCat(e.target.value as RecipeCategory)}>
+              <select value={cat} onChange={e => pickCat(e.target.value as RecipeCategory)}>
                 {RECIPE_CATEGORIES.filter(c => c !== 'ready').map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
               </select>
             </label>
             <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
             <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
           </div>
+          <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
+          <CountsAsChips value={countsAs.shown(autoMarks)} picked={countsAs.picked} onChange={countsAs.pick} onAuto={countsAs.reset} />
           <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
           <div className="rc-nut">
             <div className="rc-nuthead">
               <strong>Nutrition per serving</strong>
-              <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
+              <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} hidden={fromParts} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
             </div>
             <p className="note">{nutLine}</p>
+            {parts && roll && (
+              <div className="rc-roll">
+                <p role="status">{own ? `From the parts: ${rollText || 'no numbers yet'}` : `Per serving, from the parts: ${rollText || 'no numbers yet'}`}</p>
+                <p className="note">{countedNote(roll)}</p>
+                <label className="rc-own"><input type="checkbox" checked={own} onChange={e => chooseOwn(e.target.checked)} /> Use my own numbers</label>
+              </div>
+            )}
             <div className="rc-calcbar">
               <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
               {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
             </div>
-            {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={useNumbers} />}
-            {nutOpen && (
+            {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={adoptNumbers} />}
+            {nutOpen && !fromParts && (
               <div className="rc-nutfields">
                 <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
                 <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>
@@ -229,7 +285,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
             <p className="note" role="status">{scaleNote || servingsLine}</p>
             {listMode
               ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
-              : <IngredientRows rows={ing} options={options} sauces={sauces} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
+              : <IngredientRows rows={ing} options={options} sauces={sauces} foods={foods} meals={meals} partOf={rid => recipes.find(r => r.id === rid)} onAddFood={addFood} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
                   onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
           </fieldset>
           <label>Steps, one per line

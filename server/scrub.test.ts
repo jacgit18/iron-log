@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { mask } from './scrub.ts';
 
 describe('mask', () => {
@@ -16,5 +17,12 @@ describe('mask', () => {
     mask(`${'a'.repeat(100_000)}@${'b'.repeat(100_000)}`, 300);
     mask('a@'.repeat(50_000), 300);
     expect(Date.now() - t).toBeLessThan(1500);
+  });
+});
+
+describe('the optional profile (brief recommendations-by-age-sex)', () => {
+  it('never reaches an error report: a birth year is masked, and the report route reads only its own fields, never the config', () => {
+    expect(mask('profile {"birthYear":1985}', 200)).toBe('profile {"birthYear":####}');
+    expect(readFileSync(new URL('./clientErrors.ts', import.meta.url), 'utf8')).not.toMatch(/\bprofile\b|\bbirthYear\b|\bcfg\b/);
   });
 });

@@ -28,9 +28,9 @@ const noSideScroll = async page => { const m = await page.evaluate(() => ({ s: d
 for (const [w, zoom] of [[320, false], [320, true], [390, true]]) {
   const where = `${w}px${zoom ? ' at 200% text' : ''}`;
 
-  test(`${where}: To get does not scroll sideways and an item name is never squeezed to a sliver`, async ({ page }) => {
+  test(`${where}: Shopping does not scroll sideways and an item name is never squeezed to a sliver`, async ({ page }) => {
     await open(page, w, zoom);
-    await page.click('#groc-view-get');
+    await page.click('#groc-view-shopping');
     await noSideScroll(page);
     const names = await page.evaluate(() => [...document.querySelectorAll('button.gnamebtn')].map(e => { const r = e.getBoundingClientRect(); return { n: e.textContent.slice(0, 20), w: Math.round(r.width), h: Math.round(r.height) }; }));
     expect(names.length).toBeGreaterThan(2);
@@ -39,7 +39,7 @@ for (const [w, zoom] of [[320, false], [320, true], [390, true]]) {
 
   test(`${where}: an opened row, with a 40-character store, does not scroll sideways`, async ({ page }) => {
     await open(page, w, zoom);
-    await page.click('#groc-view-get');
+    await page.click('#groc-view-shopping');
     await page.getByRole('button', { name: /price of Chicken thighs/i }).click();
     await expect(page.locator('select[id^="groc-store-"]').first()).toBeVisible();
     await noSideScroll(page);
@@ -49,7 +49,7 @@ for (const [w, zoom] of [[320, false], [320, true], [390, true]]) {
 
   test(`${where}: in Edit mode the add field is still wide enough to type in`, async ({ page }) => {
     await open(page, w, zoom);
-    await page.click('#groc-view-home');
+    await page.click('#groc-view-inventory');
     await page.click('#groc-edit');
     await noSideScroll(page);
     const w1 = await page.locator('#groc-name').evaluate(e => e.getBoundingClientRect().width);
@@ -58,7 +58,7 @@ for (const [w, zoom] of [[320, false], [320, true], [390, true]]) {
 
   test(`${where}: the Sharing panel, with a long group name, does not scroll sideways`, async ({ page }) => {
     await open(page, w, zoom);
-    await page.click('#groc-view-home');
+    await page.click('#groc-view-inventory');
     await page.click('#groc-sharing');
     await expect(page.getByRole('region', { name: 'Sharing' })).toBeVisible();
     await noSideScroll(page);

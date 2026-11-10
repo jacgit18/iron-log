@@ -15,7 +15,7 @@ export function SelectButton({ g, canSelect, selecting, onSelecting }: { g: Groc
   if (!allPeople(g).length || (!canSelect && !selecting)) return null;
   return (
     <div className="bsrow">
-      <button type="button" className={`btn sm${selecting ? ' primary' : ''}`} id="groc-select" aria-pressed={selecting} onClick={() => onSelecting(!selecting)}>{selecting ? 'Done selecting' : 'Select'}</button>
+      <button type="button" className={`btn sm${selecting ? ' primary' : ''}`} id="groc-select" aria-pressed={selecting} onClick={() => onSelecting(!selecting)}>{selecting ? 'Done' : 'Select items'}</button>
     </div>
   );
 }
@@ -40,7 +40,7 @@ export default function BulkShare({ mk, selecting, picked, onSelecting, onClear 
         <div className="bsbar" role="region" aria-label="Selected items">
           <b role="status">{n} selected</b>
           <button type="button" className="btn sm" id="groc-select-clear" disabled={!n} onClick={onClear}>Clear</button>
-          <button type="button" className="btn sm primary" id="groc-select-share" disabled={!n} onClick={share}>Share…</button>
+          <button type="button" className="btn sm primary" id="groc-select-share" disabled={!n} onClick={share}>Change who shares</button>
         </div>
       )}
     </div>

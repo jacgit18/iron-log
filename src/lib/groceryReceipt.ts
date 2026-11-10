@@ -4,6 +4,8 @@ import type { Receipt, ReceiptLine, ReceiptUnit } from '../shared/receipt.js';
 import { MAX_ITEMS, MAX_PRICES, centsText, cleanQty, lineTotal, money, parseDollars } from './grocery.js';
 import { groupOfStore } from './grocerySettle.js';
 
+export { applySavedNames } from './groceryAliases.js'; // saved receipt names map a scanned line to its item before any model guess (brief receipt-rename-memory)
+
 /* ---------- Receipt scan (brief receipt-scan): from the lines on a receipt and the person's choices to the grocery writes, and the total check. Pure; the sheet calls
    `planReceipt`, and `applyPlan` / `restoreSnapshot` run it through the store actions that already exist (so the usual price and count rules are the same as
    typing them). Nothing here reads the photo. ---------- */
@@ -158,18 +160,20 @@ export function checkText(c: Check): { ok: boolean; text: string } {
 export interface GroceryApi {
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   setGroceryGot(month: string, id: string, on: boolean): boolean;
+  markGroceryFromReceipt?(month: string, id: string): void; // the line says a receipt ticked it, so a later receipt does not list it as missing
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
   setGroceryTax(month: string, store: string, cents: number | null): void;
   restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void;
-  updateGroceryItem(id: string, patch: Partial<{ qty: number; cents: number | null; store: string }>): string | null;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; qty: number; cents: number | null; store: string; aliases: string[] }>): string | null;
   setGroceryLineStore(month: string, id: string, store: string | null): string | null;
   makeGroceryStoreUsual(month: string, id: string): string | null;
   removeGroceryStore?(name: string, opts?: { quiet?: boolean }): string | null;
 }
 /** `created`: ids of the items Apply made from staged ones, which Undo removes (left out when there are none). */
-export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; created?: string[] }
+/** `names` and `aliases` (brief receipt-rename-memory): each item Apply renamed or gave receipt names, as it was ([] is none); Undo puts them back. */
+export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; created?: string[]; names?: Record<string, string>; aliases?: Record<string, string[]> }
 
 /** What Apply is about to change, so Undo can put it back: each touched line as it is now (null: none), each item's usual count and price, and the store's tax. */
 export function takeSnapshot(plan: Plan, month: string, lines: Record<string, GroceryLine>, items: readonly GroceryItem[], tax: Record<string, number> | undefined, created: readonly string[] = []): Snapshot {
@@ -190,6 +194,7 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
   for (const s of plan.steps) {
     if (s.kind === 'tax') { api.setGroceryTax(month, s.store, s.cents); continue; }
     if (!api.setGroceryGot(month, s.id, true)) continue; // false: nothing changed (sync still loading)
+    api.markGroceryFromReceipt?.(month, s.id);
     const move = plan.moves.find(m => m.id === s.id);
     if (move) api.setGroceryLineStore(month, s.id, move.to);
     if (s.kind === 'single') { api.setGroceryQty(month, s.id, s.qty); api.setGroceryCents(month, s.id, s.cents); } else api.setGroceryPrices(month, s.id, s.prices);
@@ -201,6 +206,8 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
 }
 
 export function restoreSnapshot(snap: Snapshot, api: GroceryApi): void {
+  for (const [id, n] of Object.entries(snap.names ?? {})) api.updateGroceryItem(id, { n });
+  for (const [id, aliases] of Object.entries(snap.aliases ?? {})) api.updateGroceryItem(id, { aliases });
   // An item's usual store goes back before its line: changing a usual store pins the item's bought lines to the store they were counted at, and a line put back first
   // (one ticked before the receipt) would be pinned to the receipt's store. Restored after, the line is simply put back as it was.
   for (const [id, u] of Object.entries(snap.usual)) if (u.store !== undefined) api.updateGroceryItem(id, u);

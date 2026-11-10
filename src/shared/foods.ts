@@ -1,6 +1,9 @@
 // Food search (brief diet-food-lookup): turns USDA FoodData Central search results into the few numbers a diet entry needs, and scales
 // them to the grams eaten. Pure, shared by the server (which asks USDA) and the app (which scales a pick). Nothing here is stored.
 
+import { cleanMicro, scaleMicro, usdaMicro, withMicro } from './foodMicro.js';
+import type { Micro } from './foodMicro.js';
+
 export const MIN_QUERY = 2;
 export const MAX_QUERY = 60;
 export const MAX_RESULTS = 8;
@@ -8,7 +11,7 @@ export const MAX_GRAMS = 5000;
 
 /** One search result: numbers per 100 g, `c` and `f` left out when the source has none. `serving` is a branded food's own serving in grams. `source` is set only on a result from
  *  Open Food Facts (crowd-sourced, shown with a "check the label" note); a USDA result has none. */
-export interface FoodHit { id: number; name: string; brand?: string; kcal: number; p: number; c?: number; f?: number; serving?: number; source?: 'off' }
+export interface FoodHit { id: number; name: string; brand?: string; kcal: number; p: number; c?: number; f?: number; serving?: number; source?: 'off'; /** Vitamins and minerals per 100 g in the limits table's units, when the source lists any (brief food-vitamins-minerals). */ micro?: Micro }
 
 /** What the person typed, trimmed and squeezed; null when it is too short or too long to ask about. */
 export function cleanQuery(v: unknown): string | null {
@@ -59,7 +62,7 @@ export function parseFoods(json: unknown): FoodHit[] {
     const unit = typeof o.servingSizeUnit === 'string' ? o.servingSizeUnit.toLowerCase() : '';
     const size = num(o.servingSize);
     const serving = size !== null && size > 0 && size <= MAX_GRAMS && (unit === 'g' || unit === 'grm') ? round1(size) : undefined;
-    out.push({ id, name: name.slice(0, 80), ...(brand ? { brand: brand.slice(0, 60) } : {}), kcal: Math.round(kcal), p: round1(p), ...(c !== undefined ? { c: round1(c) } : {}), ...(f !== undefined ? { f: round1(f) } : {}), ...(serving !== undefined ? { serving } : {}) });
+    out.push({ id, name: name.slice(0, 80), ...(brand ? { brand: brand.slice(0, 60) } : {}), kcal: Math.round(kcal), p: round1(p), ...(c !== undefined ? { c: round1(c) } : {}), ...(f !== undefined ? { f: round1(f) } : {}), ...(serving !== undefined ? { serving } : {}), ...withMicro(usdaMicro(a)) });
     if (out.length >= MAX_RESULTS) break;
   }
   return out;
@@ -76,7 +79,7 @@ export function cleanHits(json: unknown): FoodHit[] {
     const kcal = num(o.kcal), p = num(o.p);
     if (kcal === null || p === null) continue;
     const c = num(o.c), f = num(o.f), serving = num(o.serving);
-    out.push({ id: o.id, name: o.name.slice(0, 80), ...(typeof o.brand === 'string' && o.brand ? { brand: o.brand.slice(0, 60) } : {}), kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(serving !== null && serving > 0 ? { serving } : {}), ...(o.source === 'off' ? { source: 'off' as const } : {}) });
+    out.push({ id: o.id, name: o.name.slice(0, 80), ...(typeof o.brand === 'string' && o.brand ? { brand: o.brand.slice(0, 60) } : {}), kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(serving !== null && serving > 0 ? { serving } : {}), ...(o.source === 'off' ? { source: 'off' as const } : {}), ...withMicro(cleanMicro(o.micro) ?? undefined) });
     if (out.length >= MAX_RESULTS) break;
   }
   return out;
@@ -88,10 +91,10 @@ export function cleanGrams(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 && n <= MAX_GRAMS ? n : null;
 }
 
-/** The form's numbers for `grams` of a food: calories whole, grams to one decimal, carbs and fat left out when the source has none. */
-export function scaleFood(hit: FoodHit, grams: number): { kcal: number; p: number; c?: number; f?: number } {
+/** The form's numbers for `grams` of a food: calories whole, grams to one decimal, carbs and fat left out when the source has none; vitamins and minerals scaled the same way when it lists them. */
+export function scaleFood(hit: FoodHit, grams: number): { kcal: number; p: number; c?: number; f?: number; micro?: Micro } {
   const k = grams / 100;
-  return { kcal: Math.round(hit.kcal * k), p: round1(hit.p * k), ...(hit.c !== undefined ? { c: round1(hit.c * k) } : {}), ...(hit.f !== undefined ? { f: round1(hit.f * k) } : {}) };
+  return { kcal: Math.round(hit.kcal * k), p: round1(hit.p * k), ...(hit.c !== undefined ? { c: round1(hit.c * k) } : {}), ...(hit.f !== undefined ? { f: round1(hit.f * k) } : {}), ...withMicro(scaleMicro(hit.micro, k)) };
 }
 
 /** The grams a pick starts at: a branded food's serving, else 100. */

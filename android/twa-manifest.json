@@ -20,20 +20,32 @@
     "path": "./android.keystore",
     "alias": "android"
   },
-  "appVersionName": "2",
-  "appVersionCode": 2,
+  "appVersionName": "5",
+  "appVersionCode": 5,
   "shortcuts": [
     {
       "name": "Today's workout",
       "shortName": "Today",
       "url": "https://loadbearer.app/?open=board",
-      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/today.png"
     },
     {
       "name": "Daily log",
       "shortName": "Daily",
       "url": "https://loadbearer.app/?open=daily",
-      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/daily.png"
+    },
+    {
+      "name": "Progress",
+      "shortName": "Progress",
+      "url": "https://loadbearer.app/?open=progress",
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/progress.png"
+    },
+    {
+      "name": "Nutrition",
+      "shortName": "Nutrition",
+      "url": "https://loadbearer.app/#/daily/nutrition",
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/nutrition.png"
     }
   ],
   "generatorApp": "bubblewrap-cli",
@@ -46,6 +58,16 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
+  "shareTarget": {
+    "action": "https://loadbearer.app/",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
   "fullScopeUrl": "https://loadbearer.app/",
   "minSdkVersion": 24,
   "orientation": "default",
@@ -56,5 +78,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "2"
+  "appVersion": "5"
 }

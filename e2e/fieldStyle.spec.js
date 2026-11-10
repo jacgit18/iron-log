@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // A text field, number field or select that no style rule reaches falls back to the browser's own look (square corners, a 2px grey border, 2px padding).
 // Field styling is opt-in by wrapper (ux/DESIGN-SYSTEM.md "Fields"), so this walks the tabs that have fields and fails on one that looks unstyled.
@@ -42,7 +43,7 @@ test('Groceries: the add dock, the store form and the list fields are styled', a
 });
 
 for (const [name, clicks, min] of [
-  ['Daily > Nutrition', ['#tab-daily', '#daily-supplements'], 2],
+  ['Daily > Nutrition', ['#tab-daily', '#daily-supplements'], 1], // the board has no field of its own; the Targets block has the fields, the add sheet and the editor are walked below
   ['Progress > Frequency goals', ['#tab-progress', 'button.hubtile:has-text("Frequency goals")'], 1],
   ['Program', ['#tab-program'], 2],
 ]) {
@@ -51,6 +52,21 @@ for (const [name, clicks, min] of [
     expect(await unstyled(page, min)).toEqual([]);
   });
 }
+
+test('Daily > Nutrition: the add sheet, the drink sheet and the supplement editor have styled fields', async ({ page }) => {
+  await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await page.click('#nb-add');
+  await page.getByRole('dialog').getByRole('button', { name: /^One-off food/ }).click();
+  expect(await unstyled(page, 3)).toEqual([]); // food, calories, protein
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  await page.locator('.nb-col.today').getByRole('button', { name: /^\+ Drink/ }).click();
+  expect(await unstyled(page, 3)).toEqual([]); // other amount, training minutes
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  await openSupplementEditor(page);
+  expect(await unstyled(page, 1)).toEqual([]); // the library's search (the per-time add forms are the add sheet now)
+  await page.click('#suplib-add');
+  expect(await unstyled(page, 2)).toEqual([]); // the add sheet: search and dose
+});
 
 // Settings keeps Training's fields on screens of their own (Program mode, Phases, 1-rep maxes), so the page and each screen are walked.
 test('Settings: every text field, number field and select is styled, on each Training screen', async ({ page }) => {

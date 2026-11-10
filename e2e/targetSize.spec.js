@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, seedExperiments } from './fixtures.js';
 
 // Every pointer target is at least 44x44 CSS px on a phone. axe does not check this (see ux/DESIGN-SYSTEM.md), so it is checked here by size.
 const TABS = ['Board', 'Daily', 'Progress', 'Program', 'Settings'];
@@ -28,6 +28,8 @@ async function small(page) {
 
 test('phone 390x844: every button, field and tab is at least 44x44 on each tab', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await seedExperiments(page, ['hack', 'facepull', 'latpd', 'chestpress', 'bbrow', 'dbcurl', 'legcurl']); // seven ideas: the filter row shows
+  await page.goto('/');
   for (const t of TABS) {
     await page.getByRole('tab', { name: t, exact: true }).click();
     expect(await small(page), `${t} has targets under 44px`).toEqual([]);
@@ -38,8 +40,8 @@ test('phone 390x844: every button, field and tab is at least 44x44 on each tab',
 for (const [name, clicks] of [
   ['Progress > Training trends', [['tab', 'Progress'], ['button', /Training trends/]]],
   ['Daily > Nutrition', [['tab', 'Daily'], ['button', 'Nutrition']]],
-  ['Program > Exercise library', [['tab', 'Program'], ['button', 'Exercise library']]],
-  ['Program > Stretch library', [['tab', 'Program'], ['button', 'Stretch library']]],
+  ['Program > Exercises', [['tab', 'Program'], ['button', 'Exercises']]],
+  ['Program > Stretches', [['tab', 'Program'], ['button', 'Stretches']]],
 ]) {
   test(`phone 390x844: ${name} has no target under 44px`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -53,4 +55,18 @@ test('phone 390x844: the Log sheet has no target under 44px', async ({ page }) =
   await page.getByRole('button', { name: /^Log /i }).first().click();
   await expect(page.locator('.sheet')).toBeVisible();
   expect(await small(page)).toEqual([]);
+});
+
+test.describe('filter dropdowns: Recipes', () => {
+  test('phone 390x844: Recipes with Filters open (Category dropdown, with a category chosen) has no target under 44px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'r1', n: 'Chili', cat: 'protein', servings: 2, minutes: 20, ing: [{ n: 'Beans', amt: '1 can' }], steps: ['Cook.'] }] })));
+    await page.reload();
+    await page.click('#tab-daily');
+    await page.click('#daily-recipes');
+    await expect(page.getByLabel('Category', { exact: true })).toBeVisible(); // the fixtures open the Filters disclosure
+    await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
+    await expect(page.getByRole('button', { name: 'Clear Category filter' })).toBeVisible();
+    expect(await small(page), 'Recipes filters have targets under 44px').toEqual([]);
+  });
 });

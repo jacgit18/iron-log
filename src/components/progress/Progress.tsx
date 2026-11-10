@@ -1,5 +1,6 @@
 import type { PhaseKey } from '../../types.ts';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { withoutSkipMarks } from '../../lib/skipMark.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
@@ -72,7 +73,8 @@ function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => 
 }
 
 export function LiftList({ byMuscle = false }: { byMuscle?: boolean }) {
-  const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
+  const cfg = useAppStore(s => s.cfg); const allLogs = useAppStore(s => s.logs);
+  const logs = useMemo(() => withoutSkipMarks(allLogs), [allLogs]); // a skipped exercise is not a session: its Skipped entry stays out of Last, Sessions and the list
   const openModal = useAppStore(s => s.openModal);
   const body = useAppStore(s => s.body);
   const today = useToday(s => s.today);

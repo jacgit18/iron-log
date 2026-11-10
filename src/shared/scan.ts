@@ -2,12 +2,14 @@
 // Pure and shared by the server (which asks the model) and the app (which fills the form). The model's words are data: only the fixed fields
 // below are read, each checked against a range, so text printed on a label cannot add a field or change a number's meaning. Nothing here is stored.
 
+import { cleanMicro, type Micro } from './foodMicro.js';
+
 export const MAX_PHOTO_BASE64 = 2_000_000; // characters of base64 the route accepts (about 1.5 MB of JPEG); the app shrinks to fit well under it
 export const MAX_NAME = 80;
 export const MAX_SERVING = 40;
 
 /** One label read: numbers per serving, optional ones left out when the label has none. */
-export interface LabelFill { name?: string; serving?: string; servingG?: number; servingsPerPack?: number; kcal: number; p: number; c?: number; f?: number }
+export interface LabelFill { name?: string; serving?: string; servingG?: number; servingsPerPack?: number; kcal: number; p: number; c?: number; f?: number; /** Vitamins and minerals per serving in mg or mcg, as printed (brief food-vitamins-minerals); only keys in NUTRIENT_KEYS, each within MICRO_MAX. */ micro?: Micro }
 
 /** `ok`: usable numbers. `per100g`: only a per-100 g column was printed (nothing is converted; the name may still help). `unreadable`: no calories or protein. */
 export type LabelResult = { kind: 'ok'; label: LabelFill } | { kind: 'per100g'; name?: string } | { kind: 'unreadable' };
@@ -52,6 +54,8 @@ export function cleanLabel(raw: unknown): LabelResult {
   if (c !== null) label.c = one(c);
   const f = inRange(o.f, 0, 300);
   if (f !== null) label.f = one(f);
+  const micro = cleanMicro(o.micro); // unknown keys, text, zero and misreads over ten times the adult upper limit are dropped here, so a label's printed text can never add a field
+  if (micro) label.micro = micro;
   return { kind: 'ok', label };
 }
 

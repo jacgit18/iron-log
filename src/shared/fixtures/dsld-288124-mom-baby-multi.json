@@ -1,0 +1,15 @@
+{
+"fullName": "35+ Mom and Baby Multivitamin", "brandName": "Rainbow Light", "entryDate": "2023-08-23", "upcSku": "0 21888 20312 3",
+"servingSizes": [{"unit": "Tablet(s)", "notes": "", "minQuantity": 1}],
+"ingredientRows": [
+{"name": "Thiamin", "ingredientGroup": "Vitamin B1 (Thiamine)", "category": "vitamin", "quantity": [{"quantity": 20, "unit": "mg"}]},
+{"name": "Riboflavin", "ingredientGroup": "Riboflavin", "category": "vitamin", "quantity": [{"quantity": 22, "unit": "mg"}]},
+{"name": "Vitamin B6", "ingredientGroup": "Vitamin B6", "category": "vitamin", "quantity": [{"quantity": 20, "unit": "mg"}]},
+{"name": "Folate", "ingredientGroup": "Vitamin B9 (Folate)", "category": "vitamin", "quantity": [{"quantity": 1360, "unit": "mcg DFE"}], "nestedRows": [{"name": "Folic Acid", "ingredientGroup": "Vitamin B9 (folic acid) ", "category": "vitamin", "quantity": [{"quantity": 800, "unit": "mcg"}]}]},
+{"name": "Vitamin B12", "ingredientGroup": "Vitamin B12", "category": "vitamin", "quantity": [{"quantity": 300, "unit": "mcg"}]},
+{"name": "Biotin", "ingredientGroup": "Vitamin B7 (biotin)", "category": "vitamin", "quantity": [{"quantity": 300, "unit": "mcg"}]},
+{"name": "Pantothenic Acid", "ingredientGroup": "Vitamin B5 (Pantothenic Acid)", "category": "vitamin", "quantity": [{"quantity": 20, "unit": "mg"}]},
+{"name": "Manganese", "ingredientGroup": "Manganese", "category": "mineral", "quantity": [{"quantity": 3, "unit": "mg"}]},
+{"name": "Molybdenum", "ingredientGroup": "Molybdenum", "category": "mineral", "quantity": [{"quantity": 75, "unit": "mcg"}]}
+]
+}

@@ -1,8 +1,9 @@
 import { DEFAULT_CFG } from '../lib/logic.js';
 import type { Cfg, WarmupItem } from '../types.ts';
 import { normDietCfg } from './diet.js';
+import { cleanProfile } from './profile.js';
 import { normRecipeChips } from './recipes.js';
-import { LIMITS, validBodyLb, validDate, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
+import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
 
 /* ---------- Config shape ----------
    normConfig takes anything (a stored doc, a file, a database snapshot) and returns the keys that can be used.
@@ -10,6 +11,7 @@ import { LIMITS, validBodyLb, validDate, validFreq, validGoal, validLiftGoalLb, 
 
 // The config from a file: the keys the app reads as plain objects must be plain objects, or it would throw on every load.
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
+const EX_NOTE_MAX = 200; // the longest note an exercise keeps (src/lib/exerciseNote.ts has the same cap)
 const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals', 'equipment', 'freqGoals'];
 // A goal that scales with body weight keeps `bw` and `bwd` only as a valid pair; either one bad drops both and it becomes a plain goal.
 const cleanGoal = (g: any) => {
@@ -25,7 +27,14 @@ export function normConfig(c: any): Partial<Cfg> {
   if ('rest' in out && !validRest(out.rest)) delete out.rest;
   const own = (o: any, f: (k: string, v: any) => unknown) => { const r: Record<string, unknown> = {}; Object.entries(o).forEach(([k, v]) => { if (!UNSAFE.has(k)) { const x = f(k, v); if (x !== undefined) r[k] = x; } }); return r; };
   if (out.pct) out.pct = { ...DEFAULT_CFG.pct, ...own(out.pct, (k, v) => (typeof v === 'number' && validPct(v) ? v : undefined)) };
-  if (out.ex) out.ex = own(out.ex, (_k, v) => { if (!v || typeof v !== 'object' || Array.isArray(v) || !('step' in v) || validStep(v.step)) return v; const { step: _step, ...rest } = v; return rest; });
+  // A bad step or note is dropped on its own; the rest of the exercise's entry stays.
+  if (out.ex) out.ex = own(out.ex, (_k, v) => {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return v;
+    let r = v;
+    if ('step' in r && !validStep(r.step)) { const { step: _step, ...rest } = r; r = rest; }
+    if ('note' in r && !(typeof r.note === 'string' && r.note.length <= EX_NOTE_MAX)) { const { note: _note, ...rest } = r; r = rest; }
+    return r;
+  });
   if (out.rm) out.rm = own(out.rm, (k, v) => (typeof v === 'number' && validRm(v) ? v : undefined));
   if (out.liftGoals) out.liftGoals = own(out.liftGoals, (k, byKey) => (byKey && typeof byKey === 'object' && !Array.isArray(byKey) ? own(byKey, (_k, g) => (g && typeof g === 'object' && typeof g.w === 'number' && validLiftGoalLb(g.w) ? cleanGoal(g) : undefined)) : undefined));
   if (out.equipment) out.equipment = own(out.equipment, (k, v) => (/^x:[a-z0-9-]{1,40}$/.test(k) && typeof v === 'string' && v.trim() && v.length <= 30 ? v.trim() : undefined));
@@ -34,7 +43,9 @@ export function normConfig(c: any): Partial<Cfg> {
   // hideKg is only ever true: absent means the kg figures are shown, so a false (or anything else) is dropped.
   if ('hideKg' in out && out.hideKg !== true) delete out.hideKg;
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
+  if ('groceryBudget' in out && !validGroceryBudget(out.groceryBudget)) delete out.groceryBudget;
   if ('diet' in out) { const d = normDietCfg(out.diet); if (d) out.diet = d; else delete out.diet; }
+  if ('profile' in out) { const pr = cleanProfile(out.profile); if (pr) out.profile = pr; else delete out.profile; }
   if ('recipeChips' in out) { const rc = normRecipeChips(out.recipeChips); if (rc) out.recipeChips = rc; else delete out.recipeChips; }
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
   ['backup', 'ghBackup', 'token', 'ghToken'].forEach(k => { delete out[k]; });
@@ -50,7 +61,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'groceryBudget', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips', 'profile'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 

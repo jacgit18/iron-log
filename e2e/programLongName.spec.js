@@ -22,7 +22,7 @@ for (const [w, zoom] of [[320, true], [390, true], [320, false]]) {
 }
 
 // Review of PR 412: the rule was first on .edpanel, which the Exercise and Stretch libraries share, and it broke their Edit buttons into "Ed / it".
-for (const lib of ['Exercise library', 'Stretch library']) {
+for (const lib of ['Exercises', 'Stretches']) {
   test(`${lib} at 320px: the Edit buttons stay on one line`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.click('#tab-program');

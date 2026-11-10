@@ -6,8 +6,8 @@ export const PROGRESS_PAGES = ['goals', 'hist', 'freq', 'lifts', 'trends'] as co
 /** Every address the app knows, as a path with no `#/`. A tab is the first part. */
 export const PATHS: readonly string[] = [
   'board', 'board/stretches', 'board/workout',
-  'daily', 'daily/grocery', 'daily/grocery/get', 'daily/grocery/home', 'daily/grocery/receipts', 'daily/grocery/spend', 'daily/medical', 'daily/recipes',
-  'daily/recipes/form', 'daily/recipes/library', 'daily/nutrition', 'daily/recipes/mine', 'daily/recipes/mine/sauce',
+  'daily', 'daily/grocery', 'daily/grocery/bought', 'daily/grocery/bought/history', 'daily/grocery/inventory', 'daily/grocery/receipts', 'daily/grocery/shopping', 'daily/medical', 'daily/recipes',
+  'daily/recipes/form', 'daily/recipes/library', 'daily/nutrition', 'daily/recipes/mine', 'daily/recipes/mine/sauce', 'daily/recipes/types',
   'plans',
   'program', 'program/a', 'program/b', 'program/compare', 'program/exercises', 'program/saved', 'program/stretches',
   'progress', ...PROGRESS_PAGES.map(p => `progress/${p}`),
@@ -18,7 +18,7 @@ const KNOWN = new Set(PATHS);
 export interface Route { tab: string; path: string }
 
 /** An address that was renamed: the old one still opens the same screen. */
-const RENAMED: Readonly<Record<string, string>> = { 'daily/supplements': 'daily/nutrition' };
+const RENAMED: Readonly<Record<string, string>> = { 'daily/grocery/get': 'daily/grocery/shopping', 'daily/grocery/home': 'daily/grocery/inventory', 'daily/grocery/spend': 'daily/grocery/bought/history', 'daily/supplements': 'daily/nutrition' };
 /** The Daily sections whose address is not their key: the Nutrition section's key is still `supplements` (saved views and button ids use it). */
 const DAILY_ADDRESS: Readonly<Record<string, string>> = { supplements: 'nutrition' };
 const dailyAddress = (key: string): string => DAILY_ADDRESS[key] ?? key;

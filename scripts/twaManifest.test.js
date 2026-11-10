@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // android/twa-manifest.json is the Bubblewrap config for the Play build. It must say what the web manifest says, and it must not turn on billing.
@@ -23,6 +23,24 @@ describe('android/twa-manifest.json', () => {
     expect(twa.minSdkVersion).toBeGreaterThanOrEqual(24); // androidbrowserhelper 2.7.4 needs API 24; Bubblewrap's default 21 fails the build
     expect(twa.appVersionCode).toBeGreaterThanOrEqual(1);
     expect(twa.signingKey.path).toBe('./android.keystore'); // relative, never a path on one machine
+  });
+  it('receives shared links like the web manifest does, so the app is in Android\'s share list', () => {
+    // Bubblewrap only writes the SEND intent filter when twa-manifest.json has shareTarget; the web manifest's share_target does not reach an installed Play app by itself.
+    const target = manifestBlock.match(/share_target: \{([^}]*\{[^}]*\}[^}]*)\}/)?.[1] ?? '';
+    const param = name => target.match(new RegExp(`${name}: '([^']+)'`))?.[1];
+    expect(twa.shareTarget.action).toBe('https://loadbearer.app/');
+    expect(twa.shareTarget.method).toBe('GET');
+    expect(twa.shareTarget.params).toEqual({ title: param('title'), text: param('text'), url: param('url') });
+    expect(twa.shareTarget.params.url).toBe('share_url'); // what src/lib/shareTarget.ts reads
+  });
+  it('lists the same launcher shortcuts as the web manifest (Android allows four)', () => {
+    const web = [...manifestBlock.matchAll(/\{ name: (?:'([^']+)'|"([^"]+)"), short_name: '([^']+)', url: '\.\/([^']*)', icons: \[\{ src: '([^']+)'/g)].map(m => ({ name: m[1] ?? m[2], shortName: m[3], target: m[4], icon: m[5] }));
+    const wrapper = twa.shortcuts.map(s => ({ name: s.name, shortName: s.shortName, target: s.url.replace('https://loadbearer.app/', ''), icon: s.chosenIconUrl.replace('https://loadbearer.app/', '') }));
+    expect(web).toHaveLength(4);
+    expect(wrapper).toEqual(web);
+    for (const s of web) expect(existsSync(new URL(`../public/${s.icon}`, import.meta.url)), s.icon).toBe(true);
+    for (const s of web) expect(s.icon).toMatch(/^shortcut-icons\/[a-z]+\.png$/); // outside icons/, which server/appLabel.ts rewrites to the QA or Staging copy
+    for (const s of twa.shortcuts) expect(s.url).toMatch(/^https:\/\/loadbearer\.app\/(\?open=(board|daily|progress|program|plans|settings)|#\/[a-z]+(\/[a-z]+)*)$/);
   });
   it('sells nothing: no Play Billing feature', () => {
     expect(twa.features?.playBilling).toBeUndefined();

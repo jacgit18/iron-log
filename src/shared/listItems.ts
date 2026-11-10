@@ -1,5 +1,7 @@
 import { PH_KEYS } from '../lib/data.js';
-import type { Experiment, Stretch, StretchExperiment, SupplementItem, SupplementSlot } from '../types.ts';
+import { normPortion } from '../lib/supplementPortion.js';
+import type { Experiment, Stretch, StretchExperiment, SupplementItem, SupplementNutrient, SupplementServing, SupplementSlot } from '../types.ts';
+import { MAX_NUTRIENT_ROWS, NUTRIENT_KEYS, NUTRIENT_UNITS } from './nutrientKeys.js';
 import { goodUrl, str } from './stretchWeek.js';
 
 /* ---------- One item of a small list: a stretch, a stretch experiment ----------
@@ -35,10 +37,31 @@ export function normExperimentItem(e: any): Experiment | null {
 
 export const SUPPLEMENT_SLOTS: SupplementSlot[] = ['morning', 'noon', 'night'];
 
+// What is in one serving: nutrient rows (a known key and unit, a positive amount; one row per key and unit) and the serving size. Anything else is dropped.
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+export function nutrientsOf(x: any): SupplementNutrient[] {
+  if (!Array.isArray(x)) return [];
+  const seen = new Set<string>(); const out: SupplementNutrient[] = [];
+  for (const r of x) {
+    if (out.length >= MAX_NUTRIENT_ROWS) break;
+    if (!r || typeof r !== 'object' || !(NUTRIENT_KEYS as readonly unknown[]).includes(r.key) || !(NUTRIENT_UNITS as readonly unknown[]).includes(r.unit)) continue;
+    const amount = typeof r.amount === 'number' ? round3(r.amount) : NaN;
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 1e7 || seen.has(`${r.key}/${r.unit}`)) continue;
+    seen.add(`${r.key}/${r.unit}`); out.push({ key: r.key, amount, unit: r.unit });
+  }
+  return out;
+}
+function servingOf(x: any): SupplementServing | null {
+  if (!x || typeof x !== 'object' || typeof x.units !== 'number' || !Number.isFinite(x.units) || x.units <= 0 || x.units > 100) return null;
+  return { units: round3(x.units), ...(str(x.form, 40) ? { form: str(x.form, 40) } : {}) };
+}
+
 // A supplement in the library or on the schedule. `slot` is morning, noon or night; anything else keeps it in the library only.
 export function normSupplementItem(x: any, slot: unknown = x && x.slot): SupplementItem | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 60)) return null;
   const catalogId = isCatalogId(x.catalogId) ? x.catalogId : null;
+  const serving = servingOf(x.serving), nutrients = nutrientsOf(x.nutrients), portion = normPortion(x.portion);
   return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x),
-    ...(catalogId && str(x.brand, 60) ? { brand: str(x.brand, 60) } : {}), ...(catalogId ? { catalogId } : {}) };
+    ...(catalogId && str(x.brand, 60) ? { brand: str(x.brand, 60) } : {}), ...(catalogId ? { catalogId } : {}),
+    ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) };
 }

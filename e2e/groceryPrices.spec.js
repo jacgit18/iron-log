@@ -8,7 +8,7 @@ const addBeef = async (page, price) => {
   if (price) { await page.click('#groc-more'); await page.fill('#groc-price', price); }
   await page.click('#groc-add');
   await page.click('#groc-done');
-  await page.click('#groc-view-get');
+  await page.click('#groc-view-shopping');
   await page.getByRole('button', { name: 'Count and price of Beef' }).click();
 };
 const addPrice = async (page, text) => { await page.getByLabel('Add a price for Beef, dollars').fill(text); await page.getByRole('button', { name: 'Add price' }).click(); };
@@ -21,13 +21,14 @@ test('prices are added one at a time or together as chips, totalled, kept after 
   await expect(page.getByLabel('Total for Beef')).toHaveText('$28.73');
   await expect(page.getByRole('button', { name: 'Count and price of Beef' })).toHaveText('3 × avg $9.58');
   await expect(page.getByLabel('Count of Beef')).toHaveValue('3');
-  await expect(page.locator('#groc-summary')).toContainText('Expected $28.73');
-  await page.locator('#groc-beef').check(); // bought: the prices stay
+  await expect(page.locator('#groc-summary')).toContainText('Planned $28.73');
+  await page.locator('#groc-beef').click(); // bought: the prices stay
   await expect(page.locator('#groc-alldone')).toBeVisible();
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought');
+  await page.getByRole('button', { name: 'Count and price of Beef' }).click(); // a panel is shut again when the view changes
   await expect(page.getByLabel('Total for Beef')).toHaveText('$28.73');
-  await page.reload(); await open(page); await page.click('#groc-view-get');
-  await page.click('#groc-bought summary');
+  await page.reload(); await open(page); await page.click('#groc-view-shopping');
+  await page.click('#groc-view-bought');
   await page.getByRole('button', { name: 'Count and price of Beef' }).click();
   await page.getByRole('button', { name: 'Remove $10.49 from Beef' }).click();
   await expect(page.getByLabel('Total for Beef')).toHaveText('$18.24');
@@ -59,14 +60,14 @@ test('the single price box is empty and off while each one has its own price, so
   await expect(page.getByLabel('Total for Beef')).toHaveText('$19.48');
 });
 
-test('At home shows what was bought, To get explains the fold, and Edit mode is marked, with no accessibility violations in both themes', async ({ page }) => {
+test('Inventory shows what was bought, Shopping explains the fold, and Edit mode is marked, with no accessibility violations in both themes', async ({ page }) => {
   await open(page);
   await addBeef(page);
-  await page.locator('#groc-beef').check();
-  await page.click('#groc-bought summary');
-  await expect(page.locator('#groc-bought')).toContainText('ticked Have on At home');
-  await page.click('#groc-view-home');
-  await expect(page.locator('.ghome .gchip')).toHaveText('Bought');
+  await page.locator('#groc-beef').click();
+  await page.click('#groc-view-bought');
+  await expect(page.locator('.groc')).toContainText('These count as in your inventory');
+  await page.click('#groc-view-inventory');
+  await expect(page.locator('.ghome .ghomebought')).toHaveText(/^bought [A-Z][a-z]{2}$/);
   await page.click('#groc-edit');
   await expect(page.locator('.geditbadge')).toHaveText('Editing');
   for (const colorScheme of ['light', 'dark']) {

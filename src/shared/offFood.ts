@@ -1,5 +1,6 @@
 // Open Food Facts product (brief barcode-coverage): turns one answer of its product API into the same FoodHit a USDA search gives, per 100 g. Pure, shared by the
 // server (which asks Open Food Facts after USDA has no such code). The data is crowd-sourced, so the hit carries source 'off' and the app shows a "check the label" note.
+import { offMicro, withMicro } from './foodMicro.js';
 import { MAX_GRAMS, type FoodHit } from './foods.js';
 
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
@@ -30,5 +31,16 @@ export function offHit(json: unknown, gtin: string): FoodHit | null {
     ...(c !== null ? { c: round1(c) } : {}), ...(f !== null ? { f: round1(f) } : {}),
     ...(size !== null && size > 0 && size <= MAX_GRAMS ? { serving: round1(size) } : {}),
     source: 'off',
+    ...withMicro(offMicro(n)),
   };
+}
+
+/** The name and brand in an Open Food Facts answer (supplement scan: no nutrition needed), or null when the product is unknown or has no name. Never throws. */
+export function offName(json: unknown): { name: string; brand?: string } | null {
+  const root = obj(json);
+  const p = root?.status === 1 ? obj(root.product) : null;
+  const name = text(p?.product_name, 100);
+  if (!p || !name) return null;
+  const brand = text(typeof p.brands === 'string' ? p.brands.split(',')[0] : undefined, 60);
+  return { name, ...(brand ? { brand } : {}) };
 }

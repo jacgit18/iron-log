@@ -1,6 +1,7 @@
 /* ---------- CSV / Excel export, full data file ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
+import { shownNote } from './exerciseNote.js';
 import { ymd } from '../shared/dates.js';
 import type { DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
 import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, isItemSkipped, isSkipped, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
@@ -107,7 +108,7 @@ export function programRows(cfg: Cfg, owner: string, prog: { days: DayDraft[] })
     d.slots.forEach((s, si) => {
       const base = [owner, di + 1, ...dayCells(d), si + 1, s.id ?? '', s.sec ?? '', s.tier ?? '', s.type ?? '', s.note ?? ''];
       if (!s.items.length) rows.push([...base, '', '', '', '', '', '', '']);
-      s.items.forEach(it => rows.push([...base, it.ex, exInfo(cfg, it.ex).n, it.ph ?? '', it.w ?? '', it.bw ? 'Yes' : '', it.rx ?? '', it.note ?? '']));
+      s.items.forEach(it => rows.push([...base, it.ex, exInfo(cfg, it.ex).n, it.ph ?? '', it.w ?? '', it.bw ? 'Yes' : '', it.rx ?? '', shownNote(cfg, it.ex, it.note)]));
     });
   });
   return rows;
@@ -141,7 +142,7 @@ function addDataSheets(X: XLSX, wb: ReturnType<XLSX['utils']['book_new']>, S: Sn
   X.utils.book_append_sheet(wb, sheet(X, [PROG_HEAD, ...prow], [10, 5, 12, 26, 10, 7, 12, 11, 10, 9, 24, 14, 30, 11, 11, 10, 16, 24]), 'Programs');
   X.utils.book_append_sheet(wb, sheet(X, info, [12, 40]), 'Program info');
   X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created', 'Archived'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : '', it.archived ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9, 9]), 'Saved versions');
-  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Exercise id', 'Exercise', 'Phase', 'Note'], ...(experiments || []).map(e => [e.id, e.ex, exInfo(cfg, e.ex).n, e.ph ?? '', e.note ?? ''])], [14, 16, 30, 11, 40]), 'Experiments');
+  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Exercise id', 'Exercise', 'Phase', 'Note'], ...(experiments || []).map(e => [e.id, e.ex, exInfo(cfg, e.ex).n, e.ph ?? '', shownNote(cfg, e.ex, e.note)])], [14, 16, 30, 11, 40]), 'Experiments');
   X.utils.book_append_sheet(wb, sheet(X, [CHECK_HEAD, ...checkRows(weeks)], [12, 9, 24, 12]), 'Check-offs');
   X.utils.book_append_sheet(wb, sheet(X, [['Setting', 'Value (JSON)'], ...Object.keys(cfg).sort().map(k => [k, JSON.stringify((cfg as any)[k])])], [18, 60]), 'Config');
 }

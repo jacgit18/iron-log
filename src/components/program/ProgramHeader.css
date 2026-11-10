@@ -52,6 +52,13 @@
   .proghead {
     grid-template-columns: minmax(0,1fr);
   }
+  .proghead .seg {
+    display: flex;
+  }
+  .proghead .seg button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
   .proghead .createprog {
     display: none;
   }

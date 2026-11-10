@@ -1,0 +1,35 @@
+@layer base, components;
+@layer components {
+/* The chip row: one line that scrolls inside itself. */
+.gstorechips {
+  display: flex;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+  padding-bottom: var(--sp-4);
+  overflow-x: auto;
+}
+/* Four or more stores: one dropdown pill (FilterSelect) instead of the row; it reaches past the pill for the 44px target, so nothing here may clip it. */
+.gstorechips.gstoredrop {
+  overflow: visible;
+  padding-bottom: 0;
+}
+.gstorechips .gstorechip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.gstorechips .gstorechip.on {
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+}

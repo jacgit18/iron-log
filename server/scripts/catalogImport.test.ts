@@ -2,7 +2,7 @@ import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
-import { FEDB_EQUIPMENT, FEDB_MUSCLES, fetchDsld, importCatalog, mapDsld, mapFedb, type CatalogRow, type DsldHit } from './catalogImport.ts';
+import { dsldAliases, FEDB_EQUIPMENT, FEDB_MUSCLES, fetchDsld, importCatalog, mapDsld, mapFedb, type CatalogRow, type DsldHit } from './catalogImport.ts';
 
 // A few rows shaped like free-exercise-db's exercises.json.
 const ex = (id: string, over: Record<string, unknown> = {}) => ({
@@ -130,7 +130,21 @@ describe('mapDsld', () => {
       hit('40', 'Creatine Monohydrate', 'NOW Sports', 'Capsule'), hit('7', 'Creatine Monohydrate', 'Other Brand', 'Powder'),
     ]);
     expect(rows.map(r => r.id)).toEqual(['c:dsld:12', 'c:dsld:40', 'c:dsld:7']);
-    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand and form)']);
+    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand, form and label year)']);
+  });
+  it('keeps both label years of one product, with each one\'s year and UPC and no amounts', () => {
+    const hit = (id: string, entryDate: string, upcSku: string, extra: Record<string, unknown> = {}) =>
+      ({ _id: id, _source: { fullName: 'Mega Men', brandName: 'Nature Made', physicalState: { langualCodeDescription: 'Tablet' }, entryDate, upcSku, ...extra } }) as DsldHit;
+    const { rows, skipped } = mapDsld([
+      hit('300', '2020-05-01', '031604026505', { allIngredients: [{ name: 'Zinc' }] }), hit('20', '2016-02-03', '031604026499'),
+      hit('21', '2016-09-09', '031604000000'), hit('9', 'n/a', ''),
+    ]);
+    expect(rows.map(r => [r.id, r.data])).toEqual([
+      ['c:dsld:300', { form: 'Tablet', entryYear: 2020, upc: '031604026505' }],
+      ['c:dsld:20', { form: 'Tablet', entryYear: 2016, upc: '031604026499' }],
+      ['c:dsld:9', { form: 'Tablet' }],
+    ]);
+    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand, form and label year)']);
   });
   it('keeps id, name, brand and form only, and skips what it cannot use', () => {
     const hit = (id: unknown, src: Record<string, unknown>) => ({ _id: id, _source: src }) as DsldHit;
@@ -209,5 +223,14 @@ describe('importCatalog', () => {
     await run(rows('B'), true, true);
     expect((await all()).find(r => r.id === 'c:dsld:1')!.retired_at).toBeNull();
     await expect(run([{ ...rows('C')[0]!, id: 'c:dsld:2' }])).rejects.toThrow(/not a c:fedb: id/);
+  });
+});
+
+describe('dsldAliases', () => {
+  it('points every label at the row the import keeps for it (same name, brand, form and label year: the lowest id)', () => {
+    const hit = (id: string, entryDate: string) => ({ _id: id, _source: { fullName: 'Mega Men', brandName: 'Nature Made', physicalState: { langualCodeDescription: 'Tablet' }, entryDate } }) as DsldHit;
+    const a = dsldAliases([hit('300', '2020-05-01'), hit('20', '2016-02-03'), hit('21', '2016-09-09'), hit('301', '2020-06-01'), { _id: 'x', _source: {} } as DsldHit]);
+    expect([...a]).toEqual([['300', 'c:dsld:300'], ['20', 'c:dsld:20'], ['21', 'c:dsld:20'], ['301', 'c:dsld:300']]);
+    expect(mapDsld([hit('300', '2020-05-01'), hit('301', '2020-06-01')]).rows.map(r => r.id)).toEqual(['c:dsld:300']); // the same keys mapDsld keeps
   });
 });

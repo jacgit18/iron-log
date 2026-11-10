@@ -1,0 +1,351 @@
+@layer base, components;
+@layer components {
+/* Nutrition as one week board (NutritionBoard.tsx). The day columns, meters, meal sections and plate marks reuse the week board's rules (diet/board/WeekBoard.css, class prefix wb-); this file adds the header, toolbar, day stepper, Supplements, Hydration, Eaten and the two sheets. */
+.nb-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+}
+.nb-head h2 {
+  margin: 0;
+}
+.nb-headbtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin-left: auto;
+}
+.nb-headbtns .btn {
+  min-height: 44px;
+}
+.nb-manage {
+  display: grid;
+  gap: var(--sp-12);
+  margin: 0 0 var(--sp-12);
+  padding: 0;
+  list-style: none;
+}
+.nb-manage li {
+  display: grid;
+  gap: var(--sp-4);
+}
+.nb-manage .btn {
+  min-height: 44px;
+  justify-self: start;
+}
+.nb-weeklab {
+  margin: var(--sp-4) 0 var(--sp-8);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.nb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6) var(--sp-12);
+  margin-bottom: var(--sp-8);
+}
+.nb-target {
+  font-weight: 600;
+}
+.nb-tbtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.nb-tbtns .btn {
+  white-space: nowrap;
+}
+.nb-msg {
+  min-height: 1.4em;
+}
+.nb-scan {
+  margin-bottom: var(--sp-8);
+}
+.nb-step {
+  display: flex;
+  gap: var(--sp-6);
+  align-items: center;
+  margin-bottom: var(--sp-8);
+}
+.nb-stepbtn {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+}
+.nb-stepbtn[aria-disabled="true"] {
+  opacity: 0.45;
+}
+.nb-steppick {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  text-align: center;
+  text-align-last: center;
+}
+.nb-dayname {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-dayname[aria-pressed="true"] b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nb-col.sel {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+/* Today is marked by its "· today" label and a quiet border; only the picked day gets the accent, so tapping another day does not leave two columns looking selected. */
+.nb-col.today {
+  border-color: var(--muted);
+}
+.nb-col.past {
+  background: var(--surface);
+}
+.wb-meter.nb-water i {
+  background: var(--wb-water);
+}
+.wb-meter.nb-supps-meter i {
+  background: var(--m-supp);
+}
+.wb-legend .nbw {
+  background: var(--wb-water);
+}
+/* Vitamins and minerals under Supplements (brief vitamin-mineral-day-meter, layout B): a closed line, then thin bars in the new teal `--m-vit`. Own classes only; the Board's rules are untouched. */
+.wb-meter.nb-vit-meter {
+  height: 6px;
+}
+.wb-meter.nb-vit-meter i {
+  background: var(--m-vit);
+}
+.wb-meter.nb-vit-meter.over i {
+  background: var(--str);
+}
+.nb-vit {
+  margin: var(--sp-2) 0 var(--sp-8) var(--sp-8);
+  padding-left: var(--sp-10);
+  border-left: 2px solid var(--line);
+}
+.nb-vit-tog {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.nb-vit-tog svg {
+  flex: none;
+}
+.nb-vit-list {
+  display: grid;
+  gap: var(--sp-6);
+  padding-bottom: var(--sp-6);
+}
+.nb-vit-sub .wb-meter {
+  margin-top: var(--sp-2);
+}
+.nb-vit-over {
+  color: var(--str);
+}
+.nb-vit-close {
+  color: var(--warn-ink);
+}
+.nb-vit-all {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.nb-vit-none {
+  margin: 0 0 var(--sp-8) var(--sp-8);
+}
+.wb-legend .nbs {
+  background: var(--m-supp);
+}
+.nb-short {
+  display: none;
+}
+.wb {
+  --wb-water: #2f5fa8;
+  --m-supp: #3b7d2c;
+  --m-vit: #0e7c86;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wb {
+    --wb-water: #7fb0f0;
+    --m-supp: #8fd16a;
+    --m-vit: #5fc9d2;
+  }
+}
+:root[data-theme="dark"] .wb {
+  --wb-water: #7fb0f0;
+  --m-supp: #8fd16a;
+  --m-vit: #5fc9d2;
+}
+/* Phone (brief nutrition-mobile-layout): header B puts the short Targets and Manage buttons on one row (the Nutrition heading is visually hidden: the tab already says it) with the week switcher full width below; add-food A is Add food across the width over three equal buttons. Wide screens keep the long layout. */
+@media (max-width: 699px) {
+  .nb-headbtns {
+    order: 2;
+  }
+  .nb-weeksw {
+    order: 3;
+    flex: 1 0 100%;
+    display: flex;
+  }
+  .nb-weeksw button {
+    flex: 1;
+    min-height: 44px;
+    min-width: 0;
+    padding-inline: var(--sp-4);
+    white-space: normal;
+  }
+  .nb-long {
+    display: none;
+  }
+  .nb-short {
+    display: inline;
+  }
+  .nb-tbtns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr));
+    /* three across at normal text, fewer as text grows (the rem scales with it), so large text wraps instead of scrolling sideways */
+    flex: 1 0 100%;
+  }
+  .nb-tbtns #nb-add {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+  .nb-tbtns .btn {
+    min-height: 44px;
+    padding-inline: var(--sp-4);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}
+.nb-empty {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.nb-eatlist, .nb-recipes {
+  display: grid;
+  gap: var(--sp-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nb-eat, .nb-recipes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-8);
+}
+.nb-eatn {
+  flex: 1 1 8em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.nb-eatacts {
+  display: flex;
+  gap: var(--sp-4);
+}
+.nb-suppslot {
+  display: grid;
+  gap: var(--sp-2);
+}
+.nb-slotlab {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.nb-tick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: 44px;
+  cursor: pointer;
+}
+.nb-tick.taken span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.nb-tick small {
+  color: var(--muted);
+}
+.nb-hstatus {
+  font-variant-numeric: tabular-nums;
+}
+.nb-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+.nb-tag {
+  padding: 1px var(--sp-6);
+  border-radius: var(--r-pill);
+  background: var(--wb-water);
+  color: var(--surface);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.nb-drink {
+  border-color: var(--wb-water);
+  color: var(--wb-water);
+}
+.nbsheet {
+  display: grid;
+  gap: var(--sp-8);
+}
+.nb-menu {
+  display: grid;
+  gap: var(--sp-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nb-menu .btn {
+  display: grid;
+  justify-items: start;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+}
+.nb-menu .btn span {
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.nb-breakdown {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-8);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.nb-breakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+}

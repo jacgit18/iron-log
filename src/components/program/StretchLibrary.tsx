@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { videoLabel } from '../../lib/data.js';
 import { TIERS, tierLabel } from '../../lib/stretches.js';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import WatchLink from '../WatchLink.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
 import { canReorder, groupHeading, groupOpen, isFiltering, resultText } from '../../lib/libraryFilter.js';
-import LibraryChip from './LibraryChip.jsx';
+import FilterSelect from '../FilterSelect.jsx';
 import './Library.css';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
@@ -29,7 +29,7 @@ export default function StretchLibrary() {
   return (
     <section className={`panel edpanel exlib exlibwide${reordering ? ' exreorder' : ''}`}>
       <div className="inline spread">
-        <h2 id="slib-h" tabIndex={-1}>Stretch library</h2>
+        <h2 id="slib-h" tabIndex={-1}>Stretches</h2>
         <div className="inline">
           <button type="button" className="btn primary" id="slib-new" onClick={() => openModal({ type: 'stretch' })}>+ New stretch</button>
         </div>
@@ -38,11 +38,11 @@ export default function StretchLibrary() {
       <div className="libbar" role="search">
         <input className="libsearch" type="search" aria-label="Search" value={q} placeholder={`Search ${items.length} stretches`} onChange={e => setQ(e.target.value)} />
         <div className="libchips">
-          {sources && <LibraryChip label="Source" value={src} onChange={setSrc}>
+          {sources && <FilterSelect label="Source" value={src} onChange={setSrc}>
             <option value="">All sources</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
-          </LibraryChip>}
+          </FilterSelect>}
           {canReorder(filtering) && <button type="button" className="btn sm" aria-pressed={ordering} onClick={() => setOrdering(o => !o)}>{ordering ? 'Done' : 'Edit order'}</button>}
         </div>
         <span className="note" role="status">{resultText(shown.length, items.length, filtering, 'stretches')}</span>
@@ -69,7 +69,7 @@ export default function StretchLibrary() {
                       ? <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>
                       : <span className="pill custom" title="You created this stretch; it is not from the catalog">Custom</span>)}</b>
                     <span className="note">{r.group}{r.note ? ` · ${r.note}` : ''}</span>
-                    {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
+                    {r.url && <WatchLink url={r.url} name={r.n} size="compact" />}
                   </div>
                   <div className="actions flush">
                     {reordering && <>

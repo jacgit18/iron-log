@@ -1,0 +1,112 @@
+@layer base, components;
+@layer components {
+/* The supplement add sheet (brief supplement-add-redesign): search, results as 44px rows, the picked product's card with its label, time of day, dose. */
+.sas {
+  display: grid;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.sasresults {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+}
+.sasresults li + li {
+  border-top: 1px solid var(--line);
+}
+.sasopt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-8) var(--sp-12);
+  justify-content: center;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.sasopt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  .sasopt:hover {
+    background: var(--sunk);
+  }
+}
+.sasname {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sasopt .note {
+  overflow-wrap: anywhere;
+}
+.sasmore {
+  justify-self: start;
+}
+.sasbox {
+  display: grid;
+  gap: var(--sp-6);
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--sunk);
+  min-width: 0;
+}
+.sasbox .note {
+  margin: 0;
+}
+.sasboxhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.sasboxname {
+  margin: 0;
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+.sasslot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.sasslot legend {
+  padding: 0;
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.sasradio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.sasradio.on {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.sasfull {
+  justify-self: start;
+}
+}

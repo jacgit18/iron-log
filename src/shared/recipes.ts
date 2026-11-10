@@ -1,5 +1,6 @@
-import type { Recipe, RecipeCategory, RecipeChips, RecipeIngredient } from '../types.ts';
+import type { FoodType, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeIngredient, RecipeUse } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
+import { cleanMicro } from './foodMicro.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
@@ -36,6 +37,40 @@ export function normRecipeChips(v: unknown): RecipeChips | null {
   return hide.length || order.length ? { ...(hide.length ? { hide } : {}), ...(order.length ? { order } : {}) } : null;
 }
 
+/** The kinds of ready-made food, and how each reads on a button. */
+export const FOOD_TYPES: readonly FoodType[] = ['ingredient', 'ready', 'drink'];
+export const FOOD_TYPE_LABEL: Record<FoodType, string> = { ingredient: 'Ingredient', ready: 'Ready to eat', drink: 'Drink' };
+const cleanType = (v: unknown): FoodType | null => FOOD_TYPES.find(t => t === v) ?? null;
+export const RECIPE_USES: readonly RecipeUse[] = ['meal', 'ingredient', 'ready', 'drink'];
+export const RECIPE_USE_LABEL: Record<RecipeUse, string> = { meal: 'Meal', ingredient: 'Ingredient', ready: 'Ready to eat', drink: 'Drink' };
+/** The labels in `v`: known ones only, once each, in the fixed order; a Drink is never combined with another. None when nothing usable is left. */
+export function cleanUses(v: unknown): RecipeUse[] | null {
+  if (!Array.isArray(v)) return null;
+  const kept = RECIPE_USES.filter(u => v.includes(u));
+  return kept.length === 0 ? null : kept.includes('drink') ? ['drink'] : kept;
+}
+
+export const PLATE_MARKS: readonly PlateMark[] = ['protein', 'carb', 'veg'];
+/** The plate marks in `v`: known ones only, once each, in the fixed order. None when nothing usable is left. */
+export function cleanCounts(v: unknown): PlateMark[] | null {
+  if (!Array.isArray(v)) return null;
+  const kept = PLATE_MARKS.filter(m => v.includes(m));
+  return kept.length === 0 ? null : [...kept];
+}
+
+/** Most recipes one recipe can say it goes with (brief recipes-goes-with). */
+export const MAX_PAIRS = 3;
+/** The ids in `v` a recipe goes with: text ids only, not its own, not a reserved id, once each, at most MAX_PAIRS. None when nothing is left. */
+export function cleanPairs(v: unknown, selfId: string): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: string[] = [];
+  for (const x of v) {
+    const id = str(x, MAX_RECIPE_ID);
+    if (id && id !== selfId && !reservedId(id) && !out.includes(id)) out.push(id);
+  }
+  return out.length === 0 ? null : out.slice(0, MAX_PAIRS);
+}
+
 const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c => c === v) ?? 'other';
 /** A unit name or plural for a ready-made food (brief usual-amount-and-unit): letters first, then letters, spaces, hyphens or apostrophes, 1 to MAX_UNIT characters. */
 export const MAX_UNIT = 20;
@@ -46,12 +81,17 @@ export const cleanUsual = (v: unknown): number | null => (typeof v === 'number' 
 
 const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max ? v : null);
 
+/** How many of a linked food's unit a line uses: 0.1 to 100, to two decimals (brief meals-from-foods). */
+export const MIN_Q = 0.1, MAX_Q = 100;
+export const cleanQ = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= MIN_Q && v <= MAX_Q ? Math.round(v * 100) / 100 : null);
+
 /** One ingredient line, or null when it has no name. */
 export function normIngredient(x: unknown): RecipeIngredient | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
   const o = x as Record<string, unknown>;
   const n = str(o.n, MAX_RECIPE_NAME), amt = str(o.amt, MAX_AMOUNT), home = str(o.home, MAX_RECIPE_ID), rid = str(o.rid, MAX_RECIPE_ID), sub = str(o.sub, MAX_RECIPE_NAME);
-  return n ? { n, ...(amt ? { amt } : {}), ...(home && !reservedId(home) ? { home } : {}), ...(rid && !reservedId(rid) ? { rid } : {}), ...(sub && sub.toLowerCase() !== n.toLowerCase() ? { sub } : {}), ...(o.skip === true ? { skip: true as const } : {}) } : null;
+  const q = rid && !reservedId(rid) ? cleanQ(o.q) : null; // an amount of a linked food: meaningless without the link
+  return n ? { n, ...(amt ? { amt } : {}), ...(home && !reservedId(home) ? { home } : {}), ...(rid && !reservedId(rid) ? { rid } : {}), ...(q !== null ? { q } : {}), ...(sub && sub.toLowerCase() !== n.toLowerCase() ? { sub } : {}), ...(o.skip === true ? { skip: true as const } : {}) } : null;
 }
 
 /** One recipe, cleaned: lists are capped, blank lines dropped, an unknown category becomes Other. Null without an id or a name. */
@@ -68,11 +108,16 @@ export function normRecipe(x: unknown): Recipe | null {
   const urlText = typeof o.url === 'string' ? o.url.trim() : '', url = urlText.length <= MAX_URL && /^https?:\/\/\S+$/i.test(urlText) ? urlText : ''; // only a web link, cut never (a cut address would not open): a script or file address never becomes a link
   const library = from.startsWith('c:');
   const ready = cleanCategory(o.cat) === 'ready'; // a usual amount and a unit name belong to a ready-made food only
+  const uses = cleanUses(o.uses); // any recipe may carry them; unknown labels are dropped
+  const counts = cleanCounts(o.counts); // what it covers on a plate, set by the person
+  const pairs = cleanPairs(o.pairs, id); // recipes it goes with; ids of recipes that no longer exist are dropped by the app, not here (the server sees one list at a time)
+  const type = ready ? cleanType(o.type) : null; // a type belongs to a ready-made food only; an unknown value is dropped (the food stays untyped)
   const usual = ready ? cleanUsual(o.usual) : null, unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  const micro = cleanMicro(o.micro); // vitamins and minerals per serving, filled by a scan, the ingredient calculator or a meal's roll-up; never typed
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

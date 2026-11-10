@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import FilterSelect from '../FilterSelect.jsx';
 import { listIssues, updateIssue } from '../../lib/issuesClient.js';
 import { timeAgo } from '../../lib/timeAgo.js';
 import { ISSUE_STATUSES } from '../../shared/issues.js';
@@ -31,14 +32,10 @@ export default function IssuesList() {
 
   return (
     <div className="issues-body">
-      <div className="seg" role="group" aria-label="Show issues with status">
-        <button type="button" className={filter === null ? 'on' : ''} aria-pressed={filter === null} onClick={() => setFilter(null)}>All</button>
-        {ISSUE_STATUSES.map(s => (
-          <button key={s} type="button" className={filter === s ? 'on' : ''} aria-pressed={filter === s} onClick={() => setFilter(s)}>
-            {s[0]!.toUpperCase() + s.slice(1)}{counts ? ` ${counts[s]}` : ''}
-          </button>
-        ))}
-      </div>
+      <FilterSelect label="Status" value={filter ?? ''} onChange={v => setFilter(v === '' ? null : v as IssueStatus)}>
+        <option value="">All{counts ? ` (${ISSUE_STATUSES.reduce((n, s) => n + counts[s], 0)})` : ''}</option>
+        {ISSUE_STATUSES.map(s => <option key={s} value={s}>{s[0]!.toUpperCase() + s.slice(1)}{counts ? ` (${counts[s]})` : ''}</option>)}
+      </FilterSelect>
       {problem && <p className="note" role="status">{problem}</p>}
       {!problem && issues && !issues.length && <p className="note" role="status">No issues here.</p>}
       {!!issues?.length && (

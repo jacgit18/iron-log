@@ -1,10 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The split card sits folded at the bottom of To get; these specs read it, so each opens it first (a page with no split section has nothing to open).
-const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+// The split card sits folded at the bottom of Shopping; these specs read it, so each opens it first (a page with no split section has nothing to open).
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes), so opening it goes there first.
+const openSplit = async page => { await page.click('#groc-view-bought'); const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
 
-// Move to on To get: an item can be bought at another store this month without going to At home, and made that store's for good with one more tap.
+// Move to on Shopping: an item can be bought at another store this month without going to Inventory, and made that store's for good with one more tap.
 // The fixed date is in September 2026 (month 2026-09).
 const item = (id, n, store, cents = 300) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CAT = { stores: ["BJ's", 'Aldi'], items: [item('tp', 'Toilet paper', "BJ's", 2499), item('rice', 'Rice', ''), item('kale', 'Kale', 'Aldi')],
@@ -17,12 +18,12 @@ const seed = async (page, month = { lines: {}, pulled: [] }, admin = false) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(month));
   }, { CAT, month, admin });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
 const section = (page, store) => page.locator('section.gstore', { has: page.getByRole('heading', { name: new RegExp(`^${store.replace(/[^\\w ]/g, '.')}( |$)`) }) }).first();
 const openPanel = (page, name) => page.getByRole('button', { name: new RegExp(`price of ${name}`, 'i') }).click();
 
-test('an item under Anywhere can be moved to BJ\'s from To get, for this month only, and next month it is back', async ({ page }) => {
+test('an item under Anywhere can be moved to BJ\'s from Shopping, for this month only, and next month it is back', async ({ page }) => {
   await seed(page);
   await expect(section(page, 'Anywhere').locator('#groc-rice')).toBeVisible();
   await openPanel(page, 'Rice');
@@ -49,9 +50,10 @@ test('Make it the usual store moves the item for good, and the button goes', asy
 
 test('a bought item moved to another store counts on that store\'s bill, with its group as the split', async ({ page }) => {
   await seed(page, { lines: { tp: { got: true }, rice: { got: true } }, pulled: [] }, true);
-  const card = page.getByRole('region', { name: 'Splitting this month' });
+  await openSplit(page);
+  const card = page.getByRole('region', { name: 'Who owes who' });
   await expect(card.locator('.gsplitcard', { hasText: "BJ's" }).locator('li', { hasText: 'Bill' }).first()).toContainText('$24.99'); // rice is Anywhere, so not here
-  await page.click('#groc-bought summary');
+  await page.click('#groc-view-bought'); await openSplit(page); // the split card folds again when the view changes
   await openPanel(page, 'Rice');
   await page.getByLabel('Store for Rice this month').selectOption("BJ's");
   await expect(card.locator('.gsplitcard', { hasText: "BJ's" }).locator('li', { hasText: 'Bill' }).first()).toContainText('$27.99'); // 24.99 + 3.00
@@ -68,7 +70,7 @@ test('the panel, with Move to and the Make usual button showing, has no accessib
 
 test('Move to is not offered while there are no stores to move to', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: [], items: [{ id: 'rice', n: 'Rice', store: '', qty: 1, cents: 300, every: true, out: false }] })));
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
   await openPanel(page, 'Rice');
   await expect(page.getByLabel('Store for Rice this month')).toHaveCount(0);
 });

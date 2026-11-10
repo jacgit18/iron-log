@@ -16,7 +16,7 @@ export default function RemovedNotice({ scope, expires = false }: { scope: strin
   const st = useAppStore.getState();
   return (
     <Notice kind="undo" className="removednote" expire={expires ? { ms: UNDO_MS, onExpire: () => st.dismissRemoved(scope), key: r.id } : undefined} actions={[{ label: 'Undo', onClick: st.undoRemoved, btnRef: undoRef }, { label: 'Dismiss', onClick: () => st.dismissRemoved(), ghost: true }]}>
-      <b>Removed</b> {r.text}.
+      <b>{r.verb || 'Removed'}</b> {r.text}.
     </Notice>
   );
 }

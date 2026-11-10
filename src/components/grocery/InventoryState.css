@@ -1,0 +1,24 @@
+@layer base, components;
+@layer components {
+/* An Inventory row's state pill ("Have", "On Shopping") and the month it was bought in (brief groceries-inventory-vs-shopping). */
+.ghomestate {
+  flex: none;
+  padding: var(--sp-2) var(--sp-10);
+  border-radius: var(--r-pill);
+  background: var(--sunk);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ghomestate.need {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.ghomebought {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+}

@@ -49,3 +49,24 @@ export function hitForGtin(json: unknown, gtin: string): FoodHit | null {
   });
   return parseFoods({ foods: same })[0] ?? null;
 }
+
+/** What a scan of a supplement bottle needs from a product: its name and brand, never its nutrition (a vitamin has no calories to speak of; brief supplement-barcode-search). */
+export interface ProductName { name: string; brand?: string }
+
+const clean = (v: unknown, max: number): string | undefined => (typeof v === 'string' && v.trim() ? v.replace(/\s+/g, ' ').trim().slice(0, max) : undefined);
+
+/** The name and brand of the product in a USDA answer whose own code is exactly `gtin` (14 digits), or null. Unlike `hitForGtin` it does not need calories or protein. */
+export function nameForGtin(json: unknown, gtin: string): ProductName | null {
+  const foods = obj(json)?.foods;
+  if (!Array.isArray(foods)) return null;
+  for (const f of foods) {
+    const o = obj(f);
+    const code = o?.gtinUpc;
+    if (!o || typeof code !== 'string' || !/^\d{8,14}$/.test(code) || code.padStart(14, '0') !== gtin) continue;
+    const name = clean(o.description, 100);
+    if (!name) continue;
+    const brand = clean(o.brandName, 60) ?? clean(o.brandOwner, 60);
+    return { name, ...(brand ? { brand } : {}) };
+  }
+  return null;
+}

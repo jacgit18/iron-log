@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // A link shared from another Android app (manifest share_target, brief share-target). The address reading is a node test (shareTarget.test.ts);
 // this covers the wiring: the manifest entry, the sheet opening over the board, the address cleaned, Back closing it, and each way of saving the link.
@@ -35,7 +36,9 @@ test('Exercise: the link becomes the exercise video link; a different one asks b
   await page.getByRole('combobox', { name: 'Find an exercise' }).fill('lat pulldown');
   await page.getByRole('option', { name: /^Lat Pulldown, alternating/ }).first().click();
   await expect(page.getByText(/Saved as the video link for Lat Pulldown/)).toBeVisible();
+  await expect(page.getByText('It is also on your Ideas to try list.')).toHaveCount(0); // it is already in a program, so it is not an idea to try
   await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('.experiments')).not.toContainText('Lat Pulldown, alternating');
   await expect(page.getByRole('link', { name: /^Watch on YouTube: Lat Pulldown/ }).first()).toHaveAttribute('href', 'https://youtu.be/abc123');
   await share(page, 'share_url=https%3A%2F%2Fvimeo.com%2F42');
   await page.getByRole('button', { name: 'Exercise', exact: true }).click();
@@ -49,7 +52,7 @@ test('Exercise: the link becomes the exercise video link; a different one asks b
 
 test('Recipe: add the link to one of yours, or start a new recipe with it', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('onion');
   await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -67,7 +70,7 @@ test('Recipe: add the link to one of yours, or start a new recipe with it', asyn
 
 test('Recipe: a recipe that already has a different link asks before it is replaced', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('onion');
   await page.getByLabel('Video link (optional)').fill('https://vimeo.com/1');

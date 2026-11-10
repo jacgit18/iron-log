@@ -265,6 +265,12 @@ export interface SupplementDays {
   water: Generated<Json>;
 }
 
+export interface SupplementUpcs {
+  catalog_id: string;
+  imported_at: Generated<Timestamp>;
+  upc: string;
+}
+
 export interface UsageDays {
   counts: Generated<Json>;
   day: string;
@@ -322,6 +328,7 @@ export interface DB {
   stretch_weeks: StretchWeeks;
   stripe_events: StripeEvents;
   supplement_days: SupplementDays;
+  supplement_upcs: SupplementUpcs;
   usage_days: UsageDays;
   users: Users;
   weeks: Weeks;

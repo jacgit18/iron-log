@@ -1,12 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { startRecipe } from './recipesNav.js';
 
 // Editable recipe filters (brief recipe-filter-editing). The rules (tag cleaning, rename and merge, delete, chip order, the AND filter) are node tests
 // (recipeTags.test.ts, recipeList.test.ts, recipesSlice.test.ts); this covers what they cannot see: the tags field in the form, the chips on the
 // list, the Manage filters sheet and Back closing it, and a reload keeping the setting.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, cat, tags = []) => {
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Category').selectOption({ label: cat });
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
@@ -15,7 +16,7 @@ const make = async (page, name, cat, tags = []) => {
   await page.getByRole('button', { name: 'Back to recipes' }).click();
 };
 const rows = page => page.locator('.rc-list .rc-row b');
-const chipRow = page => page.getByRole('group', { name: 'Category' }).getByRole('button');
+const chipRow = page => page.getByLabel('Category', { exact: true }).locator('option'); // the Category dropdown's options
 
 test('a tag typed in the form shows as a chip, and a category plus tags show only recipes matching all of them', async ({ page }) => {
   await openRecipes(page);
@@ -29,7 +30,7 @@ test('a tag typed in the form shows as a chip, and a category plus tags show onl
   await expect(rows(page)).toHaveText(['Chili', 'Rice', 'Tacos']);
   await tags.getByRole('button', { name: 'meal prep' }).click(); // both tags
   await expect(rows(page)).toHaveText(['Chili', 'Rice']);
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Protein' }).click(); // category AND tags
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' }); // category AND tags
   await expect(rows(page)).toHaveText(['Chili']);
   await tags.getByRole('button', { name: 'weeknight' }).click(); // untick one
   await tags.getByRole('button', { name: 'meal prep' }).click();
@@ -39,7 +40,7 @@ test('a tag typed in the form shows as a chip, and a category plus tags show onl
 test('the form offers tags in use and a typed tag is kept without pressing Add', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein', ['weeknight']);
-  await page.getByRole('button', { name: 'New recipe' }).click();
+  await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Soup');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
   await page.getByRole('button', { name: 'Use weeknight' }).click();
@@ -62,7 +63,7 @@ test('Manage filters hides and reorders the chips on both tabs, keeps them after
   await page.goBack(); // one history entry: Back closes the sheet and stays on Recipes
   await expect(sheet).toHaveCount(0);
   await expect(page.locator('#recipes-mine')).toBeVisible();
-  await expect(chipRow(page).first()).toHaveText('All');
+  await expect(chipRow(page).first()).toHaveText('All categories');
   await expect(chipRow(page).nth(1)).toHaveText('Sides');
   await expect(chipRow(page).nth(2)).toHaveText('Protein');
   await expect(chipRow(page).filter({ hasText: 'Carbs' })).toHaveCount(0);
@@ -80,11 +81,11 @@ test('Manage filters hides and reorders the chips on both tabs, keeps them after
   await expect(chipRow(page).filter({ hasText: 'Carbs' })).toHaveCount(1);
 });
 
-test('hiding the chip that is the active filter clears the filter', async ({ page }) => {
+test('hiding the category that is the active filter clears the filter', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein');
   await make(page, 'Rice', 'Carbs');
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Carbs' }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Carbs' });
   await expect(rows(page)).toHaveText(['Rice']);
   await page.getByRole('button', { name: 'Manage filters' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Hide Carbs' }).click();

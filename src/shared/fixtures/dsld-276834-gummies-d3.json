@@ -1,0 +1,90 @@
+{
+ "id": 276834,
+ "fullName": "Vitamin D3 Gummies 2000 IU",
+ "brandName": "Sunergetic",
+ "upcSku": "X0028TB60F",
+ "entryDate": "2022-11-22",
+ "servingSizes": [
+  {
+   "minQuantity": 2,
+   "unit": "Gummy(ies)",
+   "notes": ""
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Calories",
+   "category": "other",
+   "ingredientGroup": "Header",
+   "quantity": [
+    {
+     "quantity": 15,
+     "unit": "Calorie(s)"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Total Carbohydrate",
+   "category": "sugar",
+   "ingredientGroup": "Carbohydrate (unspecified)",
+   "quantity": [
+    {
+     "quantity": 4,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Total Sugars",
+     "category": "sugar",
+     "ingredientGroup": "Carbohydrate (unspecified)",
+     "quantity": [
+      {
+       "quantity": 3,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": [
+      {
+       "name": "added Sugar",
+       "category": "sugar",
+       "ingredientGroup": "Sugar (unspecified)",
+       "quantity": [
+        {
+         "quantity": 3,
+         "unit": "Gram(s)"
+        }
+       ],
+       "nestedRows": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Vitamin D",
+   "category": "vitamin",
+   "ingredientGroup": "Vitamin D",
+   "quantity": [
+    {
+     "quantity": 50,
+     "unit": "mcg"
+    }
+   ],
+   "nestedRows": []
+  },
+  {
+   "name": "Sodium",
+   "category": "mineral",
+   "ingredientGroup": "Sodium",
+   "quantity": [
+    {
+     "quantity": 10,
+     "unit": "mg"
+    }
+   ],
+   "nestedRows": []
+  }
+ ]
+}

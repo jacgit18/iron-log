@@ -1,8 +1,9 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
-import { SLOTS, newSupplementId } from '../lib/supplements.js';
-import { isCatalogId } from '../shared/listItems.js';
+import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
+import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
+import { normPortion } from '../lib/supplementPortion.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
@@ -10,7 +11,6 @@ import { goalMetNow, trackWater } from '../lib/waterReminder.js';
 import { ymd } from '../shared/dates.js';
 
 // The same supplement: name and brand, any case (a catalog supplement has a brand; your own has none).
-const sameSupplement = (x: { n: string; brand?: string }, n: string, brand?: string) => x.n.toLowerCase() === n.toLowerCase() && (x.brand || '').toLowerCase() === (brand || '').toLowerCase();
 
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -176,11 +176,14 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
 
   /* Supplement library and schedule: Morning, Noon, Night. The same list every day; ticks are kept per date. */
   // From the Supplements tab: a new supplement straight into a section.
-  addSupplement(slot, name, dose) {
+  // `opts` (brief supplement-label-scan): amounts, serving size and brand read from a bottle's label, cleaned like any typed rows; left out, it is added exactly as before.
+  addSupplement(slot, name, dose, opts = {}) {
     if (!SLOTS.some(([k]) => k === slot)) return false;
     const n = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (!n) { flag('Give the supplement a name'); return false; }
     const dz = String(dose || '').trim().slice(0, 40);
-    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}) }); });
+    const brand = String(opts.brand || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); });
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
   // `dose`, when typed (the Supplements tab's add form), replaces the saved one.
@@ -199,7 +202,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
       const i = s.items.findIndex(x => x.id === id);
       const { dose: d0, ...rest } = s.items[i];
       const nd = dz || d0;
-      s.items.splice(i + 1, 0, { ...rest, id: newSupplementId(s.items, rest.n), slot, ...(nd ? { dose: nd } : {}) });
+      const copy = { ...rest, id: newSupplementId(s.items, rest.n), slot, ...(nd ? { dose: nd } : {}) };
+      delete copy.portion; // a new intake starts at one serving: you choose its amount
+      s.items.splice(i + 1, 0, copy);
     });
   },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
@@ -237,7 +242,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (items.some(x => x.catalogId === c.id)) return 'Already in your supplements.';
     if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
     const slot = opts.slot && SLOTS.some(([k]) => k === opts.slot) ? opts.slot : ''; const dz = String(opts.dose || '').trim().slice(0, 40);
-    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id }); })) return null;
+    // The label's amounts (brief supplement-label-amounts) are cleaned like any typed rows and become the supplement's own (ADR 026); none given adds it exactly as before.
+    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id, ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); })) return null;
     flag(`Added ${n}`); return null;
   },
   // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id
@@ -252,10 +259,20 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if ((!cur || !sameSupplement(cur, n, cur.brand)) && get().supp.items.some(x => sameSupplement(x, n, cur?.brand) && x.id !== d.id)) return 'You already have that supplement. To take it more than once a day, add it to another section on the Supplements tab.';
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
+    const nutrients = d.nutrients === undefined ? cur?.nutrients || [] : nutrientsOf(d.nutrients);
+    const serving = d.serving === undefined ? cur?.serving : normSupplementItem({ id: 'x', n: 'x', serving: d.serving })?.serving; // one serving size per product; the same cleaner as a synced item
+    const portion = d.portion === undefined ? cur?.portion : normPortion(d.portion);
     get().mutateSupp(s => {
-      const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}) };
+      const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}),
+        ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
+      // The same product in other sections shares one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
+      if (cur) for (const x of s.items) {
+        if (x.id === item.id || !sameSupplement(x, cur.n, cur.brand)) continue;
+        if (d.nutrients !== undefined) { if (nutrients.length) x.nutrients = nutrients.map(r => ({ ...r })); else delete x.nutrients; }
+        if (d.serving !== undefined) { if (serving) x.serving = { ...serving }; else delete x.serving; }
+      }
     });
     set({ modal: null }); flag('Supplement saved'); return null;
   },

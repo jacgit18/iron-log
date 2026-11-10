@@ -20,7 +20,8 @@ const seed = async (page, allStores) => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const openSplit = page => page.getByRole('button', { name: /^Splitting this month/ }).click();
+// Who owes who is the first row on Bought (brief groceries-store-chips-owes).
+const openSplit = async page => { await page.click('#groc-view-bought'); await page.getByRole('button', { name: /^Who owes who/ }).click(); };
 const block = page => page.getByRole('region', { name: 'Across all stores' });
 
 test('with All stores on, the block nets each person over both stores and the cards stay', async ({ page }) => {
@@ -47,7 +48,7 @@ test('with All stores off the stores have no group, so there is nothing to net a
 test('the Sharing panel switches a group between All stores and Only these stores', async ({ page }) => {
   await seed(page, false);
   await page.evaluate(() => localStorage.setItem('ironlog:session/admin', 'true'));
-  await page.click('#groc-view-home');
+  await page.click('#groc-view-inventory');
   await page.click('#groc-sharing');
   const all = page.getByRole('radio', { name: 'All stores' });
   await expect(page.getByRole('radio', { name: 'Only these stores' })).toBeChecked();

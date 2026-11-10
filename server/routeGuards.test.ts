@@ -31,7 +31,7 @@ const PUBLIC_WITH_AUTH: Record<string, string> = {
 // its check, push/fire.ts) and its token and limit tests live in the push tests.
 
 /** Mounted routers (app.use with a prefix) cannot be listed from the router, so each prefix is probed by hand. */
-const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'sync', 'usage-admin'];
+const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'supplement-barcode', 'supplement-label', 'sync', 'usage-admin'];
 
 let db: Kysely<DB>;
 let auth: ReturnType<typeof createAuth>;
@@ -122,8 +122,9 @@ describe('role guards: a plain signed-in account', () => {
     const url = await listen(createApp({ db }));
     expect((await fetch(`${url}/api/issues`, { headers: plain })).status).toBe(403);
     expect((await fetch(`${url}/api/accounts`, { headers: plain })).status).toBe(403);
-    expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
-    expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
+    expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422); // open to everyone signed in (2026-11-08): an empty body reaches the route's own check, a restored admin check would give 403
+    expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422);
+    expect((await fetch(`${url}/api/scan/supplement`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(422); // bottle scan: the same open-to-everyone-signed-in guard
     expect((await fetch(`${url}/api/receipts`, { headers: plain })).status).toBe(403);
     expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).toBe(503); // everyone signed in may ask; with no USDA key in this app the route itself answers 503 (a lost sign-in gate would give 401, a restored admin check 403)
     expect((await fetch(`${url}/api/backups`, { headers: { ...plain, 'x-client-version': 'dev' } })).status).toBe(402);
