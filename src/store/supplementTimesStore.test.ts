@@ -50,4 +50,10 @@ describe('saveSupplementTimes', () => {
     expect(st().supp.items[0].id).toBe(id);
   });
   it('refuses no times', () => { const id = fish(); expect(st().saveSupplementTimes(id, [], '')).toBe(false); expect(slots()).toEqual(['morning:2']); });
+  it('a rename on the sheet reaches every time, so Save does not add a second copy at the other time', () => {
+    const id = fish(); st().saveSupplementTimes(id, [{ slot: 'morning', portion: 1 }, { slot: 'night', portion: 1 }], '1 g');
+    expect(st().saveSupplement({ id, n: 'Fish oil 1000', slot: 'morning', dose: '1 g' })).toBeNull();
+    expect(st().saveSupplementTimes(id, [{ slot: 'morning', portion: 1 }, { slot: 'night', portion: 1 }], '1 g')).toBe(true);
+    expect(st().supp.items.map((i: any) => `${i.n}@${i.slot}`)).toEqual(['Fish oil 1000@morning', 'Fish oil 1000@night']);
+  });
 });

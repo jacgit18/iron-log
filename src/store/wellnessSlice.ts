@@ -289,9 +289,10 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
         ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
-      // The same product in other sections shares one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
+      // The same product in other sections shares its name, one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
       if (cur) for (const x of s.items) {
         if (x.id === item.id || !sameSupplement(x, cur.n, cur.brand)) continue;
+        x.n = n; // a rename reaches every time of the product: the sheet shows them as one supplement, and Save groups them by name
         if (d.nutrients !== undefined) { if (nutrients.length) x.nutrients = nutrients.map(r => ({ ...r })); else delete x.nutrients; }
         if (d.serving !== undefined) { if (serving) x.serving = { ...serving }; else delete x.serving; }
       }
