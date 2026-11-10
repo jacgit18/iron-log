@@ -43,8 +43,8 @@ test('an admin sees the panel, loads the list only when asked, and finds the ope
   await expect(panel.getByRole('button', { name: /duplicate key value/ })).toBeVisible();
   await expect(panel.getByRole('button', { name: /Cannot read properties/ })).toHaveCount(0); // the default filter is Open
   expect(calls).toEqual([{ method: 'GET', path: '/', status: 'open', body: null }]);
-  await expect(panel.getByRole('button', { name: /Open 1/ })).toHaveAttribute('aria-pressed', 'true');
-  await panel.getByRole('button', { name: /^All/ }).click();
+  await expect(panel.getByRole('combobox', { name: 'Status' })).toHaveValue('open');
+  await panel.getByRole('combobox', { name: 'Status' }).selectOption('');
   await expect(panel.getByRole('button', { name: /Cannot read properties/ })).toBeVisible();
   expect(calls.at(-1)).toMatchObject({ method: 'GET', status: null });
   await panel.getByRole('button', { name: 'Hide issues' }).click();
@@ -59,7 +59,7 @@ test('opening an issue shows its facts; changing the status and note sends one P
   await expect(panel.getByText('aaaaaaaaaaaa')).toBeVisible();
   await expect(panel.getByText('/api/sync')).toBeVisible();
   await expect(panel.getByText('foo /server/x.ts:1:2')).toBeVisible();
-  await panel.getByLabel('Status', { exact: true }).selectOption('investigating');
+  await panel.locator('.issuedetail').getByLabel('Status', { exact: true }).selectOption('investigating');
   await panel.getByLabel('Note', { exact: true }).fill('retry storm after deploy');
   await panel.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => calls.filter(c => c.method === 'PATCH').length).toBe(1);
@@ -86,10 +86,10 @@ test('a status someone else changed is not put back: after the list reloads the 
   const panel = page.getByRole('region', { name: 'Production issues' });
   await panel.getByRole('button', { name: 'Show issues' }).click();
   await panel.getByRole('button', { name: /duplicate key value/ }).click();
-  await expect(panel.getByLabel('Status', { exact: true })).toHaveValue('open');
+  await expect(panel.locator('.issuedetail').getByLabel('Status', { exact: true })).toHaveValue('open');
   calls.now[0].status = 'fixed'; // another admin fixed it
-  await panel.getByRole('button', { name: /^All/ }).click(); // the list is read again
-  await expect(panel.getByLabel('Status', { exact: true })).toHaveValue('fixed');
+  await panel.locator('.fsel').getByRole('combobox', { name: 'Status' }).selectOption(''); // the list is read again
+  await expect(panel.locator('.issuedetail').getByLabel('Status', { exact: true })).toHaveValue('fixed');
   await panel.getByLabel('Note', { exact: true }).fill('checked after the fix');
   await panel.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => calls.filter(c => c.method === 'PATCH').length).toBe(1);
