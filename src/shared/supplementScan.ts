@@ -1,4 +1,4 @@
-import { cleanSupplementLabel, MAX_OTHER, type LabelOther, type LabelRow, type LabelServing, type SupplementLabel } from './dsldLabel.js';
+import { cleanLabelIngredients, cleanSupplementLabel, MAX_OTHER, type LabelOther, type LabelRow, type LabelServing, type SupplementLabel } from './dsldLabel.js';
 import { MICRO_MAX, MICRO_UNIT } from './foodMicro.js';
 import { NUTRIENT_KEYS, type NutrientKey, type NutrientUnit } from './nutrientKeys.js';
 
@@ -66,13 +66,13 @@ function servingOf(raw: unknown): LabelServing | null {
   return units !== undefined && units > 0 && units <= 100 && form ? { text: words, units: round3(units), form } : { text: words };
 }
 
-/** One parsed model answer as a result. `{}`, a non-object, or an answer with no rows, no other lines and no serving is unreadable; an answer with only other lines is kept (herbs and blends), so the preview can say nothing tracked was found. */
+/** One parsed model answer as a result. `{}`, a non-object, or an answer with no rows, no ingredients and no other lines is unreadable; an answer with only other lines is kept (herbs and blends), so the preview can say nothing tracked was found. */
 export function cleanSupplementScan(raw: unknown): SupplementScanResult {
   if (!isObj(raw)) return UNREADABLE;
-  const rows = rowsOf(raw.rows), other = otherOf(raw.other), serving = servingOf(raw.serving);
-  if (!rows.length && !other.length) return UNREADABLE;
+  const rows = rowsOf(raw.rows), ingredients = cleanLabelIngredients(raw.ingredients), other = otherOf(raw.other), serving = servingOf(raw.serving);
+  if (!rows.length && !ingredients.length && !other.length) return UNREADABLE;
   const name = text(raw.name, 300) ?? '', brand = text(raw.brand, 300);
-  return { kind: 'ok', label: { name, ...(brand ? { brand } : {}), serving, rows, other } };
+  return { kind: 'ok', label: { name, ...(brand ? { brand } : {}), serving, rows, ingredients, other } };
 }
 
 /** The route's answer as the app reads it; anything that is not a known shape is "unreadable". The label is checked again with the same cleaner as a catalog label. */
@@ -80,5 +80,5 @@ export function cleanSupplementScanAnswer(body: unknown): SupplementScanResult {
   const result = isObj(body) && isObj(body.result) ? body.result : null;
   if (!result || result.kind !== 'ok') return UNREADABLE;
   const label = cleanSupplementLabel(result.label);
-  return label && (label.rows.length || label.other.length) ? { kind: 'ok', label } : UNREADABLE;
+  return label && (label.rows.length || label.ingredients.length || label.other.length) ? { kind: 'ok', label } : UNREADABLE;
 }

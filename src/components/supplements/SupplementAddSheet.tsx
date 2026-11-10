@@ -116,7 +116,7 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
     }
     if (pick?.kind === 'catalog') {
       if (!slots.length) { setErr('Pick a time of day, or Library only.'); return; }
-      const m = s.addCatalogSupplement(pick.item, { slot, dose, ...(fill?.nutrients.length || fill?.serving ? { nutrients: fill.nutrients, serving: fill.serving } : {}) });
+      const m = s.addCatalogSupplement(pick.item, { slot, dose, ...(fill?.nutrients.length || fill?.ingredients.length || fill?.serving ? { nutrients: fill.nutrients, ingredients: fill.ingredients, serving: fill.serving } : {}) });
       if (m) { setErr(m); return; }
       const made = useAppStore.getState().supp.items.find(i => i.catalogId === pick.item.id);
       if (!made) return;
@@ -127,7 +127,7 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
     if (!pick && (o.mine.shown.length || o.catalog.shown.length)) { setErr('Pick a result, or pick “Add … as a new supplement”.'); return; }
     const name = pick?.kind === 'create' ? pick.name : typed;
     if (!slot) { setErr('Pick Morning, Noon or Night for a new supplement, or open the full form to keep it in the library only.'); return; }
-    if (s.addSupplement(slot, name, dose, scanFill && scanned ? { nutrients: scanFill.nutrients, ...(scanFill.serving ? { serving: scanFill.serving } : {}), ...(scanned.brand ? { brand: scanned.brand } : {}) } : undefined)) {
+    if (s.addSupplement(slot, name, dose, scanFill && scanned ? { nutrients: scanFill.nutrients, ingredients: scanFill.ingredients, ...(scanFill.serving ? { serving: scanFill.serving } : {}), ...(scanned.brand ? { brand: scanned.brand } : {}) } : undefined)) {
       const made = useAppStore.getState().supp.items.find(i => i.n === name && i.slot === slot);
       if (made) slots.slice(1).forEach(sl => s.addSupplementInstance(made.id, sl, dose));
       s.closeModal();

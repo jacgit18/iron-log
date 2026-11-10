@@ -90,7 +90,7 @@ describe('scanSupplement', () => {
 
   it('posts to the supplement route, re-checks the label and remembers the count', async () => {
     answer(200, { ok: true, result: { kind: 'ok', label: { name: 'D', serving: null, rows: [{ key: 'zinc', amount: 5, unit: 'mg' }, { key: 'bogus', amount: 1, unit: 'mg' }], other: [] } }, left: 4, max: 5 });
-    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'D', serving: null, rows: [{ key: 'zinc', amount: 5, unit: 'mg' }], other: [] } } });
+    expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'D', serving: null, rows: [{ key: 'zinc', amount: 5, unit: 'mg' }], ingredients: [], other: [] } } });
     expect(url).toBe('/api/scan/supplement');
     expect(currentSupplementAllowance()).toEqual({ left: 4, max: 5 });
   });
