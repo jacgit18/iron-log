@@ -26,9 +26,8 @@ export function ingredientName(name: unknown): string {
   return curated ?? (name as string).trim().replace(/\s+/g, ' ').slice(0, MAX_INGREDIENT_NAME);
 }
 /** A name for a key with no row to take it from (a limit set for an ingredient no supplement lists today). */
-export const labelOfKey = (key: string): string => CURATED_INGREDIENTS.find(c => c.toLowerCase() === key) ?? (key ? key[0].toUpperCase() + key.slice(1) : '');
+export const labelOfKey = (key: string, typed?: string): string => CURATED_INGREDIENTS.find(c => c.toLowerCase() === key) ?? (typed && ingredientKey(typed) === key ? ingredientName(typed) : key ? key[0].toUpperCase() + key.slice(1) : '');
 const isUnit = (u: unknown): u is NutrientUnit => (NUTRIENT_UNITS as readonly unknown[]).includes(u);
-const goodAmount = (a: unknown): a is number => typeof a === 'number' && Number.isFinite(a) && a > 0 && a <= MAX_INGREDIENT_AMOUNT;
 
 /** What a person typed for a limit, or the words that say why it cannot be saved. Used by the limit sheet and the settings cleaner alike. */
 export function checkLimit(kind: unknown, amount: unknown, unit: unknown): { limit: IngredientLimit } | { error: string } {
@@ -51,9 +50,8 @@ export function ingredientLimitsOf(x: unknown): Record<string, IngredientLimit> 
     const key = ingredientKey(name);
     if (!key || UNSAFE.has(key) || key in out || !v || typeof v !== 'object') continue;
     const r = v as Record<string, unknown>;
-    if (!goodAmount(r.amount)) continue;
     const c = checkLimit(r.kind, r.amount, r.unit);
-    if ('limit' in c) out[key] = c.limit;
+    if ('limit' in c) out[key] = { ...c.limit, ...(typeof r.name === 'string' && ingredientKey(r.name) === key ? { name: ingredientName(r.name) } : {}) };
   }
   return out;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normConfig, normConfigDoc } from './config.js';
 import { ingredientsOf, normSupplementItem } from './listItems.js';
-import { CURATED_INGREDIENTS, MAX_INGREDIENT_ROWS, checkLimit, ingredientKey, ingredientLimitsOf, ingredientName } from './supplementIngredients.js';
+import { CURATED_INGREDIENTS, MAX_INGREDIENT_ROWS, checkLimit, ingredientKey, ingredientLimitsOf, ingredientName, labelOfKey } from './supplementIngredients.js';
 
 // Brief supplement-active-ingredients: the rows a supplement keeps and the limits a person sets.
 describe('ingredientName', () => {
@@ -64,6 +64,12 @@ describe('checkLimit', () => {
 describe('ingredientLimitsOf and the config', () => {
   it('keeps good limits by lowercase name and drops the rest', () => {
     expect(ingredientLimitsOf({ ' Caffeine ': { kind: 'cap', amount: 400, unit: 'mg' }, creatine: { kind: 'soft', amount: 5, unit: 'g' }, epa: { kind: 'target', amount: 0, unit: 'mg' }, dha: { kind: 'target', amount: 1, unit: 'oz' }, omega: 'x' })).toEqual({ caffeine: { kind: 'cap', amount: 400, unit: 'mg' } });
+  });
+  it('keeps the typed name when it matches the key, so a limit-only row reads as typed', () => {
+    expect(ingredientLimitsOf({ 'l-theanine': { kind: 'cap', amount: 400, unit: 'mg', name: ' L-Theanine ' }, other: { kind: 'cap', amount: 1, unit: 'mg', name: 'Different' } })).toEqual({ 'l-theanine': { kind: 'cap', amount: 400, unit: 'mg', name: 'L-Theanine' }, other: { kind: 'cap', amount: 1, unit: 'mg' } });
+    expect(labelOfKey('l-theanine', 'L-Theanine')).toBe('L-Theanine');
+    expect(labelOfKey('l-theanine')).toBe('L-theanine');
+    expect(labelOfKey('epa', 'whatever')).toBe('EPA');
   });
   it('never takes a prototype key', () => {
     const raw = JSON.parse('{"__proto__":{"kind":"cap","amount":1,"unit":"mg"},"constructor":{"kind":"cap","amount":1,"unit":"mg"}}');

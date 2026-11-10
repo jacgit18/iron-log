@@ -4,6 +4,7 @@ import { CURATED_INGREDIENTS, ingredientKey, ingredientName, labelOfKey } from '
 import { CLOSE_FRACTION } from './intakeChecks.js';
 import { countedItems } from './supplementNutrients.js';
 import type { TotalsBasis } from './supplementNutrients.js';
+import { fmtAmount } from './amountFormat.js';
 import { byName } from './sort.js';
 import { portionOf } from './supplementPortion.js';
 
@@ -53,8 +54,7 @@ export function convertAmount(amount: number, from: NutrientUnit, to: NutrientUn
   return a === undefined || b === undefined ? undefined : round3((amount * a) / b);
 }
 
-/** 1250 becomes "1,250"; at most two decimals, none when whole. */
-export const fmt = (n: number): string => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+const fmt = fmtAmount;
 
 const familyOf = (u: NutrientUnit) => (u === 'IU' ? 'iu' : 'mass');
 
@@ -69,7 +69,7 @@ export function ingredientTotals(items: SupplementItem[], taken: Taken, date: st
       e.rows.push({ itemId: item.id, name: item.n, amount: round3(r.amount * portionOf(item)), unit: r.unit });
     }
   }
-  for (const key of Object.keys(limits)) if (!by.has(key)) by.set(key, { label: labelOfKey(key), rows: [] });
+  for (const key of Object.keys(limits)) if (!by.has(key)) by.set(key, { label: labelOfKey(key, limits[key].name), rows: [] });
   const out: IngredientTotal[] = [];
   for (const [key, e] of by) {
     const lim = limits[key];
@@ -156,3 +156,9 @@ export function duplicateIngredientNotes(drafts: readonly IngredientDraft[]): st
 /** Some scheduled supplement lists an ingredient, or you set a limit: the Totals sheet then has something to show even when no vitamin or mineral is listed. */
 export const hasIngredientData = (items: SupplementItem[], limits: Record<string, IngredientLimit> = {}): boolean =>
   Object.keys(limits).length > 0 || items.some(i => i.slot && (i.ingredients || []).length > 0);
+
+/** Element ids for the Totals rows: the name as a slug, and a number after it when two names make the same slug ("l-theanine" and "l theanine"). */
+export function rowIds(keys: readonly string[]): string[] {
+  const used = new Map<string, number>();
+  return keys.map(k => { const s = k.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item'; const n = (used.get(s) ?? 0) + 1; used.set(s, n); return n === 1 ? s : `${s}-${n}`; });
+}

@@ -1,6 +1,7 @@
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
 import { profileAge } from '../shared/profile.js';
 import type { Profile } from '../shared/profile.js';
+import { fmtAmount } from './amountFormat.js';
 import type { WeekAverages } from './intakeAverage.js';
 import { targetCheck } from './intakeChecks.js';
 import { groupFor } from './nutrientGroups.js';
@@ -73,8 +74,7 @@ export interface TotalsView {
 /** " (1 capsule)" after a product's name when it is taken at other than one serving, so a total that counted half or double says so; empty otherwise. */
 const tagOf = (items: readonly SupplementItem[], id: string): string => { const i = items.find(x => x.id === id); const t = i ? portionTag(i) : ''; return t ? ` (${t})` : ''; };
 
-/** 1250 becomes "1,250"; at most two decimals, none when whole. */
-export const fmtAmount = (n: number): string => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+export { fmtAmount };
 
 /** Why food is shown beside a row but not added to it, by what the limit counts (the same words as the limits table's scope). */
 const NOT_ADDED: Record<'supplements' | 'form', string> = { supplements: 'this limit counts supplements only', form: 'this limit counts one form of the nutrient, which a food label does not separate' };

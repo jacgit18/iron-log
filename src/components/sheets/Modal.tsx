@@ -67,7 +67,7 @@ export default function Modal() {
     case 'nbadd': return <AddFoodSheet key={String(modal.day ?? '')} />;
     case 'nbdrink': return <DrinkSheet key={String(modal.day ?? '')} />;
     case 'nbmanage': return <ManageSheet />;
-    case 'ingredientlimit': return <IngredientLimitSheet key={String(modal.name ?? '')} name={String(modal.name ?? '')} day={String(modal.day ?? '')} unit={(modal.unit as NutrientUnit | undefined) ?? 'mg'} />;
+    case 'ingredientlimit': return <IngredientLimitSheet key={String(modal.name ?? '')} name={String(modal.name ?? '')} label={modal.label ? String(modal.label) : undefined} day={String(modal.day ?? '')} unit={(modal.unit as NutrientUnit | undefined) ?? 'mg'} />;
     case 'nbsupptotals': return <SupplementTotalsSheet day={String(modal.day ?? '')} />;
     case 'nbtargets': return <TargetsSheet />;
     case 'portion': return <PortionSheet key={String(modal.id ?? '')} />;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IngredientLimit, SupplementItem } from '../types.ts';
-import { capWarning, convertAmount, ingredientRows, ingredientTotals, ingredientsOverCap, limitPosition } from './supplementIngredients.js';
+import { capWarning, convertAmount, rowIds, ingredientRows, ingredientTotals, ingredientsOverCap, limitPosition } from './supplementIngredients.js';
 
 // Brief supplement-active-ingredients: a day's sums (taken or scheduled, portion, units) and where they stand against the person's own limit.
 const D = '2026-11-10';
@@ -102,5 +102,12 @@ describe('over-cap warning', () => {
   it('is empty when nothing was taken or no cap is set', () => {
     expect(capWarning([a], {}, D, limits)).toBe('');
     expect(capWarning([a], ticked('a'), D, {})).toBe('');
+  });
+});
+
+describe('rowIds', () => {
+  it('slugs names and numbers a repeat so two rows never share an id', () => {
+    expect(rowIds(['omega-3', 'l-theanine', 'l theanine', 'l.theanine'])).toEqual(['omega-3', 'l-theanine', 'l-theanine-2', 'l-theanine-3']);
+    expect(rowIds(['***'])).toEqual(['item']);
   });
 });

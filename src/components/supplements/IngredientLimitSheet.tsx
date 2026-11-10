@@ -9,15 +9,15 @@ import './IngredientLimitSheet.css';
 
 // "Set your limit" from a row of the Totals sheet (brief supplement-active-ingredients): your own daily target (aim for at least) or cap (stay under) for one ingredient, in g, mg, mcg or IU.
 // A sheet, not a screen: it replaces the Totals sheet in the same history entry, has no address, and Save, Cancel and Remove limit all return to Totals. `unit` is the ingredient's unit on the Totals row.
-export default function IngredientLimitSheet({ name, day, unit }: { name: string; day: string; unit: NutrientUnit }) {
+export default function IngredientLimitSheet({ name, label: shown, day, unit }: { name: string; label?: string; day: string; unit: NutrientUnit }) {
   const cur = useAppStore.getState().cfg.ingredientLimits?.[name];
-  const label = labelOfKey(name);
+  const label = shown || labelOfKey(name, cur?.name);
   const [kind, setKind] = useState<'target' | 'cap'>(cur?.kind ?? 'target');
   const [amount, setAmount] = useState(cur ? String(cur.amount) : '');
   const [u, setU] = useState<NutrientUnit>(cur?.unit ?? unit);
   const [err, setErr] = useState('');
   const back = () => useAppStore.getState().openModal({ type: 'nbsupptotals', day });
-  const save = (e: { preventDefault(): void }) => { e.preventDefault(); const m = useAppStore.getState().setIngredientLimit(name, { kind, amount, unit: u }); if (m) setErr(m); else back(); };
+  const save = (e: { preventDefault(): void }) => { e.preventDefault(); const m = useAppStore.getState().setIngredientLimit(shown || labelOfKey(name, cur?.name), { kind, amount, unit: u }); if (m) setErr(m); else back(); };
   return (
     <Sheet as="form" noValidate onSubmit={save} aria-label={`Your limit for ${label}`}>
       <h2 className="cond">Your limit for {label}</h2>

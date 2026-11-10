@@ -3,7 +3,7 @@ import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
 import { ingredientsOf, isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
-import { MAX_INGREDIENT_LIMITS, checkLimit, ingredientKey } from '../shared/supplementIngredients.js';
+import { MAX_INGREDIENT_LIMITS, checkLimit, ingredientKey, ingredientName } from '../shared/supplementIngredients.js';
 import { normPortion } from '../lib/supplementPortion.js';
 import { planTimes } from '../lib/supplementTimes.js';
 import type { StretchTier, SupplementItem, SupplementSlot } from '../types.ts';
@@ -310,7 +310,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const ok = checkLimit(limit.kind, limit.amount, limit.unit);
     if ('error' in ok) return ok.error;
     if (!get().cfg.ingredientLimits?.[key] && Object.keys(get().cfg.ingredientLimits || {}).length >= MAX_INGREDIENT_LIMITS) return 'You have set as many limits as fit. Remove one first.';
-    get().mutateCfg(c => { c.ingredientLimits = { ...(c.ingredientLimits || {}), [key]: ok.limit }; });
+    if (!get().mutateCfg(c => { c.ingredientLimits = { ...(c.ingredientLimits || {}), [key]: { ...ok.limit, name: ingredientName(name) } }; })) return 'Try again in a moment.';
     flag('Limit saved'); return null;
   },
   // Undo puts it back where it was, with every day it was ticked.

@@ -15,9 +15,9 @@ beforeEach(async () => {
 describe('setIngredientLimit', () => {
   it('sets a limit by lowercase name, changes it and removes it', () => {
     expect(st().setIngredientLimit('Caffeine ', { kind: 'cap', amount: '400', unit: 'mg' })).toBeNull();
-    expect(st().cfg.ingredientLimits).toEqual({ caffeine: { kind: 'cap', amount: 400, unit: 'mg' } });
+    expect(st().cfg.ingredientLimits).toEqual({ caffeine: { kind: 'cap', amount: 400, unit: 'mg', name: 'Caffeine' } });
     expect(st().setIngredientLimit('caffeine', { kind: 'target', amount: 100, unit: 'mg' })).toBeNull();
-    expect(st().cfg.ingredientLimits).toEqual({ caffeine: { kind: 'target', amount: 100, unit: 'mg' } });
+    expect(st().cfg.ingredientLimits).toEqual({ caffeine: { kind: 'target', amount: 100, unit: 'mg', name: 'Caffeine' } });
     expect(st().setIngredientLimit('CAFFEINE', null)).toBeNull();
     expect('ingredientLimits' in st().cfg).toBe(false);
   });

@@ -243,7 +243,7 @@ export interface SupplementNutrient { key: NutrientKey; amount: number; unit: Nu
 /** An active ingredient in one serving (brief supplement-active-ingredients): a free name (curated or typed), amount per serving, unit. */
 export interface SupplementIngredient { name: string; amount: number; unit: NutrientUnit }
 /** Your own daily number for one ingredient: a target (aim for at least) or a cap (stay under). Never a built-in limit. */
-export interface IngredientLimit { kind: 'target' | 'cap'; amount: number; unit: NutrientUnit }
+export interface IngredientLimit { kind: 'target' | 'cap'; amount: number; unit: NutrientUnit; /** The name as the person typed it, for a row no supplement lists today. */ name?: string }
 /** `units`: how many capsules, tablets or scoops make one serving; `form`: Capsule, Powder, ... */
 export interface SupplementServing { units: number; form?: string }
 export type { NutrientKey, NutrientUnit };
