@@ -4,6 +4,7 @@ import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { exInfo } from '../../lib/data.js';
 import type { EquipmentId } from '../../types.ts';
 import { exerciseOptions } from '../../lib/exerciseOptions.js';
+import { inYourPrograms } from '../../lib/exerciseLibrary.js';
 import { cleanName, newExerciseError, startName, MAX_EXERCISE_NAME } from '../../lib/shareExercise.js';
 import EquipmentField from '../EquipmentField.jsx';
 import ItemPicker from '../ItemPicker.jsx';
@@ -36,7 +37,7 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
     );
   }
 
-  const saveExercise = (id: string, name: string) => { const st = useAppStore.getState(); st.applyExerciseUrl(id, url); setStep({ k: 'saved', text: `Saved as the video link for ${name}.`, idea: st.addIdeaToTry(id) || useAppStore.getState().experiments.some(x => x.ex === id) }); }; // the exercise also goes on Ideas to try, so a shared video shows up there
+  const saveExercise = (id: string, name: string) => { const st = useAppStore.getState(); st.applyExerciseUrl(id, url); setStep({ k: 'saved', text: `Saved as the video link for ${name}.`, idea: !inYourPrograms(id, st) && (st.addIdeaToTry(id) || useAppStore.getState().experiments.some(x => x.ex === id)) }); }; // an exercise that is not in your programs also goes on Ideas to try, so a shared video shows up there; one already in a program stays where it is
   const saveRecipe = (id: string, name: string) => {
     const r = useAppStore.getState().recipes.find(x => x.id === id); if (!r) return;
     const err = useAppStore.getState().saveRecipe({ ...r, url });

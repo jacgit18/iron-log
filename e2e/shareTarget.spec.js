@@ -36,9 +36,9 @@ test('Exercise: the link becomes the exercise video link; a different one asks b
   await page.getByRole('combobox', { name: 'Find an exercise' }).fill('lat pulldown');
   await page.getByRole('option', { name: /^Lat Pulldown, alternating/ }).first().click();
   await expect(page.getByText(/Saved as the video link for Lat Pulldown/)).toBeVisible();
-  await expect(page.getByText('It is also on your Ideas to try list.')).toBeVisible();
+  await expect(page.getByText('It is also on your Ideas to try list.')).toHaveCount(0); // it is already in a program, so it is not an idea to try
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page.locator('.experiments')).toContainText('Lat Pulldown');
+  await expect(page.locator('.experiments')).not.toContainText('Lat Pulldown, alternating');
   await expect(page.getByRole('link', { name: /^Watch on YouTube: Lat Pulldown/ }).first()).toHaveAttribute('href', 'https://youtu.be/abc123');
   await share(page, 'share_url=https%3A%2F%2Fvimeo.com%2F42');
   await page.getByRole('button', { name: 'Exercise', exact: true }).click();

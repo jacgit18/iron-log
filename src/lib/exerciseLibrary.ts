@@ -15,6 +15,9 @@ export function usageOf(exId: string, { programs, library, experiments, logs }: 
   };
 }
 
+/** True when program A or B (the ones loaded) has the exercise: it is already something you do, so it never needs to go on Ideas to try. */
+export const inYourPrograms = (exId: string, state: Parameters<typeof usageOf>[1]): boolean => usageOf(exId, state).programs.length > 0;
+
 // Every exercise id something of yours points at: the rotation programs, saved/created versions, experiments, logged sessions and this
 // week's added cards. Syncing, the library lists only cfg.ex (ADR 024), but an older program can still use a built-in id never copied
 // into it (e.g. latpd); the add flows count these as yours, so the catalog never offers a second exercise under the same name (ADR 036).

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { libraryRows, filterRows, usageOf, hasTwoSources, keepCatalogItems, exIdsInUse, findExIdIn, rowSummary } from './exerciseLibrary.js';
+import { libraryRows, filterRows, usageOf, inYourPrograms, hasTwoSources, keepCatalogItems, exIdsInUse, findExIdIn, rowSummary } from './exerciseLibrary.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 const state = (over = {}) => ({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [], logs: {}, ...over });
@@ -108,5 +108,12 @@ describe('rowSummary', () => {
   });
   it('lists a muscle once when it is both primary and secondary', () => {
     expect(rowSummary({ p: ['quads'], s: ['quads', 'glutes'], mob: false, inPrograms: [] }, '').line).toBe('Quads, glutes');
+  });
+});
+
+describe('inYourPrograms', () => {
+  it('is true for an exercise in program A or B, false for one that is only in the library, an experiment or a log', () => {
+    expect(inYourPrograms('hack', state())).toBe(true);
+    expect(inYourPrograms('zzz', state({ experiments: [{ id: 'e', ex: 'zzz' }], logs: { zzz: [{}] } }))).toBe(false);
   });
 });
