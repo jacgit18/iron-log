@@ -40,7 +40,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /missing to Shopping/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to recipes' }).click();
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Ready-made' });
   await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toBeVisible();
   await page.getByRole('button', { name: 'Can make' }).click(); // nothing is missing from a food with no ingredients, but it is not "can make"
   await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toHaveCount(0);
@@ -108,10 +108,10 @@ test('Enter in the lookup box does not save the form, and the Ready-made filter 
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Ready-made' });
   await page.getByRole('button', { name: 'Library', exact: true }).click();
-  await expect(page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' })).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Category', { exact: true }).locator('option', { hasText: 'Ready-made' })).toHaveCount(0);
+  await expect(page.getByLabel('Category', { exact: true })).toHaveValue('');
 });
 
 test('the normal recipe form does not offer Ready-made as a category', async ({ page }) => {
