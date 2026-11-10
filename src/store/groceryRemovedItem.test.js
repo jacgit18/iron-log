@@ -39,7 +39,7 @@ describe('removing an item bought this month', () => {
     expect(m().lines[id]).toMatchObject({ got: true, store: 'Aldi', share: { with: [sis] } });
     st().undoRemoved(); // the Undo the notice offers
     expect(st().grocery.items.map(i => i.n)).toEqual(['Milk']);
-    expect(m().lines[id]).toEqual({ got: true, qty: 1, cents: 1000, store: 'Aldi', share: { with: [sis] } });
+    expect(m().lines[id]).toEqual({ at: expect.any(String), got: true, qty: 1, cents: 1000, store: 'Aldi', share: { with: [sis] } });
     expect(money()).toMatchObject({ spent: 1080, yours: 540, owed: 540 });
   });
   it('keeps an item’s own split and a store it was moved to for the month, and touches no month where it was not bought', async () => {

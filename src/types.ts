@@ -281,7 +281,11 @@ export interface GroceryStore { id: string; n: string; retired?: true }
 /** `store`: where the item was bought this month when that is not its usual store (Move to on To get); '' is Anywhere, absent is the item's own store. */
 /** `unpriced`: bought with no price at all (the item had none and none was typed), so a price given to the item later does not reach back and price this month's purchase. */
 /** `rc`: this bought tick was written by a scanned receipt's Apply (brief receipt-earlier-items); cleared when the item is unticked. A later receipt does not list the item as "bought but not on this receipt". */
-export interface GroceryLine { got?: true; rc?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
+/** One closed purchase of an item in a month (brief grocery-purchase-log): what was open on the line when the person said they ran out. It holds its own count, price, store and split, so a later price, store or group change never reaches it.
+ *  `at`: when it was bought, local `YYYY-MM-DDTHH:mm` (a receipt gives its date alone, `YYYY-MM-DD`); absent on purchases saved before the log. */
+export interface GroceryBuy { at?: string; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string; rc?: true }
+/** `at`: when the open purchase (the line's own fields) was ticked bought. `buys`: the purchases already closed by Ran out on At home, oldest first; the month counts them with the open one. */
+export interface GroceryLine { at?: string; buys?: GroceryBuy[]; got?: true; rc?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */

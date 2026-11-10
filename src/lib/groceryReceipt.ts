@@ -159,7 +159,7 @@ export function checkText(c: Check): { ok: boolean; text: string } {
 /** The store actions Apply and Undo use. All exist already except `restoreGroceryLine`, which puts back one line exactly as it was. `removeGroceryItem` with `quiet` removes an item Apply created without the usual Removed notice, which would compete with the receipt Undo. */
 export interface GroceryApi {
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
-  setGroceryGot(month: string, id: string, on: boolean): boolean;
+  setGroceryGot(month: string, id: string, on: boolean, at?: string): boolean;
   markGroceryFromReceipt?(month: string, id: string): void; // the line says a receipt ticked it, so a later receipt does not list it as missing
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
@@ -189,11 +189,11 @@ export function takeSnapshot(plan: Plan, month: string, lines: Record<string, Gr
 }
 
 /** Runs the plan: each item is ticked bought for the month, marked bought at the receipt's store when it is not there already, then gets its count and price (or its packs' prices), and the store's tax is set. With `makeUsual` the receipt's store also becomes the item's usual one; an item that action refuses (the name is already there) is named in `out.refused` and stays bought at the store for the month only. Returns how many items were written. */
-export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[]; unticked?: number }): number {
+export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[]; unticked?: number }, at?: string): number { // `at`: the receipt's date, the stamp of what it buys
   let done = 0;
   for (const s of plan.steps) {
     if (s.kind === 'tax') { api.setGroceryTax(month, s.store, s.cents); continue; }
-    if (!api.setGroceryGot(month, s.id, true)) continue; // false: nothing changed (sync still loading)
+    if (!api.setGroceryGot(month, s.id, true, at)) continue; // false: nothing changed (sync still loading)
     api.markGroceryFromReceipt?.(month, s.id);
     const move = plan.moves.find(m => m.id === s.id);
     if (move) api.setGroceryLineStore(month, s.id, move.to);
