@@ -410,7 +410,8 @@ export interface WellnessSlice {
   /** Moves a stretch experiment into your stretches (library only, in the default group); Undo reverses it. */
   promoteStretchExp(id: string): boolean;
   removeStretchExtra(id: string): void;
-  addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
+  /** `nutrients`, `serving` and `brand` are read from a bottle's label (brief supplement-label-scan); left out, it is added with none. */
+  addSupplement(slot: SupplementSlot, name: string, dose?: string, opts?: { nutrients?: SupplementNutrient[]; serving?: SupplementServing; brand?: string }): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
   /** Adds another instance of one of yours (same name, brand and catalog id; its own id, section and ticks) to a section, e.g. a second dose later in the day. `dose` replaces the copied one when typed. */
   addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;

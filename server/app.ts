@@ -133,7 +133,7 @@ const DB_HEALTH_TTL_MS = 5_000;
 /** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
 /** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own parser (2 MB for a label, 5 MB for a receipt) runs after sign-in, the admin check and the per-user limit (scan.ts). */
-const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt)(\/|$)/i;
+const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt|supplement)(\/|$)/i;
 /** Keeping a receipt photo (POST /api/receipts, up to 1 MB as base64) also skips the 100 kb parser; the route's own 2 MB one runs after sign-in, the admin check and the per-user limit (receipts.ts). Other methods and paths keep the small one. */
 const RECEIPT_SAVE_PATH = /^\/api\/receipts\/?$/i;
 

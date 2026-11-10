@@ -2,6 +2,8 @@ import { signIn } from '../sync/devUser.js';
 import { markUsedUp, rememberAllowance } from './labelAllowance.js';
 import { cleanReceiptAnswer, type ItemRef, type ReceiptResult } from '../shared/receipt.js';
 import { cleanScanAnswer, type LabelResult } from '../shared/scan.js';
+import { cleanSupplementScanAnswer, type SupplementScanResult } from '../shared/supplementScan.js';
+import { markSupplementUsedUp, rememberSupplementAllowance, SUPPLEMENT_USED_UP_TEXT } from './supplementAllowance.js';
 
 // Label photo scan, app side (brief label-photo-scan): shrink the photo in the browser, send it to /api/scan/label, read the answer. The photo is
 // never stored; every failure comes back as a plain reason, never a throw.
@@ -85,4 +87,33 @@ export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSi
   if (res.status === 429) return { ok: false, reason: 'limit' };
   if (!res.ok) { console.warn(`receipt scan unavailable: status ${res.status}`); return { ok: false, reason: 'unavailable' }; }
   try { return { ok: true, result: cleanReceiptAnswer(await res.json(), new Set(items.map(i => i.id))), image }; } catch { return { ok: false, reason: 'unavailable' }; }
+}
+
+/** Words under the bottle-scan button for each way it can fail or come back empty (brief supplement-label-scan). Adding the supplement without amounts always still works. */
+export const SUPPLEMENT_SCAN_TEXT = {
+  offline: 'You are offline. You can still add it and type the amounts.',
+  limit: 'Too many scans just now. Try again in a minute, or type the amounts.',
+  unavailable: 'Bottle scan is not available right now. You can still add it and type the amounts.',
+  photo: 'Could not open that photo. Try another one, or type the amounts.',
+  unreadable: 'Could not read the amounts. Try a closer, flatter photo, or type them in the supplement\u2019s sheet.',
+  cap: SUPPLEMENT_USED_UP_TEXT,
+  check: 'Read from your photo. Check each amount against the bottle.',
+} as const;
+
+/** One photo of a bottle's Supplement Facts panel to /api/scan/supplement. The answer is checked again with the same validator as the server's; every failure is a plain reason, never a throw. The photo is not kept. */
+export async function scanSupplement(file: Blob, signal?: AbortSignal): Promise<{ ok: true; result: SupplementScanResult } | LabelFailure> {
+  let image: string;
+  try { image = await shrinkToJpegBase64(file); } catch { return { ok: false, reason: 'photo' }; }
+  let res: Response;
+  try {
+    res = await fetch('/api/scan/supplement', { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': __APP_VERSION__, ...signIn() }, body: JSON.stringify({ image }), ...(signal ? { signal } : {}) });
+  } catch { return { ok: false, reason: 'offline' }; }
+  if (res.status === 429) return { ok: false, reason: 'limit' };
+  if (!res.ok) {
+    const why = await res.json().then((b: { why?: unknown; retryAfterSec?: unknown }) => b, () => ({} as { why?: unknown; retryAfterSec?: unknown }));
+    if (res.status === 503 && why.why === 'cap') { markSupplementUsedUp(why.retryAfterSec); return { ok: false, reason: 'cap' }; }
+    console.warn(`bottle scan unavailable: status ${res.status}`);
+    return { ok: false, reason: 'unavailable' };
+  }
+  try { const body: unknown = await res.json(); rememberSupplementAllowance(body); return { ok: true, result: cleanSupplementScanAnswer(body) }; } catch { return { ok: false, reason: 'unavailable' }; }
 }

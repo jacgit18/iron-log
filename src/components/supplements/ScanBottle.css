@@ -1,0 +1,16 @@
+@layer base, components;
+@layer components {
+/* Scan the bottle's label (brief supplement-label-scan): the button and its status line; the button is 44px tall. */
+.scanbottle {
+  display: grid;
+  gap: var(--sp-6);
+  justify-items: start;
+  min-width: 0;
+}
+.scanbottle .btn {
+  min-height: 44px;
+}
+.scanbottle .note {
+  margin: 0;
+}
+}
