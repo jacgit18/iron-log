@@ -6,6 +6,9 @@
   gap: var(--sp-12);
   margin-top: var(--sp-12);
 }
+.issues-body > .fsel {
+  align-self: flex-start;
+}
 .issuelist {
   list-style: none;
   margin: 0;
