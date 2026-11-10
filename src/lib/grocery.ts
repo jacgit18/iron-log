@@ -1,5 +1,6 @@
 import { MAX_GROUPS, MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
+import { buysOf, buyCost, closedCost } from './groceryPurchases.js';
 import { sortByName } from './sort.js';
 import type { Grocery, GroceryData, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
 
@@ -161,7 +162,7 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean, used?: Readon
   g.items.filter(i => {
     const l = m.lines[i.id];
     if (live) return !l?.have && !(used?.has(i.id) && !l?.got); // a used one-time item is only on the month it was bought in
-    return l?.got === true || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id);
+    return l?.got === true || !!l?.buys?.length || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id); // an item you ran out of keeps the purchases it closed
   });
 
 /** The At home ticks a new month starts with (ADR 079): the items you have (ticked Have, or bought) in the latest earlier month that has any, still in the catalogue.
@@ -233,7 +234,7 @@ export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): Groc
 /** The bought lines of items that were removed from the list, read as items under the store they were bought at, so a month's tile, count and tax hint
  *  see the same purchases as the store lines, the split card and Spending do (`purchasesOf`, `spendByMonth`). */
 export const removedBought = (g: Grocery, m: GroceryMonth): GroceryItem[] =>
-  Object.entries(m.lines).filter(([id, l]) => l.got && !g.items.some(x => x.id === id)).map(([id, l]) => { const it = removedItem(g, id, l); return { ...it, store: storeFor(g, it, m) }; });
+  Object.entries(m.lines).filter(([id, l]) => (l.got || l.buys?.length) && !g.items.some(x => x.id === id)).map(([id, l]) => { const it = removedItem(g, id, l); return { ...it, store: storeFor(g, it, m) }; });
 
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
 export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.filter(p => !p.gone).length}`;
@@ -247,6 +248,8 @@ export function tally(items: GroceryItem[], m: GroceryMonth) {
     const l = lineOf(i, m); const t = lineCost(l);
     planned += t; if (l.cents == null && !l.prices) unpriced++;
     if (l.got) { got++; spent += t; boughtAt.add(i.store); }
+    const raw = m.lines[i.id]; // purchases closed by Ran out still count as spent, at the store each was bought at
+    if (raw?.buys?.length) { spent += closedCost(raw); buysOf(raw).forEach(b => boughtAt.add(b.store ?? i.store)); }
   });
   let taxed = false; // whether any tax was added: only a store with something ticked counts
   boughtAt.forEach(store => { const t = own(m.tax, store) ?? 0; if (t) { spent += t; taxed = true; } });
@@ -260,8 +263,9 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
     const key = shiftMonth(endKey, i - count + 1); const m = months[key];
     let spent = 0, bought = 0; const boughtAt = new Set<string>();
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
-      if (!l.got) return;
       const it = g.items.find(x => x.id === id);
+      buysOf(l).forEach(b => { bought++; boughtAt.add(b.store ?? storeFor(g, it ?? removedItem(g, id, l), m!)); spent += buyCost(b); }); // closed by Ran out
+      if (!l.got) return;
       bought++; boughtAt.add(storeFor(g, it ?? removedItem(g, id, l), m!)); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
     });
     boughtAt.forEach(store => { spent += own(m?.tax, store) ?? 0; }); // each store's tax from the receipt

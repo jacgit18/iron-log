@@ -1,4 +1,5 @@
 import { lineCost, lineOf, own, removedItem, shiftMonth, storeFor } from './grocery.js';
+import { buyCost, buysOf } from './groceryPurchases.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 import { paidKey } from './grocery.js';
@@ -49,6 +50,14 @@ export interface MonthPurchase extends Purchase { store: string; itemId: string 
 export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
   const out: MonthPurchase[] = [];
   Object.entries(m.lines).forEach(([id, raw]) => {
+    // Purchases closed by Ran out keep the store and split they were bought with (brief grocery-purchase-log).
+    const was = g.items.find(x => x.id === id) ?? removedItem(g, id, raw);
+    const known = knownPeople(g);
+    buysOf(raw).forEach(b => {
+      const store = b.store ?? storeFor(g, was, m);
+      if (b.prices) b.prices.forEach((cents, i) => out.push({ store, itemId: id, cents, parties: partiesOf(b.packShares?.[i] ?? b.share, undefined, known) }));
+      else out.push({ store, itemId: id, cents: buyCost(b), parties: partiesOf(b.share, undefined, known) });
+    });
     if (!raw.got) return;
     // An item removed from the catalogue is read from its line alone: its own price and count, and the store and split pinned on the line when it was removed.
     const base = g.items.find(x => x.id === id) ?? removedItem(g, id, raw);
