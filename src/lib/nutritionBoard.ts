@@ -88,6 +88,8 @@ export const ADD_FLOWS: Record<AddFlow, { label: string; hint: string }> = {
 };
 const EAT_FLOWS: readonly AddFlow[] = ['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes', 'copy', 'savemeal'];
 const PLAN_FLOWS: readonly AddFlow[] = ['meals', 'recipes'];
+/** The shortcut buttons beside + Add food, so the toolbar keeps its shape on every editable day: today logs (scan, quick add, one-off), a day ahead plans (recipes, saved meals), last week has none. */
+export const toolbarFlows = (day: string, today: string): readonly AddFlow[] => (day === today ? ['barcode', 'quick', 'oneoff'] : day > today ? ['recipes', 'meals'] : []);
 export const addFlows = (day: string, today: string): readonly AddFlow[] => (day === today ? EAT_FLOWS : day > today ? PLAN_FLOWS : []);
 
 /** Which way a day's numbers are counted: eaten food for last week and today, the plan for days ahead. */

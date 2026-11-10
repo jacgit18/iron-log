@@ -101,6 +101,10 @@
 .nb-col.sel {
   box-shadow: 0 0 0 2px var(--accent);
 }
+/* Today is marked by its "· today" label and a quiet border; only the picked day gets the accent, so tapping another day does not leave two columns looking selected. */
+.nb-col.today {
+  border-color: var(--muted);
+}
 .nb-col.past {
   background: var(--surface);
 }
