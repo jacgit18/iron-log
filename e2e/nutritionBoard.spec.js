@@ -68,14 +68,22 @@ test('the toolbar names its day, starts on today and follows the day you tap; la
   await expect(page.locator('.nb-toolbar')).toContainText('read-only');
 });
 
-test('the add sheet pre-picks the meal from the time (Dinner at 18:30), remembers the last pick, and a logged food moves the meters', async ({ page }) => {
+test('the add sheet pre-picks the meal from the time (Dinner at 18:30) on a day ahead and remembers the last pick; today asks no meal, and a logged food moves the meters', async ({ page }) => {
   await openNutrition(page);
-  const sheet = await openAdd(page);
+  let sheet = await openAdd(page);
+  await expect(sheet.getByRole('group', { name: 'Which meal' })).toHaveCount(0); // eaten food has no meal
+  await closeSheet(page);
+  await col(page, '2026-09-25').getByRole('button', { name: /^Fri 25/ }).click();
+  sheet = await openAdd(page);
   await expect(sheet.getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true');
   await sheet.getByRole('button', { name: 'Lunch' }).click();
   await closeSheet(page);
+  await col(page, '2026-09-25').getByRole('button', { name: /^Fri 25/ }).click();
+  sheet = await openAdd(page);
+  await expect(sheet.getByRole('button', { name: 'Lunch' })).toHaveAttribute('aria-pressed', 'true');
+  await closeSheet(page);
+  await todayCol(page).getByRole('button', { name: /^Thu 24/ }).click();
   const again = await openAdd(page, 'One-off food');
-  await expect(again.getByRole('button', { name: 'Lunch' })).toHaveAttribute('aria-pressed', 'true');
   await again.locator('#dt-add-n').fill('Rice');
   await again.locator('#dt-add-k').fill('300');
   await again.locator('#dt-add-p').fill('20');
@@ -276,4 +284,12 @@ test.describe('on a phone', () => {
     await expect(page.locator('#nb-add')).toHaveCount(0);
     await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();
   });
+});
+
+test('on today the Recipes way only logs: Log is there, Plan is not', async ({ page }) => {
+  await seedRecipes(page);
+  await openNutrition(page);
+  const sheet = await openAdd(page, 'Recipes');
+  await expect(sheet.getByRole('button', { name: 'Log Chili' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: /^Plan / })).toHaveCount(0);
 });

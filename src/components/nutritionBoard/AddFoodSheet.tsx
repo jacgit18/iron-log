@@ -27,7 +27,7 @@ const KEY = 'nb-last-meal';
 const lastMeal = (): PlanSlot | null => { try { const v = localStorage.getItem(KEY); return PLAN_SLOTS.find(s => s === v) ?? null; } catch { return null; } };
 const remember = (s: PlanSlot) => { try { localStorage.setItem(KEY, s); } catch { /* private window: the pick just is not remembered */ } };
 
-// The add sheet (brief nutrition-board): which meal (pre-picked from the time of day, remembering the last pick), then the ways of adding that exist today. A day ahead plans recipes and saved meals into that meal; today logs what was eaten.
+// The add sheet (brief nutrition-board): the ways of adding that exist today. A day ahead asks which meal (pre-picked from the time of day, remembering the last pick) and plans recipes and saved meals into it; today logs what was eaten, which has no meal, so it asks nothing (owner, 2026-11-10: no Plan on today).
 // `modal.day` is the day it adds to, `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan barcode opens the camera itself).
 export default function AddFoodSheet() {
   const modal = useAppStore(s => s.modal);
@@ -54,13 +54,13 @@ export default function AddFoodSheet() {
     <Sheet className="nbsheet" aria-label={`Add food, ${addingTo(day, today)}`}>
       <h2 className="cond">{flow ? ADD_FLOWS[flow].label : 'Add food'}</h2>
       <p className="note">{addingTo(day, today)}</p>
-      {flows.length === 0 ? <p className="note">Last week&apos;s food cannot be changed.</p> : (
+      {flows.length === 0 ? <p className="note">Last week&apos;s food cannot be changed.</p> : day > today && (
         <div role="group" aria-label="Which meal">
           <p className="note" id="nb-meal-h">Which meal?</p>
           <div className="seg" role="group" aria-labelledby="nb-meal-h">
             {PLAN_SLOTS.map(s => <button key={s} type="button" aria-pressed={meal === s} onClick={() => pick(s)}>{SLOT_LABEL[s]}</button>)}
           </div>
-          <p className="note">{day > today ? `Recipes and saved meals you add go into ${SLOT_LABEL[meal]}.` : `Recipes you plan go into ${SLOT_LABEL[meal]}; food you log is listed under Eaten.`}</p>
+          <p className="note">Recipes and saved meals you add go into {SLOT_LABEL[meal]}.</p>
         </div>
       )}
       {!flow && flows.length > 0 && (
@@ -132,7 +132,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
             <li key={r.id}>
               <span className="nb-eatn">{r.n}</span>
               {eat && <button type="button" className="btn sm" aria-label={`Log ${r.n}`} onClick={() => st().openModal({ type: 'portion', id: r.id, day })}>Log</button>}
-              <button type="button" className="btn sm" aria-label={`Plan ${r.n} for ${SLOT_LABEL[meal]}`} onClick={() => plan('r', r.id, r.n)}>Plan</button>
+              {!eat && <button type="button" className="btn sm" aria-label={`Plan ${r.n} for ${SLOT_LABEL[meal]}`} onClick={() => plan('r', r.id, r.n)}>Plan</button>}
             </li>
           ))}
         </ul>

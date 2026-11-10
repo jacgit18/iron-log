@@ -1,6 +1,7 @@
 import type { BodyEntry, Cfg, Logs, MuscleKey, PhaseKey, WeightChange as Change } from '../../types.ts';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { isSkipMark } from '../../lib/skipMark.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { ymd, parseDate, addDays, fmtShort, weekStartOf } from '../../shared/dates.js';
@@ -331,7 +332,7 @@ export type TrendPart = 'summary' | 'trends' | 'body';
 // One part of the trends at a time, so Progress can show the summary on the tab and each chart group on its own page.
 export default function Trends({ part = 'summary' }: { part?: TrendPart }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const body = useAppStore(s => s.body);
-  const hasLogs = Object.values(logs).some(l => l && l.length);
+  const hasLogs = Object.values(logs).some(l => l && l.some(e => !isSkipMark(e)));
   if (part === 'body') return <BodyChart />;
   if (!hasLogs && !body.length) return part === 'summary' ? null : <p className="note">Log a lift to see charts here.</p>;
   const keys = trendWeeks(logs, 12, 4); const byWeek = setsByWeek(logs, keys);

@@ -105,3 +105,24 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await openRecipes(page);
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
 });
+
+test('a scanned food is logged to the day the scan began on, even if another day is picked before Save', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('ironlog:session/admin', 'true');
+    window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13', 'upc_a']; } async detect() { return [{ rawValue: '016000275287', format: 'upc_a' }]; } };
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
+  });
+  await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Almond milk', brand: 'Silk', kcal: 30, p: 1, c: 1, f: 2.5, serving: 240 } }) }));
+  await page.reload();
+  await openDiet(page);
+  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click();
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  const scanned = page.getByRole('group', { name: 'Scanned food' });
+  await expect(scanned).toBeVisible();
+  await page.locator('.nb-col[data-day="2026-09-25"]').getByRole('button', { name: /^Fri 25/ }).click(); // another day, before saving
+  await expect(scanned.getByText('Logs to today, the day you scanned on.')).toBeVisible(); // the panel says where it will log
+  await scanned.getByRole('button', { name: 'Save and log it' }).click();
+  await expect(page.getByText(/Saved Almond milk \(Silk\) as .* and logged it\./)).toBeVisible();
+  await expect(page.locator('.nb-col.today .nb-eat')).toHaveCount(1);
+  await expect(page.locator('.nb-col[data-day="2026-09-25"] .nb-eat')).toHaveCount(0);
+});

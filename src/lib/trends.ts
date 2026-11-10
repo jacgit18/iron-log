@@ -3,6 +3,7 @@ import { BUILTIN, exInfo } from './data.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS, isUniform, normWeek } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
+import { isSkipMark } from './skipMark.js';
 import { nameCmp } from './sort.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -46,7 +47,7 @@ export function trendWeeks(logs: Logs, max: number, min: number) {
 }
 export function setsByWeek(logs: Logs, keys: string[]) {
   const out: Record<string, { sets: number; sessions: number }> = {}; keys.forEach(k => { out[k] = { sets: 0, sessions: 0 }; });
-  Object.values(logs).forEach(L => L.forEach(e => { const r = out[entryWeek(e)]; if (r) { r.sets += setsOf(e); r.sessions++; } }));
+  Object.values(logs).forEach(L => L.forEach(e => { const r = out[entryWeek(e)]; if (r && !isSkipMark(e)) { r.sets += setsOf(e); r.sessions++; } }));
   return out;
 }
 export function muscleWeeks(cfg: Cfg, logs: Logs, keys: string[]) {

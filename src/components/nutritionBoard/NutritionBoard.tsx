@@ -34,7 +34,7 @@ export default function NutritionBoard() {
   const recipes = useAppStore(s => s.recipes);
   const [picked, setPicked] = useState(today);
   const [msg, setMsg] = useState('');
-  const [scanned, setScanned] = useState<FoodHit | null>(null);
+  const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
   const day = onBoard(today, picked) ? picked : today;
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
@@ -69,8 +69,8 @@ export default function NutritionBoard() {
     const left = out.left + (out.add.length - done - (stopped ? 1 : 0));
     setMsg(`Logged ${done} from ${r.name}.${stopped ? ` ${stopped}` : left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
   };
-  const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned(h) });
-  const open = (flow?: string) => st().openModal({ type: 'nbadd', day, ...(flow ? { flow } : {}), onScan: (h: FoodHit) => setScanned(h), onMsg: setMsg });
+  const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
+  const open = (flow?: string) => st().openModal({ type: 'nbadd', day, ...(flow ? { flow } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day }), onMsg: setMsg });
   const editable = foodEditable(day, today);
   const target = addingTo(day, today);
   return (
@@ -99,7 +99,7 @@ export default function NutritionBoard() {
         ) : <span className="note">Last week&apos;s food cannot be changed. Supplements and water can.</span>}
       </div>
       <RemovedNotice scope="diet" expires />
-      {scanned && <div className="nb-scan"><ScanFood key={scanned.id} hit={scanned} day={day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
+      {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}</p>
       <div className="wb-legend" aria-hidden="true"><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span><span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>
       {wide ? (
