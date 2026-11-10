@@ -31,7 +31,8 @@ test('one note on an exercise shows on every card and sheet, and an edit from an
   await expect(idea.locator('.note', { hasText: 'Keep your ribs down' })).toBeVisible();
 
   // Adding the idea to a day this week: that card shows the exercise's note, not a copy.
-  await idea.getByRole('button', { name: 'This week only' }).click();
+  await idea.getByRole('button', { name: /^Add / }).first().click();
+  await dialog(page).getByRole('button', { name: 'Day 1', exact: true }).click();
   await expect(page.locator('article', { hasText: NAME })).toHaveCount(2);
   await expect(page.locator('article .note', { hasText: 'Keep your ribs down' })).toHaveCount(2);
 
