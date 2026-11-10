@@ -1,4 +1,5 @@
 import { applySplits } from './boardSplit.js';
+import { SKIPPED_NOTE, isSkipMark } from './skipMark.js';
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp, validStep } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
@@ -187,6 +188,7 @@ export function volText(e: LogEntry): string {
 }
 export function describe(e: LogEntry | null | undefined): string {
   if (!e) return '';
+  if (isSkipMark(e)) return 'Skipped';
   const S = e.sets!; if (!isUniform(e) && !S.every(x => x.w === S[0].w)) return volText(e);
   const load = e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'bodyweight'; return `${load} · ${volText(e)}`;
 }
@@ -577,7 +579,7 @@ export function planRows(cfg: Cfg, logs: Logs, it: CardItem, ph: PhaseKey | null
    replaces it. Returns only the exercises whose entries changed: {exId: entries}. */
 export const AUTO_NOTE = 'From check-off';
 /** The note on the entry a skip writes for the day it was skipped (an auto entry with no numbers, so stats and last-session lookups ignore it). */
-export const SKIPPED_NOTE = 'Skipped';
+export { SKIPPED_NOTE };
 const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
 // The day a board was worked: the earliest date among this week's log entries for the cards in it.
 export function dayDate(cards: Slot[], logs: Logs, wk: string): string | null {

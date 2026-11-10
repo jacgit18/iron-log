@@ -1,4 +1,5 @@
 import type { Cfg, LogEntry, Logs } from '../types.ts';
+import { isSkipMark } from './skipMark.js';
 import { entryWeek } from './trends.js';
 
 /* ---------- Exercise frequency goals ----------
@@ -9,7 +10,7 @@ import { entryWeek } from './trends.js';
 
 /** Days in the week starting `weekKey` (its Sunday) on which `entries` has a session. */
 export const sessionsInWeek = (entries: LogEntry[] | null | undefined, weekKey: string, columnOf?: (slot: string) => number | null) =>
-  new Set((entries || []).filter(e => e && entryWeek(e) === weekKey)
+  new Set((entries || []).filter(e => e && !isSkipMark(e) && entryWeek(e) === weekKey)
     .map(e => { const c = e.slot && columnOf ? columnOf(e.slot) : null; return c != null ? `c${c}` : `d${e.d}`; })).size;
 
 /** Every goal as { id, goal, done, met }, this week's sessions against the target, goals not yet met first. */
