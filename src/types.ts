@@ -102,6 +102,8 @@ export interface ExerciseInfo {
   eq?: EquipmentId;
   /** How many lb the suggested weight goes up by; absent means the default (2.5 under 50 lb, else 5). */
   step?: number;
+  /** One note for the exercise, shown on every card, idea and sheet with it (up to 200 characters; brief exercise-notes-persist). */
+  note?: string;
 }
 
 export interface WarmupItem {

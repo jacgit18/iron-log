@@ -14,6 +14,17 @@ describe('normConfig lift goals', () => {
   });
 });
 
+describe('normConfig exercise note', () => {
+  const run = (ex: object) => normConfig({ ex }).ex;
+  it('keeps a good note and the rest of the entry', () => {
+    expect(run({ hack: { eq: 'machine', step: 10, note: 'Pause at the bottom' } })).toEqual({ hack: { eq: 'machine', step: 10, note: 'Pause at the bottom' } });
+    expect(run({ hack: { note: 'x'.repeat(200) } })).toEqual({ hack: { note: 'x'.repeat(200) } });
+  });
+  it('drops a note that is not text or is too long, and keeps everything else on that entry', () => {
+    [5, null, {}, ['a'], 'x'.repeat(201)].forEach(note => expect(run({ hack: { eq: 'machine', step: 10, note }, bench: { note: 'ok' } })).toEqual({ hack: { eq: 'machine', step: 10 }, bench: { note: 'ok' } }));
+  });
+});
+
 describe('normConfig exercise step', () => {
   const run = (ex: object) => normConfig({ ex }).ex;
   it('keeps a good step and the rest of the entry', () => {
