@@ -16,7 +16,7 @@ import Sheet from '../Sheet.jsx';
 import './ShareSheet.css';
 
 const SHOWN = 12;
-type Step = { k: 'pick' } | { k: 'create'; name: string; eq: EquipmentId | ''; err: string } | { k: 'exercise'; q: string; err?: string; ask?: { id: string; name: string } } | { k: 'recipe'; q: string; ask?: { id: string; name: string } } | { k: 'saved'; text: string };
+type Step = { k: 'pick' } | { k: 'create'; name: string; eq: EquipmentId | ''; err: string } | { k: 'exercise'; q: string; err?: string; ask?: { id: string; name: string } } | { k: 'recipe'; q: string; ask?: { id: string; name: string } } | { k: 'saved'; text: string; idea?: boolean };
 
 // A link shared from another app (the manifest's share_target, brief share-target): save it as an exercise's video link or a recipe's.
 export default function ShareSheet({ title, url }: { title: string; url: string }) {
@@ -36,7 +36,7 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
     );
   }
 
-  const saveExercise = (id: string, name: string) => { useAppStore.getState().applyExerciseUrl(id, url); setStep({ k: 'saved', text: `Saved as the video link for ${name}.` }); };
+  const saveExercise = (id: string, name: string) => { const st = useAppStore.getState(); st.applyExerciseUrl(id, url); setStep({ k: 'saved', text: `Saved as the video link for ${name}.`, idea: st.addIdeaToTry(id) || useAppStore.getState().experiments.some(x => x.ex === id) }); }; // the exercise also goes on Ideas to try, so a shared video shows up there
   const saveRecipe = (id: string, name: string) => {
     const r = useAppStore.getState().recipes.find(x => x.id === id); if (!r) return;
     const err = useAppStore.getState().saveRecipe({ ...r, url });
@@ -94,7 +94,7 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
           const name = cleanName(step.name); const st = useAppStore.getState();
           const id = st.createExercise({ nn: name, nu: url, ne: step.eq });
           if (!useAppStore.getState().cfg.ex[id]) { setStep({ ...step, err: 'Could not save yet. Try again in a moment.' }); return; } // data still loading
-          setStep({ k: 'saved', text: `Saved as the video link for ${name}.` });
+          setStep({ k: 'saved', text: `Saved as the video link for ${name}.`, idea: useAppStore.getState().addIdeaToTry(id) });
         }}>
           <label className="field">Exercise name
             <input value={step.name} maxLength={MAX_EXERCISE_NAME} autoFocus placeholder="e.g. Cable Lateral Raise" onChange={e => setStep({ ...step, name: e.target.value, err: '' })} />
@@ -142,6 +142,7 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
       {step.k === 'saved' && (
         <>
           <p className="note" role="status">{step.text}</p>
+          {step.idea && <p className="note">It is also on your Ideas to try list.</p>}
           <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>
         </>
       )}

@@ -51,6 +51,12 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
   },
+  // Puts an exercise on the Ideas to try list (a shared video's exercise lands there on its own). False when it is already listed or the data is not ready; no flag or modal change.
+  addIdeaToTry(ex) {
+    if (get().blocked() || !get().cfg.ex[ex] || get().experiments.some(x => x.ex === ex)) return false;
+    get().setExperiments([...get().experiments, { id: uid('E'), ex, ph: null, note: '' }]);
+    return true;
+  },
   // The exercise id a sheet's choice stands for, adding it to the library first when it is new: a catalog pick joins with its snapshot
   // (ADR 036), a typed name becomes a new exercise, an existing one gets the link and equipment typed for it. `chosen`: `d.ex`, or the
   // existing exercise a typed name already belongs to. The caller has already checked the choice.
