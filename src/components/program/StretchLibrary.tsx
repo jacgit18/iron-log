@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { videoLabel } from '../../lib/data.js';
 import { TIERS, tierLabel } from '../../lib/stretches.js';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import WatchLink from '../WatchLink.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
 import { canReorder, groupHeading, groupOpen, isFiltering, resultText } from '../../lib/libraryFilter.js';
@@ -69,7 +69,7 @@ export default function StretchLibrary() {
                       ? <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>
                       : <span className="pill custom" title="You created this stretch; it is not from the catalog">Custom</span>)}</b>
                     <span className="note">{r.group}{r.note ? ` · ${r.note}` : ''}</span>
-                    {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
+                    {r.url && <WatchLink url={r.url} name={r.n} size="compact" />}
                   </div>
                   <div className="actions flush">
                     {reordering && <>

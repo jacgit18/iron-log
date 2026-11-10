@@ -4,7 +4,6 @@ import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
-import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
@@ -16,6 +15,7 @@ import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import WatchLink from '../WatchLink.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 import './Stretches.css';
@@ -24,7 +24,7 @@ import '../board/Experiments.css';
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
 function Link({ n, url }: { n: string; url?: string }) {
-  return url ? <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(url)}: ${n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(url)}</a> : null;
+  return url ? <WatchLink url={url} name={n} size="compact" /> : null;
 }
 
 function Row({ d, s, id, n, url, note, extra, removing }: { d: number; s: AppState; id: string; n: string; url?: string; note?: string; extra?: ReactNode; removing?: boolean }) {
