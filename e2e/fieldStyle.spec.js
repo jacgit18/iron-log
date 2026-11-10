@@ -63,7 +63,9 @@ test('Daily > Nutrition: the add sheet, the drink sheet and the supplement edito
   expect(await unstyled(page, 3)).toEqual([]); // other amount, training minutes
   await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
   await openSupplementEditor(page);
-  expect(await unstyled(page, 3)).toEqual([]); // each time of day's add form
+  expect(await unstyled(page, 1)).toEqual([]); // the library's search (the per-time add forms are the add sheet now)
+  await page.click('#suplib-add');
+  expect(await unstyled(page, 2)).toEqual([]); // the add sheet: search and dose
 });
 
 // Settings keeps Training's fields on screens of their own (Program mode, Phases, 1-rep maxes), so the page and each screen are walked.

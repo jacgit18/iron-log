@@ -11,7 +11,7 @@ const FOOD = { ok: true, hits: [{ id: 7, name: 'Spinach', kcal: 100, p: 10, c: 5
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); });
 
 async function addSupplement(page, name, nutrient, amount) {
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill(name);
   await page.locator('#supp-add-nutrient').click();
   await page.getByLabel('Nutrient 1').selectOption({ label: nutrient });

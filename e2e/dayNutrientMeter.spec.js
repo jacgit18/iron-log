@@ -8,7 +8,7 @@ import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } 
 const dialog = page => page.getByRole('dialog');
 
 async function addSupplement(page, name, nutrient, amount) {
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill(name);
   await page.locator('#supp-add-nutrient').click();
   await page.getByLabel('Nutrient 1').selectOption({ label: nutrient });

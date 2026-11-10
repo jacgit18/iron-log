@@ -17,7 +17,7 @@ async function takeCalcium(page, mg) {
   await page.locator('#tab-daily').click();
   await openNutrition(page);
   await openSupplementEditor(page);
-  await page.locator('#suplib-new').click();
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await page.locator('#supp-name').fill('Calcium cap');
   await page.locator('#supp-add-nutrient').click();
   await page.getByLabel('Nutrient 1').selectOption({ label: 'Calcium' });

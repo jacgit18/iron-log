@@ -198,39 +198,47 @@ const openSupplements = async (page, answer = search()) => {
   await page.click('#tab-daily'); await page.click('#daily-supplements');
   await openSupplementEditor(page);
 };
-const morningName = page => page.getByRole('combobox', { name: 'Add to Morning' });
+// The one add sheet (brief supplement-add-redesign): + Add in the library opens it; one search over yours and the catalog, a time of day, a dose.
+const addSheet = page => page.getByRole('dialog', { name: 'Add a supplement' });
+const openAddSheet = async page => { await page.locator('#suplib-add').click(); await expect(addSheet(page)).toBeVisible(); return addSheet(page); };
+const searchBox = page => page.locator('#suppadd-q');
 
-test('Supplements tab: a catalog product picked in a section joins your supplements there, with the dose typed', async ({ page }) => {
+test('Supplement add sheet: a catalog product picked joins your supplements in the chosen time of day, with the dose typed', async ({ page }) => {
   await openSupplements(page);
-  await morningName(page).fill('creatine now');
-  await page.getByRole('group', { name: 'Catalog' }).getByRole('option', { name: /Creatine Monohydrate/ }).click();
-  await expect(page.getByText('From the catalog. It joins your supplements in Morning.')).toBeVisible();
-  await page.fill('#suppdose-morning', '5 g');
-  await page.click('#suppadd-morning');
+  const sheet = await openAddSheet(page);
+  await searchBox(page).fill('creatine now');
+  await sheet.getByRole('button', { name: /Creatine Monohydrate/ }).click();
+  await expect(sheet.getByText(/From the catalog: it joins your supplements/)).toBeVisible();
+  await sheet.getByLabel('Morning').check();
+  await page.fill('#suppadd-dose', '5 g');
+  await page.click('#suppadd-go');
+  await expect(addSheet(page)).toHaveCount(0);
   const morning = page.getByRole('group', { name: 'Morning' });
   await expect(morning.locator('.srow')).toContainText(['Creatine Monohydrate5 g']);
-  await expect(morningName(page)).toHaveValue('');
 });
 
-test('Supplements tab: one of yours from the library is offered by name and moves into the section', async ({ page }) => {
+test('Supplement add sheet: one of yours from the library is offered by name and moves into the time of day', async ({ page }) => {
   await openSupplements(page);
-  await morningName(page).fill('fish');
-  await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Fish Oil/ }).click();
-  await expect(page.getByText('Moves it to Morning.')).toBeVisible();
-  await page.click('#suppadd-morning');
+  const sheet = await openAddSheet(page);
+  await searchBox(page).fill('fish');
+  await sheet.getByRole('button', { name: /Fish Oil/ }).click();
+  await expect(sheet.getByText('Yours, in the library only. Adding it schedules it.')).toBeVisible();
+  await page.click('#suppadd-go');
   await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Fish Oil1 g']);
   await expect(page.locator('#supplib-morning')).toHaveCount(0); // the old "Add from your library" menu is gone
 });
 
-test('Supplements tab: a slow answer to an older search never replaces the newer one', async ({ page }) => {
+test('Supplement add sheet: a slow answer to an older search never replaces the newer one', async ({ page }) => {
   await openSupplements(page, search('creatine'));
-  await morningName(page).fill('creatine');
+  await openAddSheet(page);
+  await searchBox(page).fill('creatine');
   await page.waitForTimeout(500); // past the wait, so the slow search for "creatine" is sent
-  await morningName(page).fill('creatine kaged');
-  const catalogOpts = page.getByRole('group', { name: 'Catalog' }).getByRole('option');
-  await expect(catalogOpts).toHaveText([/Creatine HCl/]);
+  await searchBox(page).fill('creatine kaged');
+  const results = addSheet(page).getByRole('list', { name: 'Results' }).getByRole('button');
+  await expect(results.filter({ hasText: /Creatine/ }).first()).toContainText('Creatine HCl');
+  await expect(results.filter({ hasText: 'Creatine Monohydrate' })).toHaveCount(0);
   await page.waitForTimeout(1500); // the "creatine" answer (both products) arrives now
-  await expect(catalogOpts).toHaveText([/Creatine HCl/]);
+  await expect(results.filter({ hasText: 'Creatine Monohydrate' })).toHaveCount(0);
 });
 
 // Step 5: the libraries' own search shows catalog matches with Add; there is no Browse catalog any more.
@@ -250,13 +258,15 @@ test('Exercise library: the search shows catalog matches, Add moves one into you
   await expect(fromCatalog.getByText('No exercises in the catalog match that, or you have them all.')).toBeVisible();
 });
 
-test('Supplement library: the search asks the server and Add keeps it Library only', async ({ page }) => {
+test('Supplement add sheet: the search asks the server and Library only keeps it out of the schedule', async ({ page }) => {
   await page.route('**/api/catalog/search?*', search());
   await openSynced(page);
   await page.click('#tab-daily'); await page.click('#daily-supplements'); await openSupplementEditor(page);
-  await page.locator('.exlib').getByRole('searchbox').fill('kaged');
-  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
-  await fromCatalog.getByRole('button', { name: 'Add Creatine HCl by Kaged from the catalog' }).click();
+  const sheet = await openAddSheet(page);
+  await searchBox(page).fill('kaged');
+  await sheet.getByRole('button', { name: /Creatine HCl/ }).click();
+  await sheet.getByLabel('Library only').check();
+  await page.click('#suppadd-go');
   const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Creatine HCl' });
   await expect(row).toHaveCount(1);
   await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
@@ -275,14 +285,15 @@ test('the Supplement library is in Manage on Daily → Nutrition, not on the Pro
   await expect(page.locator('#suplib-h')).toHaveCount(0);
 });
 
-test('Supplements tab: while a new search runs, the last answer is filtered by the new words (never shown under unrelated ones)', async ({ page }) => {
+test('Supplement add sheet: while a new search runs, the last answer is filtered by the new words (never shown under unrelated ones)', async ({ page }) => {
   await openSupplements(page, search('zinc'));
-  await morningName(page).fill('creatine');
-  const catalogOpts = page.getByRole('group', { name: 'Catalog' }).getByRole('option');
-  await expect(catalogOpts).toHaveCount(2);
-  await morningName(page).fill('zinc'); // the zinc answer takes 1.5 s; the creatine products must not show meanwhile
+  const sheet = await openAddSheet(page);
+  await searchBox(page).fill('creatine');
+  const results = sheet.getByRole('list', { name: 'Results' }).getByRole('button');
+  await expect(results.filter({ hasText: /^Creatine/ })).toHaveCount(2);
+  await searchBox(page).fill('zinc'); // the zinc answer takes 1.5 s; the creatine products must not show meanwhile
   await expect(page.getByText('Searching the catalog…')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
+  await expect(results.filter({ hasText: /Creatine/ })).toHaveCount(0);
 });
 
 test('Stretch library: the search shows catalog matches, and the empty note points to them', async ({ page }) => {

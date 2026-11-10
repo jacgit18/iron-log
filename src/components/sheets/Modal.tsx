@@ -6,6 +6,7 @@ import SlotSheet from './SlotSheet.js';
 import ExerciseSheet from './ExerciseSheet.js';
 import DayAddSheet from './DayAddSheet.js';
 import { StretchSheet, StretchExpSheet } from './StretchSheets.js';
+import SupplementAddSheet from '../supplements/SupplementAddSheet.js';
 import SupplementSheet from './SupplementSheet.js';
 import ExperimentSheet from './ExperimentSheet.js';
 import MoveSheet from './MoveSheet.js';
@@ -43,6 +44,7 @@ export default function Modal() {
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
+    case 'suppadd': return <SupplementAddSheet backToManage={modal.from === 'manage'} />;
     case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} backToManage={modal.from === 'manage'} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
