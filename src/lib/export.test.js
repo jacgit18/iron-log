@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as X from 'xlsx';
 import { BUILTIN, exInfo } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { buildWeekWorkbook, buildCsv, buildDataFile, parseDataFile, mergeEntries, mergeWeek } from './export.js';
+import { buildWeekWorkbook, buildCsv, buildDataFile, parseDataFile, mergeEntries, mergeWeek, programRows, buildOverallWorkbook } from './export.js';
 
 const snapshot = () => ({
   cfg: { ...structuredClone(DEFAULT_CFG), rm: { hack: 400 } },
@@ -82,6 +82,20 @@ it('the week workbook lists experiment cards on the Plan sheet', () => {
   const w = { done: { 'X-1': true }, extra: [{ id: 'X-1', day: 2, ex: 'hack', ph: 'hyp' }] };
   const rows = X.utils.sheet_to_json(buildWeekWorkbook(X, S, '2026-09-27', w).Sheets.Plan, { header: 1 });
   expect(rows.some(r => r[2] === 'To try' && r[5] === exInfo(S.cfg, 'hack').n && r[9] === 'Yes')).toBe(true);
+});
+
+describe('exercise notes in the program export', () => {
+  const cfg = () => ({ ...structuredClone(DEFAULT_CFG), ex: { hack: { note: 'Pause at the bottom' } } });
+  const prog = { days: [{ slots: [{ id: 's', items: [{ ex: 'hack', ph: 'hyp', w: null, note: 'old card note' }, { ex: 'rdl', ph: 'hyp', w: null, note: 'only here' }, { ex: 'curl', ph: 'hyp', w: null }] }] }] };
+  it('writes the note the card shows: the exercise note, else the old card note', () => {
+    const notes = programRows(cfg(), 'A', prog).map(r => r[r.length - 1]);
+    expect(notes).toEqual(['Pause at the bottom', 'only here', '']);
+  });
+  it('writes the note an Ideas card shows to the Experiments sheet', () => {
+    const S = { ...snapshot(), cfg: cfg(), experiments: [{ id: 'E1', ex: 'hack', ph: null, note: '' }, { id: 'E2', ex: 'rdl', ph: null, note: 'try light' }] };
+    const rows = X.utils.sheet_to_json(buildOverallWorkbook(X, S, {}).Sheets.Experiments, { header: 1 });
+    expect(rows.slice(1).map(r => r[4])).toEqual(['Pause at the bottom', 'try light']);
+  });
 });
 
 describe('import tab choices', () => {

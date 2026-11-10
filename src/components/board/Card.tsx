@@ -10,6 +10,7 @@ import { movedFromLabel } from '../../lib/movedFromLabel.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
+import { shownNote } from '../../lib/exerciseNote.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
@@ -173,7 +174,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
                 {last && !isk && !sk && <button type="button" className="btn sm" id={`rep-${s.id}-${idx}`} aria-label={`Same as last: log ${ex.n} again, ${describe(last)}`} onClick={() => quickLog(s.id, idx)}>Same as last</button>}
                 <button type="button" className={`btn sm logbtn${editing ? ' editbtn' : ''}`} id={`log-${s.id}-${idx}`} aria-label={`${editing ? 'Edit' : 'Log'} ${ex.n}`} onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>{editing && <Icon name="edit" />}{editing ? 'Edit' : 'Log'}</button>
               </div>
-              {it.note && <div className="note">{it.note}</div>}
+              {shownNote(cfg, it.ex, it.note) && <div className="note">{shownNote(cfg, it.ex, it.note)}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
               {bo && <div className="stall">Back off · {ph === 'iso' ? 'holds fell short' : 'reps fell short'} 2 sessions in a row. Try {bo.lo === bo.hi ? bo.lo : `${bo.lo}–${bo.hi}`} lb and rebuild</div>}
               {st && <div className="stall">Stalled since {fmtShort(parseDate(st.since))} · no gain in 3 weeks. Check sleep and recovery before pushing harder</div>}

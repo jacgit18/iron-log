@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import type { CatalogItem, Cfg, EquipmentId, SlotType } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo, findExId } from '../../lib/data.js';
+import { shownNote } from '../../lib/exerciseNote.js';
 import { pickedChoice } from '../../lib/catalogExercise.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
 import { DAYS, progName } from '../../lib/logic.js';
@@ -11,16 +12,17 @@ import ExerciseField from '../ExerciseField.jsx';
 import './SlotSheet.css';
 
 // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentId | ''; cat?: CatalogItem | null };
+type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nt?: boolean; nm: string; nu?: string; ne?: EquipmentId | ''; cat?: CatalogItem | null }; // nt: the Note field was typed in, so choosing another exercise leaves it alone
 type SlotState = { id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; days: number[]; idx: number | null; target?: { key: string; day: number } | null; items: ItemState[] };
 
 function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; type: SlotType; cfg: Cfg; onChange: (k: number, patch: Partial<ItemState>) => void }) {
   const up = (patch: Partial<ItemState>) => onChange(k, patch);
+  const noteFor = (name: string) => { const id = findExId(cfg, name); return id ? shownNote(cfg, id) : ''; }; // an exercise's note shows as soon as it is picked
   const legend = type === 'superset' ? (k ? 'B' : 'A') : type === 'either' ? (k ? 'Or' : 'Option 1') : 'Exercise';
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentId | '' })} cat={it.cat} onCat={cat => up({ cat })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm, ...(it.nt ? {} : { note: noteFor(nm) }) })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentId | '' })} cat={it.cat} onCat={cat => up({ cat })} />
       <div className="fields">
         <label className="field">Program phase for this card, every week
           <select value={it.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
@@ -34,7 +36,7 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
         <label className="field">Sets × reps<input value={it.rx} placeholder="phase default" onChange={e => up({ rx: e.target.value })} /></label>
       </div>
       <label className="inline"><input type="checkbox" checked={!!it.bw} onChange={e => up({ bw: e.target.checked })} /> Bodyweight</label>
-      <label className="field">Note<input value={it.note} placeholder="Form cue, setup" onChange={e => up({ note: e.target.value })} /></label>
+      <label className="field">Note (shown on every {it.nm.trim() || 'this exercise'})<input maxLength={200} value={it.note} placeholder="Form cue, setup" onChange={e => up({ note: e.target.value, nt: true })} /></label>
     </fieldset>
   );
 }
@@ -48,7 +50,7 @@ export default function SlotSheet({ idx, col, target, fromExp }: { idx: number |
     const exp = idx == null && fromExp ? st.experiments.find(x => x.id === fromExp) : null; // promoted from the Experiment list: its exercise, phase and note start the card
     const src: any = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [exp ? { ...blankItem(), ex: exp.ex, ph: exp.ph, note: exp.note } : blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]); // a new card or a clone of the one being edited
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-    return { ...src, type: src.type || 'single', day: edDay, days: [edDay], idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
+    return { ...src, type: src.type || 'single', day: edDay, days: [edDay], idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.ex ? shownNote(cfg, it.ex, it.note) : '' })) }; // the note is the exercise's; an old per-card note shows until the exercise has one
   });
   const [err, setErr] = useState('');
   const manyDays = idx == null && col == null; // adding from the Program tab: tick every day it goes on
@@ -57,7 +59,7 @@ export default function SlotSheet({ idx, col, target, fromExp }: { idx: number |
   const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map(({ cat, ...it }) => ({ ...it, ...pickedChoice(cfg, it.nm, cat), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
+    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map(({ cat, nt: _nt, ...it }) => ({ ...it, ...pickedChoice(cfg, it.nm, cat), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
     const msg = st.saveSlot({ ...clean, ...(fromExp ? { fromExp } : {}) });
     if (msg) setErr(msg);
   };
