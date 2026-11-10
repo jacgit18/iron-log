@@ -214,6 +214,16 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     if (ok) flag(`Added ${exInfo(get().cfg, e.ex).n} to Day ${col}`);
     return ok;
   },
+  addIdeaToDay(entryId, col) {
+    const e = get().experiments.find(x => x.id === entryId); const before = new Set((get().week.extra || []).map(x => x.id));
+    if (!e || !get().addToDay(entryId, col)) return false;
+    const added = (get().week.extra || []).find(x => !before.has(x.id)); if (!added) return false;
+    get().noteRemoved('experiments', `${exInfo(get().cfg, e.ex).n} to Day ${col} this week`, () => {
+      if (!(get().week.extra || []).some(x => x.id === added.id)) return false; // already gone, or another week is shown
+      get().removeExtra(added.id); get().dismissRemoved(); return true;
+    }, { verb: 'Added', undone: `Removed from Day ${col}` });
+    return true;
+  },
   removeExtra(slotId) {
     const s = get().slotById(slotId); if (!s || !s.experiment) return;
     const w0 = get().week; const wk = get().weekKey(); const i = (w0.extra || []).findIndex(x => x.id === slotId);

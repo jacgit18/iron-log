@@ -6,14 +6,14 @@ import { shownNote } from '../../lib/exerciseNote.js';
 import { daysOn } from '../../lib/ideaDays.js';
 import type { MuscleKey } from '../../types.ts';
 import { M_KEYS, MUSCLES, tagsOf } from '../../lib/muscles.js';
-import { hasFilter, matchesMuscle, matchesQuery, matchesStatus, musclesPresent, statusLabel, type IdeaStatus } from '../../lib/experimentFilter.js';
+import { hasFilter, matchesMuscle, matchesQuery, cardMuscles, matchesStatus, muscleKeys, musclesPresent, statusLabel, type IdeaStatus } from '../../lib/experimentFilter.js';
 import IdeaCard from './IdeaCard.jsx';
 import IdeaFilters from './IdeaFilters.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Experiments.css';
 
 // The Experiment board: exercises to try, added to a day of the viewed week (Add opens the day sheet). Long lists get a search and Status and Muscle filters.
-export default function Experiments({ onDragStart, onDragEnd }: { day?: number; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void }) {
+export default function Experiments({ onDragStart, onDragEnd }: { onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void }) {
   const cfg = useAppStore(s => s.cfg);
   const items = useAppStore(s => s.experiments);
   const logs = useAppStore(s => s.logs);
@@ -23,10 +23,9 @@ export default function Experiments({ onDragStart, onDragEnd }: { day?: number; 
   const [status, setStatus] = useState<IdeaStatus>('');
   const [muscle, setMuscle] = useState('');
   if (!hasFilter(items.length) && (q || status || muscle)) { setQ(''); setStatus(''); setMuscle(''); } // the filters hide on a short list: forget them, so they do not come back set
-  const facts = items.map(e => ({ e, onDays: daysOn(week, e.ex), neverLogged: !lastSession(logs, e.ex), tags: tagsOf(cfg, e.ex) })); // lastSession ignores auto entries, so only a session you logged counts
-  const mus = (f: (typeof facts)[number]) => [...(f.tags?.p || []), ...(f.tags?.s || [])];
-  const shown = hasFilter(items.length) ? facts.filter(f => matchesStatus(status, f) && matchesMuscle(muscle, mus(f)) && matchesQuery(q, exInfo(cfg, f.e.ex).n, shownNote(cfg, f.e.ex, f.e.note))) : facts;
-  const muscles = musclesPresent(facts.map(mus), M_KEYS).map(key => ({ key, label: MUSCLES[key].n }));
+  const facts = items.map(e => ({ e, onDays: daysOn(week, e.ex), neverLogged: !lastSession(logs, e.ex), tags: tagsOf(cfg, e.ex) })).map(f => ({ ...f, mus: muscleKeys(f.tags) })); // lastSession ignores auto entries, so only a session you logged counts
+  const shown = hasFilter(items.length) ? facts.filter(f => matchesStatus(status, f) && matchesMuscle(muscle, f.mus) && matchesQuery(q, exInfo(cfg, f.e.ex).n, shownNote(cfg, f.e.ex, f.e.note))) : facts;
+  const muscles = musclesPresent(facts.map(f => f.mus), M_KEYS).map(key => ({ key, label: MUSCLES[key].n }));
   return (
     <section className="experiments" aria-labelledby="exp-h">
       <div className="exphead">
@@ -40,7 +39,7 @@ export default function Experiments({ onDragStart, onDragEnd }: { day?: number; 
           {shown.map(f => {
             const info = exInfo(cfg, f.e.ex);
             return (
-              <IdeaCard key={f.e.id} id={f.e.id} name={info.n} status={statusLabel(f)} muscles={(f.tags?.p || []).slice(0, 2).map(m => MUSCLES[m as MuscleKey]?.n || m)} note={shownNote(cfg, f.e.ex, f.e.note)} url={info.url || undefined}
+              <IdeaCard key={f.e.id} id={f.e.id} name={info.n} status={statusLabel(f)} muscles={cardMuscles(f.tags).map(m => MUSCLES[m as MuscleKey]?.n || m)} note={shownNote(cfg, f.e.ex, f.e.note)} url={info.url || undefined}
                 onAdd={() => st.openModal({ type: 'ideaadd', id: f.e.id })} onEdit={() => st.openModal({ type: 'experiment', id: f.e.id })} onDelete={() => st.deleteExperiment(f.e.id)}
                 drag={{ onStart: ev => onDragStart(ev, 'exp:' + f.e.id), onEnd: onDragEnd }} />
             );

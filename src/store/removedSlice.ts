@@ -8,11 +8,11 @@ let seq = 0;
 
 export const removedSlice = (set: StoreSet, get: StoreGet, flag: Flag): RemovedSlice => ({
   removed: null,
-  noteRemoved(scope, text, restore, verb) { set({ removed: { id: ++seq, scope, text, restore, ...(verb ? { verb } : {}) } }); },
+  noteRemoved(scope, text, restore, opts) { set({ removed: { id: ++seq, scope, text, restore, ...opts } }); },
   undoRemoved() {
     const r = get().removed; if (!r) return;
     set({ removed: null });
-    if (r.restore() !== false) flag('Put back');
+    if (r.restore() !== false) flag(r.undone || 'Put back');
   },
   dismissRemoved(scope) { const r = get().removed; if (r && (scope == null || r.scope === scope)) set({ removed: null }); },
 });

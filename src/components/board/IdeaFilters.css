@@ -31,16 +31,13 @@
   .ifsearch {
     flex: 1 1 100%;
   }
-  /* the count sits inside the search box, at its right edge, so the row below keeps its width for the dropdowns */
   .ifcount {
-    position: absolute;
-    right: var(--sp-12);
-    bottom: var(--sp-12);
+    flex: none;
     margin: 0;
-    pointer-events: none;
-  }
-  .ifsearch input {
-    padding-right: 96px;
+    align-self: flex-end;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 }
 }

@@ -311,7 +311,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           );
         })}
       </div>
-      <Experiments day={day as number} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+      <Experiments onDragStart={onDragStart} onDragEnd={onDragEnd} />
     </div>
   );
 }

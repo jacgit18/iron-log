@@ -6,7 +6,7 @@ import './WatchLink.css';
 export default function WatchLink({ url, name, size = 'large' }: { url: string; name: string; size?: 'large' | 'compact' }) {
   const label = videoLabel(url);
   return (
-    <a className={`watch watch-${size}`} href={url} target="_blank" rel="noopener noreferrer" aria-label={`${label}: ${name} (opens in a new tab)`}>
+    <a className={`watch watch-${size}`} href={url} draggable={false} target="_blank" rel="noopener noreferrer" aria-label={`${label}: ${name} (opens in a new tab)`}>
       <span className="watch-play" aria-hidden="true"><Icon name="play" /></span>{' '}<span>{label}</span>
     </a>
   );

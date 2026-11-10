@@ -25,12 +25,7 @@ export default function IdeaAddSheet({ id }: { id: string }) {
   const pick = (col: number) => {
     const st = useAppStore.getState();
     if (mode === 'program') { st.openAddToProgram(col, id); return; }
-    const before = new Set((st.week.extra || []).map(x => x.id));
-    const ok = st.addToDay(id, col); st.closeModal();
-    const added = ok ? (useAppStore.getState().week.extra || []).find(x => !before.has(x.id)) : null;
-    if (!added) return;
-    // Undo takes out only the card just added; if it is already gone it does nothing. It returns false so the "Put back" flag stays quiet.
-    st.noteRemoved('experiments', `${name} to Day ${col} this week`, () => { const s = useAppStore.getState(); if ((s.week.extra || []).some(x => x.id === added.id)) { s.removeExtra(added.id); s.dismissRemoved(); } return false; }, 'Added');
+    st.addIdeaToDay(id, col); st.closeModal();
   };
   return (
     <Sheet>

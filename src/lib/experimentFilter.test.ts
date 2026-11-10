@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FILTER_AT, hasFilter, matchesMuscle, matchesQuery, matchesStatus, musclesPresent, statusLabel } from './experimentFilter.js';
+import { FILTER_AT, hasFilter, matchesMuscle, matchesQuery, matchesStatus, musclesPresent, statusLabel, muscleKeys, cardMuscles } from './experimentFilter.js';
 
 describe('experiment list filter', () => {
   it('shows the search only above the threshold', () => {
@@ -42,5 +42,11 @@ describe('Ideas to try status and muscle', () => {
   it('lists only muscles present, in the given order', () => {
     expect(musclesPresent([['quads'], [], ['chest', 'quads']], ['chest', 'back', 'quads'])).toEqual(['chest', 'quads']);
     expect(musclesPresent([[]], ['chest'])).toEqual([]);
+  });
+  it('lists primary then secondary muscles, and the first two primary on a card', () => {
+    expect(muscleKeys({ p: ['quads'], s: ['glutes'] })).toEqual(['quads', 'glutes']);
+    expect(muscleKeys(null)).toEqual([]);
+    expect(cardMuscles({ p: ['a', 'b', 'c'] })).toEqual(['a', 'b']);
+    expect(cardMuscles(undefined)).toEqual([]);
   });
 });
