@@ -24,7 +24,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
         ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
-        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), BETA_TO_FREE: join(dir, 'beta-to-free'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), FIND_USER: join(dir, 'find-user'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
+        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), CATALOG_UPCS: join(dir, 'upcs'), BETA_TO_FREE: join(dir, 'beta-to-free'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), FIND_USER: join(dir, 'find-user'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
       },
       encoding: 'utf8',
     }, (err, stdout, stderr) => {
@@ -47,6 +47,7 @@ beforeEach(() => {
   writeFileSync(log, '');
   stub('backup', '');
   stub('catalog', '');
+  stub('upcs', '');
   stub('beta-to-free', '');
   stub('keep-injury', '');
   stub('find-user', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
@@ -137,6 +138,16 @@ describe('prod-db.sh', () => {
     expect((await run(['catalog', 'fedb', '--apply'])).calls).toEqual(['backup run url=', `catalog --source fedb --apply url=${URL}`]);
   });
 
+  it('upcs is a dry run by default; --apply backs up first; a --limit trial takes no backup and passes on', async () => {
+    expect((await run(['upcs'])).calls).toEqual([`upcs  url=${URL}`]) // no arguments: the stub logs two spaces;
+    writeFileSync(log, '');
+    expect((await run(['upcs', '--apply'])).calls).toEqual(['backup run url=', `upcs --apply url=${URL}`]);
+    writeFileSync(log, '');
+    expect((await run(['upcs', '--limit', '50'])).calls).toEqual([`upcs --limit 50 url=${URL}`]);
+    writeFileSync(log, '');
+    expect((await run(['upcs', '--apply', '--limit', '50'])).calls).toEqual([`upcs --apply --limit 50 url=${URL}`]); // a limited run writes nothing, so no backup
+  });
+
   it('reader is a dry run without --apply: it makes no login and sets no secret', async () => {
     const r = await run(['reader'], { DB_READER: stub('reader', 'echo -n "postgresql://migrations_reader:r3ader@ep-prod.neon.tech/neondb"'), GH: stub('gh', '') });
     expect(r.status).toBe(0);
@@ -170,7 +181,7 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'beta-to-free', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'upcs', 'injury-default', 'beta-to-free', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });

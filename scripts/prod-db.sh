@@ -8,6 +8,8 @@
 #                               a migration must be applied BEFORE the code that needs it goes live.
 #   migrate [--apply]           lists what waits; with --apply: a backup, then dbmate up, then the status again.
 #   catalog <source> [--apply]  npm run catalog:import against production (source: fedb): a dry run, or with --apply a backup, then the write.
+#   upcs [--apply] [--limit N]  npm run catalog:upcs against production (ADR 117): reads every NIH label's UPC into supplement_upcs (about 122,000 calls, hours to a day, resumable from
+#                               .cache/dsld-upcs.tsv): a dry run that reads and counts, or with --apply a backup, then the write. Run it after `catalog dsld`.
 #   injury-default [--apply]    one-off (ADR 045): npm run keep:injury-prevention against production: a dry run, or with --apply a backup, then
 #                               the write (existing accounts keep Injury prevention on). Run right before deploying that change.
 #   beta-to-free [--apply]      one-off (billing go-live): npm run beta:to-free against production: a dry run that prints how many accounts are on
@@ -47,6 +49,7 @@ DBMATE="${DBMATE:-npx dbmate}"                     # overridable for tests
 BACKUP="${BACKUP:-scripts/backup-cloud-run.sh}"
 CATALOG_IMPORT="${CATALOG_IMPORT:-npm run -s catalog:import --}"
 KEEP_INJURY="${KEEP_INJURY:-npm run -s keep:injury-prevention --}"
+CATALOG_UPCS="${CATALOG_UPCS:-npm run -s catalog:upcs --}"
 ENCRYPT_USERS="${ENCRYPT_USERS:-npm run -s encrypt:users --}"
 BETA_TO_FREE="${BETA_TO_FREE:-npm run -s beta:to-free --}"
 FIND_USER="${FIND_USER:-npm run -s find:user --}"
@@ -138,6 +141,13 @@ case "$cmd" in
     URL="$(owner_url)"
     if $apply; then backup; DATABASE_URL="$URL" $CATALOG_IMPORT --source "$source" --apply
     else DATABASE_URL="$URL" $CATALOG_IMPORT --source "$source"; fi ;;
+  upcs)
+    URL="$(owner_url)"; where
+    # --limit is passed through for a trial; a limited run writes nothing, so it never needs a backup.
+    extra=(${args[@]+"${args[@]}"})
+    limited=false; for a in ${extra[@]+"${extra[@]}"}; do [ "$a" = "--limit" ] && limited=true; done
+    if $apply; then $limited || backup; DATABASE_URL="$URL" $CATALOG_UPCS --apply ${extra[@]+"${extra[@]}"}
+    else DATABASE_URL="$URL" $CATALOG_UPCS ${extra[@]+"${extra[@]}"}; fi ;;
   injury-default)
     URL="$(owner_url)"
     if $apply; then backup; DATABASE_URL="$URL" $KEEP_INJURY --apply
