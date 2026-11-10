@@ -290,6 +290,17 @@ describe('moving a card to another program', () => {
 });
 
 describe('the add/edit exercise sheet', () => {
+  it('saves a Note field as the exercise note, not on the card, and two fields for one exercise cannot undo each other', () => {
+    const items = [{ ex: 'arnold', ph: 'strength', w: 30, note: 'Elbows in' }, { ex: 'arnold', ph: 'strength', w: 30, note: '' }];
+    expect(st().saveSlot(newCard({ type: 'superset', days: [1], items }))).toBeNull();
+    expect(st().cfg.ex.arnold.note).toBe('Elbows in'); // the untouched second field leaves it alone
+    const card = st().edProgram().days[0].slots.find(s => s.items.length === 2 && s.items[0].ex === 'arnold');
+    expect(card.items.some(it => 'note' in it)).toBe(false);
+    st().saveSlot(newCard({ days: [2], items: [{ ex: 'arnold', ph: 'strength', w: 30, note: 'Elbows in' }] }));
+    expect(st().cfg.ex.arnold.note).toBe('Elbows in');
+    st().saveSlot(newCard({ days: [3], items: [{ ex: 'arnold', ph: 'strength', w: 30, note: 'Elbows in' }] }));
+    expect(st().cfg.ex.arnold.note).toBe('Elbows in');
+  });
   it('adds one card to each ticked day, each with its own id, and nothing else moves', () => {
     const before = st().edProgram().days.map(d => ids(d.slots));
     expect(st().saveSlot(newCard({ days: [5, 1, 3, 3] }))).toBeNull();
