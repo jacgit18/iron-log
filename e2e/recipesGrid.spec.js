@@ -40,12 +40,12 @@ test('at 1920 px the chip groups and Sort share one row, with Sort at the right 
   expect(list.y).toBeLessThan(600); // was about 600 px down before the chip rows shared one line; the type tabs and the Filters button now sit above the list too (brief recipes-find-type-tabs)
 });
 
-test('at 375 px the filter groups wrap onto their own rows and stay inside the screen', async ({ page }) => {
+test('at 375 px the filter groups wrap and stay inside the screen', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await openRecipes(page);
   const t = await tops(page);
-  expect(new Set(t).size).toBe(t.length);
-  expect(await page.evaluate(() => [...document.querySelectorAll('.rc-filterbar button')].every(b => b.getBoundingClientRect().right <= innerWidth))).toBe(true);
+  expect(new Set(t).size).toBeGreaterThan(1); // wraps: the shorter groups (the Category pill, Can make and Manage) may share a row now that Category is a dropdown
+  expect(await page.evaluate(() => [...document.querySelectorAll('.rc-filterbar button, .rc-filterbar select')].every(b => b.getBoundingClientRect().right <= innerWidth))).toBe(true);
 });
 
 test('a card opens its recipe and Back returns to the grid', async ({ page }) => {
