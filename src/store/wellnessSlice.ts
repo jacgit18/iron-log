@@ -4,7 +4,8 @@ import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStre
 import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
 import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
 import { normPortion } from '../lib/supplementPortion.js';
-import type { StretchTier, SupplementSlot } from '../types.ts';
+import { planTimes } from '../lib/supplementTimes.js';
+import type { StretchTier, SupplementItem, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
 import { goalMetNow, trackWater } from '../lib/waterReminder.js';
@@ -206,6 +207,27 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
       delete copy.portion; // a new intake starts at one serving: you choose its amount
       s.items.splice(i + 1, 0, copy);
     });
+  },
+  // Save from the sheet's time chips (brief supplement-split-times): the product of `id` ends up at `times`, each with its own amount. `planTimes` says what
+  // changes: new entries are copies (like addSupplementInstance), a time turned off is removed with its Undo notice. `dose` is written to every time.
+  saveSupplementTimes(id, times, dose) {
+    if (get().blocked()) return false;
+    const plan = planTimes(get().supp.items, id, times); if (!plan) return false;
+    const dz = String(dose || '').trim().slice(0, 40);
+    const cur = get().supp.items.find(x => x.id === id)!;
+    if (!get().mutateSupp(s => {
+      const put = (x: SupplementItem, portion: number) => { const p = normPortion(portion); if (p) x.portion = p; else delete x.portion; };
+      for (const m of plan.move) { const x = s.items.find(i => i.id === m.id); if (x) { x.slot = m.slot; put(x, m.portion); } }
+      for (const a of plan.add) {
+        const i = s.items.findIndex(x => x.id === a.from); if (i < 0) continue;
+        const copy: SupplementItem = { ...s.items[i], id: newSupplementId(s.items, s.items[i].n), slot: a.slot }; put(copy, a.portion);
+        s.items.splice(i + 1, 0, copy);
+      }
+      for (const m of plan.set) { const x = s.items.find(i => i.id === m.id); if (x) put(x, m.portion); }
+      for (const x of s.items) if (x.slot && sameSupplement(x, cur.n, cur.brand) && !plan.remove.includes(x.id)) { if (dz) x.dose = dz; else delete x.dose; }
+    })) return false;
+    for (const rid of plan.remove) get().removeSupplement(rid);
+    return true;
   },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
   removeSupplement(id) {

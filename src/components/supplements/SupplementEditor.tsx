@@ -2,6 +2,7 @@ import type { SupplementItem, SupplementSlot, Supplements, Taken } from '../../t
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { SLOTS, scheduled, scheduleOf, slotTally } from '../../lib/supplements.js';
+import { portionTag } from '../../lib/supplementPortion.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Supplements.css';
@@ -23,7 +24,7 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
           <li key={x.id} className={`srow${(taken[date] || {})[x.id] ? ' taken' : ''}${arming === x.id ? ' removing' : ''}`}>
             <label className="stick">
               <input type="checkbox" className="chk" id={`supp-${x.id}`} checked={!!(taken[date] || {})[x.id]} onChange={e => s.setSupplementTaken(date, x.id, e.target.checked)} />
-              <span className="sname"><span className="rmname">{x.n}</span>{x.dose && <span className="sdose">{x.dose}</span>}</span>
+              <span className="sname"><span className="rmname">{x.n}</span>{(x.dose || portionTag(x)) && <span className="sdose">{[x.dose, portionTag(x)].filter(Boolean).join(' · ')}</span>}</span>
             </label>
             {editing && <ArmedButton className={`btn sm ${arming === x.id ? 'danger' : 'ghost'}`} aria-label={`Remove ${x.n} from ${label}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x.id : null)} onConfirm={() => { setArming(null); s.removeSupplement(x.id); }} />}
           </li>

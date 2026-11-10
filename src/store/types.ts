@@ -8,6 +8,7 @@ import type {
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { Micro } from '../shared/foodMicro.ts';
+import type { TimeChoice } from '../lib/supplementTimes.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
@@ -423,6 +424,8 @@ export interface WellnessSlice {
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
   /** Adds another instance of one of yours (same name, brand and catalog id; its own id, section and ticks) to a section, e.g. a second dose later in the day. `dose` replaces the copied one when typed. */
   addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;
+  /** Sets the times of day (and the amount at each) of one supplement from the sheet's chips; every time gets `dose`. Times turned off are removed with Undo. */
+  saveSupplementTimes(id: string, times: TimeChoice[], dose?: string): boolean;
   removeSupplement(id: string): boolean;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
   /** `nutrients` and `serving` are one serving's amounts read from its label (brief supplement-label-amounts); left out, it is added with none. */
