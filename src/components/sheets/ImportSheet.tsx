@@ -72,7 +72,7 @@ export default function ImportSheet() {
         ))}
       </ul>
       <p className="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights, saved versions and Ideas to try entries. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
-      <p className="note"><b>Replace my data</b> makes the ticked tabs match the file exactly. Anything on those tabs here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''} A tab that isn't listed above (Recipes, Food log or Groceries when the file has none) keeps what you have here.</p>
+      <p className="note"><b>Replace my data</b> makes the ticked tabs match the file exactly. Anything on those tabs here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''} A tab that isn't listed above (Stretches, Supplements, Groceries, Recipes or Food log, when the file has none) keeps what you have here.</p>
       {busy && <p className="note">Importing…</p>}
       {dl && <div className="actions start"><button type="button" className="btn sm ghost" onClick={st.downloadData}>Export current data first</button></div>}
       <div className="actions impact">
