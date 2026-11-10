@@ -24,7 +24,6 @@ export const MICRO_MAX: Record<NutrientKey, number> = {
   vitaminA: 30000, vitaminB6: 1000, vitaminC: 20000, vitaminD: 1000, vitaminE: 10000, zinc: 400,
   potassium: 68000, vitaminB12: 48, vitaminK: 2400, fiber: 760, sodium: 46000, // no limit to derive these from: 20 times the larger recommended amount (sodium: the 2,300 mg level), see `nutrientTargets.ts`
   biotin: 20000, // the five added 2026-11-10 are capped above real supplement doses (a biotin 10,000 mcg or B-complex thiamin 100 mg label is normal), not at 20 times the recommended amount
-
   chromium: 2000,
   pantothenicAcid: 2000,
   riboflavin: 1000,
