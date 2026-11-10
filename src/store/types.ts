@@ -118,6 +118,8 @@ export interface LibrarySlice {
   /** The exercise id a sheet's choice stands for, adding it to the library first when it is new. */
   resolveExerciseChoice(d: ExerciseChoice & ExerciseExtras, chosen: string): string;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
+  /** Saves a Note field's text as the exercise's own note (trimmed, up to 200 characters; '' removes it); no write when unchanged. */
+  applyExerciseNote(ex: string, text: string | null | undefined): void;
   applyExerciseEq(ex: string, eq: EquipmentId | '' | null | undefined): void;
   addEquipment(name: string): EquipmentId | null;
   removeEquipment(id: string): boolean;

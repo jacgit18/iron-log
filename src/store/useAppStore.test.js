@@ -558,9 +558,11 @@ describe('experiment board', () => {
 
   it('adds, edits and deletes entries, and saves them', () => {
     const e = add('hack', 'hyp', 'try light');
-    expect(e).toMatchObject({ ex: 'hack', ph: 'hyp', note: 'try light' });
+    expect(e).toMatchObject({ ex: 'hack', ph: 'hyp', note: '' }); // the note belongs to the exercise, not the idea
+    expect(st().cfg.ex.hack.note).toBe('try light');
     expect(saved('experiments/main').items).toHaveLength(1);
     st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: '' });
+    expect(st().cfg.ex.hack?.note).toBeUndefined(); // emptying the field clears the exercise's note
     expect(st().experiments).toEqual([{ id: e.id, ex: 'hack', ph: 'strength', note: '' }]);
     st().deleteExperiment(e.id);
     expect(st().experiments).toEqual([]);

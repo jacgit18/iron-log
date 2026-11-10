@@ -4,6 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { DAYS, colOf, describe, lastSession, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
+import { shownNote } from '../../lib/exerciseNote.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
@@ -23,7 +24,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   const [pick, setPick] = useState<Record<string, number>>({});
   const [q, setQ] = useState('');
   if (q && !hasFilter(items.length)) setQ(''); // the search hides on a short list: forget its text, so it does not come back filled in
-  const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, exInfo(cfg, e.ex).n, e.note)) : items; // the search shows only on a long list
+  const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, exInfo(cfg, e.ex).n, shownNote(cfg, e.ex, e.note))) : items; // the search shows only on a long list
   const days = DAYS.filter(d => !rest.includes(d));
   const start = ymd(weekStartOf(today)) === ymd(weekStart) ? todayCol(today) : day;
   const def = days.includes(start) ? start : days[0];
@@ -42,7 +43,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
             const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, week.moved?.[x.id] || x.day)))].sort((a, b) => a - b); // the days of this week it is already on, where a dragged card now sits
             const to = days.includes(pick[e.id]) ? pick[e.id] : def;
             return (
-              <ExperimentCard key={e.id} id={e.id} prefix="exp" name={n} tag={e.ph ? PHASES[e.ph].label : undefined} note={e.note}
+              <ExperimentCard key={e.id} id={e.id} prefix="exp" name={n} tag={e.ph ? PHASES[e.ph].label : undefined} note={shownNote(cfg, e.ex, e.note)}
                 detail={<>{on.length > 0 && <div className="note onday">On {on.map(d => `Day ${d}`).join(', ')} this week</div>}{last && <div className="lastlog">Last: {describe(last)}</div>}</>}
                 days={days.map(d => ({ value: d, label: `Day ${d}` }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} addLabel="This week only" onAdd={() => st.addToDay(e.id, to)}
                 extra={<button type="button" className="btn sm ghost" aria-label={`Add ${n} to program, Day ${to}`} onClick={() => st.openAddToProgram(to, e.id)}>To program</button>}

@@ -3,6 +3,7 @@ import { clearDone, dayAt, progName } from '../lib/logic.js';
 import { eqNameError, newEqId } from '../lib/equipment.js';
 import { exIdsInUse, usageOf } from '../lib/exerciseLibrary.js';
 import { EX, exInfo, findExId, isCatalogId, isOwnExercise, isVideoUrl, newExId, slotsFor, VIDEO_ERR, warmupOf } from '../lib/data.js';
+import { noteToSave } from '../lib/exerciseNote.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
 import { validRm, validStep } from '../shared/validate.js';
 import type { Cfg, LibraryItem, PhaseKey, Program } from '../types.ts';
@@ -46,7 +47,8 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     const target = d.cat ? d.cat.id : chosen;
     if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Ideas to try list.`;
     const ex = get().resolveExerciseChoice(d, chosen);
-    const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
+    get().applyExerciseNote(ex, d.note); // the note belongs to the exercise, so the idea keeps none of its own
+    const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: '' };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
@@ -76,6 +78,13 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     const url = (raw || '').trim();
     if (url === (exInfo(get().cfg, ex).url || '')) return;
     get().mutateCfg(c => setOverride(c, ex, { url }));
+  },
+  // A note typed in any Note field is the exercise's note, shown on every card and idea with it. Nothing is written when it is unchanged.
+  applyExerciseNote(ex, text) {
+    if (text == null) return; // not offered by this caller: leave the saved note alone
+    const note = noteToSave(get().cfg, ex, text);
+    if (note == null) return;
+    get().mutateCfg(c => setOverride(c, ex, { note }));
   },
   applyExerciseEq(ex, eq) {
     if (eq == null) return; // not offered by this caller: leave the saved equipment alone
@@ -112,10 +121,10 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     if (d.cat) { const err = catalogPickError(get().cfg, d.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
     const ex = get().resolveExerciseChoice(d, d.ex);
-    const note = (d.note || '').trim().slice(0, 200);
+    get().applyExerciseNote(ex, d.note);
     const ph = d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
     const ok = get().mutateWeek(w => {
-      w.extra = [...(w.extra || []), { id, day: pd, ex, ph, note, add: true }];
+      w.extra = [...(w.extra || []), { id, day: pd, ex, ph, add: true }];
       if (ph && exDef && ph !== exDef) w.ph[`${id}:0`] = ph; // picked over the exercise default: a one-week pick, like the card's phase menu
     });
     if (!ok) return null;
@@ -201,7 +210,7 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
   addToDay(entryId, col) {
     const e = get().experiments.find(x => x.id === entryId); if (!e) return false;
     const pd = dayAt(get().week, col); if (pd == null) { flag('That is your rest day'); return false; }
-    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex: e.ex, ph: e.ph ?? null, note: e.note || '' }]; });
+    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex: e.ex, ph: e.ph ?? null }]; });
     if (ok) flag(`Added ${exInfo(get().cfg, e.ex).n} to Day ${col}`);
     return ok;
   },

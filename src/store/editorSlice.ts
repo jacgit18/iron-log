@@ -1,6 +1,8 @@
 import { BUILTIN, BLANK, slotsFor, exInfo, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { catalogName, catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
 import { exIdsInUse } from '../lib/exerciseLibrary.js';
+import { noteToSave } from '../lib/exerciseNote.js';
+import { setOverride } from './librarySlice.js';
 import { buildStarter, starterById } from '../lib/starterPrograms.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
@@ -345,9 +347,12 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       if (it.cat && !get().cfg.ex[ex]) { const snap = catalogSnapshot(it.cat, it); newEx[ex] = snap.info; if (snap.tags) newTags[ex] = snap.tags; } // picked from the catalog: joins the library with the card
       else if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
       else { get().applyExerciseUrl(ex, it.nu); get().applyExerciseEq(ex, it.ne); }
-      const o: ProgramItem = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
+      const o: ProgramItem = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; return o; // the note is the exercise's, saved below
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); if (Object.keys(newTags).length) c.muscleMap = { ...(c.muscleMap || {}), ...newTags }; });
+    // Each item's Note field is its exercise's note. Judged against what was shown before this save, so two fields for one exercise cannot undo each other.
+    const noteWrites = d.items.map((it: any, n: number) => [items[n]!.ex, noteToSave(get().cfg, items[n]!.ex, it.note)] as const).filter((w): w is readonly [string, string] => w[1] != null);
+    if (noteWrites.length) get().mutateCfg(c => { noteWrites.forEach(([ex, note]) => setOverride(c, ex, { note })); });
     const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
     const newSlotId = (n: number) => `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}${days.length > 1 ? n : ''}`;
     const ids = days.map((_, n) => (n ? newSlotId(n) : d.id || newSlotId(0))); // each day's card, known now so a promotion's Undo can find them
