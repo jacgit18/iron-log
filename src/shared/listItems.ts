@@ -1,7 +1,8 @@
 import { PH_KEYS } from '../lib/data.js';
 import { normPortion } from '../lib/supplementPortion.js';
-import type { Experiment, Stretch, StretchExperiment, SupplementItem, SupplementNutrient, SupplementServing, SupplementSlot } from '../types.ts';
+import type { Experiment, Stretch, StretchExperiment, SupplementIngredient, SupplementItem, SupplementNutrient, SupplementServing, SupplementSlot } from '../types.ts';
 import { MAX_NUTRIENT_ROWS, NUTRIENT_KEYS, NUTRIENT_UNITS } from './nutrientKeys.js';
+import { MAX_INGREDIENT_AMOUNT, MAX_INGREDIENT_ROWS, ingredientKey, ingredientName } from './supplementIngredients.js';
 import { goodUrl, str } from './stretchWeek.js';
 
 /* ---------- One item of a small list: a stretch, a stretch experiment ----------
@@ -51,6 +52,19 @@ export function nutrientsOf(x: any): SupplementNutrient[] {
   }
   return out;
 }
+// Active ingredient rows (brief supplement-active-ingredients): a name, a positive amount and a known unit; one row per name (case and spacing ignored) and unit, at most MAX_INGREDIENT_ROWS.
+export function ingredientsOf(x: any): SupplementIngredient[] {
+  if (!Array.isArray(x)) return [];
+  const seen = new Set<string>(); const out: SupplementIngredient[] = [];
+  for (const r of x) {
+    if (out.length >= MAX_INGREDIENT_ROWS) break;
+    if (!r || typeof r !== 'object' || !(NUTRIENT_UNITS as readonly unknown[]).includes(r.unit)) continue;
+    const name = ingredientName(r.name), amount = typeof r.amount === 'number' ? round3(r.amount) : NaN, id = `${ingredientKey(name)}/${r.unit}`;
+    if (!name || !Number.isFinite(amount) || amount <= 0 || amount > MAX_INGREDIENT_AMOUNT || seen.has(id)) continue;
+    seen.add(id); out.push({ name, amount, unit: r.unit });
+  }
+  return out;
+}
 function servingOf(x: any): SupplementServing | null {
   if (!x || typeof x !== 'object' || typeof x.units !== 'number' || !Number.isFinite(x.units) || x.units <= 0 || x.units > 100) return null;
   return { units: round3(x.units), ...(str(x.form, 40) ? { form: str(x.form, 40) } : {}) };
@@ -60,8 +74,8 @@ function servingOf(x: any): SupplementServing | null {
 export function normSupplementItem(x: any, slot: unknown = x && x.slot): SupplementItem | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 60)) return null;
   const catalogId = isCatalogId(x.catalogId) ? x.catalogId : null;
-  const serving = servingOf(x.serving), nutrients = nutrientsOf(x.nutrients), portion = normPortion(x.portion);
+  const serving = servingOf(x.serving), nutrients = nutrientsOf(x.nutrients), ingredients = ingredientsOf(x.ingredients), portion = normPortion(x.portion);
   return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x),
     ...(catalogId && str(x.brand, 60) ? { brand: str(x.brand, 60) } : {}), ...(catalogId ? { catalogId } : {}),
-    ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) };
+    ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}), ...(portion ? { portion } : {}) };
 }

@@ -1,0 +1,14 @@
+@layer base, components;
+@layer components {
+/* The limit sheet: Target or Cap, an amount and a unit side by side (the unit stays narrow so nothing scrolls sideways at 375 px). */
+.ilim-amt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6rem;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.ilim-amt input, .ilim-amt select {
+  min-height: 44px;
+  min-width: 0;
+}
+}
