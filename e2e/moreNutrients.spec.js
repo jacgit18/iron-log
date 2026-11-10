@@ -1,11 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief supplement-more-nutrients, PR 2: the grouped pickers and the Totals sheet rows for the eight added nutrients. The figures, limits and words are node tests (supplementTotalsView.test.ts and the three
 // table tests); this covers the wiring: picking the new nutrients by heading, a limit nutrient (manganese) and a target nutrient (thiamin) in the sheet, no warning for the target, axe at 375 px in both
 // themes and no sideways scroll. The fixed clock is Thursday 2026-09-24.
 const dialog = page => page.getByRole('dialog');
+const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const EIGHT = [['thiamin', 1.2], ['riboflavin', 1.3], ['biotin', 30], ['pantothenicAcid', 5], ['choline', 100], ['chromium', 35], ['molybdenum', 45], ['manganese', 2]];
 
 async function addSupplement(page, name, rows) {
   await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
@@ -67,4 +69,47 @@ test('the sheet with the new rows has no axe violations in either theme at 375 p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.emulateMedia({ colorScheme: 'dark' });
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
+});
+
+test('a label import brings in the eight added nutrients as rows', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('ironlog:flag:apiSync', 'true'); localStorage.setItem('ironlog:session/known', 'true'); });
+  await page.route('**/api/sync*', json(200, { rows: [], cursor: '1', more: false }));
+  await page.route('**/api/me', json(200, { ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } }));
+  await page.route('**/api/commands/**', json(200, { rows: [], cursor: '2' }));
+  await page.route('**/api/catalog?*', json(200, { ok: true, items: [] }));
+  await page.route('**/api/catalog/search?*', json(200, { ok: true, items: [{ id: 'c:dsld:900', name: 'Full Blend', brand: 'Acme', data: { form: 'Tablet', entryYear: 2020, upc: '031604026505' } }], more: false }));
+  await page.route('**/api/supplement-label/*', json(200, { label: { name: 'Full Blend', brand: 'Acme', entryYear: 2020, serving: { text: '1 tablet', units: 1, form: 'tablet' }, rows: EIGHT.map(([key, amount]) => ({ key, amount, unit: ['biotin', 'chromium', 'molybdenum'].includes(key) ? 'mcg' : 'mg' })), other: [] } }));
+  await page.goto('/');
+  await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await openSupplementEditor(page);
+  await page.locator('#suplib-add').click();
+  const sheet = page.getByRole('dialog', { name: 'Add a supplement' });
+  await sheet.locator('#suppadd-q').fill('full blend');
+  await sheet.getByRole('button', { name: /2020 label/ }).click();
+  await expect(sheet.locator('.lblrows')).toContainText('Thiamin');
+  await expect(sheet.locator('.lblrows')).toContainText('Manganese');
+  await sheet.getByLabel('Morning').check();
+  await page.click('#suppadd-go');
+  await expect(sheet).toHaveCount(0);
+  await page.getByRole('button', { name: 'Edit Full Blend' }).click();
+  await expect(page.locator('.nrow')).toHaveCount(8);
+  await expect(page.getByLabel('Nutrient 1')).toHaveValue(/./);
+  const keys = await page.locator('.nrow select[aria-label^="Nutrient"]').evaluateAll(els => els.map(e => e.value));
+  expect(keys.sort()).toEqual(EIGHT.map(([k]) => k).sort());
+});
+
+test('a looked-up food carries the eight added nutrients into the Totals sheet', async ({ page }) => {
+  const micro = Object.fromEntries(EIGHT.map(([k, v]) => [k, v]));
+  await page.route('**/api/foods/search*', json(200, { ok: true, hits: [{ id: 7, name: 'Mixed greens', kcal: 100, p: 10, c: 5, f: 1, micro }] }));
+  await openNutrition(page);
+  const sheet = await openAdd(page, 'Find food');
+  await sheet.getByRole('searchbox').or(sheet.getByRole('combobox')).first().fill('greens');
+  await sheet.getByRole('button', { name: /Mixed greens/ }).first().click();
+  await sheet.getByLabel('Grams').fill('100');
+  await sheet.getByRole('button', { name: 'Use', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+  await closeSheet(page);
+  await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+  const s = dialog(page);
+  for (const k of ['thiamin', 'riboflavin', 'biotin', 'pantothenicAcid', 'choline', 'chromium', 'molybdenum', 'manganese']) await expect(s.locator(`#stt-${k}`)).toBeVisible();
 });

@@ -34,8 +34,8 @@ describe('rowsFromMicro and nextFreeKey', () => {
     expect(rowsFromMicro({ iron: 1 }, false)).toEqual([row('iron', '1', 'mg')]);
   });
   it('offers the next nutrient with no row, and none when all 28 have one', () => {
-    expect(nextFreeKey([row('calcium', '1', 'mg')])).toBe('choline');
-    expect(nextFreeKey([])).toBe('calcium');
+    expect(nextFreeKey([row('calcium', '1', 'mg')])).toBe('thiamin');
+    expect(nextFreeKey([])).toBe('thiamin');
     const all = rowsFromMicro(Object.fromEntries(NUTRIENT_KEYS.map(k => [k, 1])), false);
     expect(all).toHaveLength(28);
     expect(nextFreeKey(all)).toBeUndefined();

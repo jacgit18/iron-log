@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NUTRIENT_KEYS, type NutrientKey } from '../shared/nutrientKeys.js';
-import { PICKER_GROUPS, pickerGroups } from './nutrientPickerGroups.js';
+import { PICKER_GROUPS, nextFreePickerKey } from './nutrientPickerGroups.js';
 
 describe('PICKER_GROUPS', () => {
   it('lists every nutrient key under exactly one heading', () => {
@@ -20,13 +20,11 @@ describe('PICKER_GROUPS', () => {
   });
 });
 
-describe('pickerGroups', () => {
-  it('returns the table for a known or missing key', () => {
-    expect(pickerGroups()).toBe(PICKER_GROUPS);
-    expect(pickerGroups('zinc')).toBe(PICKER_GROUPS);
-  });
-  it('keeps an unknown current key selectable', () => {
-    const g = pickerGroups('mystery' as NutrientKey);
-    expect(g[g.length - 1]).toEqual({ heading: 'Current', keys: ['mystery'] });
+describe('nextFreePickerKey', () => {
+  it('follows the picker order, skips taken keys and ends with none', () => {
+    expect(nextFreePickerKey([])).toBe('thiamin');
+    expect(nextFreePickerKey(['thiamin', 'riboflavin'])).toBe('niacin');
+    expect(nextFreePickerKey(NUTRIENT_KEYS.filter(k => k !== 'choline'))).toBe('choline');
+    expect(nextFreePickerKey(NUTRIENT_KEYS)).toBeUndefined();
   });
 });
