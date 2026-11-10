@@ -106,7 +106,7 @@ export default function ReceiptSheet() {
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!));
     if (newStore) snap.addedStore = newStore;
     const out: { refused: string[]; unticked?: number } = { refused: [] };
-    const done = applyPlan(real, mk, st, out);
+    const done = applyPlan(real, mk, st, out, receipt.date); // the receipt's date stamps what it buys
     const used = new Set(real.steps.flatMap(x => (x.kind === 'tax' ? [] : [x.id])));
     const edits: RowEdit[] = rows.map(r => { const c = choices[r.lines[0]!]!; return { text: r.text, itemId: c.itemId, include: c.include, touched: touched.has(r.key), remember: !noRemember.has(r.key) }; });
     const nm = applyNames({ items: () => useAppStore.getState().grocery.items, updateGroceryItem: st.updateGroceryItem }, Object.fromEntries(Object.entries(renames).filter(([id]) => used.has(id))), aliasAddsFor(edits, used, made.ids)); // after the plan: the plan works by id, so a rename cannot disturb it

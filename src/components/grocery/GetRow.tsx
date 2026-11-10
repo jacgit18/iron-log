@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { centsText, lineCost, lineOf, money, unitWords } from '../../lib/grocery.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { hasNoPrice } from '../../lib/groceryChips.js';
+import { buyCost, buysOf, stampText } from '../../lib/groceryPurchases.js';
 import Icon from '../Icon.jsx';
 import { COUNT_ERROR, PRICE_ERROR } from './groceryMessages.js';
 import { commitPrice, commitQty } from './commitNumber.js';
@@ -16,7 +17,7 @@ import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types
 export default function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMove, pick }: { g: GroceryT; item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; carries: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void; onMove: (id: string) => void; pick?: { on: boolean; set: (on: boolean) => void } }) {
   const s = useAppStore.getState();
   const l = lineOf(item, month); const total = lineCost(l); const w = unitWords(item.unit);
-  const moreId = `groc-more-${item.id}`;
+  const moreId = `groc-more-${item.id}`; const year = Number(mk.slice(0, 4)); // the month being looked at, so a stamp in another year shows its year
   const usual = g.items.find(x => x.id === item.id)?.store ?? item.store; // `item` is already under the store it is bought at this month
   const [moveErr, setMoveErr] = useState<string | null>(null);
   const [wasOpen, setWasOpen] = useState(open);
@@ -76,6 +77,12 @@ export default function GetRow({ g, item, month, mk, future, carries, onGot, ope
               <SharePicker name={`${item.n} pack ${i + 1}`} people={people} parties={partiesFor(g, item, raw, i)} own={!!raw?.packShares?.[i]} onChange={sh => s.setGroceryPackShare(mk, item.id, i, sh)} />
             </div>
           ))}
+          {(buysOf(raw).length > 0 || (l.got && raw?.at)) && (
+            <ul className="gbuys" aria-label={`Purchases of ${item.n} this month`}>
+              {l.got && <li>{stampText(raw?.at, year) || 'Bought'}{' · '}{l.prices ? `${l.prices.length} packs, ${money(total)}` : `${w.qty(l.qty)} × ${l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}`}{item.store ? ` · ${item.store}` : ''}</li>}
+              {[...buysOf(raw)].reverse().map((b, i) => <li key={i}>{stampText(b.at, year) || 'Earlier'}{' · '}{b.prices ? `${b.prices.length} packs, ${money(buyCost(b))}` : `${w.qty(b.qty ?? 1)} × ${b.cents == null ? 'no price' : `${money(b.cents)}${w.per}`}`}{b.store ? ` · ${b.store}` : ''}</li>)}
+            </ul>
+          )}
           <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null && !l.prices ? '' : money(total)}</span>
           {!future && !l.got && <button type="button" className="btn sm ghost gtake" aria-label={`I have this: ${item.n}`} onClick={() => s.takeGroceryOff(mk, item.id)}>I have this</button>}
       </>)}</div>

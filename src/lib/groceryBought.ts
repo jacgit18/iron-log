@@ -4,7 +4,7 @@ import { lineOf } from './grocery.js';
 // The Bought view (brief groceries-shopping-bought-inventory): what is ticked bought in a month, and which rows "Select all" takes.
 // Pure; the page keeps the state (what is picked, which month).
 
-export const boughtRows = (list: GroceryItem[], m: GroceryMonth): GroceryItem[] => list.filter(i => lineOf(i, m).got);
+export const boughtRows = (list: GroceryItem[], m: GroceryMonth): GroceryItem[] => list.filter(i => lineOf(i, m).got || !!m.lines[i.id]?.buys?.length); // an item you ran out of stays here, with the purchases it closed
 
 
 type Group = { store: string; items: GroceryItem[] };
