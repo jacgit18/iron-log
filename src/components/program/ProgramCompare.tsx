@@ -1,6 +1,7 @@
 import type { LibraryItem, PhaseKey, Program } from '../../types.ts';
 import { useId, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import FilterSelect from '../FilterSelect.jsx';
 import Icon from '../Icon.jsx';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { DAYS, progName } from '../../lib/logic.js';
@@ -129,13 +130,17 @@ function Panel() {
             Filter{filtersOn ? ` · ${filtersOn} on` : ''}<span className="cmpchev" aria-hidden="true"><Icon name="chevron-down" /></span>
           </button>
           <div id={filtersId} className="cmpfilters" data-open={filtersOpen}>
-            <div className="cmpchips" role="group" aria-label="Show rows">
-              {chips.map(([k, label, n]) => <button type="button" key={k} className="btn sm cmpchip" aria-pressed={status === k} onClick={() => setStatus(k)}>{label} {n}</button>)}
-            </div>
-            <div className="cmpchips" role="group" aria-label="Phase">
-              <button type="button" className="btn sm cmpchip" aria-pressed={phase === null} onClick={() => setPhase(null)}>Any phase</button>
-              {phases.map(k => <button type="button" key={k} className="btn sm cmpchip" aria-pressed={phase === k} onClick={() => setPhase(k)}>{PHASES[k].label}</button>)}
-              {hasNone && <button type="button" className="btn sm cmpchip" aria-pressed={phase === 'none'} onClick={() => setPhase('none')}>No phase</button>}
+            <div className="cmpsel">
+              <FilterSelect label="Show rows" value={status === 'all' ? '' : status} onChange={v => setStatus((v || 'all') as StatusFilter)}>
+                {chips.map(([k, label, n]) => <option key={k} value={k === 'all' ? '' : k}>{label} ({n})</option>)}
+              </FilterSelect>
+              {(phases.length > 0 || hasNone) && (
+                <FilterSelect label="Phase" value={phase ?? ''} onChange={v => setPhase((v || null) as PhaseFilter)}>
+                  <option value="">Any phase</option>
+                  {phases.map(k => <option key={k} value={k}>{PHASES[k].label}</option>)}
+                  {hasNone && <option value="none">No phase</option>}
+                </FilterSelect>
+              )}
             </div>
           </div>
           {!dayRows.length ? <p className="note" role="status">{day === 0 ? 'Nothing in either program.' : 'Nothing on this day in either program.'}</p>
