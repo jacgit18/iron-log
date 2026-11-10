@@ -15,10 +15,10 @@ test('Exercise library: the search box and chips fit two lines, a chip filters a
   const status = bar.getByRole('status');
   const total = Number((await status.textContent()).match(/^(\d+) exercises$/)[1]);
   await bar.getByRole('combobox', { name: 'Equipment' }).selectOption('barbell');
-  await expect(bar.locator('.libchip.on')).toHaveCount(1);
+  await expect(bar.locator('.fsel.on')).toHaveCount(1);
   await expect(status).toHaveText(new RegExp(`^\\d+ of ${total} exercises$`));
   await bar.getByRole('button', { name: 'Clear Equipment filter' }).click();
-  await expect(bar.locator('.libchip.on')).toHaveCount(0);
+  await expect(bar.locator('.fsel.on')).toHaveCount(0);
   await expect(status).toHaveText(`${total} exercises`);
   await bar.getByRole('searchbox').fill('zzzz-no-match');
   await expect(status).toHaveText(`0 of ${total} exercises`);
@@ -60,7 +60,7 @@ for (const name of ['Exercises', 'Stretches']) {
   test(`${name}: 44px targets, no sideways scroll, no accessibility violations`, async ({ page }) => {
     await openLib(page, name);
     for (const b of await lib(page).locator('.libbar, .libgroup').getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
-    for (const b of await lib(page).locator('.libchip select').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    for (const b of await lib(page).locator('.fsel select').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const { violations } = await new AxeBuilder({ page }).include('.exlib').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     expect(violations.map(v => v.id)).toEqual([]);

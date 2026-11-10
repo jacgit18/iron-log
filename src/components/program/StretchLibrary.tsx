@@ -7,7 +7,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
 import { canReorder, groupHeading, groupOpen, isFiltering, resultText } from '../../lib/libraryFilter.js';
-import LibraryChip from './LibraryChip.jsx';
+import FilterSelect from '../FilterSelect.jsx';
 import './Library.css';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
@@ -38,11 +38,11 @@ export default function StretchLibrary() {
       <div className="libbar" role="search">
         <input className="libsearch" type="search" aria-label="Search" value={q} placeholder={`Search ${items.length} stretches`} onChange={e => setQ(e.target.value)} />
         <div className="libchips">
-          {sources && <LibraryChip label="Source" value={src} onChange={setSrc}>
+          {sources && <FilterSelect label="Source" value={src} onChange={setSrc}>
             <option value="">All sources</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
-          </LibraryChip>}
+          </FilterSelect>}
           {canReorder(filtering) && <button type="button" className="btn sm" aria-pressed={ordering} onClick={() => setOrdering(o => !o)}>{ordering ? 'Done' : 'Edit order'}</button>}
         </div>
         <span className="note" role="status">{resultText(shown.length, items.length, filtering, 'stretches')}</span>
