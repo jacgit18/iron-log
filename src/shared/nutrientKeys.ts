@@ -4,10 +4,18 @@
    a recommended amount, never a limit; brief nutrients-without-upper-limit). A key here needs a row in exactly one of them (`nutrientTargets.test.ts` checks). */
 
 export const LIMIT_KEYS = [
-  'calcium', 'copper', 'folate', 'iodine', 'iron', 'magnesium', 'niacin', 'phosphorus', 'selenium',
+  'calcium', 'choline', 'copper', 'folate', 'iodine', 'iron', 'magnesium', 'manganese', 'molybdenum', 'niacin', 'phosphorus', 'selenium',
   'vitaminA', 'vitaminB6', 'vitaminC', 'vitaminD', 'vitaminE', 'zinc',
 ] as const;
-export const TARGET_KEYS = ['potassium', 'vitaminB12', 'vitaminK', 'fiber', 'sodium'] as const;
+export const TARGET_KEYS = [
+  'potassium', 'vitaminB12', 'vitaminK', 'fiber', 'sodium',
+  // brief supplement-more-nutrients: one key per line, so parallel branches merge
+  'biotin',
+  'chromium',
+  'pantothenicAcid',
+  'riboflavin',
+  'thiamin',
+] as const;
 /** Limit keys first, in the limits table's order, then the target keys: a cleaned `micro` writes its keys in this order. */
 export const NUTRIENT_KEYS = [...LIMIT_KEYS, ...TARGET_KEYS] as const;
 export type NutrientKey = typeof NUTRIENT_KEYS[number];

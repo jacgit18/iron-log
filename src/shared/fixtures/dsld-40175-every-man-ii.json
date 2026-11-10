@@ -1,0 +1,15 @@
+{
+"fullName": "40+ Every Man II Multivitamin", "brandName": "New Chapter", "entryDate": "2015-01-23", "upcSku": "",
+"servingSizes": [{"unit": "Tablet(s)", "minQuantity": 3}],
+"ingredientRows": [
+{"name": "Thiamin", "ingredientGroup": "Vitamin B1 (Thiamine)", "category": "vitamin", "quantity": [{"quantity": 8, "unit": "mg"}]},
+{"name": "Riboflavin", "ingredientGroup": "Vitamin B2 (Riboflavin)", "category": "vitamin", "quantity": [{"quantity": 5, "unit": "mg"}]},
+{"name": "Vitamin B6", "ingredientGroup": "Vitamin B6 (unspecified)", "category": "vitamin", "quantity": [{"quantity": 10, "unit": "mg"}]},
+{"name": "Vitamin B12", "ingredientGroup": "Vitamin B12", "category": "vitamin", "quantity": [{"quantity": 50, "unit": "mcg"}]},
+{"name": "Biotin", "ingredientGroup": "Vitamin B7 (biotin)", "category": "vitamin", "quantity": [{"quantity": 300, "unit": "mcg"}]},
+{"name": "Pantothenic Acid", "ingredientGroup": "Pantothenic Acid (Vitamin B5)", "category": "vitamin", "quantity": [{"quantity": 25, "unit": "mg"}]},
+{"name": "Manganese", "ingredientGroup": "Manganese", "category": "mineral", "quantity": [{"quantity": 2, "unit": "mg"}]},
+{"name": "Chromium", "ingredientGroup": "Chromium", "category": "mineral", "quantity": [{"quantity": 100, "unit": "mcg"}]},
+{"name": "Molybdenum", "ingredientGroup": "Molybdenum", "category": "mineral", "quantity": [{"quantity": 50, "unit": "mcg"}]}
+]
+}

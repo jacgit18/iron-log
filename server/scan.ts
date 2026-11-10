@@ -26,7 +26,7 @@ const UNAVAILABLE = 'label scan is not available right now';
 const RECEIPT_UNAVAILABLE = 'receipt scan is not available right now';
 
 const MICRO_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-const LABEL_MAX_TOKENS = 700; // the four macros were 400; up to 15 vitamin and mineral amounts more
+const LABEL_MAX_TOKENS = 850; // the four macros were 400; up to 28 vitamin and mineral amounts more (700 for the first 20)
 
 const SYSTEM = [
   'You read one photo of a food nutrition-facts label and answer with one JSON object and nothing else.',
