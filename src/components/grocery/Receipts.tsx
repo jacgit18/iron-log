@@ -8,7 +8,7 @@ import './Receipts.css';
 
 // The Receipts page (brief receipt-save-photo), #/daily/grocery/receipts: the photos kept after Scan receipt, newest month first, as plain text rows (no
 // thumbnails, so opening the page loads no pictures). A row opens the viewer sheet (ReceiptViewer.tsx); the list is read from the server every time the page opens.
-const allWords = (skipped: number) => (skipped ? `Downloaded. ${skipped} ${skipped === 1 ? 'photo' : 'photos'} could not be loaded and ${skipped === 1 ? 'is' : 'are'} left out; they are still saved. Try again for those.` : 'Downloaded all your saved receipts.');
+const allWords = (skipped: number) => (skipped ? `Downloaded. ${skipped} ${skipped === 1 ? 'photo' : 'photos'} could not be loaded and ${skipped === 1 ? 'is' : 'are'} left out; ${skipped === 1 ? 'it is' : 'they are'} still saved. Try again for ${skipped === 1 ? 'it' : 'those'}.` : 'Downloaded all your saved receipts.');
 const WORDS = { offline: 'You are offline. Saved receipts need a connection.', unavailable: 'Could not load your saved receipts right now.' } as const;
 
 export default function Receipts() {
