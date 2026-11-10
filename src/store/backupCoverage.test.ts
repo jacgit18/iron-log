@@ -59,15 +59,15 @@ beforeEach(() => { clearStorage(); useAppStore.setState({ ...structuredClone(pri
 const exportData = async () => JSON.parse((await st().buildExportFile('data')).data);
 const withoutTime = ({ exportedAt: _t, ...rest }: any) => rest;
 
-// A supplement with every field the item can carry (serving, nutrients, portion, the time of day, dose, note), one ticked on a day, and water and a boost.
-const SUPP_ITEM = { id: 'mg-night', n: 'Magnesium glycinate', slot: 'night', dose: '2 capsules', note: 'with dinner', serving: { units: 2, form: 'Capsule' }, nutrients: [{ key: 'magnesium', amount: 200, unit: 'mg' }, { key: 'zinc', amount: 5, unit: 'mg' }, { key: 'biotin', amount: 300, unit: 'mcg' }], portion: 0.5 };
+// A supplement with every field the item can carry (serving, nutrients, active ingredients, portion, the time of day, dose, note), one ticked on a day, and water and a boost.
+const SUPP_ITEM = { id: 'mg-night', n: 'Magnesium glycinate', slot: 'night', dose: '2 capsules', note: 'with dinner', serving: { units: 2, form: 'Capsule' }, nutrients: [{ key: 'magnesium', amount: 200, unit: 'mg' }, { key: 'zinc', amount: 5, unit: 'mg' }, { key: 'biotin', amount: 300, unit: 'mcg' }], portion: 0.5, ingredients: [{ name: 'Omega-3', amount: 500, unit: 'mg' }, { name: 'L-theanine', amount: 200, unit: 'mg' }] };
 const SUPP_LIB = { id: 'c:dsld:12345', n: 'Vitamin D3', slot: '', brand: 'Acme', catalogId: 'c:dsld:12345', serving: { units: 1, form: 'Softgel' }, nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }] };
 
 async function fillEverything() {
   const wk = st().weekKey();
   const mine = structuredClone(st().programs.A); mine.days[0].title = 'Push day';
   useAppStore.setState({
-    cfg: { ...structuredClone(pristine.cfg as object), rest: 120, groceryBudget: 40000, bwGoal: { w: 175, d: wk }, profile: { birthYear: 1990, sex: 'male' }, diet: { kcal: 2200, protein: 150, pace: 'steady' }, equipment: { 'x:bands': 'Bands' }, freqGoals: { hack: 2 }, injuryPrevention: false, hideKg: true, recipeChips: { hide: ['drinks'], order: ['sides'] } },
+    cfg: { ...structuredClone(pristine.cfg as object), rest: 120, groceryBudget: 40000, bwGoal: { w: 175, d: wk }, profile: { birthYear: 1990, sex: 'male' }, diet: { kcal: 2200, protein: 150, pace: 'steady' }, equipment: { 'x:bands': 'Bands' }, freqGoals: { hack: 2 }, injuryPrevention: false, hideKg: true, recipeChips: { hide: ['drinks'], order: ['sides'] }, ingredientLimits: { 'omega-3': { kind: 'cap', amount: 3000, unit: 'mg', name: 'Omega-3' } } },
     recipes: [{ id: 'chili-ab12', n: 'Chili', cat: 'protein', tags: ['Meal prep'], ing: [{ n: 'beans' }], steps: ['Simmer.'], servings: 4, kcal: 400, p: 30, micro: { iron: 3 } }],
     diet: [{ id: 'f1', d: wk, n: 'Oats', kcal: 300, p: 10, c: 50, f: 5, t: 8, micro: { calcium: 120 } }],
     programs: { A: mine, B: st().programs.B },
@@ -76,7 +76,7 @@ async function fillEverything() {
     stretches: [{ id: 's1', n: 'Doorway stretch', group: 'chest', tier: 'primary', note: 'hold 30 s' }],
     stretchExps: [{ id: 'x1', n: 'Couch stretch' }],
     grocery: { stores: ['Veg market'], items: [{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false }] },
-    groceryMonths: { '2026-09': { lines: { kale: { got: true, qty: 3, cents: 260 } }, pulled: [] } },
+    groceryMonths: { '2026-09': { lines: { kale: { got: true, at: '2026-09-03T10:15', qty: 3, cents: 260, buys: [{ at: '2026-09-01T09:00', qty: 1, cents: 250, store: 'Veg market' }] } }, pulled: [] } },
     supp: { waterGoal: 100, waterMode: 'fixed', water: { [wk]: [8, 16] }, boost: { [wk]: { hot: true, mins: 45 } }, items: [SUPP_ITEM, SUPP_LIB], taken: { [wk]: { 'mg-night': true } } },
   });
   st().submitLog('A-d1s1', 0, { entry: { d: wk, ph: 'hyp', ...summarizeSets([{ w: 45, r: 12 }], false), slot: 'A-d1s1', wk, n: 'felt good' }, ph: 'hyp', done: true });
@@ -149,6 +149,9 @@ describe('backup coverage', () => {
     expect(first.diet[0].micro).toEqual({ calcium: 120 });
     expect(first.recipes[0].micro).toEqual({ iron: 3 });
     expect(first.grocery.months['2026-09'].lines.kale.got).toBe(true);
+    expect(first.grocery.months['2026-09'].lines.kale.buys).toEqual([{ at: '2026-09-01T09:00', qty: 1, cents: 250, store: 'Veg market' }]); // the purchases Ran out closed
+    expect(first.grocery.months['2026-09'].lines.kale.at).toBe('2026-09-03T10:15');
+    expect(first.config.ingredientLimits).toEqual({ 'omega-3': { kind: 'cap', amount: 3000, unit: 'mg', name: 'Omega-3' } });
 
     useAppStore.setState({ ...structuredClone(pristine) }); clearStorage();
     await st().pasteImport(JSON.stringify(first));
