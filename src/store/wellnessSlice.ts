@@ -2,7 +2,8 @@ import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
-import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
+import { ingredientsOf, isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
+import { MAX_INGREDIENT_LIMITS, checkLimit, ingredientKey } from '../shared/supplementIngredients.js';
 import { normPortion } from '../lib/supplementPortion.js';
 import { planTimes } from '../lib/supplementTimes.js';
 import type { StretchTier, SupplementItem, SupplementSlot } from '../types.ts';
@@ -282,11 +283,12 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     const nutrients = d.nutrients === undefined ? cur?.nutrients || [] : nutrientsOf(d.nutrients);
+    const ingredients = d.ingredients === undefined ? cur?.ingredients || [] : ingredientsOf(d.ingredients);
     const serving = d.serving === undefined ? cur?.serving : normSupplementItem({ id: 'x', n: 'x', serving: d.serving })?.serving; // one serving size per product; the same cleaner as a synced item
     const portion = d.portion === undefined ? cur?.portion : normPortion(d.portion);
     get().mutateSupp(s => {
       const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}),
-        ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
+        ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
       // The same product in other sections shares its name, one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
@@ -294,10 +296,22 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
         if (x.id === item.id || !sameSupplement(x, cur.n, cur.brand)) continue;
         x.n = n; // a rename reaches every time of the product: the sheet shows them as one supplement, and Save groups them by name
         if (d.nutrients !== undefined) { if (nutrients.length) x.nutrients = nutrients.map(r => ({ ...r })); else delete x.nutrients; }
+        if (d.ingredients !== undefined) { if (ingredients.length) x.ingredients = ingredients.map(r => ({ ...r })); else delete x.ingredients; }
         if (d.serving !== undefined) { if (serving) x.serving = { ...serving }; else delete x.serving; }
       }
     });
     set({ modal: null }); flag('Supplement saved'); return null;
+  },
+  // Your own daily target or cap for one active ingredient (brief supplement-active-ingredients): per name, all supplements. `null` removes it. The limit is the person's own number, so removing an ingredient row elsewhere keeps it.
+  setIngredientLimit(name, limit) {
+    const key = ingredientKey(name); if (!key) return 'Name the ingredient.';
+    if (get().blocked()) return 'Try again in a moment.';
+    if (limit === null) { get().mutateCfg(c => { if (c.ingredientLimits) { delete c.ingredientLimits[key]; if (!Object.keys(c.ingredientLimits).length) delete c.ingredientLimits; } }); flag('Limit removed'); return null; }
+    const ok = checkLimit(limit.kind, limit.amount, limit.unit);
+    if ('error' in ok) return ok.error;
+    if (!get().cfg.ingredientLimits?.[key] && Object.keys(get().cfg.ingredientLimits || {}).length >= MAX_INGREDIENT_LIMITS) return 'You have set as many limits as fit. Remove one first.';
+    get().mutateCfg(c => { c.ingredientLimits = { ...(c.ingredientLimits || {}), [key]: ok.limit }; });
+    flag('Limit saved'); return null;
   },
   // Undo puts it back where it was, with every day it was ticked.
   deleteSupplement(id) {

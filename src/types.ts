@@ -166,6 +166,8 @@ export interface Cfg extends ProgramCfg {
   hideKg?: true;
   /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
   recipeChips?: RecipeChips;
+  /** Your own daily target or cap per active ingredient, by lowercase ingredient name (brief supplement-active-ingredients). */
+  ingredientLimits?: Record<string, IngredientLimit>;
 }
 
 /** An Experiment (or added) card on one week. */
@@ -235,9 +237,13 @@ export interface LiftGoal { w: number; start?: number; by?: string; bw?: number;
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
 /** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[]; /** Servings taken each time, left out when it is 1 (brief supplement-portions): the nutrient rows are per serving, so the amount counted is row x portion. */ portion?: number }
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[]; /** Active ingredients per serving (brief supplement-active-ingredients): omega-3, creatine, caffeine or a typed name, beside the 28 nutrient rows. Same portion rule as `nutrients`. */ ingredients?: SupplementIngredient[]; /** Servings taken each time, left out when it is 1 (brief supplement-portions): the nutrient rows are per serving, so the amount counted is row x portion. */ portion?: number }
 /** What is in one serving, typed by the person (supplement nutrient totals). `amount` is per serving; ticking the item on a day counts one serving. */
 export interface SupplementNutrient { key: NutrientKey; amount: number; unit: NutrientUnit }
+/** An active ingredient in one serving (brief supplement-active-ingredients): a free name (curated or typed), amount per serving, unit. */
+export interface SupplementIngredient { name: string; amount: number; unit: NutrientUnit }
+/** Your own daily number for one ingredient: a target (aim for at least) or a cap (stay under). Never a built-in limit. */
+export interface IngredientLimit { kind: 'target' | 'cap'; amount: number; unit: NutrientUnit }
 /** `units`: how many capsules, tablets or scoops make one serving; `form`: Capsule, Powder, ... */
 export interface SupplementServing { units: number; form?: string }
 export type { NutrientKey, NutrientUnit };

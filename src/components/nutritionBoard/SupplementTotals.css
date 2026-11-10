@@ -16,6 +16,13 @@
   border: 1px solid var(--line);
   border-radius: var(--r-md);
 }
+.stt-limit {
+  justify-self: start;
+  min-height: 44px;
+}
+.stt-row.met .stt-st b {
+  color: var(--accent);
+}
 .stt-row.over {
   border-color: var(--str);
 }

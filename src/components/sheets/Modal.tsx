@@ -1,5 +1,6 @@
 import type { ProductName } from '../../shared/barcode.js';
 import type { CatalogItem } from '../../types.js';
+import type { NutrientUnit } from '../../shared/nutrientKeys.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import LogSheet from './LogSheet.js';
 import DetailSheet from './DetailSheet.js';
@@ -8,6 +9,7 @@ import SlotSheet from './SlotSheet.js';
 import ExerciseSheet from './ExerciseSheet.js';
 import DayAddSheet from './DayAddSheet.js';
 import { StretchSheet, StretchExpSheet } from './StretchSheets.js';
+import IngredientLimitSheet from '../supplements/IngredientLimitSheet.js';
 import SupplementAddSheet from '../supplements/SupplementAddSheet.js';
 import SupplementBarcodeSheet from '../supplements/SupplementBarcodeSheet.js';
 import SupplementSheet, { type SupplementDraft } from './SupplementSheet.js';
@@ -65,6 +67,7 @@ export default function Modal() {
     case 'nbadd': return <AddFoodSheet key={String(modal.day ?? '')} />;
     case 'nbdrink': return <DrinkSheet key={String(modal.day ?? '')} />;
     case 'nbmanage': return <ManageSheet />;
+    case 'ingredientlimit': return <IngredientLimitSheet key={String(modal.name ?? '')} name={String(modal.name ?? '')} day={String(modal.day ?? '')} unit={(modal.unit as NutrientUnit | undefined) ?? 'mg'} />;
     case 'nbsupptotals': return <SupplementTotalsSheet day={String(modal.day ?? '')} />;
     case 'nbtargets': return <TargetsSheet />;
     case 'portion': return <PortionSheet key={String(modal.id ?? '')} />;
