@@ -27,25 +27,25 @@
       "name": "Today's workout",
       "shortName": "Today",
       "url": "https://loadbearer.app/?open=board",
-      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/today.png"
     },
     {
       "name": "Daily log",
       "shortName": "Daily",
       "url": "https://loadbearer.app/?open=daily",
-      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/daily.png"
     },
     {
       "name": "Progress",
       "shortName": "Progress",
       "url": "https://loadbearer.app/?open=progress",
-      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/progress.png"
     },
     {
       "name": "Nutrition",
       "shortName": "Nutrition",
       "url": "https://loadbearer.app/#/daily/nutrition",
-      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+      "chosenIconUrl": "https://loadbearer.app/shortcut-icons/nutrition.png"
     }
   ],
   "generatorApp": "bubblewrap-cli",
