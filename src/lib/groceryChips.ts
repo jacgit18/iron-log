@@ -26,6 +26,21 @@ export const chipGroups = <T extends { store: string }>(groups: T[], chip: strin
 /** Chips are offered only when there is more than one store to tell apart. */
 export const showChips = (chips: Chip[]): boolean => chips.length > 2;
 
+/** Chips up to this many options (All plus up to 3 stores) stay chips; more become one dropdown (brief filter-dropdowns, owner rule 2026-11-10: more than 4 options). */
+export const CHIPS_MAX = 4;
+
+/** Whether a chip set is shown as a dropdown: more than four options. */
+export const asDropdown = (chips: Chip[]): boolean => chips.length > CHIPS_MAX;
+
+/** The dropdown's option text: "All (12)" for All, "Costco (8)" for a store. */
+export const chipOptionText = (c: Chip): string => `${c.label} (${c.count})`;
+
+/** The select value of a chip key: All is '' (FilterSelect's All), a store keeps its key. */
+export const chipToValue = (key: string): string => (key === ALL_CHIP ? '' : key);
+
+/** The chip key of a select value: '' is All. */
+export const valueToChip = (value: string): string => (value === '' ? ALL_CHIP : value);
+
 /** The width (px) from which row details start open: above 700, the repo's phone breakpoint (as the Program editor and the Board). */
 export const DETAILS_OPEN_FROM = 701;
 
