@@ -2354,7 +2354,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-189', feature: 'Week board', title: 'The plate check and its one-tap fix', persona: 'meal-planner', brief: 'week-board',
     steps: [
-      'With Chili and Rice paired (S-179), press + Add food, pick Dinner, press Recipes and press Plan Chili for Dinner. Read the marks under Dinner on today\'s column.',
+      'With Chili and Rice paired (S-179), tap the name of a day after today (for example "Fri 25"), press + Add food, pick Dinner, press Recipes and press Plan Chili for Dinner. Read the marks under Dinner on that day\'s column.',
       'Press the dashed "+ Add a carb" button.',
     ],
     expected: [
@@ -2481,14 +2481,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-199', feature: 'Nutrition board', title: 'The add sheet picks the meal from the time, and remembers your pick', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Use a private window (or a browser that has never opened the add sheet), sign in as this account, open Nutrition and press + Add food. The meal pick is remembered per browser.',
-      'Read which button under Which meal? is pressed. Press a different one and press Done.',
-      'Press + Add food again.',
+      'Use a private window (or a browser that has never opened the add sheet), sign in as this account, open Nutrition and press + Add food on today. Press Done.',
+      'Tap the name of a day after today (for example "Fri 25") and press + Add food. Read which button under Which meal? is pressed. Press a different one and press Done.',
+      'Tap the day name again and press + Add food again.',
     ],
     expected: [
-      'Before 10:30 Breakfast is pressed; to 14:30 Lunch; to 16:30 Snack; to 21:30 Dinner; after that Snack.',
-      'The sheet title is "Add food" and under it reads "Adding to <today> · today"; the note under the meal buttons says "Recipes you plan go into <meal>; food you log is listed under Eaten."',
-      'The second time the sheet opens on the meal you picked, whatever the time. (The pick is kept in this browser only.)',
+      'On today the sheet shows no Which meal? question (eaten food has no meal); the title is "Add food" and under it reads "Adding to <today> · today".',
+      'On the day ahead, before 10:30 Breakfast is pressed; to 14:30 Lunch; to 16:30 Snack; to 21:30 Dinner; after that Snack. The note under the meal buttons says "Recipes and saved meals you add go into <meal>."',
+      'The second time the sheet opens on a day ahead it shows the meal you picked, whatever the time. (The pick is kept in this browser only.)',
     ],
   },
   {
@@ -2522,12 +2522,12 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press + Add food, Find food, type "oat" in "Search your past meals and recipes", pick a result and press Add.',
       'Press Back to ways of adding, then Saved meals, and tap "Usual breakfast".',
-      'Press Back to ways of adding, then Recipes. Type a few letters in Find a recipe. Press Log on one recipe, and Plan on another.',
+      'Press Back to ways of adding, then Recipes. Type a few letters in Find a recipe and press Log on one recipe. Then tap the name of a day after today, press + Add food, Recipes, and press Plan on a recipe.',
     ],
     expected: [
       'The food is added ("Added 1 portion of <food>.") and listed under Eaten.',
       'Usual breakfast logs two entries (the scramble and the oats); today\'s meters follow.',
-      'Log opens the portion sheet for that recipe; Plan says "Planned <recipe> for <meal>." and the recipe appears in that meal on today\'s column.',
+      'On today a recipe has only Log, which opens the portion sheet (there is no Plan on today). On the day ahead Plan says "Planned <recipe> for <meal>." and the recipe appears in that meal on that day\'s column.',
     ],
   },
   {
@@ -2591,7 +2591,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Breakfast, Lunch and Dinner say "Nothing planned" and have no button; there is no Snack.',
       'The note reads "Recipes and saved meals you add go into Snack."; each recipe has only Plan (no Log). The notice reads "Planned Overnight oats for Snack."',
-      'A Snack section now holds an Overnight oats card, and that day\'s Calories meter reads its planned calories. Today\'s recipes list has both Log and Plan.',
+      'A Snack section now holds an Overnight oats card, and that day\'s Calories meter reads its planned calories. Today\'s recipes list has only Log (no Plan), and today\'s add sheet shows no Which meal? question.',
     ],
   },
   {
