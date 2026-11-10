@@ -65,7 +65,7 @@ describe('POST /api/receipts through the whole app', () => {
   const jpeg = (chars: number) => '/9j/' + 'A'.repeat(chars - 4);
   const body = (chars: number) => JSON.stringify({ image: jpeg(chars), month: '2026-11' });
 
-  it('keeps a 900 kB photo from an admin (over the 100 kb app limit), refuses over its own 2 MB limit, and keeps anonymous and non-admin out', async () => {
+  it('keeps a 900 kB photo from any signed-in account (over the 100 kb app limit), refuses over its own 2 MB limit, and keeps anonymous out', async () => {
     const ok = body(900_000);
     expect(ok.length).toBeGreaterThan(100_000);
     const res = await save(ok, 'boss');
@@ -73,7 +73,7 @@ describe('POST /api/receipts through the whole app', () => {
     expect(await res.json()).toMatchObject({ ok: true, receipt: { month: '2026-11' } });
     expect((await save(body(2_200_000), 'boss')).status).toBe(413);
     expect((await save(ok)).status).toBe(401);
-    expect((await save(ok, 'plain')).status).toBe(403);
+    expect((await save(ok, 'plain')).status).toBe(201); // released to everyone 2026-11-10: a non-admin account may keep a receipt
   });
   it('still holds every other receipts call to the 100 kb parser', async () => {
     const big = JSON.stringify({ note: 'x'.repeat(150_000) });

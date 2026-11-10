@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
-import { useFeature } from '../../features.js';
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
@@ -19,7 +18,6 @@ import './ReceiptScan.css';
 export interface Applied { text: string; undo: () => void }
 
 export function useReceiptScan(g: Grocery, mk: string) {
-  const keepOn = useFeature('receipts');
   const camera = useRef<HTMLInputElement>(null);
   const library = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
@@ -52,7 +50,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
     if (!r.ok) { setMsg(RECEIPT_TEXT[r.reason]); return; }
     if (r.result.kind !== 'ok') { setMsg(RECEIPT_TEXT.unreadable); return; }
     const { receipt, remembered } = applySavedNames(r.result.receipt, catalogue.items); // the person's saved receipt names win over the model's guess (brief receipt-rename-memory)
-    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk, image: keepOn ? r.image : null, onApplied: (a: Applied) => setApplied({ ...a, mk, t: Date.now() }), onKeep: (meta: KeepMeta) => void keep(r.image, meta) });
+    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk, image: r.image, onApplied: (a: Applied) => setApplied({ ...a, mk, t: Date.now() }), onKeep: (meta: KeepMeta) => void keep(r.image, meta) });
   };
   const notes = (
     <>
@@ -76,7 +74,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
     </>
   );
   const hasNotes = !!msg || !!kept || (!!applied && applied.mk === mk);
-  return { canScan, keepOn, busy, inputs, notes, hasNotes, openCamera: () => camera.current?.click(), openLibrary: () => library.current?.click() };
+  return { canScan, busy, inputs, notes, hasNotes, openCamera: () => camera.current?.click(), openLibrary: () => library.current?.click() };
 }
 export type ReceiptScanState = ReturnType<typeof useReceiptScan>;
 
@@ -86,14 +84,13 @@ export function ReceiptMenu({ r }: { r: ReceiptScanState }) {
   return (
     <>
       {r.canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={r.busy} onClick={e => { shut(e); r.openLibrary(); }}>Pick from photos</button>}
-      {r.keepOn && <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>}
+      <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>
     </>
   );
 }
 
 // `phone`: only Scan receipt shows here, full width; Pick from photos and Saved receipts are in the More menu (ReceiptMenu) and their notices still show under it.
 export default function ReceiptScan({ r, phone }: { r: ReceiptScanState; phone?: boolean }) {
-  if (!r.canScan && !r.keepOn) return null;
   if (phone && !r.canScan && !r.hasNotes) return null;
   return (
     <div className={phone ? 'rcscan rcphone' : 'rcscan'}>

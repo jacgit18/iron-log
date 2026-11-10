@@ -29,19 +29,19 @@ test('set a budget, watch the bar, go over it, and it survives a reload', async 
   await seed(page, { lines: { rice: { got: true } }, pulled: [] }); // Rice 30.00 bought, Apples 50.00 still to get: planned 80.00
   await open(page);
   await page.click('#groc-budget-set');
-  await page.fill('#groc-budget-in', 'abc'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.fill('#groc-budget-in', 'abc'); await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('#groc-budget-err')).toBeVisible();
-  await page.fill('#groc-budget-in', '60'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.fill('#groc-budget-in', '60'); await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('#groc-budget')).toContainText('$30.00 of $60.00');
   await expect(page.locator('#groc-budget')).toContainText('$30.00 left');
   await expect(page.locator('#groc-budget-note')).toHaveText('You still have $30.00 left in your budget to spend.'); // the whole list (80.00) costs more than 60.00
   await expect(page.locator('#groc-budget .gbstate')).toHaveCount(0); // so the figure shows once, in the note
   await page.reload(); await open(page);
   await expect(page.locator('#groc-budget')).toContainText('$30.00 of $60.00');
-  await page.click('#groc-budget-edit'); await page.fill('#groc-budget-in', '100'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.click('#groc-budget-edit'); await page.fill('#groc-budget-in', '100'); await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('#groc-budget-note')).toHaveCount(0); // the list (80.00) fits: no note, and the left figure is back on the line
   await expect(page.locator('#groc-budget .gbstate')).toHaveText('$70.00 left');
-  await page.click('#groc-budget-edit'); await page.fill('#groc-budget-in', '25'); await page.getByRole('button', { name: 'Save' }).click();
+  await page.click('#groc-budget-edit'); await page.fill('#groc-budget-in', '25'); await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('#groc-budget')).toContainText('$5.00 over budget');
   await page.click('#groc-budget-edit'); await page.getByRole('button', { name: 'Remove' }).click();
   await expect(page.locator('#groc-budget-set')).toBeVisible();
