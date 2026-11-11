@@ -18,7 +18,7 @@
 }
 .gshare.own summary {
   border-color: var(--accent);
-  color: var(--text);
+  color: var(--ink);
 }
 .gsharebody {
   display: flex;

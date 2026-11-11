@@ -185,7 +185,7 @@
   padding: var(--sp-2) var(--sp-8);
   border: 1px solid var(--accent);
   border-radius: var(--r-pill);
-  color: var(--text);
+  color: var(--ink);
   font-size: var(--fs-xs);
   white-space: nowrap;
 }
