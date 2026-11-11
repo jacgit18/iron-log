@@ -91,7 +91,10 @@ export type ScenarioFeature =
   | 'Plan labels'
   | 'Grocery list cap'
   | 'Erased account'
-  | 'Large history';
+  | 'Large history'
+  | 'Issues filter'
+  | 'Scan keeps its day'
+  | 'Launcher shortcuts';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -102,7 +105,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Supplement times', 'Active ingredients', 'Ingredient day line',
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
-  'Plan labels', 'Grocery list cap', 'Erased account', 'Large history',
+  'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts',
 ];
 
 export interface Scenario {
@@ -3356,6 +3359,47 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Progress and History open within a few seconds and reach back about three years; the export completes and the file opens; the Board stays responsive after the large history loads.',
+    ],
+  },
+  {
+    id: 'S-273', feature: 'Issues filter', title: 'The Issues list filters by one Status dropdown', persona: 'new-user', brief: 'feature-map',
+    steps: [
+      'Sign in as an admin (the owner account). Open Settings, then Issues.',
+      'Read the Status control: it is one dropdown, not a row of buttons. Open it and read the options, then pick each status in turn, then clear it with the x or All.',
+    ],
+    expected: [
+      'Status is a single dropdown whose options carry their counts and which starts on Open; the list shows only that status; the x or All shows every issue. An account that is not an admin has no Issues panel.',
+    ],
+  },
+  {
+    id: 'S-274', feature: 'Scan keeps its day', title: 'A scanned food is logged to the day the scan began on', persona: 'meal-planner', brief: 'nutrition-board', device: true,
+    steps: [
+      'On a phone, open Nutrition and select yesterday (not today).',
+      'Scan a food with the camera (a barcode or a label) and wait for the scanned-food panel. If the app lets you change the day while the panel is open, change it to today; if not, note that and carry on.',
+      'Press Save and log it, then look at both yesterday and today.',
+    ],
+    expected: [
+      'The food is logged to yesterday, the day the scan began on, not to whichever day was selected when Save and log it was pressed; today shows no new entry.',
+    ],
+  },
+  {
+    id: 'S-275', feature: 'Launcher shortcuts', title: 'Long-press the app icon: four shortcuts with their own icons', persona: 'new-user', brief: 'feature-map', device: true,
+    steps: [
+      'On an Android phone, with the Play app on wrapper version 6 or later, long-press the Loadbearer icon on the home screen.',
+      'Read the menu, then open each shortcut in turn (Progress and Nutrition included), going back to the home screen between them.',
+    ],
+    expected: [
+      'Four shortcuts are listed, each with its own icon (a barbell, a calendar tick, a rising line, a fork and knife); Progress opens the Progress tab and Nutrition opens the Nutrition screen inside Daily. An older wrapper shows fewer or no shortcuts: that is the old build, not a bug.',
+    ],
+  },
+  {
+    id: 'S-276', feature: 'Launcher shortcuts', title: 'Loadbearer is in the Android share list', persona: 'superset-builder', brief: 'share-target', device: true, edge: true,
+    steps: [
+      'On an Android phone with the Play app (not only the installed web app), open a YouTube video and choose Share.',
+      'Look for Loadbearer in the share list and choose it.',
+    ],
+    expected: [
+      'Loadbearer is listed in the share sheet for a plain-text link and opens "Save this link" over the board (S-30 covers saving it). A wrapper built before the share entry was added is missing from the list.',
     ],
   },
 ];
