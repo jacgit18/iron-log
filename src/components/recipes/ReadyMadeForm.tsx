@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
+import './RecipeFormSections.css';
 import { liveRows, microOfRows, rowsFromMicro } from '../../lib/foodAmountRows.js';
 import type { AmountRow } from '../../lib/foodAmountRows.js';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
@@ -80,7 +81,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null);
   };
   return (
-    <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New ready-made food'}>
+    <form className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New ready-made food'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit ready-made food' : 'New ready-made food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
         <FoodSearch onUse={fillFrom} {...(scanFirst ? { scanFirst } : {})} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
@@ -128,10 +129,12 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>
-      {err && <p className="note gerr" role="alert">{err}</p>}
-      <div className="rc-actions rc-bar">
-        <button type="submit" className="btn primary">Save food</button>
-        <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+      <div className="rcf-foot">
+        {err && <p className="note gerr" role="alert">{err}</p>}
+        <div className="rc-actions rc-bar">
+          <button type="submit" className="btn primary">Save food</button>
+          <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+        </div>
       </div>
     </form>
   );
