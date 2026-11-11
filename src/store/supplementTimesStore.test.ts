@@ -57,3 +57,13 @@ describe('saveSupplementTimes', () => {
     expect(st().supp.items.map((i: any) => `${i.n}@${i.slot}`)).toEqual(['Fish oil 1000@morning', 'Fish oil 1000@night']);
   });
 });
+
+describe('saveSupplementTimes without a dose', () => {
+  it('leaves each time its own dose (the merged list passes none)', () => {
+    const id = fish(); st().saveSupplementTimes(id, [{ slot: 'morning', portion: 1 }, { slot: 'night', portion: 1 }], '2 g');
+    const night = st().supp.items.find((i: any) => i.slot === 'night')!;
+    st().mutateSupp((s: any) => { s.items.find((i: any) => i.id === night.id)!.dose = '5 g'; });
+    st().saveSupplementTimes(id, [{ slot: 'morning', portion: 1 }, { slot: 'night', portion: 1 }, { slot: 'noon', portion: 1 }]);
+    expect(st().supp.items.filter((i: any) => i.slot).map((i: any) => `${i.slot}:${i.dose}`).sort()).toEqual(['morning:2 g', 'night:5 g', 'noon:2 g']);
+  });
+});

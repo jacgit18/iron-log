@@ -1,113 +1,13 @@
 @layer base, components;
 @layer components {
-/* Supplements and Water on a phone: the same flat pattern as Groceries (Grocery.css). Sections sit in one panel with hairline
-   dividers, not cards inside a card; a row is a 44px tap target; the panel gives its width to the list. */
-.sstop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-}
-.sstopend {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-8);
-}
-.sstopend .btn {
-  min-height: 44px;
-}
-
-/* One time of day: small uppercase head with the count, then its rows. */
-.sslot {
-  display: flex;
-  flex-direction: column;
-}
-.sslothead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: var(--sp-4);
-}
-.sslothead h3 {
-  margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-}
-.sslot.done .sslothead h3 {
-  color: var(--accent);
-}
-.sslot>.note {
-  margin: var(--sp-8) 0 0;
-}
-.slist {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.slist>li {
-  border-bottom: 1px solid var(--line);
-}
-.slist>li:last-child {
-  border-bottom: 0;
-}
-
-/* A supplement: the label (tick + name + dose) fills the row, so the whole row ticks it. */
-.srow {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-8);
-  min-height: 44px;
-}
-.stick {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-10);
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 44px;
-  cursor: pointer;
-}
-.sname {
-  flex: 1 1 auto;
-  min-width: 0;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-.sname .rmname {
-  font-weight: 600;
-}
-.sdose {
-  display: block;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-}
-.srow.taken .rmname {
-  color: var(--done);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-  font-weight: 500;
-}
-.srow>.btn {
-  flex: none;
-  min-height: 44px;
-  margin-left: auto;
-}
-
+/* Water on a phone: the same flat pattern as Groceries (Grocery.css). Sections sit in one panel with hairline
+   dividers, not cards inside a card; a row is a 44px tap target; the panel gives its width to the list. The supplement list has its own file (SupplementList.css). */
 /* Water */
 .wkpi {
   background: transparent;
   border: 0;
   border-radius: 0;
   padding: 0;
-}
-.suppanel .sect {
-  padding: var(--sp-6) 0 var(--sp-4);
 }
 .wchips {
   display: grid;
@@ -169,12 +69,5 @@
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--sp-8);
-}
-
-/* A phone: the panel gives its width to the list. */
-@media (max-width:480px) {
-  .suppanel.panel {
-    padding: var(--sp-12);
-  }
 }
 }

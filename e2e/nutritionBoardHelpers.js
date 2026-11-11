@@ -40,3 +40,14 @@ export const openManage = async page => {
 // The supplement editor and library: Manage, then Supplements and library. `closeSupplementEditor` is its Done button.
 export const openSupplementEditor = async page => { await openManage(page); await page.locator('#sched-edit').click(); await expect(page.locator('#sched-h')).toBeVisible(); };
 export const closeSupplementEditor = async page => { await page.locator('#sched-done').click(); await expect(page.getByRole('dialog')).toHaveCount(0); };
+// The merged supplement list in Manage (brief supplement-merged-list): a product is one row, its times are the lit chips.
+export const suppRow = (page, name) => page.locator('.exlib .exrow').filter({ hasText: name });
+export const suppChip = (page, name, slot) => suppRow(page, name).getByRole('button', { name: slot, exact: true });
+// Each text is a name, optionally followed by its dose ("Fish Oil1 g"): that row has the time lit and shows the dose.
+export const expectScheduledAt = async (page, slot, texts) => {
+  for (const t of texts) {
+    const [, name, dose] = t.match(/^(.*?)(\d.*)?$/);
+    await expect(suppChip(page, name, slot)).toHaveAttribute('aria-pressed', 'true');
+    if (dose) await expect(suppRow(page, name)).toContainText(dose);
+  }
+};

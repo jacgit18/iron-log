@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
-import { closeSupplementEditor, openSupplementEditor } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, expectScheduledAt, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // The exercise picker in the add sheets (ADR 036): your library, the catalog when syncing, a create row. The API is scripted, as in
 // sync.spec.js: the account has Program A with one Lat Pulldown card.
@@ -213,8 +213,7 @@ test('Supplement add sheet: a catalog product picked joins your supplements in t
   await page.fill('#suppadd-dose', '5 g');
   await page.click('#suppadd-go');
   await expect(addSheet(page)).toHaveCount(0);
-  const morning = page.getByRole('group', { name: 'Morning' });
-  await expect(morning.locator('.srow')).toContainText(['Creatine Monohydrate5 g']);
+  await expectScheduledAt(page, 'Morning', ['Creatine Monohydrate5 g']);
 });
 
 test('Supplement add sheet: one of yours from the library is offered by name and moves into the time of day', async ({ page }) => {
@@ -224,7 +223,7 @@ test('Supplement add sheet: one of yours from the library is offered by name and
   await sheet.getByRole('button', { name: /Fish Oil/ }).click();
   await expect(sheet.getByText('Yours, in the library only. Adding it schedules it.')).toBeVisible();
   await page.click('#suppadd-go');
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Fish Oil1 g']);
+  await expectScheduledAt(page, 'Morning', ['Fish Oil1 g']);
   await expect(page.locator('#supplib-morning')).toHaveCount(0); // the old "Add from your library" menu is gone
 });
 
@@ -269,7 +268,7 @@ test('Supplement add sheet: the search asks the server and Library only keeps it
   await page.click('#suppadd-go');
   const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Creatine HCl' });
   await expect(row).toHaveCount(1);
-  await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
+  await expect(row).toContainText('Library only'); // no time lit
 });
 
 test('the Supplement library is in Manage on Daily → Nutrition, not on the Program tab', async ({ page }) => {
@@ -279,7 +278,7 @@ test('the Supplement library is in Manage on Daily → Nutrition, not on the Pro
   await page.click('#tab-daily'); await page.click('#daily-supplements');
   await expect(page.locator('#suplib-h')).toHaveCount(0);
   await openSupplementEditor(page);
-  await expect(page.locator('#suplib-h')).toHaveText('Supplement library');
+  await expect(page.locator('#suplib-h')).toHaveText('Your supplements');
   await expect(page.locator('.exlib .exrow').filter({ hasText: 'Fish Oil' })).toHaveCount(1); // a Library only one is listed
   await closeSupplementEditor(page);
   await expect(page.locator('#suplib-h')).toHaveCount(0);

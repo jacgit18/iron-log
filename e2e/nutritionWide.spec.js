@@ -54,7 +54,7 @@ test('Manage opens the supplement editor and library in a sheet, and Done closes
   await page.setViewportSize({ width: 1920, height: 1080 });
   await open(page);
   await openSupplementEditor(page);
-  await expect(page.locator('#suplib-h')).toBeVisible(); // the library follows the schedule
+  await expect(page.locator('#suplib-h')).toBeVisible(); // the merged supplement list
   await closeSupplementEditor(page);
   await expect(page.locator('#sched-h')).toHaveCount(0);
 });

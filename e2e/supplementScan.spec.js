@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, expectScheduledAt, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief supplement-label-scan: Scan the bottle's label on the add sheet (a miss, or Add as new) and Scan label on a supplement you typed. The validator, the route, the allowance and the messages are
 // node tests (supplementScan.test.ts, scan.test.ts, supplementAllowance.test.ts, scanPhoto.test.ts); what a node test cannot catch is the wiring: the camera input, the preview before Add, the amounts
@@ -46,7 +46,7 @@ test('a miss offers Scan the bottle’s label, shows what was read before Add, a
   await sheet(page).getByLabel('Morning').check();
   await page.click('#suppadd-go');
   await expect(sheet(page)).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['My Zinc', 'Zzyzx drops']);
+  await expectScheduledAt(page, 'Morning', ['My Zinc', 'Zzyzx drops']);
   await page.getByRole('button', { name: 'Edit Zzyzx drops' }).click();
   await expect(page.getByLabel('Amount 1')).toHaveValue('50'); // vitamin D, in the app's nutrient order
   await expect(page.getByLabel('Amount 2')).toHaveValue('15'); // zinc
@@ -66,7 +66,7 @@ test('a photo that cannot be read leaves the sheet usable, and Add still adds wi
   await expect(sheet(page).getByText('Could not read the amounts. Try a closer, flatter photo, or type them in the supplement’s sheet.')).toBeVisible();
   await expect(sheet(page).locator('.lblrows')).toHaveCount(0);
   await page.click('#suppadd-go');
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['My Zinc', 'Zzyzx drops']);
+  await expectScheduledAt(page, 'Morning', ['My Zinc', 'Zzyzx drops']);
 });
 
 test('a used-up cap switches the button off and says what to do instead', async ({ page }) => {
