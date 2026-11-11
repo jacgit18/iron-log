@@ -13,7 +13,6 @@ const make = async (page, name, cat, { kcal, p, tags = [] } = {}) => {
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   for (const t of tags) await page.getByRole('button', { name: `Use ${t}` }).click();
   if (kcal !== undefined || p !== undefined) {
-    await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
     if (kcal !== undefined) await page.getByLabel('Calories per serving').fill(String(kcal));
     if (p !== undefined) await page.getByLabel('Protein per serving (g)').fill(String(p));
   }

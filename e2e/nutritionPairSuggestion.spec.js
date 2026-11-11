@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // The suggestion after logging (brief recipes-goes-with, part 3). Which partners are offered is a node test (pairSuggestions.test.ts); this covers the
-// real Log sheet and Ate this: the offer after Log it, one tap logging the partner, and Undo taking only that entry back.
+// real Log sheet and the log control: the offer after Log it, one tap logging the partner, and Undo taking only that entry back.
 const seed = async page => {
   const mk = (id, n, cat, kcal, p, pairs) => ({ id, n, cat, ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p, ...(pairs ? { pairs } : {}) });
   const items = [mk('chili', 'Chili', 'protein', 400, 30, ['rice', 'plain']), mk('rice', 'Rice', 'carbs', 200, 4, ['chili']), { id: 'plain', n: 'Plain', cat: 'carbs', ing: [{ n: 'x' }], steps: ['Cook.'], pairs: ['chili'] }];
@@ -26,14 +26,14 @@ test('after Log it, the partner with numbers is offered, one tap logs it, Undo r
   await expect(page.getByText(/Logged .* to today/)).toBeVisible(); // the chili entry is still there
 });
 
-test('Ate this on the recipe page offers it too, and a recipe with no pairing offers nothing', async ({ page }) => {
+test('The log control on the recipe page offers it too, and a recipe with no pairing offers nothing', async ({ page }) => {
   await seed(page);
   await row(page, 'Chili').click();
   await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByRole('group', { name: 'Goes with it' }).getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
 });
 
-test('Ate this twice offers the partner again after the second log', async ({ page }) => {
+test('The log control twice offers the partner again after the second log', async ({ page }) => {
   await seed(page);
   await row(page, 'Chili').click();
   await page.getByRole('button', { name: 'Log', exact: true }).click();

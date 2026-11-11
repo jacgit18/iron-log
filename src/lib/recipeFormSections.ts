@@ -22,6 +22,13 @@ const OWNER: Record<FormField, FormSection> = {
 /** The section that holds a field. */
 export const sectionOf = (field: FormField): FormSection => OWNER[field];
 
+/** The field a sentence from `saveRecipe` is about, so Save can unfold its section: a name, an ingredient (or a meal that would contain itself), a tag; anything else (the recipe cap) is shown with Basics open. */
+export const fieldForSaveError = (msg: string): FormField => {
+  if (/\btags?\b/i.test(msg)) return 'tags';
+  if (/ingredient|contain|loop|Meals can hold/i.test(msg)) return 'ingredients';
+  return 'name';
+};
+
 /** A new recipe opens with Basics unfolded and the rest folded. */
 export const initialOpen = (): ReadonlySet<FormSection> => new Set<FormSection>(['basics']);
 

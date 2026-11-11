@@ -47,7 +47,6 @@ test('a bowl built from two foods rolls up in the form, on save and on its page,
   await unfoldAll(page);
   await page.getByLabel('Use my own numbers').check();
   await expect(roll).toContainText('From the parts: 375 kcal');
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('700');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Your own numbers are used. The parts add up to 375 kcal')).toBeVisible();

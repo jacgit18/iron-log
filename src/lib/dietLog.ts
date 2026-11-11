@@ -32,7 +32,7 @@ export function shiftDay(day: string, delta: number): string {
 /** The oldest day that is kept: RETAIN_DAYS before `today`. */
 export const oldestDay = (today: string): string => shiftDay(today, -RETAIN_DAYS);
 
-/** Why a food can't be logged to `day` from the recipe page ("Ate this" on a chosen day), or null: a real date, not after `today`, not before the oldest kept day. */
+/** Why a food can't be logged to `day` from the recipe page (the log control on a chosen day), or null: a real date, not after `today`, not before the oldest kept day. */
 export function ateDayError(day: string, today: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || ymd(parseDate(day)) !== day) return 'Pick a day.';
   if (day > today) return 'Pick today or an earlier day.';
@@ -58,7 +58,7 @@ export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro
   return { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...withMicro(scaleMicro(r.micro, servings)) };
 }
 
-/** What "Ate this" and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
+/** What the log control and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
 export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
   const nums = servingNumbers(r, servings);
   if (!nums) return { error: 'Those numbers are out of range.' };
@@ -71,14 +71,14 @@ export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' |
 export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): Omit<DietEntry, 'id'> =>
   ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro) });
 
-/** The most portions Ate this, the planner and Find food offer. */
+/** The most portions the log control, the planner and Find food offer. */
 export const PORTION_MAX = 10;
 
 /** Servings in the pack of a ready-made food (brief whole-pack): 2 to 99, or null for a food with no pack size, a pack of 1, or any other recipe. */
 export const packServings = (r: Pick<Recipe, 'cat' | 'servings'>): number | null => (r.cat === 'ready' && r.servings !== undefined && r.servings >= 2 ? r.servings : null);
 
-/** The top of Ate this's portion stepper: PORTION_MAX, or the pack size or usual amount when that is larger (up to 99), lowered in half steps until the totals still fit one entry
- * (calories and protein have caps in shared/diet.ts), so More and Whole pack never reach a number Ate this would refuse. */
+/** The top of the log control's portion stepper: PORTION_MAX, or the pack size or usual amount when that is larger (up to 99), lowered in half steps until the totals still fit one entry
+ * (calories and protein have caps in shared/diet.ts), so More and Whole pack never reach a number the log control would refuse. */
 export function ateMax(r: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual'>): number {
   let top = Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0, r.usual ?? 0)); // a usual amount over 10 (brief usual-amount-and-unit) can be reached too
   if (!hasMacros(r)) return top;

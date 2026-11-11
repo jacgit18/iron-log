@@ -24,7 +24,7 @@ const FOOD_USES: readonly RecipeUse[] = ['ingredient', 'ready', 'drink'];
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 
 // A ready-made food (brief recipe-first-diet-log): something bought or frozen that you only heat up. It is a recipe in the Ready-made category with
-// no ingredients or steps, so it is listed, searched, logged with Ate this and planned like any recipe. Numbers are per serving, typed from the
+// no ingredients or steps, so it is listed, searched, logged with the log control and planned like any recipe. Numbers are per serving, typed from the
 // label or filled from the food lookup (still editable).
 export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: Recipe; onDone: (savedId: string | null) => void; scanFirst?: boolean }) {
   const [n, setN] = useState(recipe?.n ?? '');
@@ -40,7 +40,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [note, setNote] = useState(recipe?.note ?? '');
   const [pack, setPack] = useState(str(recipe?.servings));
-  const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many Ate this opens at, and what one serving is called
+  const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many the log control opens at, and what one serving is called
   const [unit, setUnit] = useState(recipe?.unit ?? '');
   const [plural, setPlural] = useState(recipe?.plural ?? '');
   const [err, setErr] = useState('');
@@ -113,7 +113,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
       <label>Servings per pack, optional
         <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
       </label>
-      <p id="rc-pack-help" className="note">Lets Ate this log the whole pack in one step.</p>
+      <p id="rc-pack-help" className="note">Lets you log the whole pack in one step.</p>
       <label>Usual amount, optional
         <input inputMode="decimal" value={usual} onChange={e => { setUsual(e.target.value); setErr(''); }} aria-describedby="rc-usual-help" />
       </label>
@@ -125,7 +125,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
           <input value={plural} maxLength={20} onChange={e => { setPlural(e.target.value); setErr(''); }} autoComplete="off" />
         </label>
       )}
-      <p id="rc-usual-help" className="note">Ate this opens at your usual amount and reads in your word: 4 and egg give "4 eggs".</p>
+      <p id="rc-usual-help" className="note">The log control opens at your usual amount and reads in your word: 4 and egg give "4 eggs".</p>
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>
