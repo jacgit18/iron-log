@@ -423,19 +423,39 @@
 }
 .nb-menu {
   display: grid;
+  gap: var(--sp-12);
+}
+.nb-menu ul {
+  display: grid;
   gap: var(--sp-6);
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.nb-grouph {
+  margin: 0 0 var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Every way is one row with the same left edge: its icon, its name, and its hint under the name; a long hint wraps under the name, not under the icon. */
 .nb-menu .btn {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--sp-10);
   justify-items: start;
   width: 100%;
   min-height: 44px;
   text-align: left;
 }
+.nb-menu .btn svg {
+  grid-row: 1 / span 2;
+}
 .nb-menu .btn span {
+  grid-column: 2;
   font-weight: 400;
   font-size: var(--fs-sm);
   color: var(--muted);

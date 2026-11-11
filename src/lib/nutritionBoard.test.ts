@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addingTo, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addGroups, addingTo, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -244,5 +244,21 @@ describe('windowDays', () => {
   it('one day is the picked day; a day outside the week starts at the first', () => {
     expect(windowDays(week, week[3]!, 1)).toEqual([week[3]]);
     expect(windowDays(week, '2000-01-01', 2)).toEqual(week.slice(0, 2));
+  });
+});
+
+describe('addGroups', () => {
+  it('today lists every way in three labelled groups, each way once', () => {
+    const g = addGroups(TODAY, TODAY);
+    expect(g.map(x => x.label)).toEqual(['Fastest', 'From what you have', 'Whole days and meals']);
+    expect(g.flatMap(x => x.flows).sort()).toEqual([...addFlows(TODAY, TODAY)].sort());
+  });
+  it('a day ahead keeps only the groups that hold a way to plan', () => {
+    const g = addGroups('2026-11-10', TODAY);
+    expect(g.map(x => x.label)).toEqual(['From what you have', 'Whole days and meals']);
+    expect(g.flatMap(x => x.flows)).toEqual(['recipes', 'meals']);
+  });
+  it('last week has none', () => {
+    expect(addGroups('2026-11-01', TODAY)).toEqual([]);
   });
 });

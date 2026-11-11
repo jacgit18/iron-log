@@ -104,6 +104,17 @@ const PLAN_FLOWS: readonly AddFlow[] = ['meals', 'recipes'];
 export const toolbarFlows = (day: string, today: string): readonly AddFlow[] => (day === today ? ['barcode', 'quick', 'oneoff'] : day > today ? ['recipes', 'meals'] : []);
 export const addFlows = (day: string, today: string): readonly AddFlow[] => (day === today ? EAT_FLOWS : day > today ? PLAN_FLOWS : []);
 
+/** The add sheet's menu in three labelled groups (brief nutrition-header-sheet-wording); a group with no way on that day is left out (a day ahead has no Fastest group). */
+export const ADD_GROUPS: readonly { label: string; flows: readonly AddFlow[] }[] = [
+  { label: 'Fastest', flows: ['quick', 'barcode', 'oneoff'] },
+  { label: 'From what you have', flows: ['find', 'recipes'] },
+  { label: 'Whole days and meals', flows: ['meals', 'copy', 'savemeal'] },
+];
+export const addGroups = (day: string, today: string): { label: string; flows: AddFlow[] }[] => {
+  const on = addFlows(day, today);
+  return ADD_GROUPS.map(g => ({ label: g.label, flows: g.flows.filter(f => on.includes(f)) })).filter(g => g.flows.length > 0);
+};
+
 /** Which way a day's numbers are counted: eaten food for last week and today, the plan for days ahead. */
 export type MeterBasis = 'eaten' | 'planned';
 export const basisOf = (day: string, today: string): MeterBasis => (day <= today ? 'eaten' : 'planned');
