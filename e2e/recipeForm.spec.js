@@ -109,7 +109,7 @@ test('Nutrition fields are there once the section is open (no second Edit button
   await page.getByLabel('Protein per serving (g)').fill('32');
   await page.getByRole('button', { name: /^Nutrition per serving/ }).click();
   await expect(page.getByLabel('Calories per serving')).toBeHidden();
-  await expect(page.getByText('420 kcal · 32 g protein')).toBeVisible();
+  await expect(page.locator('.rcf-sum', { hasText: '420 kcal · 32 g protein' })).toBeVisible();
 });
 
 test.describe('on a phone', () => {
