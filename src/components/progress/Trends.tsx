@@ -12,6 +12,7 @@ import { liftGoalStatus, goalPhaseLabel, scaledGoal } from '../../lib/liftGoal.j
 import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.jsx';
 import './Trends.css';
 
 function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub: ReactNode }) {
@@ -276,7 +277,7 @@ function BodyChart() {
                   <td role="cell" className="rmname">{fmtShort(parseDate(e.d))}</td>
                   <td role="cell" className="num">{fmtLb(e.w)} lb</td>
                   <td role="cell" className="num">{p ? signed(e.w - p.w, 1) : '—'}</td>
-                  <td role="cell" className="num"><ArmedButton className={`btn sm ${arming === e.wk ? 'danger' : 'ghost'}`} aria-label={`Delete ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? e.wk : null)} onConfirm={() => { setArming(null); deleteBodyWeight(e.wk); }} /></td>
+                  <td role="cell" className="num"><ArmedButton className={`btn sm ${arming === e.wk ? 'danger' : 'ghost'}`} aria-label={`Delete ${fmtShort(parseDate(e.d))}`} label={<Icon name="close" />} armedLabel="Delete?" onArmedChange={a => setArming(a ? e.wk : null)} onConfirm={() => { setArming(null); deleteBodyWeight(e.wk); }} /></td>
                 </tr>
               );
             })}
