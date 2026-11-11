@@ -58,27 +58,12 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-85': { auto: 'e2e', specs: ['e2e-qa/bulkShare.spec.js', 'e2e/groceryBulkShare.spec.js'] },
   'S-86': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-87': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
-  'S-91': { auto: 'manual' },
-  'S-92': { auto: 'manual' },
-  'S-93': { auto: 'manual' },
-  'S-94': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'] },
   'S-95': { auto: 'e2e', specs: ['e2e/grocerySharingDone.spec.js'] },
   'S-96': { auto: 'e2e', specs: ['e2e/grocerySharingDone.spec.js'] },
   'S-97': { auto: 'manual' },
-  'S-98': { auto: 'api', specs: ['server/securityHeaders.test.ts', 'e2e-qa/plainPages.spec.js'], partial: 'the Help sheet is the one sheet opened, on each tab and on Settings, not a different sheet on each screen' },
   'S-99': { auto: 'manual' },
-  'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts', 'src/lib/plainPageTitles.test.ts', 'src/lib/envName.test.ts', 'e2e-qa/plainPages.spec.js', 'e2e-qa/qaModePicker.spec.js', 'server/static.test.ts'], partial: 'the served QA title and icons and the hostname rule are tested; once the app loads its tab reads "<screen> · Loadbearer - QA", not the "Loadbearer QA" the scenario text names' },
   'S-101': { auto: 'api', specs: ['server/static.test.ts'] },
-  'S-102': { auto: 'manual' },
-  'S-103': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'] },
-  'S-104': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'] },
-  'S-105': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
-  'S-106': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
-  'S-107': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
   'S-108': { auto: 'e2e', specs: ['e2e-qa/ideasToTry.spec.js', 'src/store/useAppStore.test.js'] },
-  'S-109': { auto: 'e2e', specs: ['e2e/help.spec.js'] },
-  'S-110': { auto: 'manual' },
-  'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js'] },
   'S-112': { auto: 'e2e', specs: ['e2e/priceHistory.spec.js', 'src/lib/itemHistory.test.ts'] },
   'S-113': { auto: 'unit', specs: ['src/lib/itemHistory.test.ts', 'e2e/priceHistory.spec.js'], partial: 'the pack average and the no-price rows are unit tested only; the history sheet is not walked for a pack item or an unpriced purchase (the never-bought item having no line is in priceHistory.spec.js)' },
   'S-194': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
@@ -255,6 +240,50 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-218': { auto: 'e2e', specs: ['e2e/nutritionBoardManage.spec.js', 'e2e/supplementAdd.spec.js'], partial: 'Back from Settings to Nutrition is not walked' },
   'S-220': { auto: 'e2e', specs: ['e2e/supplementPortions.spec.js'] },
   'S-221': { auto: 'e2e', specs: ['e2e/supplementPortions.spec.js', 'src/lib/supplementPortion.test.ts'], partial: 'the step up to 1¼ servings and the 10-serving ceiling are unit tested only' },
+  'S-266': { auto: 'manual' },
+  'S-267': { auto: 'manual' },
+  'S-268': { auto: 'manual' },
+  'S-269': { auto: 'manual' },
+  'S-270': { auto: 'manual' },
+  'S-271': { auto: 'manual' },
+  'S-272': { auto: 'manual' },
+  'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts', 'src/lib/plainPageTitles.test.ts', 'src/lib/envName.test.ts', 'e2e-qa/plainPages.spec.js', 'e2e-qa/qaModePicker.spec.js', 'server/static.test.ts'], partial: 'the served QA title and icons and the hostname rule are tested; plainPages.spec.js asserts the title on the local build, not the real QA host' },
+  'S-102': { auto: 'api', specs: ['server/static.test.ts'], partial: 'the file the app serves is tested; the live production answer after a deploy is a curl the owner runs' },
+  'S-103': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'], partial: 'only the tag wording is tested; the card menu Move to, the planned option and the tag on the Board are not walked by any spec' },
+  'S-104': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'], partial: 'wording and rest-day column maths are unit tested; Copy day to Day 7, ticking Rest and the tag on the Board are not walked by any spec' },
+  'S-105': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'], partial: 'the sideways swipe of the Day buttons is not asserted; All days with the filter is walked at 1440 px, not at phone width' },
+  'S-106': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'], partial: 'walked at 1440 px, not on a phone; the N differ count, a day with no exercises having no heading, and Filter 1 on All days are not asserted' },
+  'S-107': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'], partial: 'two cards across at about 1360 px, one card below 1240 px of panel, and the panel filling the page width are not asserted' },
+  'S-109': { auto: 'e2e', specs: ['e2e/help.spec.js'], partial: 'Help is checked for the Ideas to try term and + Add idea only; the Stretches to try heading, + Add stretch, the Add a stretch to try sheet and the first-run line are not asserted' },
+  'S-110': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js', 'e2e/receiptNewStoreItem.spec.js'] },
+  'S-114': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'src/lib/programGuide.test.ts', 'src/lib/programRowFacts.test.ts'], partial: 'tab descriptions are checked as accessible descriptions, not visible text; the N exercises across 7 days text is unit tested only' },
+  'S-115': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'src/lib/programRowFacts.test.ts'], partial: 'an either/or row, the Optional and Supersets notes and a self-named section are not asserted in the browser; Day at a glance only draws from 1280 px and the spec runs at 1920' },
+  'S-116': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'e2e/programTabLayout.spec.js'], partial: 'Archive, Delete and Compare programs after a put on Board are not walked in this flow (Archive has e2e/programArchive.spec.js)' },
+  'S-117': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js'] },
+  'S-118': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'e2e/programLongName.spec.js'], partial: 'the long name is asserted as no sideways scroll and the heading inside the page; the A and B switch staying on screen is not asserted' },
+  'S-119': { auto: 'e2e', specs: ['e2e/programTabLayout.spec.js', 'e2e/programCopyDay.spec.js'], partial: 'the Day label field under the heading and the picker staying open for that day are not asserted' },
+  'S-120': { auto: 'e2e', specs: ['e2e/programTabLayout.spec.js', 'e2e/navigation.spec.js'], partial: 'Back from the Compare address is not asserted; the second saved copy and clearing the search box are not walked' },
+  'S-121': { auto: 'e2e', specs: ['e2e/programTabLayout.spec.js', 'e2e/programTabClarity.spec.js'] },
+  'S-122': { auto: 'e2e', specs: ['e2e/groceryBought.spec.js'], partial: 'the Bought notice with Undo is not asserted here (groceryStoreChips.spec.js covers the no-price notice)' },
+  'S-123': { auto: 'e2e', specs: ['e2e/groceryBought.spec.js', 'e2e/groceryBulkShare.spec.js'], partial: 'the notice going away by itself after about 10 seconds is not asserted' },
+  'S-124': { auto: 'e2e', specs: ['e2e/groceryBought.spec.js', 'src/lib/route.test.ts'] },
+  'S-125': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-126': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-127': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-128': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-129': { auto: 'e2e', specs: ['e2e/groceryStoreChips.spec.js'], partial: 'the spec runs three stores (chips) and six (dropdown), not the persona\'s four' },
+  'S-130': { auto: 'e2e', specs: ['e2e/groceryStoreChips.spec.js'] },
+  'S-131': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-132': { auto: 'e2e', specs: ['e2e/groceryStoreChips.spec.js'], partial: 'the Undo and Dismiss buttons on the notice are not asserted' },
+  'S-133': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-134': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-135': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-91': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-92': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-93': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-94': { auto: 'e2e', specs: ['e2e/barcodeMissLadder.spec.js', 'src/lib/labelAllowance.test.ts'], partial: 'the label route is stubbed (7 of 30, a cap answer), so the server-wide count and a real SCAN_DAILY_MAX are not run' },
+  'S-98': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'server/securityHeaders.test.ts'], partial: 'the Help sheet is the one sheet opened on each tab and on Settings, not a different sheet on each screen' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */

@@ -87,7 +87,11 @@ export type ScenarioFeature =
   | 'Supplement label lookup'
   | 'Supplement UPC'
   | 'Backup coverage'
-  | 'Watch link';
+  | 'Watch link'
+  | 'Plan labels'
+  | 'Grocery list cap'
+  | 'Erased account'
+  | 'Large history';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -98,6 +102,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Supplement times', 'Active ingredients', 'Ingredient day line',
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
+  'Plan labels', 'Grocery list cap', 'Erased account', 'Large history',
 ];
 
 export interface Scenario {
@@ -1166,21 +1171,21 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-85', feature: 'Bulk share', title: 'Select all in Costco, share with one person, and Undo', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
       'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, Shopping.',
-      'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
+      'Press Select items. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
       'Press "Select all in Costco", then Change who shares In the sheet tick Sam only and press Apply.',
       'Look at the Costco rows and the notice, then press Undo within about 10 seconds (the notice goes away by itself).',
     ],
     expected: [
       'Nothing changes until Apply; the bar counts the Costco items and Change who shares is off while nothing is selected.',
-      'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select button.',
+      'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select items button.',
       'Undo puts every row back to "Me +2".',
     ],
   },
   {
     id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes Inventory, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
-      'On Shopping, Select two Costco items and press Change who shares Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
-      'Open Inventory, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to Shopping, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'On Shopping, press Select items and tick two Costco items and press Change who shares Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
+      'Open Inventory, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to Shopping, press Select items, pick the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
       'Open Inventory again and look at the same items\' split.',
     ],
     expected: [
@@ -1189,17 +1194,17 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
+    id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select items', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
     steps: [
       'On Shopping open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
-      'Press Select, tick that item and one other, press Change who shares, and read the sheet. Tick Alex and press Apply.',
+      'Press Select items, tick that item and one other, press Change who shares, and read the sheet. Tick Alex and press Apply.',
       'Open the pack-priced item and look at both packs; press Undo on the notice within about 10 seconds (it goes away by itself).',
       'Sign in as Recipe collector (30 grocery items and no sharing group; any account that has grocery items but no sharing group will do) and open Groceries, Shopping. New user does not prove it, because its list is empty.',
     ],
     expected: [
       'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
       'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
-      'An account that has items but no sharing group has no Select button on Shopping.',
+      'An account that has items but no sharing group has no Select items button on Shopping.',
     ],
   },
   {
@@ -3282,6 +3287,76 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Each shows the same Watch link, large enough to tap; nothing else on the Board card moved (the Board is hands-off: compare it with before).',
+    ],
+  },
+  {
+    id: 'S-266', feature: 'Plan labels', title: 'Lifetime shows its plan and nothing to pay', persona: 'lifetime', brief: 'feature-map',
+    steps: [
+      'Open Settings and find the Billing panel (it only shows when billing is on for the server; if it is missing, note that and stop).',
+      'Read the plan line and the buttons under it.',
+    ],
+    expected: [
+      'The panel says "Plan:" with the lifetime plan name and "Nothing to pay."; there is no Plus buy button.',
+    ],
+  },
+  {
+    id: 'S-267', feature: 'Plan labels', title: 'Founder shows its plan and nothing to pay', persona: 'founder', brief: 'feature-map',
+    steps: [
+      'Open Settings and find the Billing panel (it only shows when billing is on for the server; if it is missing, note that and stop).',
+      'Read the plan line and the buttons under it.',
+    ],
+    expected: [
+      'The panel says "Plan:" with the founder plan name and "Nothing to pay."; there is no Plus buy button.',
+    ],
+  },
+  {
+    id: 'S-268', feature: 'Plan labels', title: 'Legacy beta says its plan is set by the owner', persona: 'legacy-beta', brief: 'feature-map',
+    steps: [
+      'Open Settings and find the Billing panel (it only shows when billing is on for the server; if it is missing, note that and stop).',
+      'Read the plan line.',
+    ],
+    expected: [
+      'The panel says "Your plan is set by the owner." and offers no way to buy.',
+    ],
+  },
+  {
+    id: 'S-269', feature: 'Plan labels', title: 'A failed payment shows a warning and a way to fix it', persona: 'paid-past-due', brief: 'feature-map', edge: true,
+    steps: [
+      'Open Settings and find the Billing panel (it only shows when billing is on for the server; if it is missing, note that and stop).',
+      'Read the plan line, then press Manage billing if it is there (do not complete anything in Stripe).',
+    ],
+    expected: [
+      'The plan is still paid; when the plan comes from Stripe the panel says "Payment failed. Update your card in Manage billing." and has no "Renews on" line. A seeded account may have no Stripe customer: if the warning is missing, record whether the plan line reads "set by the owner".',
+    ],
+  },
+  {
+    id: 'S-270', feature: 'Grocery list cap', title: 'The 501st item is refused', persona: 'grocery-at-cap', brief: 'feature-map',
+    steps: [
+      'Open Groceries, Shopping, and try to add one more item with Quick add (an item name no store has).',
+      'Repeat from Inventory, Edit, if it has its own add box.',
+    ],
+    expected: [
+      'The add is refused with "The list is full (500 items)." and the list stays at 500; Quick add and Inventory both say so; nothing is lost.',
+    ],
+  },
+  {
+    id: 'S-271', feature: 'Erased account', title: 'An erased account opens to empty screens', persona: 'erased-account', brief: 'feature-map',
+    steps: [
+      'Open the Board, the Program tab, Progress, Groceries and Daily, Nutrition in turn.',
+      'Open Settings and read the Delete my data panel.',
+    ],
+    expected: [
+      'Every screen shows its empty or first-run state with no program, no log and no groceries, and nothing errors; the Delete my data panel is still offered. The account is on a later data epoch, so another device that held old data resets rather than uploading it.',
+    ],
+  },
+  {
+    id: 'S-272', feature: 'Large history', title: 'Three years of history still opens and exports', persona: 'three-year-veteran', brief: 'feature-map',
+    steps: [
+      'Open Progress and move through its views and date ranges, then open History.',
+      'In Settings, Data, press Export all data and wait for it to finish.',
+    ],
+    expected: [
+      'Progress and History open within a few seconds and reach back about three years; the export completes and the file opens; the Board stays responsive after the large history loads.',
     ],
   },
 ];
