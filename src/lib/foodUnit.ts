@@ -4,7 +4,7 @@ import { ateMax } from './dietLog.js';
 
 export { MAX_UNIT, isUnit };
 
-/* ---------- Usual amount and unit name on a ready-made food (brief usual-amount-and-unit): "4 eggs" instead of "4 portions". Pure; Ate this and the food's page call these. ---------- */
+/* ---------- Usual amount and unit name on a ready-made food (brief usual-amount-and-unit): "4 eggs" instead of "4 portions". Pure; the log control and the food's page call these. ---------- */
 
 
 /** The plural of a unit by rule: es after s, x, z, ch or sh; ies after a consonant and y; otherwise s. An odd word is fixed by typing its plural. */
@@ -23,7 +23,7 @@ export function unitWord(n: number, f: UnitFields = {}): string {
 /** "4 eggs", "1 egg", "0.5 eggs", "2 portions". */
 export const amountText = (n: number, f: UnitFields = {}): string => `${n} ${unitWord(n, f)}`;
 
-/** Where Ate this's stepper opens: the usual amount, never past what one entry can hold, else 1. */
+/** Where the log control's stepper opens: the usual amount, never past what one entry can hold, else 1. */
 export function usualStart(r: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual'>): number {
   const top = ateMax(r);
   return Math.min(r.usual ?? 1, top);

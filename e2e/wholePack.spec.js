@@ -15,7 +15,7 @@ const make = async (page, name, pack) => {
   await page.getByRole('button', { name: 'Save food' }).click();
 };
 
-test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More stops there, and Ate this logs the pack', async ({ page }) => {
+test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More stops there, and the log control logs the pack', async ({ page }) => {
   await make(page, 'Gnocchi', '12');
   await expect(page.getByText('12 servings per pack')).toBeVisible();
   const portions = page.getByRole('status').filter({ hasText: /portions?$/ });
