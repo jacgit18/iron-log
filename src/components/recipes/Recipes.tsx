@@ -245,7 +245,7 @@ export default function Recipes() {
               { id: 'rc-tile-ready', label: 'Add a ready-made food', hint: 'A packaged food with its nutrition', onClick: () => setView({ kind: 'form', ready: true }) },
             ]} />
           )}
-          {recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
+          {recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
           <div className={pane ? 'rc-split' : undefined}>
             <ul className={`rc-list rc-cards${pane ? ' rc-narrow' : ''}`}>
               {shown.map((r: Recipe) => {
