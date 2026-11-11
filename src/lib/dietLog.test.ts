@@ -50,9 +50,9 @@ describe('carbs and fat', () => {
     expect(missingCarbsFat(l, '2026-10-28')).toBe(false);
   });
   it('words an entry, with carbs and fat only when entered', () => {
-    expect(entryText({ kcal: 1520, p: 42 })).toBe('1,520 kcal · 42 g protein');
-    expect(entryText({ kcal: 520, p: 42, c: 60, f: 12 })).toBe('520 kcal · 42 g protein · 60 g carbs · 12 g fat');
-    expect(entryText({ kcal: 520, p: 42, f: 0 })).toBe('520 kcal · 42 g protein · 0 g fat');
+    expect(entryText({ kcal: 1520, p: 42 })).toBe('1,520 kcal · P 42 g');
+    expect(entryText({ kcal: 520, p: 42, c: 60, f: 12 })).toBe('520 kcal · P 42 · C 60 · F 12 g');
+    expect(entryText({ kcal: 520, p: 42, f: 0 })).toBe('520 kcal · P 42 · F 0 g');
   });
   it('a recipe serving brings its carbs and fat scaled', () => {
     expect(servingNumbers({ kcal: 600, p: 40, c: 51, f: 11 }, 1.5)).toEqual({ kcal: 900, p: 60, c: 76.5, f: 16.5 });
