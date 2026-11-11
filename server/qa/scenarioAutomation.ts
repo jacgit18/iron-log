@@ -59,51 +59,28 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-43': { auto: 'e2e', specs: ['e2e/adminAccounts.spec.js'] },
   'S-44': { auto: 'manual' },
   'S-45': { auto: 'e2e', specs: ['e2e/adminDeleteAccount.spec.js', 'src/lib/accountsView.test.ts'] },
-  'S-46': { auto: 'e2e', specs: ['e2e/adminDeleteAccount.spec.js'] },
   'S-47': { auto: 'e2e', specs: ['e2e/kgBeside.spec.js'] },
-  'S-48': { auto: 'e2e', specs: ['e2e/kgBeside.spec.js'] },
-  'S-49': { auto: 'manual' },
-  'S-50': { auto: 'manual' },
   'S-51': { auto: 'e2e', specs: ['e2e/wholePack.spec.js'] },
   'S-52': { auto: 'e2e', specs: ['e2e/wholePack.spec.js'] },
-  'S-53': { auto: 'manual' },
-  'S-54': { auto: 'manual' },
   'S-55': { auto: 'e2e', specs: ['e2e/usualAmount.spec.js'] },
   'S-56': { auto: 'e2e', specs: ['e2e/usualAmount.spec.js'] },
-  'S-57': { auto: 'manual' },
-  'S-58': { auto: 'manual' },
-  'S-59': { auto: 'manual' },
-  'S-60': { auto: 'manual' },
   'S-61': { auto: 'e2e', specs: ['e2e/finishedGroup.spec.js'] },
   'S-62': { auto: 'e2e', specs: ['e2e/finishedGroup.spec.js'] },
   'S-63': { auto: 'e2e', specs: ['e2e/finishedGroup.spec.js'] },
-  'S-64': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js'] },
-  'S-65': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js'] },
   'S-66': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'] },
   'S-67': { auto: 'e2e', specs: ['e2e-qa/programCompare.spec.js', 'e2e/programCompare.spec.js'] },
-  'S-68': { auto: 'manual' },
   'S-69': { auto: 'manual' },
-  'S-70': { auto: 'unit', specs: ['src/lib/importFile.test.ts'] },
   'S-71': { auto: 'manual' },
   'S-72': { auto: 'e2e', specs: ['e2e-qa/programPhone.spec.js', 'e2e/programWide.spec.js'] },
-  'S-73': { auto: 'api', specs: ['server/expectedUser.test.ts'] },
-  'S-74': { auto: 'manual' },
-  'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'] },
   'S-76': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'e2e/notFound.spec.js'] },
   'S-77': { auto: 'manual' },
   'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts', 'e2e-qa/plainPages.spec.js'] },
-  'S-79': { auto: 'manual' },
   'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
   'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
-  'S-82': { auto: 'manual' },
-  'S-83': { auto: 'manual' },
   'S-84': { auto: 'e2e', specs: ['e2e/receiptMerge.spec.js'] },
   'S-85': { auto: 'e2e', specs: ['e2e-qa/bulkShare.spec.js', 'e2e/groceryBulkShare.spec.js'] },
   'S-86': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-87': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
-  'S-88': { auto: 'manual' },
-  'S-89': { auto: 'manual' },
-  'S-90': { auto: 'manual' },
   'S-91': { auto: 'manual' },
   'S-92': { auto: 'manual' },
   'S-93': { auto: 'manual' },
@@ -184,6 +161,74 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-250': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'e2e/nutritionWide.spec.js'] },
   'S-248': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
   'S-263': { auto: 'e2e', specs: ['e2e/nutrientTargets.spec.js', 'e2e/moreNutrients.spec.js'] },
+  'S-136': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-137': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-138': { auto: 'e2e', specs: ['e2e/groceryBoughtSpending.spec.js'] },
+  'S-139': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-140': { auto: 'e2e', specs: ['e2e/groceryQuickAdd.spec.js'] },
+  'S-141': { auto: 'e2e', specs: ['e2e/groceryQuickAdd.spec.js'] },
+  'S-142': { auto: 'e2e', specs: ['e2e/groceryMoneyLine.spec.js', 'e2e/groceryBoughtList.spec.js'] },
+  'S-143': { auto: 'e2e', specs: ['e2e/groceryBoughtList.spec.js', 'e2e/groceryStoreChips.spec.js'] },
+  'S-144': { auto: 'e2e', specs: ['e2e/groceryBoughtList.spec.js'] },
+  'S-145': { auto: 'e2e', specs: ['e2e/groceryEditList.spec.js'], partial: 'a folded store is opened by a search or an added item; pressing its name a second time to unfold is not walked' },
+  'S-146': { auto: 'e2e', specs: ['e2e/groceryEditList.spec.js'], partial: 'only Done is asserted at the bottom; Add and More are not' },
+  'S-147': { auto: 'e2e', specs: ['e2e/groceryEditList.spec.js'] },
+  'S-148': { auto: 'e2e', specs: ['e2e/foodTypeReview.spec.js'] },
+  'S-149': { auto: 'e2e', specs: ['e2e/foodTypeReview.spec.js'] },
+  'S-150': { auto: 'e2e', specs: ['e2e/foodTypeReview.spec.js'], partial: 'only no banner with no ready-made foods is walked; editing a food from Ready to eat to Ingredient and reopening it is not' },
+  'S-151': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'] },
+  'S-152': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'] },
+  'S-153': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'] },
+  'S-154': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js'] },
+  'S-155': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js'], partial: 'the barcode reader and camera are stubbed; the real camera on a phone is not run' },
+  'S-156': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js', 'src/lib/dietLog.test.ts'], partial: 'the future-day refusal is walked in the browser; the 400-day limit and the 20-a-day stop are unit tested only' },
+  'S-157': { auto: 'e2e', specs: ['e2e/mealRollup.spec.js'], partial: 'the Log sheet opening at the rolled-up numbers is not asserted' },
+  'S-158': { auto: 'unit', specs: ['src/lib/mealRollup.test.ts'], partial: 'no spec edits a food in the app and opens the meal again or its Log sheet; a day already logged keeping its numbers is not tested here' },
+  'S-159': { auto: 'e2e', specs: ['e2e/mealRollup.spec.js', 'src/lib/mealRollup.test.ts'], partial: 'the loop refusal is walked in the browser; the two-level roll-up numbers and the 3-level cap message are unit tested only' },
+  'S-160': { auto: 'e2e', specs: ['e2e/mealRollup.spec.js', 'src/lib/mealRollup.test.ts'], partial: 'unticking Use my own numbers and the numbers coming from the foods again is unit tested only' },
+  'S-161': { auto: 'e2e', specs: ['e2e/mealRollup.spec.js', 'src/lib/mealRollup.test.ts'], partial: 'the needs-numbers line is walked in the browser; renaming and deleting a linked food are unit tested only' },
+  'S-162': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js', 'src/lib/groceryBudget.test.ts'], partial: 'the spec reads the card on Shopping with a $60 budget; the same card on Bought and tax inside the spent figure are not asserted' },
+  'S-163': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js', 'src/lib/groceryBudget.test.ts'], partial: 'the over-budget text is walked in the browser; the amber state from 80% is unit tested only, never checked as a colour' },
+  'S-164': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js'], partial: 'edit, Remove and reload are walked with other amounts than 600; the budget showing on a second signed-in device is not' },
+  'S-165': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js', 'src/lib/groceryBudget.test.ts'], partial: 'the browser spec types only abc; an empty box, 0 and 425.50 are covered by the parseDollars unit test' },
+  'S-166': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js'] },
+  'S-167': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js'], partial: 'the spec checks Shopping and Bought only; Inventory is not asserted' },
+  'S-168': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js', 'e2e/groceryQuickAdd.spec.js'] },
+  'S-169': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js'], partial: 'the box is asserted ticked right after the tap; reopening the row to see it still ticked is not' },
+  'S-170': { auto: 'unit', specs: ['src/store/groceryQuickAddStore.test.ts', 'src/lib/groceryOneTime.test.ts'], partial: 'no browser spec unticks a bought one-time item on Bought and checks Shopping, Inventory and the still-ticked box' },
+  'S-171': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js', 'src/store/groceryQuickAddStore.test.ts'], partial: 'the browser spec adds the second Milk but does not assert it shows on Shopping; the unit test asserts the add succeeds' },
+  'S-172': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-173': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'], partial: 'a Library recipe page without a Star button is not walked (the Library needs a signed-in catalog)' },
+  'S-174': { auto: 'e2e', specs: ['e2e/recipesUsedAs.spec.js', 'e2e/recipesTypeTabs.spec.js'] },
+  'S-175': { auto: 'e2e', specs: ['e2e/recipesUsedAs.spec.js'] },
+  'S-176': { auto: 'e2e', specs: ['e2e/recipesUsedAs.spec.js', 'src/lib/recipeUses.test.ts'] },
+  'S-177': { auto: 'unit', specs: ['src/lib/libraryRows.test.ts', 'src/store/recipesSlice.test.ts'], partial: 'no browser spec walks the Library list (it needs a signed-in catalog): the + Add press, the notice with Open, Undo and Dismiss, and the In Mine check are not driven' },
+  'S-178': { auto: 'unit', specs: ['src/lib/libraryRows.test.ts'], partial: 'the tab list, the n of m at home count and the empty-tab line are unit tested; no browser spec drives the Library tabs' },
+  'S-179': { auto: 'e2e', specs: ['e2e/recipesGoesWith.spec.js'] },
+  'S-180': { auto: 'e2e', specs: ['e2e/recipesGoesWith.spec.js', 'src/lib/recipePairs.test.ts'], partial: 'Make a meal and its numbers are walked; deleting Rice clearing the pairing is unit tested only, and Undo of that delete restoring the pairing is unconfirmed' },
+  'S-46': { auto: 'e2e', specs: ['e2e/adminDeleteAccount.spec.js'], partial: 'scripted /api/accounts rows; Suspend then Restore is never pressed, so Delete forever appearing after Suspend and going after Restore is not driven' },
+  'S-48': { auto: 'e2e', specs: ['e2e/kgBeside.spec.js'], partial: 'only the Log sheet is checked with the switch off; Recent and Maxes, and switching back on, are not' },
+  'S-49': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-50': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-53': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-54': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-57': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-58': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-59': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-60': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-64': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js'], partial: 'never reads the Board badge: \'suggested, from N lb\' with +10 and its return to the usual step are not asserted' },
+  'S-65': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js', 'src/lib/weightStep.test.ts'], partial: 'the e2e types 60 only and never saves 7.5 and reopens; 0, 2.3 and abc are unit-only' },
+  'S-68': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-70': { auto: 'unit', specs: ['src/lib/importFile.test.ts'], partial: 'the wording is unit tested; showing it in Settings after a real undownloaded cloud file is not' },
+  'S-73': { auto: 'api', specs: ['server/expectedUser.test.ts'], partial: 'the server 409 and client transport are tested; the Delete my data note, the other-account card and the reload are not driven in a browser' },
+  'S-74': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'], partial: 'the miss is stubbed; the camera-blocked message with Photo instead is not asserted on this path' },
+  'S-79': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-82': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-83': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-88': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-89': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-90': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */
