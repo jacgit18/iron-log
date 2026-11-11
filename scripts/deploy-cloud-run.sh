@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploys Iron Log (the API and the PWA, one container, ADR 010) to Google Cloud Run.
 #
-# Usage:  PROJECT_ID=iron-log scripts/deploy-cloud-run.sh <command>
+# Usage:  PROJECT_ID=iron-log-jacgit18 scripts/deploy-cloud-run.sh <command>
 #   setup     enable the APIs and create the image repository (once per project)
 #   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes); with RESEND_API_KEY exported it also
 #             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
@@ -48,7 +48,7 @@
 # so spend stays at the free tier, and it needs the budget alert from the runbook in place before the first deploy.
 set -euo pipefail
 
-PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID, for example PROJECT_ID=iron-log}"
+PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID, for example PROJECT_ID=iron-log-jacgit18}"
 REGION="${REGION:-us-central1}"   # a Cloud Run free-tier region
 REPO="${REPO:-iron-log}"
 IRON_LOG_ENV="${IRON_LOG_ENV:-production}"
