@@ -38,4 +38,5 @@ export function dayIngredientMeter(rows: IngredientRow[]): DayIngredientMeterVie
 }
 
 /** The closed line's words: "Omega-3 62% · EPA Met", "Omega-3 over". */
-export const ingredientClosedLine = (top: IngredientMeterItem[]): string => top.map(t => `${t.label} ${t.status === 'over' ? 'over' : t.text}`).join(' · ');
+export const ingredientClosedText = (t: IngredientMeterItem): string => `${t.label} ${t.status === 'over' ? 'over' : t.text}`;
+export const ingredientClosedLine = (top: IngredientMeterItem[]): string => top.map(ingredientClosedText).join(' · ');

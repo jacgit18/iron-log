@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dayIngredientMeter } from '../../lib/dayIngredientMeter.js';
+import { dayIngredientMeter, ingredientClosedText } from '../../lib/dayIngredientMeter.js';
 import { ingredientRows } from '../../lib/supplementIngredients.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.js';
@@ -17,7 +17,7 @@ export default function DayIngredientMeter({ day }: { day: string }) {
     <div className="nb-vit" id={`nb-ing-${day}`}>
       <button type="button" className="nb-vit-tog" aria-expanded={open} aria-controls={`nb-ing-list-${day}`} onClick={() => setOpen(!open)}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} />
-        <span>Active ingredients: {m.top.map((t, i) => <span key={t.key}>{i > 0 && ' · '}<b className={`nb-vit-${t.status}`}>{t.label} {t.status === 'over' ? 'over' : t.text}</b></span>)}</span>
+        <span>Active ingredients: {m.top.map((t, i) => <span key={t.key}>{i > 0 && ' · '}<b className={`nb-vit-${t.status}`}>{ingredientClosedText(t)}</b></span>)}</span>
       </button>
       {open && (
         <div className="nb-vit-list" id={`nb-ing-list-${day}`}>
