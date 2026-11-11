@@ -30,7 +30,7 @@ test('a badge shows on rows with numbers, and the two chips narrow the list besi
   await make(page, 'Rice', 'Carbs', { kcal: 300, p: 5 });
   await make(page, 'Mystery', 'Protein', { tags: ['Dinner'] });
   const row = name => page.locator('.rc-row', { hasText: name });
-  await expect(row('Chili').locator('.rc-badge')).toHaveText('450 kcal · 35 g protein');
+  await expect(row('Chili').locator('.rc-badge')).toHaveText('450 kcal · P 35 g');
   await expect(row('Mystery').locator('.rc-badge')).toHaveCount(0);
 
   await nutrition(page).getByRole('button', { name: 'High protein' }).click();
