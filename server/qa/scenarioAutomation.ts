@@ -103,10 +103,10 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-250': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'e2e/nutritionWide.spec.js'] },
   'S-248': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'] },
   'S-263': { auto: 'e2e', specs: ['e2e/nutrientTargets.spec.js', 'e2e/moreNutrients.spec.js'] },
-  'S-136': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-137': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-136': { auto: 'manual' }, // needs a real phone; e2e/receiptRename.spec.js stubs it. Not covered: applying the move and opening the first item's edit row to see the text gone (the spec checks the saved-for note and the item picked on the next scan); the phone is not driven
+  'S-137': { auto: 'manual' }, // needs a real phone; e2e/receiptRename.spec.js, src/store/groceryForgetAlias.test.ts stub it. Not covered: a scan after Forget without Undo no longer matching is not walked; the Forget button size on a phone is not measured
   'S-138': { auto: 'e2e', specs: ['e2e/groceryBoughtSpending.spec.js'] },
-  'S-139': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-139': { auto: 'manual' }, // needs a real phone; e2e/groceryBoughtSpending.spec.js stubs it
   'S-140': { auto: 'e2e', specs: ['e2e/groceryQuickAdd.spec.js'] },
   'S-141': { auto: 'e2e', specs: ['e2e/groceryQuickAdd.spec.js'] },
   'S-142': { auto: 'e2e', specs: ['e2e/groceryMoneyLine.spec.js', 'e2e/groceryBoughtList.spec.js'] },
@@ -138,7 +138,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-169': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js'], partial: 'the box is asserted ticked right after the tap; reopening the row to see it still ticked is not' },
   'S-170': { auto: 'unit', specs: ['src/store/groceryQuickAddStore.test.ts', 'src/lib/groceryOneTime.test.ts'], partial: 'no browser spec unticks a bought one-time item on Bought and checks Shopping, Inventory and the still-ticked box' },
   'S-171': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js', 'src/store/groceryQuickAddStore.test.ts'], partial: 'the browser spec adds the second Milk but does not assert it shows on Shopping; the unit test asserts the add succeeds' },
-  'S-172': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-172': { auto: 'manual' }, // needs a real phone; e2e/receiptReconcile.spec.js stubs it. Not covered: the receipt answer is stubbed and the page is not driven at phone size
   'S-173': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'], partial: 'a Library recipe page without a Star button is not walked (the Library needs a signed-in catalog)' },
   'S-174': { auto: 'e2e', specs: ['e2e/recipesUsedAs.spec.js', 'e2e/recipesTypeTabs.spec.js'] },
   'S-175': { auto: 'e2e', specs: ['e2e/recipesUsedAs.spec.js'] },
@@ -149,30 +149,30 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-180': { auto: 'e2e', specs: ['e2e/recipesGoesWith.spec.js', 'src/lib/recipePairs.test.ts'], partial: 'Make a meal and its numbers are walked; deleting Rice clearing the pairing is unit tested only, and Undo of that delete restoring the pairing is unconfirmed' },
   'S-46': { auto: 'e2e', specs: ['e2e/adminDeleteAccount.spec.js'], partial: 'scripted /api/accounts rows; Suspend then Restore is never pressed, so Delete forever appearing after Suspend and going after Restore is not driven' },
   'S-48': { auto: 'e2e', specs: ['e2e/kgBeside.spec.js'], partial: 'only the Log sheet is checked with the switch off; Recent and Maxes, and switching back on, are not' },
-  'S-49': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-50': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-53': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-54': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-57': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-58': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-59': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-60': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-49': { auto: 'manual' }, // needs a real phone; e2e/labelScan.spec.js stubs it. Not covered: the scan answer is stubbed; real photo accuracy and Save food then Ate this with 1.5 portions are not covered
+  'S-50': { auto: 'manual' }, // needs a real phone; e2e/labelScan.spec.js stubs it. Not covered: unreadable and failed answers are stubbed; a real blurry photo and a per 100 g only label are not photographed
+  'S-53': { auto: 'manual' }, // needs a real phone; e2e/receiptScan.spec.js, e2e/receiptApplyFooter.spec.js stub it. Not covered: scripted receipt answer; lb/oz conversion, a crossed-out old price, the store-tax picker and Undo held back while syncing are not asserted
+  'S-54': { auto: 'manual' }, // needs a real phone; e2e/receiptScan.spec.js, e2e/receiptApplyFooter.spec.js stub it. Not covered: scripted answers; real non-receipt and cut-off photos, and the missing amount in Total check, are not asserted
+  'S-57': { auto: 'manual' }, // needs a real phone; e2e/receiptAddItem.spec.js stubs it. Not covered: scripted receipt; the new item is not looked up on Shopping or Bought this month after Apply
+  'S-58': { auto: 'manual' }, // needs a real phone; e2e/receiptAddItem.spec.js stubs it. Not covered: scripted receipt; the duplicate check uses one name under Anywhere, not a named store
+  'S-59': { auto: 'manual' }, // needs a real phone; e2e/receiptSave.spec.js stubs it. Not covered: the photo is a stub: readability, scrolling inside it, a real .jpg download and newest-month-first ordering are not checked
+  'S-60': { auto: 'manual' }, // needs a real phone; e2e/receiptSave.spec.js stubs it. Not covered: a scripted failed save stands in for airplane mode; the 200-receipt and 60 MB notice and closing before the photo loads are not covered
   'S-64': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js'], partial: 'never reads the Board badge: \'suggested, from N lb\' with +10 and its return to the usual step are not asserted' },
   'S-65': { auto: 'e2e', specs: ['e2e/progressionStep.spec.js', 'src/lib/weightStep.test.ts'], partial: 'the e2e types 60 only and never saves 7.5 and reopens; 0, 2.3 and abc are unit-only' },
-  'S-68': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-68': { auto: 'manual' }, // needs a real phone; e2e/firstPaintTheme.spec.js stubs it. Not covered: first-paint colour with the bundle blocked; the launch splash colour, a reinstalled app and a throttled real phone are not covered
   'S-70': { auto: 'unit', specs: ['src/lib/importFile.test.ts'], partial: 'the wording is unit tested; showing it in Settings after a real undownloaded cloud file is not' },
   'S-73': { auto: 'api', specs: ['server/expectedUser.test.ts'], partial: 'the server 409 and client transport are tested; the Delete my data note, the other-account card and the reload are not driven in a browser' },
-  'S-74': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-74': { auto: 'manual' }, // needs a real phone; e2e/barcodeScan.spec.js, e2e/nutritionQuickLog.spec.js stub it. Not covered: scripted detector and product; a real camera, USDA numbers against the label and the camera light are not covered
   'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'], partial: 'the miss is stubbed; the camera-blocked message with Photo instead is not asserted on this path' },
-  'S-79': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-82': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-83': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-88': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-89': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-90': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-79': { auto: 'manual' }, // needs a real phone; e2e/receiptBoughtAt.spec.js stubs it. Not covered: scripted receipt, no real photo; Undo unticking each item is unconfirmed
+  'S-82': { auto: 'manual' }, // needs a real phone; e2e/receiptMerge.spec.js stubs it. Not covered: merge, one checkbox, count 2 and the each-price are asserted via Add to list; ticking, picking an existing item, Apply, Undo and the unchanged total check are not
+  'S-83': { auto: 'manual' }, // needs a real phone; e2e/receiptMerge.spec.js stubs it. Not covered: scripted receipt; the month bill matching the receipt is not asserted
+  'S-88': { auto: 'manual' }, // needs a real phone; e2e/barcodeScan.spec.js stubs it. Not covered: the Open Food Facts note and Use are asserted on a stubbed product; a real Aldi or Trader Joe's scan and comparing numbers with the label is manual
+  'S-89': { auto: 'manual' }, // needs a real phone; e2e/barcodeScan.spec.js, e2e/barcodeMissLadder.spec.js stub it. Not covered: the miss list, Photo the label opening the label camera and the empty form are asserted; a real label photo filling the form is manual
+  'S-90': { auto: 'manual' }, // needs a real phone; e2e/receiptReconcile.spec.js stubs it. Not covered: scripted receipt, no real photo; the label wording per case is unit tested in src/lib/receiptReconcile.test.ts
   'S-226': { auto: 'e2e', specs: ['e2e/dayNutrientMeter.spec.js'], partial: 'the spec makes its own supplements; the seeded Vitamin tracker figures and the All N in Totals link are not walked' },
   'S-228': { auto: 'e2e', specs: ['e2e/foodTotals.spec.js', 'e2e/foodNutrients.spec.js'], partial: 'the lookup is stubbed (the spec uses 150 g, not 100 g); real USDA amounts are not walked' },
-  'S-233': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-233': { auto: 'manual' }, // needs a real phone; e2e/labelScanMicro.spec.js stubs it. Not covered: the scan route is stubbed; matching rows to a real label (the accuracy check) and a real camera stay manual
   'S-236': { auto: 'e2e', specs: ['e2e/supplementSplitTimes.spec.js', 'e2e/supplementPortions.spec.js'], partial: 'the specs make their own supplements; the seeded half-serving Night capsule is not walked' },
   'S-238': { auto: 'unit', specs: ['src/lib/recipeMicro.test.ts', 'src/lib/mealRollup.test.ts', 'e2e/mealRollup.spec.js'], partial: 'roll-up and planned log are node tests; the browser spec checks macros only; nothing builds Cereal duo, logs it and reads the Totals' },
   'S-245': { auto: 'unit', specs: ['src/lib/supplementIngredients.test.ts', 'e2e/supplementIngredients.spec.js'], partial: 'taken-versus-scheduled and IU rules are node tests; unticking Fish oil and the typed Vitamin A IU row are not walked in a browser' },
@@ -181,7 +181,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-259': { auto: 'e2e', specs: ['e2e/supplementAdd.spec.js'], partial: 'the catalog is stubbed; a live NIH fish oil search and the dose step are not walked' },
   'S-260': { auto: 'e2e', specs: ['e2e/supplementIngredientImport.spec.js', 'e2e/supplementAdd.spec.js'], partial: 'the NIH routes are stubbed; real labels are node tested (dsldLabel.test.ts)' },
   'S-261': { auto: 'e2e', specs: ['e2e/supplementBarcode.spec.js'], partial: 'the UPC table and route are stubbed; a real stored Thorne or Sports Research UPC is not walked' },
-  'S-262': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-262': { auto: 'manual' }, // needs a real phone; e2e/supplementScan.spec.js stubs it. Not covered: the scan route is stubbed; a real bottle photo on a phone is the owner check
   'S-264': { auto: 'unit', specs: ['src/store/backupCoverage.test.ts'], partial: 'the data-file round trip is a node test; the import review rows and the Replace note are not walked in a browser' },
   'S-01': { auto: 'e2e', specs: ['e2e/diet.spec.js', 'e2e/nutritionBoard.spec.js'], partial: 'the specs use their own fixture, not the diet-on-target seed: 1,440 / 2,400 kcal, 58 / 160 g and yesterday\'s five foods are not asserted, and editing the calories to 250 then deleting is not walked (the edit spec changes only the name)' },
   'S-02': { auto: 'e2e', specs: ['e2e/dietMeals.spec.js', 'src/store/dietSlice.test.ts'], partial: 'no spec asserts the seeded over-target numbers or the red bar (2,880 / 2,400 kcal, 106 / 160 g) nor the Quick add text; the 21st One-off refusal is store-unit-tested only; the meal spec reaches 20 via Saved meals' },
@@ -223,8 +223,8 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-201': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'e2e/nutritionQuickLog.spec.js'], partial: 'tapping a Suggested now food is not walked' },
   'S-202': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js', 'e2e/savedMealsMove.spec.js', 'e2e/nutritionBoard.spec.js'], partial: 'logging Usual breakfast as two entries and Log it from the Recipes way are not walked' },
   'S-203': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js', 'e2e/dietMeals.spec.js'], partial: 'deleting every seeded food and then opening Save as a meal is not walked' },
-  'S-204': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-205': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-204': { auto: 'manual' }, // needs a real phone; e2e/barcodeMissLadder.spec.js stubs it. Not covered: the real phone camera and permission prompt are not walked; only the miss branch is asserted, not a found product coming back picked on Find food, then Use and Add
+  'S-205': { auto: 'manual' }, // needs a real phone; e2e/nutritionQuickLog.spec.js stubs it. Not covered: the real camera is replaced by a photo file and a stubbed lookup
   'S-206': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'the Supplements and Hydration lines and the Quick add empty note are not asserted in the browser' },
   'S-207': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'Snack, Overnight oats and the Snack section appearing are not walked (the spec plans Chili into Lunch)' },
   'S-208': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'Delete and the Carbs and fat count only what you enter line are not walked in the browser (the line is unit tested)' },
@@ -251,7 +251,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-106': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'], partial: 'walked at 1440 px, not on a phone; the N differ count, a day with no exercises having no heading, and Filter 1 on All days are not asserted' },
   'S-107': { auto: 'e2e', specs: ['e2e/programCompare.spec.js'], partial: 'two cards across at about 1360 px, one card below 1240 px of panel, and the panel filling the page width are not asserted' },
   'S-109': { auto: 'e2e', specs: ['e2e/help.spec.js'], partial: 'Help is checked for the Ideas to try term and + Add idea only; the Stretches to try heading, + Add stretch, the Add a stretch to try sheet and the first-run line are not asserted' },
-  'S-110': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-110': { auto: 'manual' }, // needs a real phone; e2e/receiptAddStore.spec.js stubs it. Not covered: the scan is stubbed (no real photo or phone); matched items listed under the new store on Shopping, ticked and priced, are not asserted
   'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js', 'e2e/receiptNewStoreItem.spec.js'] },
   'S-114': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'src/lib/programGuide.test.ts', 'src/lib/programRowFacts.test.ts'], partial: 'tab descriptions are checked as accessible descriptions, not visible text; the N exercises across 7 days text is unit tested only' },
   'S-115': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'src/lib/programRowFacts.test.ts'], partial: 'an either/or row, the Optional and Supersets notes and a self-named section are not asserted in the browser; Day at a glance only draws from 1280 px and the spec runs at 1920' },
@@ -264,20 +264,20 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-122': { auto: 'e2e', specs: ['e2e/groceryBought.spec.js'], partial: 'the Bought notice with Undo is not asserted here (groceryStoreChips.spec.js covers the no-price notice)' },
   'S-123': { auto: 'e2e', specs: ['e2e/groceryBought.spec.js', 'e2e/groceryBulkShare.spec.js'], partial: 'the notice going away by itself after about 10 seconds is not asserted' },
   'S-124': { auto: 'e2e', specs: ['e2e/groceryBought.spec.js', 'src/lib/route.test.ts'] },
-  'S-125': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-126': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-127': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-128': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-125': { auto: 'manual' }, // needs a real phone; e2e/groceryBought.spec.js, e2e/groceryViewSwitch.spec.js, e2e/groceryLargeText.spec.js stub it. Not covered: run at 320 px with 200% root text, not a real phone at largest system text; Sharing groups and Edit wrapping under each other is not asserted
+  'S-126': { auto: 'manual' }, // needs a real phone; e2e/receiptApplyFooter.spec.js, src/lib/receiptApplyLabel.test.ts stub it. Not covered: thumb scrolling never applying and the Undo notice staying 10 seconds are not asserted
+  'S-127': { auto: 'manual' }, // needs a real phone; e2e/receiptApplyFooter.spec.js, src/lib/receiptApplyLabel.test.ts stub it. Not covered: the Undo offer after the second tap is not asserted
+  'S-128': { auto: 'manual' }, // needs a real phone; e2e/receiptApplyFooter.spec.js stubs it. Not covered: the bar staying above a real phone's bottom edge (safe area) is not run
   'S-129': { auto: 'e2e', specs: ['e2e/groceryStoreChips.spec.js'], partial: 'the spec runs three stores (chips) and six (dropdown), not the persona\'s four' },
   'S-130': { auto: 'e2e', specs: ['e2e/groceryStoreChips.spec.js'] },
-  'S-131': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-131': { auto: 'manual' }, // needs a real phone; e2e/groceryStoreChips.spec.js stubs it. Not covered: resizes one browser, not a computer and a phone side by side
   'S-132': { auto: 'e2e', specs: ['e2e/groceryStoreChips.spec.js'], partial: 'the Undo and Dismiss buttons on the notice are not asserted' },
-  'S-133': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-134': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-135': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-91': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-92': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
-  'S-93': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
+  'S-133': { auto: 'manual' }, // needs a real phone; e2e/receiptRename.spec.js, src/lib/groceryAliases.test.ts stub it. Not covered: the item holding the new name after Apply and Undo restoring the old name are not asserted for a renamed match
+  'S-134': { auto: 'manual' }, // needs a real phone; e2e/receiptRename.spec.js stubs it
+  'S-135': { auto: 'manual' }, // needs a real phone; e2e/receiptRename.spec.js stubs it. Not covered: the second scan of the same text matching the new item is not asserted
+  'S-91': { auto: 'manual' }, // needs a real phone; e2e/receiptReconcile.spec.js, src/lib/receiptReconcile.test.ts stub it. Not covered: the none-of-your-items wording is unit tested only and no spec scans a receipt with none of the ticked items; a real phone photo is not run
+  'S-92': { auto: 'manual' }, // needs a real phone; src/lib/receiptReconcile.test.ts, src/lib/groceryReceipt.test.ts stub it. Not covered: no browser spec scans a receipt whose count differs from the ticked count, so the note under the row and the count after Apply are not walked in the app
+  'S-93': { auto: 'manual' }, // needs a real phone; e2e/barcodeMissLadder.spec.js, src/lib/barcodeScan.test.ts stub it. Not covered: camera, real code and real AI read are stubbed; no AI call after Type the name is not asserted
   'S-94': { auto: 'e2e', specs: ['e2e/barcodeMissLadder.spec.js', 'src/lib/labelAllowance.test.ts'], partial: 'the label route is stubbed (7 of 30, a cap answer), so the server-wide count and a real SCAN_DAILY_MAX are not run' },
   'S-98': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'server/securityHeaders.test.ts'], partial: 'the Help sheet is the one sheet opened on each tab and on Settings, not a different sheet on each screen' },
   'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },

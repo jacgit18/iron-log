@@ -2246,7 +2246,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Groceries and make sure a few items are in At home. Open Recipes, press Library.',
       'Press Meals, Ingredients and Drinks in turn. Read the "n of m at home" on rows.',
-      'Press Ingredients, then Show more until the tab empties.',
+      'Press Ingredients, open the filters above the list and set Category to Dessert (no loaded ingredient is a dessert).',
     ],
     expected: [
       'Library has All, Meals, Ingredients and Drinks (no Foods) and no counts. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
@@ -3325,7 +3325,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Read the plan line, then press Manage billing if it is there (do not complete anything in Stripe).',
     ],
     expected: [
-      'The plan is still paid; when the plan comes from Stripe the panel says "Payment failed. Update your card in Manage billing." and has no "Renews on" line. A seeded account may have no Stripe customer: if the warning is missing, record whether the plan line reads "set by the owner".',
+      'The plan is still paid; the seeded plan comes from Stripe (seedPersona.ts), so the panel says "Plan: Plus", then "Payment failed. Update your card in Manage billing." and has no "Renews on" line. The seed has no Stripe customer, so the Manage billing button may be missing.',
     ],
   },
   {
