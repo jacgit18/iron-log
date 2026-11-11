@@ -35,7 +35,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await page.getByRole('button', { name: 'Cancel' }).click();
   await make(page);
   await expect(page.getByRole('heading', { name: /Frozen lasagna/ })).toBeVisible();
-  await expect(page.getByText('Per portion: 420 kcal · 22 g protein · 48 g carbs · 15 g fat')).toBeVisible();
+  await expect(page.getByText('Per portion: 420 kcal · P 22 · C 48 · F 15 g')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /missing to Shopping/ })).toHaveCount(0);
@@ -80,7 +80,7 @@ test('the food lookup in the ready-made form fills the numbers, still editable',
   await expect(page.getByLabel('Protein per serving (g)')).toHaveValue('6.6');
   await page.getByLabel('Calories per serving').fill('185');
   await page.getByRole('button', { name: 'Save food' }).click();
-  await expect(page.getByText('Per portion: 185 kcal · 6.6 g protein')).toBeVisible();
+  await expect(page.getByText('Per portion: 185 kcal · P 6.6 · C ')).toBeVisible();
 });
 
 test('the add sheet has no separate lookup box, the One-off food form is open, and a Find food pick fills it', async ({ page }) => {

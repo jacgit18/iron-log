@@ -1,4 +1,5 @@
 import type { DietEntry, Recipe } from '../types.ts';
+import { fmtNum, macroLine } from './macroLine.js';
 import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
 import { parseDate, ymd } from '../shared/dates.js';
 import { scaleMicro, withMicro } from '../shared/foodMicro.js';
@@ -85,15 +86,14 @@ export function ateMax(r: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' |
   return top;
 }
 
-/** One entry in words: "520 kcal · 42 g protein", with " · 60 g carbs" and " · 12 g fat" when they were entered. */
-export const entryText = (e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'>): string =>
-  [`${fmtNum(e.kcal)} kcal`, `${fmtNum(e.p)} g protein`, ...(e.c !== undefined ? [`${fmtNum(e.c)} g carbs`] : []), ...(e.f !== undefined ? [`${fmtNum(e.f)} g fat`] : [])].join(' · ');
+/** One entry in words, in the shared macro line (`macroLine`): "520 kcal · P 42 g", or "520 kcal · P 42 · C 60 · F 12 g" when carbs and fat were entered. */
+export const entryText = (e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'>): string => macroLine(e);
 
 /** How full a bar is, 0 to 100 (the bar stops at full; the text says how far over). */
 export const barPercent = (have: number, target: number | null): number => (target && target > 0 ? Math.max(0, Math.min(100, Math.round((have / target) * 100))) : 0);
 
-/** "1,850 of 2,775" style numbers. */
-export const fmtNum = (n: number): string => n.toLocaleString('en-US');
+/** "1,850 of 2,775" style numbers (lives in macroLine.ts; exported here as before, so callers do not change). */
+export { fmtNum };
 
 /** A meter's words: "1,850 of 2,775 kcal", with ", 225 over" past the target, or just "1,850 kcal" with no target. */
 export function meterText(have: number, target: number | null, unit: string): string {
