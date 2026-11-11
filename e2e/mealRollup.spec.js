@@ -42,6 +42,7 @@ test('a bowl built from two foods rolls up in the form, on save and on its page,
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Per serving, from the parts: 375 kcal · 15.5 g protein')).toBeVisible();
   await expect(page.locator('.rc-ing', { hasText: '1.5 portions Oat cereal' })).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await page.getByLabel('Use my own numbers').check();
@@ -56,6 +57,7 @@ test('a loop is refused in the picker with a message, and the form stays usable'
   await seed(page, [oats, rc('a', 'Lunch box', 'other', { ing: [{ n: 'Sandwich', rid: 'b', q: 1 }] }), rc('b', 'Sandwich', 'other', { ing: [{ n: 'Oat cereal', rid: 'oats', q: 1 }] })]);
   await openRecipes(page);
   await page.getByRole('button', { name: /Sandwich/ }).first().click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await page.getByRole('button', { name: '+ Food or meal' }).click();

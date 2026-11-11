@@ -35,8 +35,12 @@ test('water is Have with nothing in Groceries and is not added to Shopping', asy
 test('the Have mark sits in the same column for water and for a matched item, and water has no picker', async ({ page }) => {
   await addHome(page, ['Rice']);
   await newRecipe(page, 'Rice and water', ['water', 'rice']);
-  const x = async name => (await state(page, name).boundingBox()).x;
-  expect(Math.abs((await x('water')) - (await x('rice')))).toBeLessThan(1);
+  // The mark sits beside the ingredient's name (brief recipe-page-layout), not in a column of its own: in the left half of its row, on the name's line.
+  for (const name of ['water', 'rice']) {
+    const row = await page.locator('.rc-ing', { hasText: name }).first().boundingBox(), mark = await state(page, name).boundingBox();
+    expect(mark.x - row.x).toBeLessThan(row.width * 0.6);
+    expect(mark.y - row.y).toBeLessThan(30);
+  }
   await expect(page.locator('.rc-ing', { hasText: 'water' }).getByRole('combobox')).toHaveCount(0);
   await expect(page.locator('.rc-ing', { hasText: 'water' }).getByText('Always at home')).toBeVisible();
 });

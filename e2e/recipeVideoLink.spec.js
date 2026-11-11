@@ -41,6 +41,7 @@ test('clearing the field removes the link; the link comes back in the form when 
   await start(page, 'https://vimeo.com/1');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByRole('link', { name: /Watch on Vimeo/ })).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: /^Edit/ }).first().click();
   await unfoldAll(page);
   await expect(page.getByLabel('Video link (optional)')).toHaveValue('https://vimeo.com/1');
