@@ -210,6 +210,13 @@
 .nb-short {
   display: none;
 }
+/* Two and three days side by side at 768 to 1439 px (1440 px and up keeps `.wb-board`'s seven). */
+.nb-board-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nb-board-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .wb {
   --wb-water: #2f5fa8;
   --m-supp: #3b7d2c;

@@ -40,6 +40,17 @@ export function stepDay(today: string, day: string, delta: number): string {
   return next < lo ? lo : next > hi ? hi : next;
 }
 
+/** How many day columns the board shows at a screen width (brief nutrition-header-sheet-wording): seven from 1440 px, three from 1000, two from 768, else one. */
+export type DaysShown = 1 | 2 | 3 | 7;
+export const daysShown = (width: number): DaysShown => (width >= 1440 ? 7 : width >= 1000 ? 3 : width >= 768 ? 2 : 1);
+
+/** The `n` days of `week` to draw when `day` is the picked one: the picked day first and the days after it, held inside the week (a Saturday on a three-day board shows Thu, Fri, Sat). */
+export function windowDays(week: readonly string[], day: string, n: number): string[] {
+  const at = Math.max(0, week.indexOf(day));
+  const start = Math.min(at, Math.max(0, week.length - n));
+  return week.slice(start, start + n);
+}
+
 export type DayKind = 'past' | 'today' | 'future';
 export const dayKind = (day: string, today: string): DayKind => (day < today ? 'past' : day === today ? 'today' : 'future');
 

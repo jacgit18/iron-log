@@ -3,7 +3,7 @@ import { bwSorted, goalStatus } from '../../lib/body.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
-import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, onBoard, toolbarFlows, weekDays, weekLabel, weekOf, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, onBoard, toolbarFlows, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -14,7 +14,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
 import DayStepper from './DayStepper.js';
-import { useWideBoard } from './useWideBoard.js';
+import { useDaysShown } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
@@ -26,7 +26,7 @@ const NO_MEALS: SavedMeal[] = [];
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
   const today = ymd(now);
-  const wide = useWideBoard();
+  const shown = useDaysShown();
   const cfg = useAppStore(s => s.cfg);
   const body = useAppStore(s => s.body);
   const supp = useAppStore(s => s.supp);
@@ -102,12 +102,12 @@ export default function NutritionBoard() {
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}</p>
       <div className="wb-legend" aria-hidden="true"><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span><span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>
-      {wide ? (
+      {shown === 7 ? (
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} />)}</div>
       ) : (
         <>
           <DayStepper today={today} day={day} onPick={d => { setPicked(d); setMsg(''); }} />
-          <DayColumn v={views[days.indexOf(day)]!} today={today} selected days={moveTargets} onPick={() => undefined} onLog={log} onMsg={setMsg} />
+          <div className={`wb-board nb-board nb-board-${shown}`}>{windowDays(days, day, shown).map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} />)}</div>
         </>
       )}
     </section>

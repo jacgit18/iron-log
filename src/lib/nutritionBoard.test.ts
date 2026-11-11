@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addingTo, toolbarFlows, basisOf, dayGroups, dayView, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf } from './nutritionBoard.js';
+import { addFlows, addingTo, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -223,5 +223,26 @@ describe('the Supplements meter', () => {
     const v = view(TODAY, { supp: supp({ items, taken: { [TODAY]: { a: true } } }) });
     expect(v.supps.text).toBe('1 of 4 taken');
     expect(v.meters).toHaveLength(4);
+  });
+});
+
+describe('daysShown', () => {
+  it('shows seven from 1440, three from 1000, two from 768, else one', () => {
+    expect([375, 767, 768, 999, 1000, 1439, 1440, 2560].map(daysShown)).toEqual([1, 1, 2, 2, 3, 3, 7, 7]);
+  });
+});
+
+describe('windowDays', () => {
+  const week = weekDays(TODAY, 0);
+  it('starts at the picked day and takes the days after it', () => {
+    expect(windowDays(week, week[2]!, 3)).toEqual(week.slice(2, 5));
+  });
+  it('holds the window inside the week: the last day shows the days before it', () => {
+    expect(windowDays(week, week[6]!, 3)).toEqual(week.slice(4, 7));
+    expect(windowDays(week, week[6]!, 2)).toEqual(week.slice(5, 7));
+  });
+  it('one day is the picked day; a day outside the week starts at the first', () => {
+    expect(windowDays(week, week[3]!, 1)).toEqual([week[3]]);
+    expect(windowDays(week, '2000-01-01', 2)).toEqual(week.slice(0, 2));
   });
 });
