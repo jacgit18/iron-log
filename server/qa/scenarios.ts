@@ -72,7 +72,10 @@ export type ScenarioFeature =
   | 'Vitamin and mineral day line'
   | 'Food vitamins and minerals'
   | 'Typed amounts'
-  | 'Age and sex amounts';
+  | 'Age and sex amounts'
+  | 'Supplement times'
+  | 'Active ingredients'
+  | 'Ingredient day line';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -80,6 +83,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
   'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Supplement portions',
   'Vitamin and mineral totals', 'Vitamin and mineral day line', 'Food vitamins and minerals', 'Typed amounts', 'Age and sex amounts',
+  'Supplement times', 'Active ingredients', 'Ingredient day line',
 ];
 
 export interface Scenario {
@@ -2969,6 +2973,117 @@ export const SCENARIOS: readonly Scenario[] = [
       'The form and the saved page say "Per serving, from the parts: 180 kcal · 4.5 g protein · 39 g carbs · 1.5 g fat. 1 of 1 ingredient counted." and list "1.5 portions Fortified cereal".',
       'After the first log (1.5 portions of the cereal on top of the seeded day): Calcium 1,015 mg, Iron 9.25 mg, Vitamin D 128 mcg "Over the limit by 28 mcg", Zinc 37.8 mg "Close to the limit (95%)". The line reads "Food: 3 of 4 eaten foods had vitamin or mineral data."',
       'After the planned one is logged from the board: Calcium 1,210 mg, Iron 16 mg, Vitamin D 131 mcg, Zinc 39.6 mg "Close to the limit (99%)", and "Food: 4 of 5 eaten foods had vitamin or mineral data." Each log adds the same 195 mg of calcium, 6.75 mg of iron, 3 mcg of vitamin D and 1.8 mg of zinc.',
+    ],
+  },
+  {
+    id: 'S-239', feature: 'Supplement times', title: 'One supplement row with Morning, Noon and Night chips, no duplicate list', persona: 'supplement-stack', brief: 'supplement-merged-list',
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'Open Daily, Nutrition, Manage, then Supplements and library. Find Fish oil.',
+      'Press the Noon chip on Fish oil, then press it again.',
+      'Press Undo on the notice that follows the second press.',
+    ],
+    expected: [
+      'Fish oil is one row, not two, with Morning and Night lit; Creatine monohydrate, Caffeine capsule and Multivitamin are one row each. No schedule list repeats the same names under Morning, Noon and Night.',
+      'The first press lights Noon and adds a copy at one serving; the second press removes that time with an Undo notice, and Undo restores it.',
+    ],
+  },
+  {
+    id: 'S-240', feature: 'Supplement times', title: 'Turning off the last chip returns the supplement to Library only', persona: 'supplement-stack', brief: 'supplement-merged-list', edge: true,
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'In Manage, Supplements and library, find Creatine monohydrate (lit at Noon only) and press its Noon chip.',
+      'Read the filter counts (All, Scheduled, Library only), then press Library only.',
+    ],
+    expected: [
+      'Creatine has no chip lit and appears under Library only; the counts add up (Scheduled lost one, Library only gained one).',
+      'Search and the Source filter narrow the list, and an empty result says so.',
+    ],
+  },
+  {
+    id: 'S-241', feature: 'Supplement times', title: 'Set each time and its amount in the supplement sheet', persona: 'supplement-stack', brief: 'supplement-split-times',
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'In Manage, press Edit on Fish oil. In the sheet find "When to take Fish oil". Light Noon as well, then set the amount at each time with the steppers and press Save.',
+      'Open Daily, Nutrition and read Fish oil in the Supplements section.',
+    ],
+    expected: [
+      'The sheet shows a total such as "2 softgels a day" with "Morning 1 · Night 1" and updates as chips or steppers change; a time cannot repeat and at least one stays on.',
+      'After Save, each time is its own row and ticks separately; a row shows its amount (for example "2 softgels") only when the amount is not 1.',
+    ],
+  },
+  {
+    id: 'S-242', feature: 'Supplement times', title: 'The Add sheet picks several times, and Library only stands alone', persona: 'supplement-stack', brief: 'supplement-split-times',
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'In Manage press + Add. Search "Magnesium" and pick a result (or type a name if the catalog has none).',
+      'Press Morning and Night, then press Library only, then Morning again.',
+      'Press Add.',
+    ],
+    expected: [
+      'Morning and Night both light; pressing Library only clears them; pressing Morning clears Library only.',
+      'The supplement is added at Morning at one serving. With Morning and Night both lit it is added to both.',
+    ],
+  },
+  {
+    id: 'S-243', feature: 'Active ingredients', title: 'Ingredient rows on a supplement, and one with none behaves as before', persona: 'supplement-stack', brief: 'supplement-active-ingredients',
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'In Manage press Edit on Fish oil and look at its rows below the vitamin and mineral rows.',
+      'Press Edit on Multivitamin.',
+    ],
+    expected: [
+      'Fish oil lists Omega-3 1,000 mg, EPA 300 mg and DHA 200 mg per serving, and the nutrient picker offers all 28 nutrients grouped under headings.',
+      'Multivitamin has no ingredient rows and saves and totals exactly as it did before.',
+    ],
+  },
+  {
+    id: 'S-244', feature: 'Active ingredients', title: 'Totals shows an Active ingredients section with your own cap and target', persona: 'supplement-stack', brief: 'supplement-active-ingredients',
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'Open Daily, Nutrition, find today, and press Totals.',
+      'Find the Active ingredients section. Read the Omega-3 and EPA rows, and the Creatine row.',
+      'Press the limit button on Creatine, set a target of 5 g and save, then reopen the row and remove the limit.',
+    ],
+    expected: [
+      'Omega-3 reads 2,000 mg against its 1,500 mg cap with words and a rust bar (over the cap, never colour alone); EPA 600 mg against a 500 mg target reads Met. Creatine, scheduled but unticked, shows its figure with "Set your limit".',
+      'The limit sheet and the Totals sheet carry the not-medical-advice note and suggest no dose. A zero, negative or oversized amount is refused. Back closes the limit sheet.',
+    ],
+  },
+  {
+    id: 'S-245', feature: 'Active ingredients', title: 'What I took versus what is scheduled, and units', persona: 'supplement-stack', brief: 'supplement-active-ingredients', edge: true,
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'On Totals untick one Fish oil entry on the Supplements meter, then read the Omega-3 row on What I took and on Everything scheduled.',
+      'Add a typed ingredient "Vitamin A" in IU to Multivitamin and read its row.',
+    ],
+    expected: [
+      'Omega-3 on What I took falls to 1,000 mg (under the cap) while Everything scheduled stays 2,000 mg; g, mg and mcg convert between rows.',
+      'An IU row matches only an IU limit and is never converted to mg.',
+    ],
+  },
+  {
+    id: 'S-246', feature: 'Ingredient day line', title: 'A closed line under the Supplements meter names the two nearest their limits', persona: 'supplement-stack', brief: 'ingredient-day-bars',
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'Open Daily, Nutrition, today. Under the Supplements meter read the line that starts "Active ingredients:".',
+      'Press the line, then press Open Totals.',
+    ],
+    expected: [
+      'The line reads like "Active ingredients: Omega-3 over · EPA Met", naming the two nearest their limits; Creatine, with no limit, has no line.',
+      'Pressing it opens thin bars (up to five), each carrying the Totals sentence, and Open Totals shows the same figures.',
+    ],
+  },
+  {
+    id: 'S-247', feature: 'Ingredient day line', title: 'Nothing ticked yet, a day with no record, and a phone', persona: 'supplement-stack', brief: 'ingredient-day-bars', edge: true,
+    steps: [
+      'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
+      'On Nutrition open an earlier day with no ticks, then untick every supplement today.',
+      'Resize to 375 px wide.',
+    ],
+    expected: [
+      'With limits set and nothing ticked the line reads "nothing ticked yet"; a day with no ingredients ticked and no limits shows no line.',
+      'At 375 px there is no sideways scroll and the bars stay readable.',
     ],
   },
 ];

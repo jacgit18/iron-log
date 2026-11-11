@@ -108,9 +108,9 @@ describe('QA personas', () => {
     const rowsOf = (id: string) => buildPersonaRows(personaById(id)!, EXERCISES, TODAY);
     const sumOn = (rows: ReturnType<typeof rowsOf>, d: string, k: 'kcal' | 'p') => rows.dietEntries.filter(e => e.data.d === d).reduce((a, e) => a + e.data[k], 0);
 
-    it('has the six diet accounts, and 18 in all', () => {
-      expect(PERSONAS.filter(p => p.group === 'Diet').map(p => p.id)).toEqual(['diet-on-target', 'diet-over-target', 'diet-fresh', 'meal-planner', 'vitamin-tracker', 'recipe-collector']);
-      expect(PERSONAS).toHaveLength(18);
+    it('has the seven diet accounts, and 19 in all', () => {
+      expect(PERSONAS.filter(p => p.group === 'Diet').map(p => p.id)).toEqual(['diet-on-target', 'diet-over-target', 'diet-fresh', 'meal-planner', 'vitamin-tracker', 'supplement-stack', 'recipe-collector']);
+      expect(PERSONAS).toHaveLength(19);
     });
 
     it('puts the on-target account at about 60% of its calories today, with 14 days logged and targets set', () => {
@@ -176,6 +176,21 @@ describe('QA personas', () => {
   });
 });
 
+describe('the supplement stack persona (active ingredients and split times)', () => {
+  const rows = buildPersonaRows(personaById('supplement-stack')!, EXERCISES, TODAY);
+  it('has fish oil at Morning and Night with omega-3, EPA and DHA rows, and a multivitamin with none', () => {
+    const fish = rows.supplements.filter(x => x.data.n === 'Fish oil');
+    expect(fish.map(x => x.data.slot)).toEqual(['morning', 'night']);
+    expect(fish[0]!.data.ingredients!.map(i => i.name)).toEqual(['Omega-3', 'EPA', 'DHA']);
+    expect(rows.supplements.find(x => x.data.n === 'Multivitamin')!.data.ingredients).toBeUndefined();
+  });
+  it('sets a cap on omega-3 and a target on EPA, and ticks both fish oil entries today', () => {
+    expect(rows.config?.ingredientLimits).toEqual({ 'omega-3': { kind: 'cap', amount: 1500, unit: 'mg' }, epa: { kind: 'target', amount: 500, unit: 'mg' } });
+    const today = rows.supplementDays.find(d => d.day === '2026-10-27')!;
+    expect(Object.keys(today.taken).filter(k => k.includes('fish'))).toHaveLength(2);
+  });
+});
+
 describe('the vitamin tracker persona (QA data for the vitamin and mineral features)', () => {
   const p = personaById('vitamin-tracker')!;
   const rows = buildPersonaRows(p, EXERCISES, TODAY);
@@ -202,7 +217,7 @@ describe('the vitamin tracker persona (QA data for the vitamin and mineral featu
   });
   it('sets no birth year or sex, and no other persona carries vitamin data', () => {
     expect(rows.config && 'profile' in rows.config).toBe(false);
-    for (const q of PERSONAS.filter(x => x.id !== p.id)) {
+    for (const q of PERSONAS.filter(x => x.id !== p.id && x.id !== 'supplement-stack')) {
       const r = buildPersonaRows(q, EXERCISES, TODAY);
       expect(r.supplements, q.id).toEqual([]);
       expect(r.dietEntries.some(e => e.data.micro), q.id).toBe(false);
