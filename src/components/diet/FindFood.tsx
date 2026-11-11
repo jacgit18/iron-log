@@ -7,7 +7,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import FoodSearch, { type FoodFill, type ScanResume } from './FoodSearch.js';
 import './Diet.css';
 
-// "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one, set a portion, add it. Nothing is stored for this; it reads the log and the recipes.
+// "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one. A recipe opens the shared LogControl (brief log-or-plan-control: portion, day, Log or Plan); a food you logged before has no recipe to plan, so it keeps the small inline Less / More / Add. Nothing is stored for this; it reads the log and the recipes.
 // The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
 export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
@@ -36,8 +36,7 @@ export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day
             const type = rec ? foodTypeOf(rec) : null;
             return (
               <li key={f.n}>
-                <button type="button" className="btn sm" id={`dt-find-${f.from ?? f.n}`} onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
-                {rec && <button type="button" className="btn sm" aria-describedby={`dt-find-${rec.id}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: rec.id, day })}>Log</button>}
+                <button type="button" className="btn sm" id={`dt-find-${f.from ?? f.n}`} onClick={() => (rec ? useAppStore.getState().openModal({ type: 'portion', id: rec.id, day }) : (setPicked(f), setPortion(1)))}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
               </li>
             );
           })}

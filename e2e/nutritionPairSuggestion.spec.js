@@ -15,7 +15,7 @@ const row = (page, name) => page.locator('.rc-row', { hasText: name }).first();
 test('after Log it, the partner with numbers is offered, one tap logs it, Undo removes only it', async ({ page }) => {
   await seed(page);
   await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click();
-  await page.getByRole('button', { name: 'Log it' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Log', exact: true }).click();
   const offer = page.getByRole('group', { name: 'Goes with it' });
   await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
   await expect(offer.getByRole('button', { name: '+ Plain, also log it' })).toHaveCount(0); // no numbers, so it cannot be logged
@@ -29,18 +29,19 @@ test('after Log it, the partner with numbers is offered, one tap logs it, Undo r
 test('Ate this on the recipe page offers it too, and a recipe with no pairing offers nothing', async ({ page }) => {
   await seed(page);
   await row(page, 'Chili').click();
-  await page.getByRole('button', { name: 'Ate this' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByRole('group', { name: 'Goes with it' }).getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
 });
 
 test('Ate this twice offers the partner again after the second log', async ({ page }) => {
   await seed(page);
   await row(page, 'Chili').click();
-  await page.getByRole('button', { name: 'Ate this' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   const offer = page.getByRole('group', { name: 'Goes with it' });
   await offer.getByRole('button', { name: '+ Rice, also log it' }).click();
   await expect(offer.getByText(/Logged .* of Rice/)).toBeVisible();
-  await page.getByRole('button', { name: 'Ate this' }).click(); // a second log of the chili is a new log: Rice is on offer again
+  await page.getByRole('button', { name: 'Log another' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click(); // a second log of the chili is a new log: Rice is on offer again
   await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
 });
 
@@ -48,7 +49,7 @@ test('the Goes with it row has no accessibility violations and 44 px targets on 
   await page.setViewportSize({ width: 390, height: 844 });
   await seed(page);
   await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click();
-  await page.getByRole('button', { name: 'Log it' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Log', exact: true }).click();
   const offer = page.getByRole('group', { name: 'Goes with it' });
   await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
   const axe = await new AxeBuilder({ page }).include('.dt-pair').analyze();
