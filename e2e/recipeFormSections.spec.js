@@ -20,7 +20,7 @@ test.describe('on a phone', () => {
   test('a new recipe opens with Basics unfolded and the other four folded with summaries', async ({ page }) => {
     await openRecipes(page);
     await page.locator('#recipes-new').click();
-    await page.locator('#recipes-new-list').getByRole('button', { name: 'Write a recipe' }).click();
+    await page.locator('#recipes-new-list').getByRole('button', { name: 'Recipe or meal' }).click();
     await expect(toggle(page, 'Basics')).toHaveAttribute('aria-expanded', 'true');
     for (const t of ['Ingredients', 'Steps', 'Nutrition per serving', 'Tags, note and video']) await expect(toggle(page, t)).toHaveAttribute('aria-expanded', 'false');
     await expect(toggle(page, 'Ingredients')).toContainText('· None yet');
@@ -56,7 +56,7 @@ test.describe('on a phone', () => {
   test('a problem unfolds the section that holds the field and focuses it', async ({ page }) => {
     await openRecipes(page);
     await page.locator('#recipes-new').click();
-    await page.locator('#recipes-new-list').getByRole('button', { name: 'Write a recipe' }).click();
+    await page.locator('#recipes-new-list').getByRole('button', { name: 'Recipe or meal' }).click();
     await toggle(page, 'Tags, note and video').click();
     await page.getByLabel('Video link (optional)').fill('mailto:a@b.co');
     await toggle(page, 'Tags, note and video').click(); // folded again with the problem inside
@@ -69,7 +69,7 @@ test.describe('on a phone', () => {
   test('a bad Servings number unfolds Basics even after it was folded', async ({ page }) => {
     await openRecipes(page);
     await page.locator('#recipes-new').click();
-    await page.locator('#recipes-new-list').getByRole('button', { name: 'Write a recipe' }).click();
+    await page.locator('#recipes-new-list').getByRole('button', { name: 'Recipe or meal' }).click();
     await page.getByLabel('Servings', { exact: true }).fill('abc');
     await toggle(page, 'Basics').click();
     await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -78,8 +78,8 @@ test.describe('on a phone', () => {
   });
 });
 
-// Done when 5: Cancel from Edit returns to the recipe. The one line is in Recipes.tsx, which the recipes-list-compact brief owns, so it lands there.
-test.fixme('Cancel from Edit lands on the recipe page', async ({ page }) => {
+// Done when 5: Cancel from Edit returns to the recipe, not the list (the line is in Recipes.tsx, brief recipes-list-compact).
+test('Cancel from Edit lands on the recipe page', async ({ page }) => {
   await seed(page, [FIVE]);
   await page.reload();
   await openRecipes(page);

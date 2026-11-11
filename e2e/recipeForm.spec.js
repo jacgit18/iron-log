@@ -80,7 +80,7 @@ test('Type a list keeps the rows of lines you did not change, and the pin and Sk
   });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.getByRole('button', { name: /^Sauce Custom/ }).click();
+  await page.getByRole('button', { name: /^Sauce/ }).click();
   await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);

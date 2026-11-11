@@ -86,18 +86,20 @@ async function starInDetail(page, name, verb = 'Star') {
 }
 const favMark = (page, name) => page.locator('.rc-row', { hasText: name }).locator('.rc-favmark');
 
-test('a star persists after a reload, starred recipes lead the Recent and favorites chips, and a chip opens its recipe', async ({ page }) => {
+test('a star persists after a reload, starred recipes lead the Recent pill, and a row in it opens its recipe', async ({ page }) => {
   await open(page);
-  await expect(page.getByRole('group', { name: 'Recent and favorites' })).toHaveCount(0); // nothing starred, logged or opened yet
+  await expect(page.locator('#recipes-recent')).toHaveCount(0); // nothing starred, logged or opened yet
   await expect(page.locator('.rc-star')).toHaveCount(0); // no star on a list row: it sat over Log and the at-home count
   await starInDetail(page, 'Oat milk');
   await starInDetail(page, 'Lemon cake');
   await expect(favMark(page, 'Oat milk')).toBeVisible(); // a small mark after the name, not a button
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  const chips = page.getByRole('group', { name: 'Recent and favorites' }).getByRole('button');
-  await expect(chips).toHaveText(['Lemon cake', 'Oat milk']);
-  await chips.nth(1).click();
+  await page.click('#recipes-recent');
+  await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#recipes-tab-all')).toHaveAttribute('aria-pressed', 'false');
+  await expect(await titles(page)).toEqual(['Lemon cake', 'Oat milk']);
+  await page.locator('.rc-row', { hasText: 'Oat milk' }).click();
   await expect(page.getByRole('heading', { name: 'Oat milk' })).toBeVisible();
   await page.goBack();
   await starInDetail(page, 'Oat milk', 'Unstar');
@@ -149,19 +151,16 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await open(page);
   const menu = page.locator('#recipes-new-list');
   await page.click('#recipes-new');
-  await expect(menu.getByRole('button')).toHaveText([/Scan a food/, /Build a meal/, /Write a recipe/, /Browse the Library/, /Add a food by hand/]);
+  await expect(menu.getByRole('button')).toHaveText([/Recipe or meal/, /Scan a food/, /Add a food by hand/]);
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
-  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Write a recipe' }).click();
-  await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
-  await page.goBack();
-  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Build a meal' }).click();
+  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Recipe or meal' }).click();
   await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
   await page.goBack();
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Add a food by hand' }).click();
   await expect(page.getByRole('heading', { name: 'New ready-made food' })).toBeVisible();
   await page.goBack();
-  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Browse the Library' }).click();
+  await page.click('#recipes-library');
   await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#recipes-new')).toHaveCount(0); // the menu belongs to Mine
   await page.click('#recipes-mine');
@@ -180,7 +179,7 @@ for (const [w, h] of [[1440, 900], [375, 812]]) {
     await page.click('#recipes-new');
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(' | ')}`)).toEqual([]);
-    const small = await page.locator('.rc-tabs button, .rc-quick button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-chips button, .rc-filterbar select, .fselx').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
+    const small = await page.locator('.rc-tabs button, #recipes-new, #recipes-filters, .rc-newlist button, .rc-chips button, .rc-filterbar select, .fselx').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 43.5 && e.getBoundingClientRect().height > 0).map(e => e.textContent));
     expect(small).toEqual([]);
   });
 }
