@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import './RecipeDetail.css';
 import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
@@ -43,7 +43,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and the log control
     return (
-      <section className="panel" aria-labelledby="rc-h">
+      <section className="panel rc-detail" aria-labelledby="rc-h">
         <BackBar onBack={onBack} />
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
         <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
@@ -55,7 +55,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     );
   }
   return (
-    <section className="panel" aria-labelledby="rc-h">
+    <section className="panel rc-detail" aria-labelledby="rc-h">
       <BackBar onBack={onBack} />
       <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />}</div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
@@ -98,7 +98,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.note && <p className="note">{recipe.note}</p>}
       {credit && <p className="rc-attrib">{credit}</p>}
       <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
-      {!mine && <div className="rc-actions"><button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button></div>}
+      {!mine && <LogBar><button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button></LogBar>}
     </section>
   );
 }
@@ -107,7 +107,22 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
 const LogArea = ({ recipe, mine, onEdit }: { recipe: Recipe; mine: boolean; onEdit: () => void }) => {
   if (!mine) return <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>;
   if (!hasMacros(recipe)) return <div className="rc-actions"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
-  return <LogControl recipe={recipe} />;
+  return <LogBar><LogControl recipe={recipe} /></LogBar>; // fixed above the tab bar on a phone, under the title from 700 px (RecipeDetail.css)
+};
+
+// The bar's own height goes to the page as `--rc-bar-h`, so the page keeps exactly that much room under its last line while the bar is fixed.
+const LogBar = ({ children }: { children: React.ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const bar = ref.current, page = bar?.parentElement;
+    if (!bar || !page) return;
+    const set = () => page.style.setProperty('--rc-bar-h', `${bar.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, []);
+  return <div className="rc-logbar" ref={ref}>{children}</div>;
 };
 
 // Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to More actions (Edit and Delete) reaches both.
