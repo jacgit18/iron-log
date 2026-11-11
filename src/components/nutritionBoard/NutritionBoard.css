@@ -111,6 +111,28 @@
 .nb-col.today {
   border-color: var(--muted);
 }
+/* A past day's Supplements fold to their header line: the whole line is the button (44px tall), its chevron on the right. */
+.nb-fold {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-fold .wb-slothd {
+  flex: 1;
+}
+.nb-fold svg {
+  flex: none;
+}
 .nb-col.past {
   background: var(--surface);
 }

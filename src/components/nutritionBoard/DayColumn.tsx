@@ -24,7 +24,7 @@ export default function DayColumn({ v, today, selected, days, onPick, onLog, onM
       <DayMeters v={v} />
       {v.kind !== 'past' && <MealSections view={v.plan} today={today} days={days} editable={editable} onLog={onLog} onMsg={onMsg} />}
       {v.kind !== 'future' && <EatenList day={v.day} entries={v.kind === 'today' ? alsoEaten(v) : v.eaten} editable={v.kind === 'today'} note={v.fatNote} also={v.kind === 'today'} />}
-      <SupplementsSection day={v.day} />
+      <SupplementsSection day={v.day} folded={v.kind === 'past'} />
       <HydrationSection day={v.day} today={today} />
     </div>
   );
