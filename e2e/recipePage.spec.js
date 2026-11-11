@@ -76,3 +76,28 @@ test('a scaled recipe keeps its stepper in view, and Escape closes More actions'
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
 });
+
+test('on a phone the bar hides while an ingredient field has focus and comes back after', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.addInitScript(l => { localStorage.setItem('ironlog:grocery', JSON.stringify({ items: [{ id: 'g1', n: 'Flour', store: 'x' }] })); }, null);
+  await seed(page);
+  await open(page);
+  await expect(page.locator('.rc-logbar')).toBeVisible();
+  await page.locator('.rc-detail').evaluate(el => { const i = document.createElement('input'); i.id = 'probe'; el.querySelector('.rc-ings').appendChild(i); i.focus(); });
+  await expect(page.locator('.rc-logbar')).toBeHidden();
+  await page.locator('#probe').evaluate(i => i.blur());
+  await expect(page.locator('.rc-logbar')).toBeVisible();
+});
+
+test('a ready-made food with numbers gets the same bar, and one without numbers gets none', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const rc = (id, n, extra) => ({ id, n, cat: 'ready', type: 'ingredient', ing: [], steps: [], ...extra });
+  await page.addInitScript(l => { if (localStorage.getItem('ironlog:recipes/main') === null) localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })); }, [rc('a', 'Oat cereal', { kcal: 150, p: 5 }), rc('b', 'Mystery food', {})]);
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-recipes');
+  await page.locator('.rc-row', { hasText: 'Oat cereal' }).click();
+  await expect(page.locator('.rc-logbar')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.locator('.rc-row', { hasText: 'Mystery food' }).click();
+  await expect(page.locator('.rc-logbar')).toHaveCount(0);
+});

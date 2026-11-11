@@ -43,7 +43,7 @@
   cursor: pointer;
 }
 /* The log-or-plan control (LogControl) stays in view on a phone: fixed above the tab bar, scrolling inside itself when tall, below sheets (--z-sheet; --z-sticky is lower). The page gets room under its last line so the bar never covers it; the bar hides while an ingredient field has focus (the keyboard is open). From 700 px it is an ordinary block under the title and nothing is fixed. */
-@media (max-width: 700px) {
+@media (max-width: 700px) and (min-height: 501px) { /* a short landscape phone keeps the control in the page instead of fixed */
   .rc-detail:has(.rc-logbar) {
     padding-bottom: calc(var(--sp-16) + var(--rc-bar-h, 0px));
   }
@@ -53,13 +53,13 @@
     bottom: calc(var(--tabbar) + env(safe-area-inset-bottom, 0px));
     left: 0;
     z-index: var(--z-sticky);
-    max-height: 45vh;
+    max-height: min(45vh, 22rem);
     overflow-y: auto;
     padding: var(--sp-8) var(--sp-12);
     border-top: 1px solid var(--line);
     background: var(--bg);
   }
-  .rc-detail:has(.rc-ing :is(input, select, textarea):focus) .rc-logbar {
+  .rc-detail:has(:is(input, select, textarea):focus) .rc-logbar:not(:focus-within) {
     display: none;
   }
 }
