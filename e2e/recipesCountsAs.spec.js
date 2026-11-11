@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { startFood, startRecipe } from './recipesNav.js';
+import { startFood, startRecipe, unfoldAll } from './recipesNav.js';
 
 // Counts as on a plate (brief week-board, part 2). The derived marks and what is saved are node tests (plate.test.ts); this covers the real forms: the chips start on the
 // category, pressing one is kept and saved, Back to automatic returns to the derived marks, and the ready-made form shows them too.
@@ -24,6 +24,7 @@ test('the chips start on the category, a pressed choice is saved, and Back to au
   await back(page);
   await page.locator('.rc-row', { hasText: 'Chili with beans' }).first().click();
   await page.getByRole('button', { name: 'Edit' }).click();
+  await unfoldAll(page);
   await on(page, 'Protein'); await on(page, 'Veg'); // the choice was kept
   await counts(page).getByRole('button', { name: 'Back to automatic' }).click();
   await on(page, 'Veg', 'false');

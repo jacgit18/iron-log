@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { unfoldAll } from './recipesNav.js';
 import { test, expect } from './fixtures.js';
 
 // First-action tiles on an empty Groceries list (Inventory) and an empty Recipes list (Mine). Each tile starts an action that already exists.
@@ -48,6 +49,7 @@ test('empty Recipes shows three tiles that open the form, the Library and the re
   await page.goBack();
   await recipes(page);
   await page.click('#rc-tile-new');
+  await unfoldAll(page);
   await page.getByLabel('Name', { exact: true }).fill('Toast');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('bread');
   await page.getByLabel('Steps, one per line').fill('Toast it.');

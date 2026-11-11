@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openNutrition, openTargets, todayCol } from './nutritionBoardHelpers.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086): the daily calorie, protein, carbs and fat targets (the Diet box under the week board), and the food log, now a day column of the Nutrition week board with food added from the add sheet.
 // The rules (the target numbers, totals, caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, adding food, "Ate this" on
@@ -121,6 +121,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Add calories and protein per serving to log this recipe.')).toBeVisible();
   await page.getByRole('button', { name: 'Add them' }).click();
+  await unfoldAll(page);
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('600');
   await page.getByLabel('Protein per serving (g)').fill('40');
@@ -139,6 +140,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('100');
   await page.getByRole('button', { name: 'Save recipe' }).click();

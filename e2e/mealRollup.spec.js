@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Meals built from foods (brief meals-from-foods). The rules (roll-up, loops, depth, rename and delete, the cleaner) are node tests
 // (mealRollup.test.ts, mealsFromFoods.test.ts, shared/recipes.test.ts); this covers the wiring they cannot see: the picker, the amount
@@ -43,6 +43,7 @@ test('a bowl built from two foods rolls up in the form, on save and on its page,
   await expect(page.getByText('Per serving, from the parts: 375 kcal · 15.5 g protein')).toBeVisible();
   await expect(page.locator('.rc-ing', { hasText: '1.5 portions Oat cereal' })).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await page.getByLabel('Use my own numbers').check();
   await expect(roll).toContainText('From the parts: 375 kcal');
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
@@ -56,6 +57,7 @@ test('a loop is refused in the picker with a message, and the form stays usable'
   await openRecipes(page);
   await page.getByRole('button', { name: /Sandwich/ }).first().click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await page.getByRole('button', { name: '+ Food or meal' }).click();
   const list = page.getByRole('group', { name: 'Foods and meals' });
   await expect(list.locator('.rc-saucerow b')).toHaveText(['Oat cereal', 'Lunch box']); // never the recipe itself

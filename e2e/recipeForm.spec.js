@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // The recipe form (brief recipe-form-mobile-desktop): the amount picker, the typed list, Alternative, the folded Nutrition card, servings starting at
 // 1, and the phone and wide layouts. The rules (composing an amount, reading a list) are node tests (amountPicker.test.ts, ingredientList.test.ts);
@@ -82,6 +82,7 @@ test('Type a list keeps the rows of lines you did not change, and the pin and Sk
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await page.getByRole('button', { name: /^Sauce Custom/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await page.getByRole('button', { name: 'Type a list' }).click();
   await page.getByLabel(/^One ingredient per line/).fill('1 (14 oz) can tomatoes\n1 tsp salt or pepper\n3 cloves garlic');
   await page.getByRole('button', { name: 'Use these ingredients' }).click();
@@ -138,6 +139,7 @@ test.describe('on a phone, a recipe with an Alternative', () => {
     await page.click('#tab-daily'); await page.click('#daily-recipes');
     await page.locator('.rc-row', { hasText: /Oats/ }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await unfoldAll(page);
     const alt = page.getByLabel('Alternative for ingredient 1');
     await alt.fill('');
     await expect(alt).toBeVisible();
@@ -148,11 +150,11 @@ test.describe('on a phone, a recipe with an Alternative', () => {
 
 test.describe('on a wide screen', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
-  test('the basics and the ingredients sit side by side, and Alternative is a column', async ({ page }) => {
+  test('the sections stack, and Alternative is a column', async ({ page }) => {
     await open(page);
     const name = await page.getByLabel('Name', { exact: true }).boundingBox();
     const ing = await page.getByLabel('Ingredient 1', { exact: true }).boundingBox();
-    expect(ing.x).toBeGreaterThan(name.x + name.width);
+    expect(ing.y).toBeGreaterThan(name.y + name.height); // brief recipe-form-sections: one column of sections, Ingredients below Basics
     await expect(page.getByLabel('Alternative for ingredient 1')).toBeVisible();
     await expect(page.getByRole('button', { name: '+ Alternative' })).toBeHidden();
     const alt = await page.getByLabel('Alternative for ingredient 1').boundingBox();

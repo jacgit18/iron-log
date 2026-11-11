@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Recipe macros from ingredients (brief recipe-ingredient-macros). The rules (grams from an amount, the sums, per serving, what is left out) are node tests
 // in recipeMacros.test.ts; this covers the wiring with the food route stubbed: the panel, a lookup per row, a Grams box for an amount in cups, the Servings
@@ -67,6 +67,7 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await open(page);
   await page.locator('.rc-row', { hasText: /Chicken and rice/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await editNutrition(page);
   await expect(page.getByLabel('Calories per serving')).toHaveValue('365');
   await expect(page.getByLabel('Protein per serving (g)')).toHaveValue('47.7');
