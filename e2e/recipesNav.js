@@ -5,7 +5,7 @@ const choose = async (page, name) => {
   await page.locator('#recipes-new').click();
   await page.locator('#recipes-new-list').getByRole('button', { name }).click();
 };
-export const startRecipe = async page => { await choose(page, 'Write a recipe'); await unfoldAll(page); };
+export const startRecipe = async page => { await choose(page, 'Recipe or meal'); await unfoldAll(page); };
 export const startFood = page => choose(page, 'Add a food by hand');
 export const newMenuVisible = page => expect(page.locator('#recipes-new')).toBeVisible();
 
