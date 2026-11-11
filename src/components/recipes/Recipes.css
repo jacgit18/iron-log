@@ -20,7 +20,8 @@
   display: flex;
   gap: var(--sp-8);
   align-items: center;
-  margin: 0; /* the panel's own gap spaces the rows above the list */
+  margin: 0;
+  /* the panel's own gap spaces the rows above the list */
 }
 .rc-top input[type='search'] {
   flex: 1 1 8rem;
