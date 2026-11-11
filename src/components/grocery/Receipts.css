@@ -47,7 +47,7 @@
 }
 @media (hover:hover) {
   .rcsrow:hover {
-    border-color: var(--text);
+    border-color: var(--ink);
   }
 }
 .rcview {
