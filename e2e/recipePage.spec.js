@@ -63,3 +63,16 @@ test('the servings stepper stays hidden until Scale the amounts is tapped', asyn
   await expect(page.getByText('5 servings', { exact: true })).toBeVisible();
   await expect(page.locator('.rc-ing').first()).toContainText('1¼');
 });
+
+test('a scaled recipe keeps its stepper in view, and Escape closes More actions', async ({ page }) => {
+  await seed(page);
+  await open(page);
+  await page.getByRole('button', { name: 'Scale the amounts' }).click();
+  await page.getByRole('button', { name: 'More servings' }).click();
+  await page.getByRole('button', { name: 'Scale the amounts' }).click(); // asked to hide it, but the amounts are scaled
+  await expect(page.getByRole('button', { name: 'Reset to 4' })).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+});

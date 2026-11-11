@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import './RecipeDetail.css';
 import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
@@ -20,6 +19,7 @@ import LogControl from '../diet/LogControl.js';
 import GoesWith from './GoesWith.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
+import './RecipeDetail.css';
 import type { Recipe } from '../../types.ts';
 
 // One recipe (ADR 084): its ingredients checked against At home, the steps, and what you can do with it. `mine`: one of yours; otherwise it
@@ -38,6 +38,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const credit = attribution(recipe, mine);
   const roll = useMemo(() => (hasParts(recipe) ? mealRollup(recipe, recipes) : null), [recipe, recipes]); // a meal built from linked foods: what its parts add up to
   const rollText = roll && roll.counted > 0 ? [`${roll.per.kcal} kcal`, `${roll.per.p} g protein`, roll.per.c !== undefined && `${roll.per.c} g carbs`, roll.per.f !== undefined && `${roll.per.f} g fat`].filter(Boolean).join(' · ') : '';
+  const macros = macroLine(recipe);
+  const scaled = !!recipe.servings && tonight !== null && tonight !== recipe.servings; // a scaled recipe keeps its stepper in view, so the amounts never look like the written ones
   const missing = missingParts(status);
   const toAdd = missing.add.length;
   const maybes = mine ? suggestionPins(status).length : 0;
@@ -60,13 +62,13 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       <BackBar onBack={onBack} />
       <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />}</div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
-      {macroLine(recipe) && !roll && <p className="note rc-macros">{macroLine(recipe)} per serving</p>}
+      {!roll && macros && <p className="note rc-macros">{macros} per serving</p>}
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. The parts add up to ${rollText || 'no numbers yet'}.` : `Per serving, from the parts: ${rollText || 'no numbers yet'}.`} {countedNote(roll)}.</p>}
-      <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
-      {scaling && recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
+      <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling || scaled} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
+      {(scaling || scaled) && recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
       {maybes > 0 && <div className="rc-actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().acceptSuggestions(recipe.id, month)}>Accept all suggestions</button></div>}
       <ul className="rc-ings">
@@ -133,8 +135,17 @@ const LogBar = ({ children }: { children: React.ReactNode }) => {
 const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
 const MoreActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => {
   const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => { // Escape or a tap outside closes the list
+    if (!open) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const away = (e: PointerEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('keydown', key);
+    document.addEventListener('pointerdown', away);
+    return () => { document.removeEventListener('keydown', key); document.removeEventListener('pointerdown', away); };
+  }, [open]);
   return (
-    <div className="rc-more">
+    <div className="rc-more" ref={box}>
       <button type="button" className="btn sm ghost" aria-label="More actions" aria-expanded={open} onClick={() => setOpen(o => !o)}>⋯</button>
       {open && (
         <div className="rc-morelist" role="group" aria-label="Recipe actions">

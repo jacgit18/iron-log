@@ -42,7 +42,7 @@
   font-size: var(--fs-sm);
   cursor: pointer;
 }
-/* The log-or-plan control (LogControl) stays in view on a phone: fixed above the tab bar, scrolling inside itself when tall, below sheets (--z-sheet). The page gets room under its last line so the bar never covers it; the bar hides while an ingredient field has focus (the keyboard is open). From 700 px it is an ordinary block under the title and nothing is fixed. */
+/* The log-or-plan control (LogControl) stays in view on a phone: fixed above the tab bar, scrolling inside itself when tall, below sheets (--z-sheet; --z-sticky is lower). The page gets room under its last line so the bar never covers it; the bar hides while an ingredient field has focus (the keyboard is open). From 700 px it is an ordinary block under the title and nothing is fixed. */
 @media (max-width: 700px) {
   .rc-detail:has(.rc-logbar) {
     padding-bottom: calc(var(--sp-16) + var(--rc-bar-h, 0px));
@@ -64,8 +64,10 @@
   }
 }
 /* Missing (and Have, Have some, On your list) sit beside the ingredient's name, in its own cell, instead of a column of their own. `.rc-detail` out-ranks the list's own `.rc-ing` grid in Recipes.css. */
-.rc-detail .rc-ing {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+@media (min-width: 641px) {
+  .rc-detail .rc-ing {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  }
 }
 .rc-namecell {
   display: flex;
@@ -73,10 +75,5 @@
   align-items: baseline;
   gap: var(--sp-4) var(--sp-8);
   min-width: 0;
-}
-@media (max-width: 640px) {
-  .rc-detail .rc-ing {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 }
