@@ -286,17 +286,6 @@
   font-size: var(--fs-xs);
   font-style: italic;
 }
-.rc-cols {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-12);
-}
-.rc-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-12);
-  min-width: 0;
-}
 .rc-meta {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -498,12 +487,6 @@
   background: var(--surface);
 }
 @media (min-width: 701px) {
-  .rc-cols {
-    display: grid;
-    grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
-    gap: var(--sp-16);
-    align-items: start;
-  }
   .rc-ingh {
     display: grid;
     grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1fr) 44px;

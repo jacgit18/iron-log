@@ -48,7 +48,7 @@ jobs:
           REASON: ${{ steps.pick.outputs.reason }}
         run: |
           echo "### Review model: $MODEL ($TIER) - $REASON" >> "$GITHUB_STEP_SUMMARY"
-      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+      - uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
         id: review
         continue-on-error: true # a failed review (usage limits reached, an expired token, an action error) leaves the job, and so the PR check, green
         with:

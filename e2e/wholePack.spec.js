@@ -27,8 +27,8 @@ test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More s
   await page.getByRole('button', { name: 'Less' }).click();
   await expect(portions).toHaveText('11.5 portions');
   await page.getByRole('button', { name: 'Whole pack (12)' }).click();
-  await page.getByRole('button', { name: 'Ate this', exact: true }).click();
-  await expect(page.getByText('Logged 12 portions of Gnocchi to today.')).toBeVisible();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText('Logged 12 portions to today.')).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByText('Logged 12 portions')).toHaveCount(0);
 });

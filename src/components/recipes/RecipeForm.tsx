@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { VIDEO_ERR, isVideoUrl } from '../../lib/data.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
@@ -23,8 +24,14 @@ import type { Micro } from '../../shared/foodMicro.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 import ServingSize from './ServingSize.js';
+import './RecipeFormSections.css';
+import Icon from '../Icon.js';
+import { FORM_SECTIONS, initialOpen, sectionOf, sectionSummary, toggled, unfoldFor } from '../../lib/recipeFormSections.js';
+import type { FormField, FormSection, SectionFacts } from '../../lib/recipeFormSections.js';
 
 const TOO_FEW = 'Type at least one ingredient first.';
+// How Save finds the field a problem is about: the label (or aria-label) the input starts with.
+const FIELD_LABEL: Partial<Record<FormField, string>> = { name: 'Name', servings: 'Servings', minutes: 'Minutes', servingG: 'Grams per serving', kcal: 'Calories per serving', protein: 'Protein per serving', carbs: 'Carbs per serving', fat: 'Fat per serving', tags: 'New tag', url: 'Video link' };
 const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?? '').trim().toLowerCase()}`;
 
 // The recipe form (ADR 084, laid out again in brief recipe-form-mobile-desktop): a new recipe, or one of yours to change. A new recipe starts at
@@ -71,6 +78,19 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [note, setNote] = useState(recipe?.note ?? '');
   const [url, setUrl] = useState(recipe?.url ?? start?.url ?? '');
   const [err, setErr] = useState('');
+  const [open, setOpen] = useState(initialOpen); // brief recipe-form-sections: Basics unfolded, the rest folded; kept while the form is open, not stored
+  const [focusReq, setFocusReq] = useState<{ field: FormField; n: number } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Save found a problem in a field: its section unfolds and the field is focused (the section's header when the field is not a plain input).
+  const fail = (field: FormField, msg: string) => { setErr(msg); setOpen(unfoldFor(open, field)); setFocusReq(r => ({ field, n: (r?.n ?? 0) + 1 })); };
+  useEffect(() => {
+    if (!focusReq || !formRef.current) return;
+    const want = FIELD_LABEL[focusReq.field];
+    const form = formRef.current;
+    const inputs = want ? [...form.querySelectorAll<HTMLElement>('input[aria-label]')].filter(i => i.getAttribute('aria-label')?.startsWith(want)) : [];
+    const labelled = want ? [...form.querySelectorAll('label')].filter(l => l.textContent?.startsWith(want)).map(l => l.querySelector<HTMLElement>('input, select, textarea')) : [];
+    (inputs[0] ?? labelled.find(Boolean) ?? form.querySelector<HTMLElement>(`#rcf-btn-${sectionOf(focusReq.field)}`))?.focus();
+  }, [focusReq]);
   const [calc, setCalc] = useState(false); // the Calculate from ingredients panel is open
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
 
@@ -124,20 +144,20 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const autoMarks = marksOf({ id: recipe?.id ?? '', n, cat, ing: shownRows().filter(i => i.n.trim()), steps: [], ...(autoP !== undefined ? { p: autoP } : {}) }, recipes);
   const pendingTag = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t : ''; }; // a tag typed but not added yet is kept on Save
   const save = () => {
-    if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
-    if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
-    if (servingG.trim() && !(whole(servingG) && whole(servingG)! <= MAX_SERVING_G)) { setErr(`Grams per serving must be a whole number from 1 to ${MAX_SERVING_G}.`); return; }
+    if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { fail('servings', 'Servings must be a whole number from 1 to 99.'); return; }
+    if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { fail('minutes', 'Minutes must be a whole number from 1 to 1440.'); return; }
+    if (servingG.trim() && !(whole(servingG) && whole(servingG)! <= MAX_SERVING_G)) { fail('servingG', `Grams per serving must be a whole number from 1 to ${MAX_SERVING_G}.`); return; }
     const rolled = parts && !own && roll && roll.counted > 0 ? roll.per : null; // the meal's numbers come from its parts: they are saved into the same four fields everything else reads
     const k = rolled ? cleanKcal(rolled.kcal) : kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = rolled ? cleanProtein(rolled.p) : protein.trim() ? cleanProtein(Number(protein)) : undefined;
-    if (k === null) { setNutOpen(true); setErr('Calories per serving must be a number from 1 to 9,999.'); return; }
-    if (pr === null) { setNutOpen(true); setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
+    if (k === null) { setNutOpen(true); fail('kcal', 'Calories per serving must be a number from 1 to 9,999.'); return; }
+    if (pr === null) { setNutOpen(true); fail('protein', 'Protein per serving must be a number from 0 to 999 g.'); return; }
     const cb = rolled ? (rolled.c !== undefined ? cleanGrams(rolled.c) : undefined) : carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = rolled ? (rolled.f !== undefined ? cleanGrams(rolled.f) : undefined) : fat.trim() ? cleanGrams(Number(fat)) : undefined;
-    if (cb === null || ft === null) { setNutOpen(true); setErr('Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
-    if (!isVideoUrl(url) || /\s/.test(url.trim())) { setErr(VIDEO_ERR); return; }
+    if (cb === null || ft === null) { setNutOpen(true); fail(cb === null ? 'carbs' : 'fat', 'Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
+    if (!isVideoUrl(url) || /\s/.test(url.trim())) { fail('url', VIDEO_ERR); return; }
     const pending = pendingTag(), allTags = pending ? [...tags, pending] : tags;
-    if (allTags.length > MAX_TAGS_PER_RECIPE) { setErr(`A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
+    if (allTags.length > MAX_TAGS_PER_RECIPE) { fail('tags', `A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
     const fromList = listEdited ? listRows() : null;
-    if (listEdited && !fromList) { setErr(TOO_FEW); return; }
+    if (listEdited && !fromList) { fail('ingredients', TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
     const microOut = rolled ? rolled.micro : parts ? undefined : microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, k ?? -1); // a meal on its own numbers keeps none
@@ -202,108 +222,130 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const sv = whole(servings);
   const servingsLine = sv && sv <= 99 ? `Amounts are for ${sv} serving${sv === 1 ? '' : 's'}.` : '';
 
+  const facts: SectionFacts = { name: n, catLabel: RECIPE_CATEGORY_LABEL[cat], servings: sv && sv <= 99 ? sv : undefined, ingredients: shownRows().filter(i => i.n.trim()).length, steps: stepsFromText(steps).length, nutLine, tags: tags.length, hasNote: !!note.trim(), hasVideo: !!url.trim() };
+  const section = (id: FormSection, children: ReactNode) => {
+    const title = FORM_SECTIONS.find(s => s.id === id)!.title, isOpen = open.has(id);
+    return (
+      <section className="rcf-sec">
+        <h4 className="rcf-shd">
+          <button type="button" id={`rcf-btn-${id}`} className="rcf-toggle" aria-expanded={isOpen} aria-controls={`rcf-body-${id}`} onClick={() => setOpen(toggled(open, id))}>
+            <span className="rcf-title">{title}</span>{' '}
+            {!isOpen && <span className="rcf-sum">· {sectionSummary(id, facts)}</span>}
+            <Icon name={isOpen ? 'chevron-up' : 'chevron-down'} />
+          </button>
+        </h4>
+        <div id={`rcf-body-${id}`} className="rcf-body" hidden={!isOpen}>{children}</div>
+      </section>
+    );
+  };
+
   return (
-    <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
+    <form ref={formRef} className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit recipe' : 'New recipe'}</h3>
-      <div className="rc-cols">
-        <div className="rc-col">
-          <label>Name
-            <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
+      {section('basics', <>
+        <label>Name
+          <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
+        </label>
+        {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
+        <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
+        <div className="rc-meta">
+          <label>Category
+            <select value={cat} onChange={e => pickCat(e.target.value as RecipeCategory)}>
+              {RECIPE_CATEGORIES.filter(c => c !== 'ready').map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
+            </select>
           </label>
-          {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
-          <fieldset className="rc-tags">
-            <legend>Tags</legend>
-            {tags.length > 0 && (
-              <div className="rc-chips2">
-                {tags.map(t => <button type="button" key={t} className="btn sm" onClick={() => setTags(tags.filter(x => x !== t))}>Remove {t}</button>)}
-              </div>
-            )}
-            <div className="rc-tagadd">
-              <input aria-label="New tag" placeholder="weeknight, meal prep…" value={tagText} maxLength={MAX_TAG} autoComplete="off"
-                onChange={e => setTagText(e.target.value.replace(/,/g, ''))}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagText); } }} />
-              <button type="button" className="btn sm" disabled={!tagText.trim()} onClick={() => addTag(tagText)}>Add tag</button>
-            </div>
-            {inUse.length > 0 && (
-              <div className="rc-chips2" role="group" aria-label="Tags you use">
-                {inUse.map(c => <button type="button" key={c.tag} className="btn sm ghost" onClick={() => addTag(c.tag)}>Use {c.tag}</button>)}
-              </div>
-            )}
-            {starters.length > 0 && (
-              <div className="rc-chips2" role="group" aria-label="Suggested tags">
-                {starters.map(t => <button type="button" key={t} className="btn sm ghost" onClick={() => addTag(t)}>Use {t}</button>)}
-              </div>
-            )}
-          </fieldset>
-          <div className="rc-meta">
-            <label>Category
-              <select value={cat} onChange={e => pickCat(e.target.value as RecipeCategory)}>
-                {RECIPE_CATEGORIES.filter(c => c !== 'ready').map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
-              </select>
-            </label>
-            <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
-            <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
-          </div>
-          <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
-          <CountsAsChips value={countsAs.shown(autoMarks)} picked={countsAs.picked} onChange={countsAs.pick} onAuto={countsAs.reset} />
-          <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
-          <div className="rc-nut">
-            <div className="rc-nuthead">
-              <strong>Nutrition per serving</strong>
-              <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} hidden={fromParts} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
-            </div>
-            <p className="note">{nutLine}</p>
-            {parts && roll && (
-              <div className="rc-roll">
-                <p role="status">{own ? `From the parts: ${rollText || 'no numbers yet'}` : `Per serving, from the parts: ${rollText || 'no numbers yet'}`}</p>
-                <p className="note">{countedNote(roll)}</p>
-                <label className="rc-own"><input type="checkbox" checked={own} onChange={e => chooseOwn(e.target.checked)} /> Use my own numbers</label>
-              </div>
-            )}
-            <div className="rc-calcbar">
-              <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
-              {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
-            </div>
-            {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={adoptNumbers} />}
-            {nutOpen && !fromParts && (
-              <div className="rc-nutfields">
-                <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
-                <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>
-                <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => setCarbs(e.target.value)} /></label>
-                <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
-              </div>
-            )}
-          </div>
+          <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
+          <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
         </div>
-        <div className="rc-col">
-          <fieldset className="rc-form rc-ings">
-            <legend>Ingredients</legend>
-            <div className="seg" role="group" aria-label="How to enter ingredients">
-              <button type="button" className={listMode ? '' : 'on'} aria-pressed={!listMode} onClick={() => { const m = listMode ? showRows() : ''; if (m) setErr(m); }}>Rows</button>
-              <button type="button" className={listMode ? 'on' : ''} aria-pressed={listMode} onClick={() => { if (!listMode) showList(); }}>Type a list</button>
-            </div>
-            <p className="note" role="status">{scaleNote || servingsLine}</p>
-            {listMode
-              ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
-              : <IngredientRows rows={ing} options={options} sauces={sauces} foods={foods} meals={meals} partOf={rid => recipes.find(r => r.id === rid)} onAddFood={addFood} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
-                  onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
-          </fieldset>
-          <label>Steps, one per line
-            <textarea rows={5} value={steps} onChange={e => setSteps(e.target.value)} />
-          </label>
-          <label>Note
-            <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
-          </label>
-          <label>Video link (optional)
-            <input type="url" value={url} maxLength={500} placeholder="https://" onChange={e => setUrl(e.target.value)} />
-            <span className="note">Opens from the recipe. YouTube or any video site.</span>
-          </label>
+        <CountsAsChips value={countsAs.shown(autoMarks)} picked={countsAs.picked} onChange={countsAs.pick} onAuto={countsAs.reset} />
+      </>)}
+      {section('ing', (
+        <div className="rc-form rc-ings" role="group" aria-label="Ingredients">
+          <div className="seg" role="group" aria-label="How to enter ingredients">
+            <button type="button" className={listMode ? '' : 'on'} aria-pressed={!listMode} onClick={() => { const m = listMode ? showRows() : ''; if (m) setErr(m); }}>Rows</button>
+            <button type="button" className={listMode ? 'on' : ''} aria-pressed={listMode} onClick={() => { if (!listMode) showList(); }}>Type a list</button>
+          </div>
+          <p className="note" role="status">{scaleNote || servingsLine}</p>
+          {listMode
+            ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
+            : <IngredientRows rows={ing} options={options} sauces={sauces} foods={foods} meals={meals} partOf={rid => recipes.find(r => r.id === rid)} onAddFood={addFood} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
+                onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
         </div>
-      </div>
-      {err && <p className="note gerr" role="alert">{err}</p>}
-      <div className="rc-actions rc-bar">
-        <button type="submit" className="btn primary">Save recipe</button>
-        <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+      ))}
+      {section('steps', (
+        <label>Steps, one per line
+          <textarea rows={5} value={steps} onChange={e => setSteps(e.target.value)} />
+        </label>
+      ))}
+      {section('nut', <>
+        <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
+        <div className="rc-nut">
+          <div className="rc-nuthead">
+            <strong>Nutrition per serving</strong>
+            <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} hidden={fromParts} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
+          </div>
+          <p className="note">{nutLine}</p>
+          {parts && roll && (
+            <div className="rc-roll">
+              <p role="status">{own ? `From the parts: ${rollText || 'no numbers yet'}` : `Per serving, from the parts: ${rollText || 'no numbers yet'}`}</p>
+              <p className="note">{countedNote(roll)}</p>
+              <label className="rc-own"><input type="checkbox" checked={own} onChange={e => chooseOwn(e.target.checked)} /> Use my own numbers</label>
+            </div>
+          )}
+          <div className="rc-calcbar">
+            <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
+            {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
+          </div>
+          {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={adoptNumbers} />}
+          {nutOpen && !fromParts && (
+            <div className="rc-nutfields">
+              <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
+              <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>
+              <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => setCarbs(e.target.value)} /></label>
+              <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
+            </div>
+          )}
+        </div>
+      </>)}
+      {section('more', <>
+        <fieldset className="rc-tags">
+          <legend>Tags</legend>
+          {tags.length > 0 && (
+            <div className="rc-chips2">
+              {tags.map(t => <button type="button" key={t} className="btn sm" onClick={() => setTags(tags.filter(x => x !== t))}>Remove {t}</button>)}
+            </div>
+          )}
+          <div className="rc-tagadd">
+            <input aria-label="New tag" placeholder="weeknight, meal prep…" value={tagText} maxLength={MAX_TAG} autoComplete="off"
+              onChange={e => setTagText(e.target.value.replace(/,/g, ''))}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagText); } }} />
+            <button type="button" className="btn sm" disabled={!tagText.trim()} onClick={() => addTag(tagText)}>Add tag</button>
+          </div>
+          {inUse.length > 0 && (
+            <div className="rc-chips2" role="group" aria-label="Tags you use">
+              {inUse.map(c => <button type="button" key={c.tag} className="btn sm ghost" onClick={() => addTag(c.tag)}>Use {c.tag}</button>)}
+            </div>
+          )}
+          {starters.length > 0 && (
+            <div className="rc-chips2" role="group" aria-label="Suggested tags">
+              {starters.map(t => <button type="button" key={t} className="btn sm ghost" onClick={() => addTag(t)}>Use {t}</button>)}
+            </div>
+          )}
+        </fieldset>
+        <label>Note
+          <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
+        </label>
+        <label>Video link (optional)
+          <input type="url" value={url} maxLength={500} placeholder="https://" onChange={e => setUrl(e.target.value)} />
+          <span className="note">Opens from the recipe. YouTube or any video site.</span>
+        </label>
+      </>)}
+      <div className="rcf-foot">
+        {err && <p className="note gerr" role="alert">{err}</p>}
+        <div className="rc-actions rc-bar">
+          <button type="submit" className="btn primary">Save recipe</button>
+          <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+        </div>
       </div>
     </form>
   );
