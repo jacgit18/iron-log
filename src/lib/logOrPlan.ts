@@ -5,7 +5,7 @@ import { ateEntry, oldestDay, shiftDay } from './dietLog.js';
 import { inWindow } from './dietPlan.js';
 import { SLOT_LABEL } from './weekBoard.js';
 
-/* ---------- The one control for logging or planning a recipe (brief log-or-plan-control). Today or an earlier day logs what was eaten (through `ateEntry`, the function the old the log control and the portion sheet shared); a day ahead plans it into a meal on the Nutrition board. Pure: the store is passed in as `Ports`. ---------- */
+/* ---------- The one control for logging or planning a recipe (brief log-or-plan-control). Today or an earlier day logs what was eaten (through `ateEntry`, the function the old Ate this button and the portion sheet shared); a day ahead plans it into a meal on the Nutrition board. Pure: the store is passed in as `Ports`. ---------- */
 
 /** The days the control offers: back as far as the log keeps entries (the portion sheet's `oldestDay`), ahead as far as the board can plan (`inWindow`, today plus MAX_PLAN_AHEAD days). */
 export const dayRange = (today: string): { min: string; max: string } => ({ min: oldestDay(today), max: shiftDay(today, MAX_PLAN_AHEAD) });
