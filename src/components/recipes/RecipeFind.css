@@ -1,56 +1,25 @@
 @layer base, components;
 @layer components {
-/* Recipes find (brief recipes-find-type-tabs): the type tabs, the Recent and favorites chips, + New, the Filters button, a star on a row and the list beside its detail from 1280px.
-   Every control is 44px tall; the tabs use their own class, not the shared .seg rules. */
+/* Recipes find (briefs recipes-find-type-tabs, recipes-list-compact): the pill row, + New, the Filters button, a star on a row and the list beside its detail from 1280px.
+   Every control is 44px tall; the pills use the shared .pillbtn, never the .seg rules. */
+/* One row of pills (Recent, then the type tabs) that scrolls sideways instead of wrapping onto more rows; the pills are the shared .pillbtn. */
 .rc-tabs {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--sp-6);
-  margin: var(--sp-8) 0;
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.rc-tabs button {
-  display: inline-flex;
-  gap: var(--sp-6);
-  align-items: center;
-  min-height: 44px;
-  padding: 0 var(--sp-16);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: inherit;
-  font-size: var(--fs-md);
-  font-weight: 600;
-}
-.rc-tabs button[aria-pressed='true'] {
-  background: var(--accent-fill);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+.rc-tabs .pillbtn {
+  flex: none;
 }
 .rc-count {
   font-weight: 400;
   font-size: var(--fs-sm);
   color: var(--muted);
 }
-.rc-tabs button[aria-pressed='true'] .rc-count {
+.rc-tabs [aria-pressed='true'] .rc-count {
   color: inherit;
-}
-.rc-quick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-6);
-  margin: var(--sp-8) 0;
-}
-.rc-quick button {
-  display: inline-flex;
-  gap: var(--sp-4);
-  align-items: center;
-  min-height: 44px;
-  padding: 0 var(--sp-12);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: inherit;
-  font-size: var(--fs-md);
 }
 .rc-new {
   position: relative;
@@ -89,6 +58,7 @@
 }
 .rc-filtertoggle {
   display: inline-flex;
+  flex: none;
   gap: var(--sp-6);
   align-items: center;
   min-height: 44px;
