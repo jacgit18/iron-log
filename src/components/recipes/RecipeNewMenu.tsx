@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../Icon.js';
 
-export type NewChoice = 'scan' | 'meal' | 'recipe' | 'library' | 'food';
-// One + New button for every way to add (brief recipes-find-type-tabs): a disclosure of plain buttons, closed again by a choice, Escape or a tap outside.
+export type NewChoice = 'scan' | 'recipe' | 'food';
+// One + New button for every way to add (briefs recipes-find-type-tabs, recipes-list-compact: three rows; the Library is the other tab): a disclosure of plain buttons, closed again by a choice, Escape or a tap outside.
 // "Add a food by hand" is the old New ready-made food button: the brief lists four entries, and without it a food with no barcode and no label photo could not be typed in.
 const CHOICES: { key: NewChoice; label: string; hint: string }[] = [
+  { key: 'recipe', label: 'Recipe or meal', hint: 'Ingredients and steps' },
   { key: 'scan', label: 'Scan a food', hint: 'Barcode or label, fills a ready-made food' },
-  { key: 'meal', label: 'Build a meal', hint: 'Ingredients and steps' },
-  { key: 'recipe', label: 'Write a recipe', hint: 'Your own, ingredient by ingredient' },
-  { key: 'library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine' },
   { key: 'food', label: 'Add a food by hand', hint: 'A packaged food and its numbers' },
 ];
 

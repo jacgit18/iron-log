@@ -1,15 +1,30 @@
 @layer base, components;
 @layer components {
 /* Recipes (ADR 084): the list, the library search, a recipe and its form. Plain flat rows like Groceries; every tap target is 44px tall. */
-.rc-top {
+.rc-titlebar {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--sp-8);
   align-items: center;
-  margin: var(--sp-8) 0;
+}
+.rc-titlebar h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.rc-src {
+  display: flex;
+  flex: none;
+  gap: var(--sp-4);
+}
+.rc-top {
+  display: flex;
+  gap: var(--sp-8);
+  align-items: center;
+  margin: 0;
+  /* the panel's own gap spaces the rows above the list */
 }
 .rc-top input[type='search'] {
-  flex: 1 1 12rem;
+  flex: 1 1 8rem;
   min-width: 0;
   min-height: 44px;
 }
@@ -74,14 +89,15 @@
 .rc-list li {
   border-top: 1px solid var(--line);
 }
+/* A compact row: name and star on one line, the type and macro line under it, and one slot at the right (Log, + Add, or an arrow). */
 .rc-row {
   display: flex;
   flex: 1;
-  flex-direction: column;
-  gap: var(--sp-6);
-  width: 100%;
+  gap: var(--sp-8);
+  align-items: center;
+  min-width: 0;
   min-height: 44px;
-  padding: var(--sp-12);
+  padding: var(--sp-8) 0 var(--sp-8) var(--sp-12);
   border: 0;
   background: transparent;
   color: inherit;
@@ -92,51 +108,54 @@
   align-self: center;
   flex: none;
   min-height: 44px;
-  margin-right: var(--sp-8);
+  margin: 0 var(--sp-12) 0 var(--sp-8);
+}
+.rc-go {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-inline-end: var(--sp-12);
+  color: var(--muted);
 }
 .rc-row .rc-meta {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-6);
 }
 .rc-row .rc-have {
   white-space: nowrap;
 }
-.rc-row .rc-badge {
-  margin-top: auto;
-}
 .rc-main {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 .rc-title {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-8);
+  align-items: center;
+  min-width: 0;
 }
-/* (.rc-list.rc-cards: the plain .rc-list further down is a column of the ingredient list, so the grid needs the extra class.) Recipes and Library as a grid of cards: 1 column on a phone, 2 from 600px, 3 from 1100px, 4 from 1600px (viewport widths). */
+.rc-title b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* (.rc-list.rc-cards: the plain .rc-list further down is a column of the ingredient list, so the grid needs the extra class.) Recipes and Library as compact rows: 1 column on a phone, 2 from 768px (viewport width). */
 .rc-list.rc-cards {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-12);
+  column-gap: var(--sp-16);
 }
 .rc-list.rc-cards li {
   display: flex;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  min-width: 0;
 }
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .rc-list.rc-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (min-width: 1100px) {
-  .rc-list.rc-cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@media (min-width: 1600px) {
-  .rc-list.rc-cards {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 /* Category, Tags and Nutrition chips and Sort share one row that wraps only when it must; Sort sits at the right end. */
