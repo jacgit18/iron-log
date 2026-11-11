@@ -29,7 +29,7 @@ describe('type tabs', () => {
   });
   it('says what to do in an empty tab, and that a search found nothing', () => {
     expect(emptyTabNote('foods', false)).toContain('Scan a food');
-    expect(emptyTabNote('meals', false)).toContain('Build a meal');
+    expect(emptyTabNote('meals', false)).toContain('Recipe or meal');
     expect(emptyTabNote('drinks', true)).toContain('Clear the search');
   });
 });
