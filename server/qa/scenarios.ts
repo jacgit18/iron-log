@@ -224,15 +224,15 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-08', feature: 'Meal planner', title: 'Log from the plan; later days have no Log button', persona: 'meal-planner', brief: 'diet-meal-planner', edge: true,
+    id: 'S-08', feature: 'Meal planner', title: 'Tick the plan to log it; later days have no check box', persona: 'meal-planner', brief: 'diet-meal-planner', edge: true,
     steps: [
-      'On today\'s column, tap today\'s planned recipe and press Log.',
-      'Tap today\'s planned meal and press Log.',
+      'On today\'s column, tick the check box beside today\'s planned recipe (Check <name> as eaten).',
+      'Tick the check box beside today\'s planned meal.',
       'Look at the cards of a day after today.',
     ],
     expected: [
-      'The recipe logs one entry with its numbers at the planned portion, listed under Eaten, and today\'s meters move. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
-      'Days after today show no Log button.',
+      'The recipe logs one entry with its numbers at the planned portion, shown as checked in its meal (the notice reads "Logged 1 from <name>."), not listed again under Also eaten, and today\'s meters move. Unticking removes what it logged. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
+      'Days after today have no check box.',
     ],
   },
   {
@@ -399,7 +399,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-22', feature: 'Recipe nutrition', title: 'Meal tags from the recipe form', persona: 'recipe-collector', brief: 'recipe-nutrition-badges', edge: true,
+    id: 'S-22', feature: 'Recipe nutrition', title: 'Meal tags from the recipe form', persona: 'recipe-collector', brief: 'recipe-nutrition-badges',
     steps: [
       'Edit a recipe and look at the tag suggestions.',
       'Tap Dinner and save.',
@@ -846,7 +846,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-58', feature: 'Receipt scan', title: 'Close, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
     steps: [
       'On a phone, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Close at the top of the sheet.',
-      'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs), then press Add item. Empty the name and press Add item.',
+      'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs 1), then press Add item. Empty the name and press Add item.',
     ],
     expected: [
       'Not now, Remove and Close each leave the list exactly as it was.',
@@ -947,7 +947,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-67', feature: 'Program compare', title: 'An empty day, and a day that exists on one side only', persona: 'new-user', brief: 'program-compare', edge: true,
+    id: 'S-67', feature: 'Program compare', title: 'An empty day, and a day that exists on one side only', persona: 'superset-builder', brief: 'program-compare', edge: true,
     steps: [
       'On a phone (or a 375 px wide window), as a new account, create a program, open Program, Compare programs, and pick it against Program A.',
       'Step through the day buttons.',
@@ -1300,7 +1300,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-95', feature: 'Sharing done', title: 'Done closes the Sharing panel and adds what you typed', persona: 'grocery-shopper', brief: 'sharing-done-button',
     steps: [
-      'Open Daily, Groceries, Inventory, press Sharing and look at the bottom of the panel.',
+      'Open Daily, Groceries, Inventory, press Sharing groups and look at the bottom of the panel.',
       'In the Home group type Jo in Add a person without pressing Add person, then press Done.',
       'Press Sharing again and look at the Home group.',
     ],
@@ -1536,7 +1536,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program tab clarity ----
   {
-    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs', persona: 'new-user', brief: 'program-tab-clarity',
+    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs', persona: 'superset-builder', brief: 'program-tab-clarity',
     steps: [
       'On a computer open the Program tab for the first time on this browser (clear the site data first if you have been here).',
       'Read the guide card at the top, then the section tabs (Programs, Exercises, Stretches, Saved, Compare) and the card under them.',
@@ -1560,7 +1560,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-116', feature: 'Program tab clarity', title: 'Saved programs: save a copy, edit it, put it on the Board', persona: 'new-user', brief: 'program-tab-clarity',
+    id: 'S-116', feature: 'Program tab clarity', title: 'Saved programs: save a copy, edit it, put it on the Board', persona: 'superset-builder', brief: 'program-tab-clarity',
     steps: [
       'On Program, scroll to Saved programs and read its text.',
       'Save Program A as "Kept copy" with Save a copy, then switch the card to Program B.',
@@ -1572,7 +1572,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-117', feature: 'Program tab clarity', title: 'On a phone the first exercise shows on the first screen and the compact top works', persona: 'new-user', brief: 'program-tab-clarity',
+    id: 'S-117', feature: 'Program tab clarity', title: 'On a phone the first exercise shows on the first screen and the compact top works', persona: 'superset-builder', brief: 'program-tab-clarity',
     steps: [
       'On a phone (or a 375 x 812 window) open Program with the guide dismissed.',
       'Look at the top of the editor: + Add exercise and the two small buttons under it.',
@@ -1745,7 +1745,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-131', feature: 'Groceries views', title: 'Row details start open on a computer and closed on a phone, and the More menu choice sticks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes', device: true, edge: true,
     steps: [
       'On a computer open Shopping and look at the rows. Then open the same page on a phone.',
-      'On the phone press the ... menu and choose "Show details on all rows". Reload the page.',
+      'On the phone press Show details above the list. Reload the page.',
     ],
     expected: [
       'On the computer every row shows its count, price, Move to and Shared with. On the phone every row is closed.',
@@ -1810,7 +1810,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-137', feature: 'Receipt scan', title: 'Forget a receipt name from an item and Undo', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
     steps: [
-      'On a phone, in Inventory press Edit and open an item that has receipt names. Press Forget beside one.',
+      'On a phone, in Inventory press Edit and open an item that has receipt names (rename a receipt line to it and Apply first; the seed has none). Press Forget beside one.',
       'Press Undo in the Removed notice, then scan a receipt with that text.',
     ],
     expected: [
@@ -2120,7 +2120,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget', edge: true,
+    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget',
     steps: [
       'Open Groceries on a computer and look at the Shopping and Bought buttons.',
     ],
@@ -2173,11 +2173,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-172', feature: 'Receipt reconcile', title: 'A second receipt at the same store does not list what the first receipt bought', persona: 'grocery-shopper', brief: 'receipt-earlier-items', device: true,
     steps: [
-      'On a phone, tick Milk by hand on Shopping. Scan a receipt from a store, press Apply. Scan a second receipt from the same store with different items.',
+      'On a phone, tick Milk 1 by hand on Shopping. Scan a receipt from a store, press Apply. Scan a second receipt from the same store with different items.',
       'Read the text under the lines and open "Review these" if it is there.',
     ],
     expected: [
-      'The second sheet says how many items from an earlier receipt are not listed, and lists only Milk (ticked by hand) under "Already bought, not on this receipt", folded until you press Review.',
+      'The second sheet says how many items from an earlier receipt are not listed, and lists only Milk 1 (ticked by hand) under "Already bought, not on this receipt", folded until you press Review.',
       'It does not say "Is this the right one?" because some of this receipt\'s lines match your list.',
     ],
   },
@@ -2382,7 +2382,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-190', feature: 'Week board', title: 'Move a card to another meal or day, and drag on a wide screen', persona: 'meal-planner', brief: 'week-board',
+    id: 'S-190', feature: 'Week board', title: 'Move a card to another meal or day, and drag on a wide screen', persona: 'meal-planner', brief: 'week-board', edge: true,
     steps: [
       'Tap a card, press Move to… and pick Lunch. Tap it again, press Move to… and pick another day.',
       'On a wide screen drag a card into another meal.',
@@ -2462,12 +2462,12 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-196', feature: 'Nutrition board', title: 'Meters count the plan for days ahead, and today\'s plan counts only once logged', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
       'On Nutrition note today\'s Calories meter and the planned items under today\'s meals (the seed plans two under Not set).',
-      'Tap one of today\'s planned items and press Log.',
+      'Tick the check box of one of today\'s planned items (Check <name> as eaten).',
       'Look at a day after today that has planned items: add up the calories of its cards and compare with its Calories meter.',
     ],
     expected: [
-      'Before logging, today\'s Calories meter counts only the Eaten list (about 35% of 2,400 kcal), not the planned items.',
-      'After Log, the item appears in today\'s Eaten list and the meter rises by that item\'s calories.',
+      'Before logging, today\'s Calories meter counts only the Also eaten list (about 35% of 2,400 kcal), not the planned items.',
+      'After the check, the item shows its check in its meal (it is not listed again under Also eaten) and the meter rises by that item\'s calories.',
       'A day ahead reads the sum of its planned items against 2,400 kcal; a screen reader says "planned" there, not "eaten" (ADR 105).',
     ],
   },
@@ -2783,7 +2783,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-221', feature: 'Supplement portions', title: 'No serving size, and an old supplement', persona: 'diet-on-target', brief: 'supplement-portions', edge: true,
+    id: 'S-221', feature: 'Supplement portions', title: 'No serving size, and an old supplement', persona: 'vitamin-tracker', brief: 'supplement-portions', edge: true,
     steps: [
       'Open a supplement that has nutrient rows but no serving size (or add one) and read "How much you take each time"; press − then + and watch the line under it.',
       'Open a supplement you saved before portions existed and look at today\'s Supplements and Totals.',
@@ -3138,21 +3138,21 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-251', feature: 'Grocery purchase log', title: 'Ran out keeps the purchase in Spending', persona: 'grocery-shopper', brief: 'grocery-purchase-log',
     steps: [
       'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
-      'Open Groceries, At home. Note this month\'s Spending. Untick a priced item (it was bought) and press Ran out if asked.',
-      'Open Bought and its Spending history switch, then, if a sharing group exists, the Who owes who button under This month. Then open To get.',
+      'On Shopping tick a priced item (bought). Open Inventory, note this month\'s Spending, then untick that item (there is no Ran out button).',
+      'Open Bought and its Spending history switch, then, if a sharing group exists, the Who owes who button under This month. Then open Shopping.',
     ],
     expected: [
-      'The item\'s cost stays in the month\'s Spending and in who owes who, and the item is back on To get, unticked.',
+      'The item\'s cost stays in the month\'s Spending and in who owes who, and the item is back on Shopping, unticked.',
     ],
   },
   {
     id: 'S-252', feature: 'Grocery purchase log', title: 'Buy it again: a second purchase is its own line', persona: 'grocery-shopper', brief: 'grocery-purchase-log', edge: true,
     steps: [
       'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
-      'Tick the same item as bought again after it ran out. Open Bought.',
+      'Tick the same item as bought again on Shopping after you unticked it. Open Bought.',
     ],
     expected: [
-      'Bought lists both purchases, newest first, each with date and time; the month total counts both. Unticking on To get or Bought removes only the open purchase, never a closed one.',
+      'Bought lists both purchases, newest first, each with date and time; the month total counts both. Unticking on Shopping or Bought removes only the open purchase, never a closed one.',
     ],
   },
   {

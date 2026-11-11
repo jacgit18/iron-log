@@ -52,9 +52,6 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-76': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'e2e/notFound.spec.js'] },
   'S-77': { auto: 'manual' },
   'S-78': { auto: 'api', specs: ['server/static.test.ts', 'src/lib/route.test.ts', 'e2e-qa/plainPages.spec.js'] },
-  'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
-  'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
-  'S-84': { auto: 'e2e', specs: ['e2e/receiptMerge.spec.js'] },
   'S-85': { auto: 'e2e', specs: ['e2e-qa/bulkShare.spec.js', 'e2e/groceryBulkShare.spec.js'] },
   'S-86': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-87': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
@@ -125,7 +122,6 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-152': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'] },
   'S-153': { auto: 'e2e', specs: ['e2e/recipesTypeTabs.spec.js'] },
   'S-154': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js'] },
-  'S-155': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js'], partial: 'the barcode reader and camera are stubbed; the real camera on a phone is not run' },
   'S-156': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js', 'src/lib/dietLog.test.ts'], partial: 'the future-day refusal is walked in the browser; the 400-day limit and the 20-a-day stop are unit tested only' },
   'S-157': { auto: 'e2e', specs: ['e2e/mealRollup.spec.js'], partial: 'the Log sheet opening at the rolled-up numbers is not asserted' },
   'S-158': { auto: 'unit', specs: ['src/lib/mealRollup.test.ts'], partial: 'no spec edits a food in the app and opens the meal again or its Log sheet; a day already logged keeping its numbers is not tested here' },
@@ -284,6 +280,10 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-93': { auto: 'manual' }, // needs a real phone (device scenario); the specs only stub the camera
   'S-94': { auto: 'e2e', specs: ['e2e/barcodeMissLadder.spec.js', 'src/lib/labelAllowance.test.ts'], partial: 'the label route is stubbed (7 of 30, a cap answer), so the server-wide count and a real SCAN_DAILY_MAX are not run' },
   'S-98': { auto: 'e2e', specs: ['e2e-qa/plainPages.spec.js', 'server/securityHeaders.test.ts'], partial: 'the Help sheet is the one sheet opened on each tab and on Settings, not a different sheet on each screen' },
+  'S-80': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
+  'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
+  'S-84': { auto: 'e2e', specs: ['e2e/receiptMerge.spec.js'] },
+  'S-155': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js'], partial: 'the barcode reader and camera are stubbed; the real camera on a phone is not run (the owner recorded a result for this scenario, so it is not marked device)' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */
