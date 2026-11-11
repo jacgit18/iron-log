@@ -34,6 +34,7 @@ test.describe('on a phone', () => {
     await page.reload();
     await openRecipes(page);
     await page.locator('.rc-row', { hasText: /Chili/ }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await expect(toggle(page, 'Ingredients')).toContainText('Ingredients · 5');
     await toggle(page, 'Ingredients').click();
@@ -83,6 +84,7 @@ test('Cancel from Edit lands on the recipe page', async ({ page }) => {
   await page.reload();
   await openRecipes(page);
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByRole('heading', { name: /Chili/ })).toBeVisible();

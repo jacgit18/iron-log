@@ -23,7 +23,7 @@ test('The log control opens at the usual amount in the unit name, and logs it in
   await expect(page.getByText('Usual: 4 eggs')).toBeVisible();
   await expect(page.getByText('Per egg: 72 kcal · P 6 g')).toBeVisible();
   await expect(amount(page)).toHaveText('4 eggs');
-  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await expect(amount(page)).toHaveText('4.5 eggs');
   await page.getByRole('button', { name: 'Less' }).click();
   await page.getByRole('button', { name: 'Log', exact: true }).click();
@@ -44,6 +44,7 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await page.getByRole('button', { name: 'Less' }).click();
   await page.getByRole('button', { name: 'Less' }).click();
   await expect(amount(page)).toHaveText('1 loaf');
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: /Edit/ }).first().click();
   await expect(page.getByLabel('Usual amount, optional')).toHaveValue('2');
   await expect(page.getByLabel('One serving is called, optional')).toHaveValue('loaf');
