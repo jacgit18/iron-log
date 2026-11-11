@@ -121,6 +121,7 @@ for (const [w, h] of [[1920, 1080], [1280, 800]]) {
     const list = await box(page.locator('.rc-cards')), side = await box(pane);
     expect(side.x).toBeGreaterThan(list.x + list.width - 1); // beside, not below
     await expect(pane.getByRole('button', { name: 'Back to recipes' })).toBeHidden();
+    await pane.getByRole('button', { name: 'More actions' }).click();
     await pane.getByRole('button', { name: /Delete the food Oat milk/ }).click();
     await pane.getByRole('button', { name: /Delete the food Oat milk|Tap again to delete/ }).click();
     await expect(page.locator('.rc-row', { hasText: 'Oat milk' })).toHaveCount(0);

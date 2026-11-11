@@ -1,0 +1,45 @@
+@layer base, components;
+@layer components {
+/* Recipe page (RecipeDetail.tsx; brief recipe-page-layout): More actions beside the star and the "Scale the amounts" link in the Ingredients heading. */
+.rc-more {
+  position: relative;
+  flex: none;
+}
+.rc-more > .btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.rc-morelist {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: var(--z-tabs);
+  display: grid;
+  gap: var(--sp-6);
+  min-width: 10rem;
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+.rc-morelist .btn {
+  min-height: 44px;
+}
+.rc-ingh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-4) var(--sp-8);
+}
+.rc-scalelink {
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+}

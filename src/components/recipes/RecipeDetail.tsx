@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import './RecipeDetail.css';
 import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
@@ -28,6 +29,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const months = useAppStore(s => s.groceryMonths);
   const grocery = useMemo(() => withoutUsed(groceryAll, months), [groceryAll, months]); // a used one-time item is no longer something you have
   const [msg, setMsg] = useState('');
+  const [scaling, setScaling] = useState(false); // the servings stepper is hidden until "Scale the amounts" is tapped
   const [tonight, setTonight] = useState<number | null>(null); // servings for tonight; the amounts shown scale to it, nothing is saved
   const shown = recipe.servings ? tonight ?? recipe.servings : null;
   const month = monthKey(new Date());
@@ -43,27 +45,26 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     return (
       <section className="panel" aria-labelledby="rc-h">
         <BackBar onBack={onBack} />
-        <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2><RecipeStar recipe={recipe} mine={mine} /></div>
+        <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
         <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.usual !== undefined && <p className="note">Usual: {amountText(recipe.usual, recipe)}</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
         <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
-        <div className="rc-actions"><MineActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} /></div>
       </section>
     );
   }
   return (
     <section className="panel" aria-labelledby="rc-h">
       <BackBar onBack={onBack} />
-      <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} /></div>
+      <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />}</div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
-      {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. The parts add up to ${rollText || 'no numbers yet'}.` : `Per serving, from the parts: ${rollText || 'no numbers yet'}.`} {countedNote(roll)}.</p>}
-      <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
+      <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
+      {scaling && recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
       {maybes > 0 && <div className="rc-actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().acceptSuggestions(recipe.id, month)}>Accept all suggestions</button></div>}
       <ul className="rc-ings">
@@ -97,11 +98,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.note && <p className="note">{recipe.note}</p>}
       {credit && <p className="rc-attrib">{credit}</p>}
       <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
-      <div className="rc-actions">
-        {mine ? (
-          <MineActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />
-        ) : <button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button>}
-      </div>
+      {!mine && <div className="rc-actions"><button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button></div>}
     </section>
   );
 }
@@ -113,11 +110,19 @@ const LogArea = ({ recipe, mine, onEdit }: { recipe: Recipe; mine: boolean; onEd
   return <LogControl recipe={recipe} />;
 };
 
-// Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to Edit and Delete reaches both.
+// Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to More actions (Edit and Delete) reaches both.
 const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
-const MineActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => (
-  <>
-    <button type="button" className="btn" onClick={onEdit}>Edit</button>
-    <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the ${noun} ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
-  </>
-);
+const MoreActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rc-more">
+      <button type="button" className="btn sm ghost" aria-label="More actions" aria-expanded={open} onClick={() => setOpen(o => !o)}>⋯</button>
+      {open && (
+        <div className="rc-morelist" role="group" aria-label="Recipe actions">
+          <button type="button" className="btn" onClick={onEdit}>Edit</button>
+          <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the ${noun} ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
+        </div>
+      )}
+    </div>
+  );
+};
