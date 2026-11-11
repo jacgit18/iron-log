@@ -41,7 +41,7 @@
   cursor: default;
 }
 @media (hover:hover) {
-  .pillbtn:hover {
+  .pillbtn:hover:not(:disabled, [aria-disabled="true"]) {
     border-color: var(--accent);
   }
 }
