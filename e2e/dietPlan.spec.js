@@ -58,7 +58,7 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await logFood(page, 'Oats', 350, 12);
   await expect(todayCol(page).locator('.nb-eat', { hasText: 'Oats' })).toBeVisible();
   let sheet = await openAdd(page, 'Save as a meal');
-  await sheet.getByRole('button', { name: 'Save as meal' }).click();
+  await sheet.getByRole('button', { name: 'Save as a meal', exact: true }).click();
   await sheet.getByRole('checkbox', { name: /Oats/ }).check();
   await sheet.getByLabel('Meal name').fill('Breakfast');
   await sheet.getByRole('button', { name: 'Save meal' }).click();

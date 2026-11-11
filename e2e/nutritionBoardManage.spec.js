@@ -47,12 +47,12 @@ test('Manage reaches the supplement editor, saved meals and foods, and the water
   await openNutrition(page);
   const m = await openManage(page);
   await expect(m.getByRole('button', { name: 'Supplements and library' })).toBeVisible();
-  await expect(m.getByRole('button', { name: 'Saved meals and foods' })).toBeVisible();
+  await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toBeVisible();
   await expect(m.getByRole('button', { name: 'Water reminder' })).toBeVisible();
   await expect(page.locator('#sched-h')).toHaveCount(0); // the editor is not on the page
 });
 
-test('Manage: Supplements and library has a way back, and Saved meals and foods opens Recipes with Back to Nutrition', async ({ page }) => {
+test('Manage: Supplements and library has a way back, and Meals and foods (opens Recipes) opens Recipes with Back to Nutrition', async ({ page }) => {
   await openNutrition(page);
   await openManage(page);
   await page.locator('#sched-edit').click();

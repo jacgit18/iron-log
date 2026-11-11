@@ -192,11 +192,30 @@ test('supplements tick on today, last week and a day ahead, each with its own co
   await col(page, '2026-09-26').getByRole('group', { name: 'Supplements' }).getByLabel(/Magnesium/).check();
   await expect(col(page, '2026-09-26')).toContainText('1 of 2 taken');
   await page.getByRole('button', { name: 'Previous week', exact: true }).click();
+  const fold = col(page, '2026-09-19').getByRole('button', { name: /Supplements/ });
+  await expect(fold).toHaveAttribute('aria-expanded', 'false'); // a past day shows one summary line
+  await expect(col(page, '2026-09-19')).toContainText('0 of 2 taken');
+  await fold.click();
   await tick('2026-09-19', 'creatine').check();
   await tick('2026-09-19', 'magnesium').check();
   await expect(col(page, '2026-09-19')).toContainText('2 of 2 taken');
   await page.getByRole('button', { name: 'This week', exact: true }).click();
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
+});
+
+test('an empty meal on a day ahead (not today) has an Add control that opens the add sheet on that day with that meal picked; last week has none', async ({ page }) => {
+  await openNutrition(page);
+  await col(page, '2026-09-25').getByRole('button', { name: 'Add to Lunch' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText('Adding to Fri 25')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Lunch' })).toHaveAttribute('aria-pressed', 'true');
+  await closeSheet(page);
+  await col(page, '2026-09-25').getByRole('button', { name: 'Add to Dinner' }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true');
+  await closeSheet(page);
+  await expect(todayCol(page).getByRole('button', { name: /^Add to / })).toHaveCount(0); // today logs eaten food, which has no meal
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Add to / })).toHaveCount(0); // the week cannot be changed
 });
 
 test('the Calories, Protein and Fat bars are filled in their legend colours, and a bar past its target turns the over colour', async ({ page }) => {
@@ -296,7 +315,7 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: short Targets and Manage buttons, week switcher full width, Add food over three equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: short Targets and Manage buttons, week switcher on their row, Add food over three equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
@@ -304,8 +323,8 @@ test.describe('on a phone', () => {
       expect(await page.locator('#nb-targets').evaluate(e => e.innerText)).toBe('Targets'); // the short name on a phone; the accessible name stays Targets and goal
       expect(await page.locator('#nb-h').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // the Nutrition heading stays for screen readers but is not drawn: the tab already says it
       expect(manage.r).toBeGreaterThan(width - 24); // buttons sit at the right
-      expect(week.y).toBeGreaterThan(targets.b - 1); // switcher below
-      expect(week.w).toBeGreaterThan(width - 40); // and full width
+      expect(Math.abs(week.y + week.h / 2 - (targets.y + targets.h / 2))).toBeLessThan(2); // the switcher shares the row (brief nutrition-header-sheet-wording; it was a full-width row below)
+      expect(week.r).toBeLessThanOrEqual(targets.x); // to the left of the buttons, not overlapping them
       expect(Math.min(targets.h, manage.h)).toBeGreaterThanOrEqual(43.5);
       const add = await box('#nb-add');
       const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));

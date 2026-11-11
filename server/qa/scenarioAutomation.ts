@@ -192,7 +192,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-08': { auto: 'e2e', specs: ['e2e/dietPlan.spec.js'], partial: 'logs a recipe, not a planned meal; the meal-total entry and Quick add logging linked foods are not covered; the meal-planner seed is not used' },
   'S-09': { auto: 'e2e', specs: ['e2e/dietPlan.spec.js', 'src/store/recipesSlice.test.ts', 'src/lib/recipePantry.test.ts'], partial: 'the recipe page button is never pressed twice in a spec; the once-only rule and the message wording are unit tested, the button wiring is not' },
   'S-10': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js', 'src/lib/dietSuggest.test.ts'], partial: 'the e2e logs its own Oats, not the diet-on-target seed; nearest-hour order is unit tested only' },
-  'S-11': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js'], partial: 'the 20-entries left-out message of Copy from yesterday is not exercised' },
+  'S-11': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js'], partial: 'the 20-entries left-out message of Copy yesterday is not exercised' },
   'S-13': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'], partial: 'the spec types macros first then Calories; this scenario\'s order (Calories first) is not walked (same typedKcal flag)' },
   'S-14': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js'], partial: 'a recipe pick keeping its recipe link, the six-result cap and newest-first order are not asserted in e2e (unit tested)' },
   'S-16': { auto: 'e2e', specs: ['e2e/recipeMacros.spec.js'], partial: 'the Left out list of names is not asserted' },
