@@ -20,7 +20,7 @@ test('the Add food sheet shows three labelled groups and every way starts at the
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('heading', { level: 3 })).toHaveText(['Fastest', 'From what you have', 'Whole days and meals']);
   const rows = await sheet.locator('.nb-menu .btn').evaluateAll(bs => bs.map(b => ({ x: Math.round(b.getBoundingClientRect().x), icon: !!b.querySelector('svg'), name: b.querySelector('b').textContent })));
-  expect(rows.map(r => r.name)).toEqual(['Quick add', 'Scan barcode', 'One-off food', 'Find food', 'Recipes', 'Saved meals', 'Copy yesterday', 'Save as a meal']);
+  expect(rows.map(r => r.name)).toEqual(['Quick add', 'Scan barcode', 'One-off food', 'Find food', 'Recipes', 'Saved meals', 'Copy yesterday', 'Save as a meal in Recipes']);
   expect(new Set(rows.map(r => r.x)).size).toBe(1);
   expect(rows.every(r => r.icon)).toBe(true);
   const text = await sheet.locator('.nb-menu .btn').evaluateAll(bs => bs.map(b => getComputedStyle(b).textAlign));

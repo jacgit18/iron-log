@@ -4,7 +4,7 @@ import { MAX_MEAL_NAME } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import './Diet.css';
 
-// "Save as meal" (brief diet-saved-meals): tick the foods of the day that made up a meal, name it, save it. The same name replaces the old meal, which is how a meal is changed. The caller keys it by day.
+// "Save as a meal" (brief diet-saved-meals; it makes a meal in Recipes, and the status line says so): tick the foods of the day that made up a meal, name it, save it. The same name replaces the old meal, which is how a meal is changed. The caller keys it by day.
 export default function SaveMeal({ day, onSaved }: { day: string; onSaved: (text: string) => void }) {
   const diet = useAppStore(s => s.diet);
   const list = entriesOn(diet, day);
@@ -17,18 +17,18 @@ export default function SaveMeal({ day, onSaved }: { day: string; onSaved: (text
   const save = () => {
     const out = useAppStore.getState().saveDietMeal(name, list.filter(e => ticked.has(e.id)).map(e => e.id));
     if (out) { setErr(out); return; }
-    onSaved(`Saved ${name.trim().slice(0, MAX_MEAL_NAME)}.`); close();
+    onSaved(`Saved ${name.trim().slice(0, MAX_MEAL_NAME)} as a meal in Recipes.`); close();
   };
   if (!open) {
     return (
       <div className="dt-copy">
-        <button type="button" className="btn sm" disabled={list.length === 0} onClick={() => setOpen(true)}>Save as meal</button>
+        <button type="button" className="btn sm" disabled={list.length === 0} onClick={() => setOpen(true)}>Save as a meal</button>
       </div>
     );
   }
   return (
     <fieldset className="dt-copy">
-      <legend>Save as meal</legend>
+      <legend>Save as a meal</legend>
       <ul className="dt-copylist">
         {list.map(e => (
           <li key={e.id}>

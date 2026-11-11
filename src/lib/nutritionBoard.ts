@@ -90,13 +90,13 @@ export const startMeal = (last: PlanSlot | null | undefined, minutes: number): P
 export type AddFlow = 'quick' | 'barcode' | 'oneoff' | 'find' | 'meals' | 'recipes' | 'copy' | 'savemeal';
 export const ADD_FLOWS: Record<AddFlow, { label: string; hint: string }> = {
   quick: { label: 'Quick add', hint: 'Foods you log most, and suggestions for now' },
-  barcode: { label: 'Scan barcode', hint: 'Camera, then save the food and log it' },
+  barcode: { label: 'Scan barcode', hint: 'Camera, then save the food to Recipes and log it' },
   oneoff: { label: 'One-off food', hint: 'Type a name, calories and protein' },
   find: { label: 'Find food', hint: 'Your past meals, your recipes and the food database; a label photo if a scan misses' },
   meals: { label: 'Saved meals', hint: 'Add a meal you saved' },
   recipes: { label: 'Recipes', hint: 'Add a recipe by portion' },
   copy: { label: 'Copy yesterday', hint: 'Tick what to copy from the day before' },
-  savemeal: { label: 'Save as a meal', hint: 'Turn what you ate into a saved meal' },
+  savemeal: { label: 'Save as a meal in Recipes', hint: 'Turn what you ate into a meal in Recipes' },
 };
 const EAT_FLOWS: readonly AddFlow[] = ['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes', 'copy', 'savemeal'];
 const PLAN_FLOWS: readonly AddFlow[] = ['meals', 'recipes'];
