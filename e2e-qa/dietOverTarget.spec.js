@@ -11,9 +11,11 @@ test('S-02: over target on open, and the 20-entries-a-day limit replaces the add
   await expect(todayCol(page).getByRole('img', { name: /^Calories eaten so far: 2,(?:[5-9]\d\d|4\d[1-9]|4[1-9]\d) \/ 2,400 kcal, [\d,]+ kcal over/ })).toBeVisible();
   await expect(meter(todayCol(page), 'Protein', '10\\d / 160')).toBeVisible();
   const sheet = await openAdd(page, 'One-off food');
-  for (let guard = 0; guard < 25 && (await eaten(page).count()) < 20; guard++) {
+  for (let guard = 0; guard < 25; guard++) {
+    const n = await eaten(page).count();
+    if (n >= 20) break;
     await addOneOff(sheet, 'Tea', 5, 0);
-    await expect(sheet.getByRole('status').last()).toHaveText('Added Tea.');
+    await expect(eaten(page)).toHaveCount(n + 1); // the message text is the same every time, so wait on the count
   }
   await expect(eaten(page)).toHaveCount(20);
   await addOneOff(sheet, 'Tea', 5, 0); // the 21st
