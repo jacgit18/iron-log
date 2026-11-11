@@ -22,7 +22,7 @@ test('calories follow protein, carbs and fat until you type calories yourself', 
   await expect(kcal).toHaveValue('500');
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
-  await expect(eaten(page)).toContainText('500 kcal · 40 g protein · 51 g carbs · 12 g fat');
+  await expect(eaten(page)).toContainText('500 kcal · P 40 · C 51 · F 12 g');
 });
 
 test('Search brings back what you logged with a half-portion stepper', async ({ page }) => {
@@ -37,7 +37,7 @@ test('Search brings back what you logged with a half-portion stepper', async ({ 
   await sheet.getByLabel("Search your past meals and recipes").fill('ric');
   await sheet.getByRole('list', { name: 'Matches' }).getByRole('button', { name: /Rice/ }).click();
   await sheet.getByRole('button', { name: 'More', exact: true }).click();
-  await expect(sheet.getByText('Rice: 300 kcal · 6 g protein')).toBeVisible();
+  await expect(sheet.getByText('Rice: 300 kcal · P 6 g')).toBeVisible();
   await sheet.getByRole('button', { name: 'Add', exact: true }).first().click();
   await expect(sheet.getByRole('status').last()).toContainText('Added 1.5 portions of Rice.');
   await closeSheet(page);
