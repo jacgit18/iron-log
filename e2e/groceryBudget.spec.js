@@ -43,6 +43,9 @@ test('set a budget, watch the bar, go over it, and it survives a reload', async 
   await expect(page.locator('#groc-budget .gbstate')).toHaveText('$70.00 left');
   await page.click('#groc-budget-edit'); await page.fill('#groc-budget-in', '25'); await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('#groc-budget')).toContainText('$5.00 over budget');
-  await page.click('#groc-budget-edit'); await page.getByRole('button', { name: 'Remove' }).click();
+  await page.click('#groc-budget-edit');
+  await page.click('#groc-budget-rm'); await expect(page.locator('#groc-budget-rm')).toHaveText('Tap again to remove'); // the first tap only arms it
+  await expect(page.locator('#groc-budget-in')).toBeVisible();
+  await page.click('#groc-budget-rm');
   await expect(page.locator('#groc-budget-set')).toBeVisible();
 });
