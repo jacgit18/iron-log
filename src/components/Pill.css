@@ -1,0 +1,48 @@
+@layer base, components;
+@layer components {
+/* The shared pill of the Recipes and Nutrition redesign (brief redesign-shared-macro-line-and-pill): one look for a filter, a tag you can press
+   and a choice in a row of choices. Default: field outline on the surface. Selected (aria-pressed, aria-checked, aria-selected or aria-current,
+   or the class "on" where the element has no such state): the accent fill with its ink, an accent outline and bold text, so the state never
+   rests on the fill colour alone. Its own class name on purpose: ".pill" is the small badge in styles.css, and nothing here reaches .seg,
+   .daytabs, .chip or the Board. */
+.pillbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  min-height: 44px;
+  padding: var(--sp-6) var(--sp-12);
+  box-sizing: border-box;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pillbtn.on,
+.pillbtn[aria-pressed="true"],
+.pillbtn[aria-checked="true"],
+.pillbtn[aria-selected="true"],
+.pillbtn[aria-current="true"] {
+  border-color: var(--accent);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.pillbtn:disabled,
+.pillbtn[aria-disabled="true"] {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: default;
+}
+@media (hover:hover) {
+  .pillbtn:hover {
+    border-color: var(--accent);
+  }
+}
+}
