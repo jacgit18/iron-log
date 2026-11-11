@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { meterLabel, type DayView } from '../../lib/nutritionBoard.js';
+import DayIngredientMeter from './DayIngredientMeter.js';
 import DayVitMeter from './DayVitMeter.js';
 
 // The meters at the top of a day (briefs nutrition-board, nutrition-mobile-layout): calories, protein, fat, supplements taken and water, each in words so colour is never the only cue. Eaten food for last week and today, the plan for days ahead; a bar past its target stays full and turns rust red.
@@ -12,6 +13,7 @@ export default function DayMeters({ v }: { v: DayView }) {
             <div className="wb-barl"><span>Supplements</span><b>{v.supps.text}</b></div>
             <div className="wb-meter nb-supps-meter" role="img" aria-label={v.supps.label}><i style={{ width: `${v.supps.pct}%` }} /></div>
             <DayVitMeter day={v.day} />
+            <DayIngredientMeter day={v.day} />
           </div>
         ) : null;
         if (m.hidden) return <p key={m.key} className="wb-fatnote">{m.note}</p>;
