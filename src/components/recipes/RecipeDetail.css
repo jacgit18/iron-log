@@ -63,4 +63,20 @@
     display: none;
   }
 }
+/* Missing (and Have, Have some, On your list) sit beside the ingredient's name, in its own cell, instead of a column of their own. `.rc-detail` out-ranks the list's own `.rc-ing` grid in Recipes.css. */
+.rc-detail .rc-ing {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+}
+.rc-namecell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-4) var(--sp-8);
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .rc-detail .rc-ing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 }

@@ -8,6 +8,7 @@ import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
+import { macroLine } from '../../lib/macroLine.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { servingLine } from '../../lib/recipeServing.js';
@@ -59,6 +60,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       <BackBar onBack={onBack} />
       <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />}</div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
+      {macroLine(recipe) && !roll && <p className="note rc-macros">{macroLine(recipe)} per serving</p>}
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
@@ -70,10 +72,12 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
+            <span className="rc-namecell">
             <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : l.ing.q !== undefined && l.ing.rid ? `${amountText(recipe.servings && shown ? Math.round(l.ing.q * shown / recipe.servings * 100) / 100 : l.ing.q, recipes.find(r => r.id === l.ing.rid))} ` : ''}{(() => { const s = mine && onOpen ? linkedRecipe(l.ing, recipes, recipe.id) : undefined; return s ? <button type="button" className="rc-link" aria-label={`Open ${s.n}, ${s.cat === 'seasonings' ? 'seasoning' : s.cat === 'sauces' ? 'sauce' : s.cat === 'ready' ? 'food' : 'meal'}`} onClick={() => onOpen!(s.id)}>{s.n}</button> : ingredientName(l.ing); })()}{l.ing.sub && <span className="rc-instead"> (or {l.ing.sub})</span>}</span>
             <span className="rc-states">
               <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : l.partial ? 'part' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : l.partial ? 'Have some' : 'Missing'}</span>
               {onToGet(l) && <span className="rc-state onlist">On your list</span>}
+            </span>
             </span>
             <span className="rc-pick">
             {mine && l.suggest && <button type="button" className="btn sm" aria-label={`Maybe: ${l.suggest.n} for ${ingredientName(l.ing)}`} onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
