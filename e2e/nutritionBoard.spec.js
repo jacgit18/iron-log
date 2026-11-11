@@ -199,6 +199,41 @@ test('supplements tick on today, last week and a day ahead, each with its own co
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
 });
 
+test('the Calories, Protein and Fat bars are filled in their legend colours, and a bar past its target turns the over colour', async ({ page }) => {
+  await page.evaluate(() => { // a goal weight and a weigh-in give the day its calorie and protein targets, so the bars have a width
+    localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: 180 } }));
+    localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w: 170 }] }));
+  });
+  await page.reload();
+  await openNutrition(page);
+  const sheet = await openAdd(page, 'One-off food');
+  await sheet.locator('#dt-add-n').fill('Rice');
+  await sheet.locator('#dt-add-k').fill('300');
+  await sheet.locator('#dt-add-p').fill('20');
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(sheet.getByRole('status').last()).toContainText('Added Rice');
+  await closeSheet(page);
+  const bg = l => l.evaluate(e => getComputedStyle(e).backgroundColor);
+  const legend = cls => bg(page.locator(`.wb-legend i.${cls}`));
+  const fill = name => bg(meter(todayCol(page), name).locator('i'));
+  for (const [name, cls] of [['Calories', 'kcal'], ['Protein', 'prot']]) {
+    expect(await fill(name), name).not.toBe('rgba(0, 0, 0, 0)');
+    expect(await fill(name), name).toBe(await legend(cls));
+    expect(await meter(todayCol(page), name).locator('i').evaluate(e => e.getBoundingClientRect().width), name).toBeGreaterThan(0);
+  }
+  const fat = todayCol(page).locator('.wb-meter.nb-fat i');
+  if (await fat.count()) expect(await bg(fat)).toBe(await legend('fat'));
+  const over = await openAdd(page, 'One-off food');
+  await over.locator('#dt-add-n').fill('Feast');
+  await over.locator('#dt-add-k').fill('5000');
+  await over.locator('#dt-add-p').fill('10');
+  await over.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(over.getByRole('status').last()).toContainText('Added Feast');
+  await closeSheet(page);
+  await expect(todayCol(page).locator('.wb-meter.nb-kcal')).toHaveClass(/\bover\b/);
+  expect(await fill('Calories')).toBe(await legend('over'));
+});
+
 test('the Supplements meter sits before Water, fills as supplements are ticked, and says "None scheduled" with none', async ({ page }) => {
   await openNutrition(page);
   const bar = c => meter(c, 'Supplements').locator('i');
