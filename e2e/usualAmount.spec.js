@@ -21,7 +21,7 @@ const amount = page => page.getByRole('status').filter({ hasText: /^[0-9.]+ [a-z
 test('Ate this opens at the usual amount in the unit name, and logs it in those words', async ({ page }) => {
   await make(page, 'Egg (large)', { usual: '4', unit: 'egg' });
   await expect(page.getByText('Usual: 4 eggs')).toBeVisible();
-  await expect(page.getByText('Per egg: 72 kcal · 6 g protein')).toBeVisible();
+  await expect(page.getByText('Per egg: 72 kcal · P 6 g')).toBeVisible();
   await expect(amount(page)).toHaveText('4 eggs');
   await page.getByRole('button', { name: 'More' }).click();
   await expect(amount(page)).toHaveText('4.5 eggs');

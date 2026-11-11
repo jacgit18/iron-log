@@ -37,9 +37,9 @@ test('the strip hides with nothing logged; after logging a food the chip opens t
   await strip.getByRole('list', { name: 'Recent and favorites' }).getByRole('button', { name: 'Boiled egg' }).click();
   await expect(sheet(page).getByRole('heading', { name: 'Boiled egg' })).toBeVisible();
   await expect(sheet(page).getByText('3 eggs').first()).toBeVisible(); // the usual amount
-  await expect(sheet(page).getByText('210 kcal · 18 g protein for 3 eggs')).toBeVisible();
+  await expect(sheet(page).getByText('210 kcal · P 18 g for 3 eggs')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Less' }).click();
-  await expect(sheet(page).getByText('175 kcal · 15 g protein for 2.5 eggs')).toBeVisible();
+  await expect(sheet(page).getByText('175 kcal · P 15 g for 2.5 eggs')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Log', exact: true }).click();
   await expect(sheet(page).getByText('Logged 2.5 eggs to today.')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Done' }).click();
@@ -89,7 +89,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   const scanned = page.getByRole('group', { name: 'Scanned food' });
   await expect(scanned.getByText('Almond milk (Silk) · 30 kcal per 100 g')).toBeVisible();
   await scanned.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Drink' }).click();
-  await expect(scanned.getByText('72 kcal · 2.4 g protein · 2.4 g carbs · 6 g fat')).toBeVisible();
+  await expect(scanned.getByText('72 kcal · P 2.4 · C 2.4 · F 6 g')).toBeVisible();
   const go = scanned.getByRole('button', { name: 'Save and log it' });
   await go.dblclick(); // a double tap still logs once
   await expect(page.getByText('Saved Almond milk (Silk) as drink and logged it.')).toBeVisible();
