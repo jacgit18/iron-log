@@ -1,6 +1,6 @@
-import { useState, type ButtonHTMLAttributes, type FocusEvent } from 'react';
+import { useState, type ButtonHTMLAttributes, type FocusEvent, type ReactNode } from 'react';
 
-type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'children'> & { label: string; armedLabel: string; onConfirm: () => unknown; onBlur?: (e: FocusEvent<HTMLButtonElement>) => void; onArmedChange?: (armed: boolean) => void };
+type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'children'> & { label: ReactNode; armedLabel: string; onConfirm: () => unknown; onBlur?: (e: FocusEvent<HTMLButtonElement>) => void; onArmedChange?: (armed: boolean) => void };
 
 // Destructive action that needs a second press to confirm. It stays armed until you press it again or
 // move away (no time limit), and the armed state is part of its accessible name. `onArmedChange` lets the
