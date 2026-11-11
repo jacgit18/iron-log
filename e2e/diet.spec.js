@@ -85,7 +85,7 @@ test('quick add logs a food, the meters move, it is offered again, Delete has Un
   await expect(sheet.getByRole('status')).toContainText('Added Rice.');
   await closeSheet(page);
   await expect(eaten(page)).toContainText('Rice');
-  await expect(eaten(page)).toContainText('44 g carbs · 0.5 g fat');
+  await expect(eaten(page)).toContainText('C 44 · F 0.5 g');
   // the board's meters (calories, protein, fat, water) move; carbs have no meter, they show in the entry above
   await expect(todayCol(page).getByRole('img', { name: /Calories eaten so far: 200 \/ 2,800 kcal/ })).toBeVisible();
   await expect(todayCol(page).getByRole('img', { name: /Protein eaten so far: 4 \/ 150 g/ })).toBeVisible();
@@ -128,14 +128,14 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByLabel('Carbs per serving (g), optional').fill('51');
   await page.getByLabel('Fat per serving (g), optional').fill('11');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByText('Per portion: 600 kcal · 40 g protein · 51 g carbs · 11 g fat')).toBeVisible();
+  await expect(page.getByText('Per portion: 600 kcal · P 40 · C 51 · F 11 g')).toBeVisible();
   await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 servings: 900 kcal, 60 g
   await page.getByRole('button', { name: 'Ate this' }).click();
   await expect(page.getByText('Logged 1.5 portions of Chili to today.')).toBeVisible();
   await nutrition(page);
   await expect(eaten(page)).toContainText('Chili');
   await expect(eaten(page)).toContainText('900 kcal');
-  await expect(eaten(page)).toContainText('76.5 g carbs · 16.5 g fat');
+  await expect(eaten(page)).toContainText('C 76.5 · F 16.5 g');
   // editing the recipe afterwards does not change what was logged
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
@@ -192,6 +192,6 @@ test('an entry without carbs and fat still logs, and the log says carbs and fat 
   const sheet = await oneOff(page);
   await addFood(sheet, 'Toast', 90, 3);
   await closeSheet(page);
-  await expect(eaten(page)).toContainText('90 kcal · 3 g protein');
+  await expect(eaten(page)).toContainText('90 kcal · P 3 g');
   await expect(todayCol(page)).toContainText('Carbs and fat count only what you enter.');
 });
