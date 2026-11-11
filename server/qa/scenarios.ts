@@ -3385,21 +3385,21 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-275', feature: 'Launcher shortcuts', title: 'Long-press the app icon: four shortcuts with their own icons', persona: 'new-user', brief: 'feature-map', device: true,
     steps: [
-      'On an Android phone, with the Play app on wrapper version 6 or later, long-press the Loadbearer icon on the home screen.',
+      'On an Android phone with Loadbearer installed (the Play app on wrapper version 6 or later, or the web app installed from Chrome), long-press the Loadbearer icon on the home screen.',
       'Read the menu, then open each shortcut in turn (Progress and Nutrition included), going back to the home screen between them.',
     ],
     expected: [
-      'Four shortcuts are listed, each with its own icon (a barbell, a calendar tick, a rising line, a fork and knife); Progress opens the Progress tab and Nutrition opens the Nutrition screen inside Daily. An older wrapper shows fewer or no shortcuts: that is the old build, not a bug.',
+      'Four shortcuts are listed, each with its own icon (a barbell, a calendar tick, a rising line, a fork and knife); Progress opens the Progress tab and Nutrition opens the Nutrition screen inside Daily. An older Play wrapper shows fewer or no shortcuts: that is the old build, not a bug.',
     ],
   },
   {
     id: 'S-276', feature: 'Launcher shortcuts', title: 'Loadbearer is in the Android share list', persona: 'superset-builder', brief: 'share-target', device: true, edge: true,
     steps: [
-      'On an Android phone with the Play app (not only the installed web app), open a YouTube video and choose Share.',
+      'On an Android phone with Loadbearer installed (the Play app or the web app installed from Chrome), open a YouTube video and choose Share.',
       'Look for Loadbearer in the share list and choose it.',
     ],
     expected: [
-      'Loadbearer is listed in the share sheet for a plain-text link and opens "Save this link" over the board (S-30 covers saving it). A wrapper built before the share entry was added is missing from the list.',
+      'Loadbearer is listed in the share sheet for a plain-text link and opens "Save this link" over the board (S-30 covers saving it). A Play wrapper built before the share entry was added is missing from the list.',
     ],
   },
 ];
