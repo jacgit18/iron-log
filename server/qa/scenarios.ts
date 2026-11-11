@@ -82,7 +82,12 @@ export type ScenarioFeature =
   | 'Ideas filters'
   | 'Exercise notes'
   | 'Skipped entry'
-  | 'Board day stamp';
+  | 'Board day stamp'
+  | 'Supplement add sheet'
+  | 'Supplement label lookup'
+  | 'Supplement UPC'
+  | 'Backup coverage'
+  | 'Watch link';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -92,6 +97,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Vitamin and mineral totals', 'Vitamin and mineral day line', 'Food vitamins and minerals', 'Typed amounts', 'Age and sex amounts',
   'Supplement times', 'Active ingredients', 'Ingredient day line',
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
+  'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
 ];
 
 export interface Scenario {
@@ -928,7 +934,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-66', feature: 'Program compare', title: 'Compare two programs day by day and filter the differences', persona: 'superset-builder', brief: 'program-compare',
     steps: [
       'Open Program, scroll to the end and tap Compare programs. Program A and Program B are chosen.',
-      'Tap Day 2, then Any difference, then Changed. Tap Phase differs, then pick a phase under Phase.',
+      'Tap Day 2, then open the Filter panel. Pick Changed in the Show rows dropdown (its options carry counts, for example Any difference (5)), then pick a phase in the Phase dropdown (it lists only phases present, plus No phase, and hides when there is none).',
       'Choose a saved program (save a copy of A first if the list is empty) as the second program.',
     ],
     expected: [
@@ -2416,26 +2422,26 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-193', feature: 'Nutrition board', title: 'Nutrition is one board with a week switcher', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
       'Open Daily, Nutrition at 1920 px wide.',
-      'Read the top of the page: the heading, the Week buttons, the line under them, and the two buttons at the right.',
+      'Read the top of the page: the week arrows with This week, the line under them, and the two buttons at the right (there is no "Nutrition" heading).',
       'Look down the page for panels named Diet, Supplements, Water, Food eaten and Last 7 days.',
     ],
     expected: [
-      'The Week buttons read Last week, This week and Next week, with This week pressed; a line under them names the week (for example "This week · Sep 24 to 30"); the buttons at the right read Targets and goal and Manage.',
-      'Seven day columns sit side by side; today\'s is named with "· today". Each holds five meters (Calories, Protein, Fat, Supplements, Water), its meals or an Eaten list, Supplements and Hydration.',
+      'The week switcher is a pair of arrows with a This week button; a line under them names the week (for example "This week · Sep 24 to 30"); the buttons at the right read Targets and goal and Manage.',
+      'Seven day columns sit side by side; today\'s is named with "· today". Each holds five meters (Calories, Protein, Fat, Supplements, Water), its meals or an Also eaten list (only for food that was not planned), Supplements and Hydration.',
       'None of the old panels is there; food, supplements, water and targets are all reachable from the board (S-199 to S-218).',
     ],
   },
   {
-    id: 'S-194', feature: 'Nutrition board', title: 'This week starts today; Last week and Next week are the seven days either side', persona: 'diet-on-target', brief: 'nutrition-board',
+    id: 'S-194', feature: 'Nutrition board', title: 'Weeks run Sunday to Saturday; the arrows step a week and This week returns to today', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'On Nutrition read the first and last day names of This week.',
-      'Press Last week and read its first and last day names and the line under the buttons.',
-      'Press Next week and read the same, then press This week.',
+      'On Nutrition read the first and last day names of This week (Sunday to Saturday, like the Board).',
+      'Press the previous-week arrow and read its first and last day names and the line under the arrows.',
+      'Press the next-week arrow twice and read the same, then press This week.',
     ],
     expected: [
-      'This week\'s first column is today and the last is six days on. Last week runs from seven days back to yesterday. Next week starts the day after This week ends and runs seven days.',
+      'This week runs Sunday to Saturday and today\'s column is inside it. Each arrow press moves exactly one such week.',
       'No day appears in two weeks; the line under the buttons follows (for example "Last week · Sep 17 to 23").',
-      'This week returns to today and the toolbar reads "Adding to <today> · today" again.',
+      'This week returns to the current week and the toolbar reads "Adding to <today> · today" again.',
     ],
   },
   {
@@ -2623,7 +2629,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-209', feature: 'Nutrition board', title: 'Last week is read-only for food; supplements and water can still change', persona: 'diet-on-target', brief: 'nutrition-board', edge: true,
     steps: [
-      'Press Last week and read a day: its meters, its Eaten list and its other sections.',
+      'Press the previous-week arrow and read a day: its meters, its Eaten or Also eaten list and its other sections.',
       'Look for Edit, Delete and + Add food. Read the toolbar.',
       'Tick a supplement on that day (add one first in Manage, S-210) and press + Drink, then press a size.',
     ],
@@ -3152,7 +3158,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-253', feature: 'Receipts for everyone', title: 'An ordinary account sees saved receipts and Download all', persona: 'grocery-shopper', brief: 'receipts-everyone',
     steps: [
       'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
-      'Open Groceries, then Receipts. Press Download all.',
+      'Open Groceries, then Receipts (if it is empty, keep a receipt photo first: S-59). Press Download all.',
     ],
     expected: [
       'Receipts opens for this non-admin account; Download all gives one zip with receipts.csv and each photo, naming any photo that could not load. Another account never sees these rows.',
@@ -3207,6 +3213,79 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The receiving day shows the date most of its own cards were logged on, not the moved card\'s earlier date, and the old column does not go blank.',
+    ],
+  },
+  {
+    id: 'S-259', feature: 'Supplement add sheet', title: 'One add sheet with one search over your supplements and the catalog', persona: 'diet-fresh', brief: 'supplement-add-redesign',
+    steps: [
+      'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
+      'Open Daily, Nutrition, Manage, then Supplements and library and press + Add. Type "fish oil" in the search.',
+      'Pick a catalog result and read the amounts shown, then choose a time of day and a dose.',
+    ],
+    expected: [
+      'One search lists your own supplements and the catalog together, each result showing brand, form and label year.',
+      'The picked product shows its UPC and label amounts inline; the sheet links to the full form for anything it does not cover.',
+    ],
+  },
+  {
+    id: 'S-260', feature: 'Supplement label lookup', title: 'A catalog supplement arrives with its vitamins, minerals and ingredient rows', persona: 'diet-fresh', brief: 'supplement-label-amounts',
+    steps: [
+      'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
+      'Add a catalog fish oil (it needs the NIH database to answer from QA). Open its sheet.',
+    ],
+    expected: [
+      'The sheet shows "In one serving" with its vitamin and mineral rows and "Also on the label" for the rest; omega-3, EPA and DHA (and creatine or caffeine on those labels) are saved as ingredient rows, not listed under Also on the label.',
+      'If NIH does not answer, the add still works and says no label was found.',
+    ],
+  },
+  {
+    id: 'S-261', feature: 'Supplement UPC', title: 'Type a UPC and the product fills the add sheet search', persona: 'diet-fresh', brief: 'supplement-barcode-search',
+    steps: [
+      'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
+      'In the add sheet type a UPC from a Thorne or Sports Research bottle that the crawl has stored, then type a number that is on no label.',
+    ],
+    expected: [
+      'A stored UPC fills the search with the product name and its exact catalog listing; an unknown number says it was not found and offers the label scan.',
+    ],
+  },
+  {
+    id: 'S-262', feature: 'Supplement UPC', title: 'Scan a bottle label when the product is not in NIH', persona: 'diet-fresh', brief: 'supplement-label-scan', device: true,
+    steps: [
+      'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
+      'On a phone, in the add sheet press the bottle scan button and photograph a label; read the allowance line.',
+    ],
+    expected: [
+      'The label is read into vitamin, mineral and ingredient rows to review before saving; the allowance line counts down (5 a day per person); at the cap it says so. Replace on an existing supplement asks to confirm first.',
+    ],
+  },
+  {
+    id: 'S-263', feature: 'Supplement add sheet', title: 'All 28 nutrients are offered in grouped pickers', persona: 'vitamin-tracker', brief: 'supplement-more-nutrients',
+    steps: [
+      'Press Reset on Vitamin tracker first (switch to another account to do it), then switch back.',
+      'Edit a supplement, press Add row in the nutrients, and read the picker. Then open One-off food on Nutrition and its vitamin and mineral amounts picker.',
+    ],
+    expected: [
+      'Both pickers offer all 28 nutrients, grouped under headings, and a nutrient already on the item is not offered twice.',
+    ],
+  },
+  {
+    id: 'S-264', feature: 'Backup coverage', title: 'A backup keeps recipes and supplements and says what Replace does', persona: 'recipe-collector', brief: 'backup-coverage-followups',
+    steps: [
+      'Press Reset on Recipe collector first (switch to another account to do it), then switch back.',
+      'In Settings, Data, export a backup, then open the import review for that file.',
+    ],
+    expected: [
+      'The review counts recipes (and supplements where the account has them) and its Replace note says plainly what is replaced; a copy that lost recipes does not look as full as one that kept them.',
+    ],
+  },
+  {
+    id: 'S-265', feature: 'Watch link', title: 'The video link looks the same on a recipe, the Board card, Stretches and the Stretch library', persona: 'recipe-collector', brief: 'ideas-card-filters-watch',
+    steps: [
+      'Press Reset on Recipe collector first (switch to another account to do it), then switch back.',
+      'Open a recipe that has a video link and read its Watch link, then open a Board card, Stretches and the Stretch library with a linked item.',
+    ],
+    expected: [
+      'Each shows the same Watch link, large enough to tap; nothing else on the Board card moved (the Board is hands-off: compare it with before).',
     ],
   },
 ];
