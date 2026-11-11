@@ -102,13 +102,13 @@ test('an empty list says so instead of clearing the rows', async ({ page }) => {
   await expect(page.getByText('Type at least one ingredient first.')).toBeVisible();
 });
 
-test('Nutrition per serving is folded away, shows its summary, and opens with Edit', async ({ page }) => {
+test('Nutrition fields are there once the section is open (no second Edit button), and folding it shows the summary', async ({ page }) => {
   await open(page);
-  await expect(page.getByLabel('Calories per serving')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
+  await expect(page.getByRole('button', { name: 'Edit nutrition per serving' })).toHaveCount(0);
   await page.getByLabel('Calories per serving').fill('420');
   await page.getByLabel('Protein per serving (g)').fill('32');
-  await page.getByRole('button', { name: 'Done with nutrition per serving' }).click();
+  await page.getByRole('button', { name: /^Nutrition per serving/ }).click();
+  await expect(page.getByLabel('Calories per serving')).toBeHidden();
   await expect(page.getByText('420 kcal · 32 g protein')).toBeVisible();
 });
 

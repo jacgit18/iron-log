@@ -4,7 +4,7 @@ import { closeSheet, openAdd, openNutrition, openTargets, todayCol } from './nut
 import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086): the daily calorie, protein, carbs and fat targets (the Diet box under the week board), and the food log, now a day column of the Nutrition week board with food added from the add sheet.
-// The rules (the target numbers, totals, caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, adding food, "Ate this" on
+// The rules (the target numbers, totals, caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, adding food, the log control on
 // a recipe, Undo, the board's days (last week read-only, a day ahead has no eaten list), and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
 const seedBody = (page, goal, weight) => page.addInitScript(([g, w]) => {
   if (localStorage.getItem('ironlog:config/main')) return; // seed once: the script runs again on every reload and would wipe what the test saved
@@ -113,7 +113,7 @@ test('a bad number is refused with the limit stated and nothing is added', async
   await expect(eaten(page)).toHaveCount(0);
 });
 
-test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and a recipe without macros asks for them', async ({ page }) => {
+test('The log control logs a recipe with macros as a snapshot, Undo takes it back, and a recipe without macros asks for them', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Chili');
@@ -122,7 +122,6 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await expect(page.getByText('Add calories and protein per serving to log this recipe.')).toBeVisible();
   await page.getByRole('button', { name: 'Add them' }).click();
   await unfoldAll(page);
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('600');
   await page.getByLabel('Protein per serving (g)').fill('40');
   await page.getByLabel('Carbs per serving (g), optional').fill('51');
@@ -141,7 +140,6 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('100');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await nutrition(page);

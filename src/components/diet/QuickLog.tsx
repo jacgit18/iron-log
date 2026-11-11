@@ -5,7 +5,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import ScanFood from './ScanFood.js';
 import './Diet.css';
 
-// "Recent and favorites" (brief nutrition-quick-log): the foods you log most as chips, starred first. A tap opens the portion sheet, which logs through the same rules as Ate this.
+// "Recent and favorites" (brief nutrition-quick-log): the foods you log most as chips, starred first. A tap opens the portion sheet, which logs through the same rules as the log control.
 // "Scan a food" asks the barcode sheet for a product, then ScanFood creates it (with its Type) and logs it in one step. The strip hides when there is nothing to show.
 export default function QuickLog({ day, onAdded }: { day: string; onAdded: (text: string) => void }) {
   const diet = useAppStore(s => s.diet);
