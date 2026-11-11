@@ -581,11 +581,19 @@ export const AUTO_NOTE = 'From check-off';
 /** The note on the entry a skip writes for the day it was skipped (an auto entry with no numbers, so stats and last-session lookups ignore it). */
 export { SKIPPED_NOTE };
 const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
-// The day a board was worked: the earliest date among this week's log entries for the cards in it.
+// The day a board was worked: the date most of its cards were logged on (each card counts once, by its earliest entry this week).
+// A tie goes to the later date, so a session that runs past midnight shows the day it ended. One card moved in from another day
+// therefore cannot take over the stamp.
 export function dayDate(cards: Slot[], logs: Logs, wk: string): string | null {
-  let first: string | null = null;
-  cards.forEach(s => s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (!first || e.d < first)) first = e.d; })));
-  return first;
+  const count = new Map<string, number>();
+  cards.forEach(s => {
+    let first: string | null = null;
+    s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (!first || e.d < first)) first = e.d; }));
+    if (first) count.set(first, (count.get(first) || 0) + 1);
+  });
+  let best: string | null = null;
+  count.forEach((n, d) => { if (!best || n > count.get(best)! || (n === count.get(best) && d > best)) best = d; });
+  return best;
 }
 // removeLogged: unticking also removes what you logged yourself for the card this week (the checkboxes do; skipping doesn't).
 export const newEntryId = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
