@@ -498,9 +498,18 @@ describe('dayDate: the date a board was worked', () => {
     expect(dayDate([a, b], {}, WK)).toBeNull();
     expect(dayDate([], { hack: [entry('a', '2026-09-29')] }, WK)).toBeNull();
   });
-  it('is the earliest date among the cards in the column', () => {
+  it('is the date most of the cards were logged on, so one moved-in card cannot take it over', () => {
+    const c = card('c', 'curl');
+    const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-30')], curl: [entry('c', '2026-09-29')] };
+    expect(dayDate([a, b, c], logs, WK)).toBe('2026-09-30');
+  });
+  it('goes to the later date on a tie (a session past midnight)', () => {
     const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-29')] };
-    expect(dayDate([a, b], logs, WK)).toBe('2026-09-29');
+    expect(dayDate([a, b], logs, WK)).toBe('2026-09-30');
+  });
+  it('counts a card once, by its earliest entry', () => {
+    const logs = { hack: [entry('a', '2026-09-29'), entry('a', '2026-09-30')], legext: [entry('b', '2026-09-30')] };
+    expect(dayDate([a, b], logs, WK)).toBe('2026-09-30');
   });
   it('ignores other weeks and cards that are not in the column', () => {
     const logs = { hack: [entry('a', '2026-09-22', { wk: '2026-09-20' }), entry('a', '2026-09-30')], legext: [entry('b', '2026-09-28')] };
