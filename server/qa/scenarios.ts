@@ -75,7 +75,14 @@ export type ScenarioFeature =
   | 'Age and sex amounts'
   | 'Supplement times'
   | 'Active ingredients'
-  | 'Ingredient day line';
+  | 'Ingredient day line'
+  | 'Nutrition week'
+  | 'Grocery purchase log'
+  | 'Receipts for everyone'
+  | 'Ideas filters'
+  | 'Exercise notes'
+  | 'Skipped entry'
+  | 'Board day stamp';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -84,6 +91,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Supplement portions',
   'Vitamin and mineral totals', 'Vitamin and mineral day line', 'Food vitamins and minerals', 'Typed amounts', 'Age and sex amounts',
   'Supplement times', 'Active ingredients', 'Ingredient day line',
+  'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
 ];
 
 export interface Scenario {
@@ -3084,6 +3092,121 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'With limits set and nothing ticked the line reads "nothing ticked yet"; a day with no ingredients ticked and no limits shows no line.',
       'At 375 px there is no sideways scroll and the bars stay readable.',
+    ],
+  },
+  {
+    id: 'S-248', feature: 'Nutrition week', title: 'Week arrows run Sunday to Saturday, with This week', persona: 'meal-planner', brief: 'nutrition-board',
+    steps: [
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back.',
+      'Open Daily, Nutrition. Press the previous-week arrow, then the next-week arrow twice, then This week.',
+    ],
+    expected: [
+      'Each week runs Sunday to Saturday like the Board; the arrows step one week at a time and This week returns to the current one.',
+      'No "Nutrition" heading is drawn above the switcher (the Daily tab already says it).',
+    ],
+  },
+  {
+    id: 'S-249', feature: 'Nutrition week', title: 'A planned food on today has a check box that logs it as eaten', persona: 'meal-planner', brief: 'nutrition-board',
+    steps: [
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back.',
+      'On Nutrition, today, tick the check box on a planned food, read the meters and the Also eaten section, then untick it.',
+    ],
+    expected: [
+      'Ticking logs the food as eaten and the meters move; unticking removes that log.',
+      'Also eaten appears only for food that was not planned.',
+    ],
+  },
+  {
+    id: 'S-250', feature: 'Nutrition week', title: 'The toolbar offers what the selected day can do', persona: 'meal-planner', brief: 'nutrition-board',
+    steps: [
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back.',
+      'Read the toolbar on today, then tap a day ahead and read it again. On a window 1440 px or wider count the day columns.',
+    ],
+    expected: [
+      'Today offers Scan barcode, Quick add and One-off food (they log eaten food); a day ahead offers Recipes and Saved meals (it plans, never logs).',
+      'Seven columns show from 1440 px wide, and the selected day is clearly marked.',
+    ],
+  },
+  {
+    id: 'S-251', feature: 'Grocery purchase log', title: 'Ran out keeps the purchase in Spending', persona: 'grocery-shopper', brief: 'grocery-purchase-log',
+    steps: [
+      'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
+      'Open Groceries, At home. Note this month\'s Spending. Untick a priced item (it was bought) and press Ran out if asked.',
+      'Open Spending and Who owes who, then To get.',
+    ],
+    expected: [
+      'The item\'s cost stays in the month\'s Spending and in who owes who, and the item is back on To get, unticked.',
+    ],
+  },
+  {
+    id: 'S-252', feature: 'Grocery purchase log', title: 'Buy it again: a second purchase is its own line', persona: 'grocery-shopper', brief: 'grocery-purchase-log', edge: true,
+    steps: [
+      'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
+      'Tick the same item as bought again after it ran out. Open Bought.',
+    ],
+    expected: [
+      'Bought lists both purchases, newest first, each with date and time; the month total counts both. Unticking on To get or Bought removes only the open purchase, never a closed one.',
+    ],
+  },
+  {
+    id: 'S-253', feature: 'Receipts for everyone', title: 'An ordinary account sees saved receipts and Download all', persona: 'grocery-shopper', brief: 'receipts-everyone',
+    steps: [
+      'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
+      'Open Groceries, then Receipts. Press Download all.',
+    ],
+    expected: [
+      'Receipts opens for this non-admin account; Download all gives one zip with receipts.csv and each photo, naming any photo that could not load. Another account never sees these rows.',
+    ],
+  },
+  {
+    id: 'S-254', feature: 'Ideas filters', title: 'Status and Muscle dropdowns appear above six ideas', persona: 'superset-builder', brief: 'ideas-card-filters-watch',
+    steps: [
+      'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
+      'Open Workout, Ideas to try. Add ideas until there are seven (+ Add idea, a name and a muscle each). Pick a Status, then a Muscle, then type a search, then Clear.',
+    ],
+    expected: [
+      'At six or fewer there are no filters; at seven the Status and Muscle dropdowns appear beside the search and the count reads "N of M"; choices combine with the search and Clear resets all three. A new idea added by manual + Add idea goes last.',
+    ],
+  },
+  {
+    id: 'S-255', feature: 'Ideas filters', title: 'The idea card and its Add sheet', persona: 'superset-builder', brief: 'ideas-card-filters-watch',
+    steps: [
+      'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
+      'On an idea card read status, name, muscle chips, note and Add. Press Add and choose This week only plus a day, then Undo.',
+    ],
+    expected: [
+      'The card shows status, name (opens Edit), up to two muscle chips, a short note, a large Watch tile only when there is a link, Add and a menu. Add opens "Add <name>" with day buttons in the Board\'s order; This week only shows "Added to Day N this week" with an Undo that removes it.',
+    ],
+  },
+  {
+    id: 'S-256', feature: 'Exercise notes', title: 'A note follows the exercise everywhere', persona: 'superset-builder', brief: 'exercise-notes-persist',
+    steps: [
+      'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
+      'In Program, open a card\'s sheet and save a Note. Open the same exercise on the Board and in Ideas to try or Add to day.',
+      'Edit the note in one place, then clear it.',
+    ],
+    expected: [
+      'The note shows on every Board card and idea for that exercise, the field says it is shared, and editing or clearing it in one place changes it in all (200 characters at most).',
+    ],
+  },
+  {
+    id: 'S-257', feature: 'Skipped entry', title: 'Skipping writes a Skipped entry for the day', persona: 'superset-builder', brief: 'feature-map',
+    steps: [
+      'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
+      'On the Board skip an exercise, then un-skip it, then skip it again and tick it instead. Open its log.',
+    ],
+    expected: [
+      'Skipping adds a "Skipped" entry for that date with no numbers; un-skip removes it; ticking swaps it for the check-off entry. A real logged session is never overwritten, and stats ignore Skipped.',
+    ],
+  },
+  {
+    id: 'S-258', feature: 'Board day stamp', title: 'A day\'s date stamp is the date most of its cards were logged on', persona: 'superset-builder', brief: 'feature-map',
+    steps: [
+      'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
+      'Tick a card on one day, move it into another day\'s column, and read both columns\' date stamps.',
+    ],
+    expected: [
+      'The receiving day shows the date most of its own cards were logged on, not the moved card\'s earlier date, and the old column does not go blank.',
     ],
   },
 ];
