@@ -92,7 +92,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await expect(scanned.getByText('72 kcal · P 2.4 · C 2.4 · F 6 g')).toBeVisible();
   const go = scanned.getByRole('button', { name: 'Save and log it' });
   await go.dblclick(); // a double tap still logs once
-  await expect(page.getByText('Saved Almond milk (Silk) as drink and logged it.')).toBeVisible();
+  await expect(page.getByText('Saved Almond milk (Silk) to Recipes as drink and logged it.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(1);
   await openRecipes(page);
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
@@ -100,7 +100,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await page.getByRole('button', { name: 'Scan barcode', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   await page.getByRole('group', { name: 'Scanned food' }).getByRole('button', { name: 'Save and log it' }).click();
-  await expect(page.getByText('Logged Almond milk (Silk), a food you already had.')).toBeVisible();
+  await expect(page.getByText('Logged Almond milk (Silk), a food you already had in Recipes.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(2);
   await openRecipes(page);
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
@@ -122,7 +122,7 @@ test('a scanned food is logged to the day the scan began on, even if another day
   await page.locator('.nb-col[data-day="2026-09-25"]').getByRole('button', { name: /^Fri 25/ }).click(); // another day, before saving
   await expect(scanned.getByText('Logs to today, the day you scanned on.')).toBeVisible(); // the panel says where it will log
   await scanned.getByRole('button', { name: 'Save and log it' }).click();
-  await expect(page.getByText(/Saved Almond milk \(Silk\) as .* and logged it\./)).toBeVisible();
+  await expect(page.getByText(/Saved Almond milk \(Silk\) to Recipes as .* and logged it\./)).toBeVisible();
   await expect(page.locator('.nb-col.today .nb-eat')).toHaveCount(1);
   await expect(page.locator('.nb-col[data-day="2026-09-25"] .nb-eat')).toHaveCount(0);
 });
