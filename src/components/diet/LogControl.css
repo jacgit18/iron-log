@@ -1,0 +1,33 @@
+@layer base, components;
+@layer components {
+.lc-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.lc-step .btn {
+  min-height: 44px;
+}
+.lc-meals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: var(--sp-6) 0;
+}
+.lc-meals .btn {
+  min-height: 44px;
+}
+.lc-meals .btn[aria-pressed='true'] {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-ink);
+}
+.lc-go {
+  margin: var(--sp-8) 0;
+}
+.lc-go .btn {
+  min-height: 44px;
+}
+}
