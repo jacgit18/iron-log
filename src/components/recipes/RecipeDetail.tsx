@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
+import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
@@ -13,7 +14,7 @@ import { scaleAmount } from '../../lib/recipeScale.js';
 import { linkedRecipe } from '../../lib/recipeSuggest.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import AteThis from '../diet/AteThis.js';
+import LogControl from '../diet/LogControl.js';
 import GoesWith from './GoesWith.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
@@ -38,12 +39,12 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const toAdd = missing.add.length;
   const maybes = mine ? suggestionPins(status).length : 0;
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
-  if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and Ate this
+  if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and the log control
     return (
       <section className="panel" aria-labelledby="rc-h">
         <BackBar onBack={onBack} />
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2><RecipeStar recipe={recipe} mine={mine} /></div>
-        <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
+        <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.usual !== undefined && <p className="note">Usual: {amountText(recipe.usual, recipe)}</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
@@ -60,7 +61,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
-      <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
+      <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. The parts add up to ${rollText || 'no numbers yet'}.` : `Per serving, from the parts: ${rollText || 'no numbers yet'}.`} {countedNote(roll)}.</p>}
       <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
@@ -105,11 +106,17 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   );
 }
 
+// The one log-or-plan control (brief log-or-plan-control), or the note that says why there is none: not in Mine yet, or no calories and protein to log.
+const LogArea = ({ recipe, mine, onEdit }: { recipe: Recipe; mine: boolean; onEdit: () => void }) => {
+  if (!mine) return <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>;
+  if (!hasMacros(recipe)) return <div className="rc-actions"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
+  return <LogControl recipe={recipe} />;
+};
+
 // Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to Edit and Delete reaches both.
 const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
 const MineActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => (
   <>
-    {hasMacros(recipe) && <button type="button" className="btn" onClick={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id })}>Log</button>}
     <button type="button" className="btn" onClick={onEdit}>Edit</button>
     <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the ${noun} ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
   </>
