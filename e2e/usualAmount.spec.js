@@ -26,8 +26,8 @@ test('Ate this opens at the usual amount in the unit name, and logs it in those 
   await page.getByRole('button', { name: 'More' }).click();
   await expect(amount(page)).toHaveText('4.5 eggs');
   await page.getByRole('button', { name: 'Less' }).click();
-  await page.getByRole('button', { name: 'Ate this', exact: true }).click();
-  await expect(page.getByText('Logged 4 eggs of Egg (large) to today.')).toBeVisible();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText('Logged 4 eggs to today.')).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByText('Logged 4 eggs')).toHaveCount(0);
 });
