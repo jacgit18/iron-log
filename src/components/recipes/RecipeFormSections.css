@@ -28,7 +28,7 @@
   border: 0;
   border-radius: var(--r-lg);
   background: none;
-  color: var(--text);
+  color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
