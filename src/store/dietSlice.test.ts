@@ -111,7 +111,7 @@ describe('updateDietEntry and removeDietEntry', () => {
     st().undoRemoved();
     expect(st().diet.map(e => e.id)).toEqual([a, b]);
   });
-  it('removes quietly when asked (the log control's undo)', () => {
+  it('removes quietly when asked (the log control undo)', () => {
     const id = st().addDietEntry(rice).id!;
     st().removeDietEntry(id, false);
     expect(st().diet).toEqual([]);
