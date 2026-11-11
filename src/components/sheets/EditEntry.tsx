@@ -55,7 +55,7 @@ export default function EditEntry({ exId, entry, onDone, cancelLabel = 'Cancel',
         </div>
       ))}
       <div className="setbtns">
-        <button type="button" className="btn sm" onClick={() => setRows(rs => [...rs, { ...(rs[rs.length - 1] || { w: '', r: '' }) }])}>+ Set</button>
+        <button type="button" className="btn sm" onClick={() => setRows(rs => [...rs, { ...(rs[rs.length - 1] || { w: '', r: '' }) }])}>Add set</button>
         <button type="button" className="btn sm ghost" onClick={() => setRows(rs => (rs.length > 1 ? rs.slice(0, -1) : rs))}>− Set</button>
       </div>
       <label className="field">Note<input type="text" value={note} onChange={e => setNote(e.target.value)} /></label>
