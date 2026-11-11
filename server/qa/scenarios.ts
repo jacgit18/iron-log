@@ -2851,7 +2851,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The closed line (one tap tall) reads "Vitamins and minerals: Vitamin D over · Zinc 90%", with words as well as colour.',
-      'Opened, five thin bars: Vitamin D (over, rust), Zinc 90%, Magnesium 57%, Calcium 41% and Iron 6%. The link says "All 7 in Totals" and opens the Totals sheet for that day. Pressing the line again folds it.',
+      'Opened, five thin bars: Vitamin D (over, rust), Zinc 90%, Magnesium 57%, Calcium 41% and Iron 6%. The link says "All N in Totals" (N is the number of limited nutrients with data that day, about 6 to 8; read it off the sheet) and opens the Totals sheet for that day. Pressing the line again folds it.',
     ],
   },
   {
@@ -2981,7 +2981,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Write a recipe, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
       'On the recipe\'s page press Ate this, then open Nutrition and press Totals.',
-      'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card and choose "Move to…" today. On today tick "Check Cereal duo as eaten", then press Totals again.',
+      'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card, press "Move to…" and choose today under Day (the card stays under Dinner: the Day buttons keep the meal, the Meal buttons stay on the same day). On today tick "Check Cereal duo as eaten", then press Totals again.',
     ],
     expected: [
       'The form and the saved page say "Per serving, from the parts: 180 kcal · 4.5 g protein · 39 g carbs · 1.5 g fat. 1 of 1 ingredient counted." and list "1.5 portions Fortified cereal".',
