@@ -279,13 +279,21 @@
   border-color: var(--m-supp);
 }
 @media (max-width: 699px) {
+  /* One row: the week switcher takes the room the two buttons leave and drops under them only when text is enlarged so far that all three do not fit. */
   .nb-headbtns {
     order: 2;
   }
+  .nb-head {
+    gap: var(--sp-8);
+  }
   .nb-weeksw {
-    order: 3;
-    flex: 1 0 100%;
+    order: 1;
+    flex: 1 1 auto;
+    gap: var(--sp-4);
     justify-content: space-between;
+  }
+  .nb-weekname {
+    min-width: 0;
   }
   .nb-weeksw button {
     min-height: 44px;
