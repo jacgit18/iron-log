@@ -129,8 +129,8 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Per portion: 600 kcal · P 40 · C 51 · F 11 g')).toBeVisible();
   await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 servings: 900 kcal, 60 g
-  await page.getByRole('button', { name: 'Ate this' }).click();
-  await expect(page.getByText('Logged 1.5 portions of Chili to today.')).toBeVisible();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText('Logged 1.5 portions to today.')).toBeVisible();
   await nutrition(page);
   await expect(eaten(page)).toContainText('Chili');
   await expect(eaten(page)).toContainText('900 kcal');
@@ -147,7 +147,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   // Undo right after logging removes just that entry
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
-  await page.getByRole('button', { name: 'Ate this' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await nutrition(page);
   await expect(eaten(page)).toHaveCount(1);
