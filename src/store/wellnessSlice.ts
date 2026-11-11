@@ -210,7 +210,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     });
   },
   // Save from the sheet's time chips (brief supplement-split-times): the product of `id` ends up at `times`, each with its own amount. `planTimes` says what
-  // changes: new entries are copies (like addSupplementInstance), a time turned off is removed with its Undo notice. `dose` is written to every time.
+  // changes: new entries are copies (like addSupplementInstance), a time turned off is removed with its Undo notice. `dose` is written to every time; left out (undefined), the doses stay as they are (the merged list's chips, brief supplement-merged-list).
   saveSupplementTimes(id, times, dose) {
     if (get().blocked()) return false;
     const plan = planTimes(get().supp.items, id, times); if (!plan) return false;
@@ -225,7 +225,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
         s.items.splice(i + 1, 0, copy);
       }
       for (const m of plan.set) { const x = s.items.find(i => i.id === m.id); if (x) put(x, m.portion); }
-      for (const x of s.items) if (x.slot && sameSupplement(x, cur.n, cur.brand) && !plan.remove.includes(x.id)) { if (dz) x.dose = dz; else delete x.dose; }
+      if (dose !== undefined) for (const x of s.items) if (x.slot && sameSupplement(x, cur.n, cur.brand) && !plan.remove.includes(x.id)) { if (dz) x.dose = dz; else delete x.dose; }
     })) return false;
     for (const rid of plan.remove) get().removeSupplement(rid);
     return true;

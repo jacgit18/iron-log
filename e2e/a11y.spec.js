@@ -54,7 +54,7 @@ test('training minutes for the water goal are kept after leaving the box and sho
 test('supplement library has no accessibility violations', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-supplements');
-  await openSupplementEditor(page); // the library shows under the schedule in Manage
+  await openSupplementEditor(page); // the merged supplement list in Manage
   await page.click('#suplib-add'); await page.click('#suppadd-full');
   await page.fill('#supp-name', 'Vitamin D3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();

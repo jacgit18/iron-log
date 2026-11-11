@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openSupplementEditor } from './nutritionBoardHelpers.js';
+import { expectScheduledAt, openSupplementEditor, suppChip } from './nutritionBoardHelpers.js';
 
 // The same supplement twice a day: picking one that is already scheduled adds another instance in the other section, each ticked on its own.
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -25,8 +25,6 @@ async function open(page) {
 
 test('a supplement already in Morning gets a second instance in Night, ticked and removed on its own', async ({ page }) => {
   await open(page);
-  const night = page.getByRole('group', { name: 'Night' });
-  const morning = page.getByRole('group', { name: 'Morning' });
   await page.click('#suplib-add');
   await page.fill('#suppadd-q', 'fish');
   await page.getByRole('dialog').getByRole('button', { name: /Fish Oil/ }).click();
@@ -34,13 +32,11 @@ test('a supplement already in Morning gets a second instance in Night, ticked an
   await page.getByRole('dialog').getByLabel('Night').check();
   await page.fill('#suppadd-dose', '2 g');
   await page.click('#suppadd-go');
-  await expect(night.locator('.srow')).toContainText(['Fish Oil2 g']);
-  await expect(morning.locator('.srow')).toContainText(['Fish Oil1 g']); // still in Morning
-  await night.getByRole('checkbox').check();
-  await expect(morning.getByRole('checkbox')).not.toBeChecked();
-  await night.getByRole('button', { name: 'Remove Fish Oil from Night' }).click();
-  await night.getByRole('button', { name: 'Tap again to remove' }).click();
-  await expect(night.locator('.srow')).toHaveCount(0);
-  await expect(morning.locator('.srow')).toHaveCount(1);
+  await expectScheduledAt(page, 'Night', ['Fish Oil2 g']);
+  await expectScheduledAt(page, 'Morning', ['Fish Oil1 g']); // still in Morning, with its own dose
+  await expect(page.locator('.exlib .exrow')).toHaveCount(1); // one row for both times
+  await suppChip(page, 'Fish Oil', 'Night').click(); // turned off from the chip
+  await expect(suppChip(page, 'Fish Oil', 'Night')).toHaveAttribute('aria-pressed', 'false');
+  await expect(suppChip(page, 'Fish Oil', 'Morning')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.exlib .exrow')).toHaveCount(1); // no second library entry left behind
 });

@@ -56,13 +56,13 @@ test('a product in two sections keeps its own capsules in each and shares its nu
   await page.getByRole('dialog').getByRole('button', { name: /Mag glycinate/ }).first().click();
   await page.getByRole('dialog').getByLabel('Night').check();
   await page.click('#suppadd-go');
-  await page.getByRole('button', { name: 'Edit Mag glycinate in Night' }).click();
+  await page.getByRole('button', { name: 'Edit Mag glycinate' }).click();
   await expect(page.locator('#stimes-val-night')).toHaveText('2 capsules'); // a new intake starts at one serving; an existing supplement's amounts are on its time chips
   await page.locator('#stimes-less-night').click();
   await expect(page.locator('#stimes-val-night')).toHaveText('1 capsule');
   await page.getByLabel('Amount 1').fill('300'); // the rows are shared: changing them here changes Morning too
   await saveSheet(page);
-  await page.getByRole('button', { name: 'Edit Mag glycinate in Morning' }).click();
+  await page.getByRole('button', { name: 'Edit Mag glycinate' }).click();
   await expect(page.getByLabel('Amount 1')).toHaveValue('300');
   await expect(page.locator('#stimes-val-morning')).toHaveText('2 capsules'); // its own amount is unchanged
   await expect(page.locator('#supp-serving-units')).toHaveValue('2');

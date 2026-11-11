@@ -1,77 +1,88 @@
 import { useState } from 'react';
+import type { SupplementSlot } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
-import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
-import { plainText } from '../../lib/picker.js';
+import { SLOTS } from '../../lib/supplements.js';
+import { chipTap, filterRows, groupSupplements, hasBothSources, perDay, rowCounts, rowSub, type ListFilter, type ListRow, type ListSource } from '../../lib/supplementList.js';
+import './SupplementList.css';
 
-// Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
-// schedule on Daily → Supplements while Edit is on (spec inline-catalog-picker step 6; it was a Program tab view before).
-// Syncing, each is badged Library (added from the catalog, with its brand) or Custom, with a Source filter once both kinds are listed
-// (ADR 027, 029). Local mode has no catalog, so no badges.
+// Every supplement you keep, once, in Manage > Supplements and library (brief supplement-merged-list; it replaced a schedule list and a library list that repeated each other).
+// A row is a product: Morning, Noon and Night chips schedule it right there (the rules are `lib/supplementList.ts`), Edit opens its sheet for amounts per time and Delete.
+// Syncing, each is badged Library (added from the catalog, with its brand) or Custom, with a Source filter once both kinds are listed (ADR 027, 029). Local mode has no catalog, so no badges.
+const FILTERS: [ListFilter, string][] = [['all', 'All'], ['scheduled', 'Scheduled'], ['library', 'Library only']];
+
 export default function SupplementLibrary() {
   const items = useAppStore(s => s.supp.items);
   const syncing = useAppStore(s => s.sync !== null);
-  const { openModal, moveSupplement } = useAppStore.getState();
-  const [q, setQ] = useState(''); const [src, setSrc] = useState('');
-  const needle = q.trim().toLowerCase(); const words = plainText(q).split(' ').filter(Boolean);
-  const sources = syncing && items.some(i => i.catalogId) && items.some(i => !i.catalogId);
-  const shown = items.filter(i => (!words.length || words.every(w => plainText(`${i.n} ${i.brand || ''}`).includes(w)))
-    && (!sources || !src || (i.catalogId ? 'library' : 'custom') === src));
-  const filtering = !!needle || (sources && !!src);
+  const { openModal, moveSupplement, removeSupplement, saveSupplementTimes } = useAppStore.getState();
+  const [q, setQ] = useState(''); const [src, setSrc] = useState<ListSource>(''); const [filter, setFilter] = useState<ListFilter>('all'); const [reorder, setReorder] = useState(false);
+  const rows = groupSupplements(items); const n = rowCounts(rows);
+  const sources = syncing && hasBothSources(rows);
+  const shown = filterRows(rows, { q, filter, source: sources ? src : '' });
+  const filtering = !!q.trim() || filter !== 'all' || (sources && !!src);
+  const label = (r: ListRow) => (r.brand ? `${r.n}, ${r.brand}` : r.n); // two brands of one name are two rows: say which
+  const tap = (r: ListRow, slot: SupplementSlot) => {
+    const act = chipTap(items, r.id, slot); if (!act) return;
+    if (act.kind === 'remove') removeSupplement(act.id); else saveSupplementTimes(r.id, act.times);
+  };
+  const bucket = (r: ListRow) => rows.filter(x => x.primary === r.primary);
   return (
     <section className="panel edpanel exlib">
       <div className="inline spread">
-        <h2 id="suplib-h" tabIndex={-1}>Supplement library</h2>
+        <h2 id="suplib-h" tabIndex={-1}>Your supplements</h2>
         <div className="inline">
           <button type="button" className="btn primary" id="suplib-add" onClick={() => openModal({ type: 'suppadd', from: 'manage' })}>+ Add</button>
         </div>
       </div>
-      <p className="note">Your supplements; + Add searches yours and the catalog. Ones set to Morning, Noon or Night are on the schedule above every day; “Library only” ones are kept here to schedule later.</p>
+      <p className="note">Tap Morning, Noon or Night to put a supplement on the schedule every day; a supplement with no time lit is kept here to schedule later. + Add searches yours and the catalog.</p>
       <div className="filterbar" role="search">
         <label className="field">Search<input type="search" value={q} placeholder="Name or brand" onChange={e => setQ(e.target.value)} /></label>
         {sources && <label className="field">Source
-          <select value={src} onChange={e => setSrc(e.target.value)}>
+          <select value={src} onChange={e => setSrc(e.target.value as ListSource)}>
             <option value="">All</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
           </select>
         </label>}
-        <span className="note" role="status">{filtering ? `${shown.length} of ${items.length} supplements` : `${items.length} supplement${items.length === 1 ? '' : 's'}`}</span>
       </div>
+      <div className="slbar">
+        <div className="slfilter" role="group" aria-label="Show">
+          {FILTERS.map(([k, l]) => <button key={k} type="button" id={`suplib-filter-${k}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l} <span>{k === 'all' ? n.all : k === 'scheduled' ? n.scheduled : n.library}</span></button>)}
+        </div>
+        {!filtering && rows.length > 1 && <button type="button" className="btn sm ghost" id="suplib-reorder" aria-pressed={reorder} onClick={() => setReorder(!reorder)}>{reorder ? 'Done reordering' : 'Reorder'}</button>}
+      </div>
+      {reorder && !filtering && <p className="note">Moves a supplement among those at its first time of day, which is the order on the Board.</p>}
+      <span className="note" role="status">{filtering ? `${shown.length} of ${n.all} supplements` : ''}</span>
       <RemovedNotice scope="supplements" />
+      {SLOTS.map(([k]) => <RemovedNotice key={k} scope={'suppslot:' + k} />)}
       <div className="exrows">
-        {SLOT_OPTIONS.map(([slot]) => {
-          const rows = shown.filter(i => i.slot === slot);
-          if (!rows.length) return null;
+        {shown.map(r => {
+          const peers = bucket(r); const at = peers.indexOf(r);
           return (
-            <div key={slot || 'lib'}>
-              <div className="sect">{slotLabel(slot)}</div>
-              {rows.map(r => {
-                // Instances of one supplement share a name: say which section a button acts on.
-                const where = items.filter(i => i.n === r.n && (i.brand || '') === (r.brand || '')).length > 1 ? ` in ${slotLabel(r.slot)}` : '';
-                return (
-                <div className="exrow" key={r.id}>
-                  <div className="exmain">
-                    <b>{r.n}{syncing && (r.catalogId
-                      ? <span className="pill custom" title="Added from the catalog; the dose and note are yours">Library</span>
-                      : <span className="pill custom" title="You created this supplement; it is not from the catalog">Custom</span>)}</b>
-                    <span className="note">{[r.brand, r.dose, r.note].filter(Boolean).join(' · ') || 'No dose or note'}</span>
-                  </div>
-                  <div className="actions flush">
-                    {!filtering && <>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><Icon name="arrow-up" /></button>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><Icon name="arrow-down" /></button>
-                    </>}
-                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id, from: 'manage' })}>Edit</button>
-                  </div>
+            <div className="exrow slrow" key={r.id}>
+              <div className="sltop">
+                <div className="exmain">
+                  <b>{r.n}{syncing && (r.catalogId
+                    ? <span className="pill custom" title="Added from the catalog; the dose and note are yours">Library</span>
+                    : <span className="pill custom" title="You created this supplement; it is not from the catalog">Custom</span>)}</b>
+                  <span className="note">{rowSub(r)} · {perDay(r)}</span>
                 </div>
-                );
-              })}
+                <div className="actions flush">
+                  {reorder && !filtering && <>
+                    <button type="button" className="btn sm ghost" disabled={at === 0} aria-label={`Move ${label(r)} up`} onClick={() => moveSupplement(r.id, -1)}><Icon name="arrow-up" /></button>
+                    <button type="button" className="btn sm ghost" disabled={at === peers.length - 1} aria-label={`Move ${label(r)} down`} onClick={() => moveSupplement(r.id, 1)}><Icon name="arrow-down" /></button>
+                  </>}
+                  <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${label(r)}`} onClick={() => openModal({ type: 'supplement', id: r.id, from: 'manage' })}>Edit</button>
+                </div>
+              </div>
+              <div className="slchips" role="group" aria-label={`When to take ${label(r)}`}>
+                {SLOTS.map(([k, l]) => <button key={k} type="button" className="slchip" id={`suplib-${r.id}-${k}`} aria-pressed={r.slots.includes(k)} onClick={() => tap(r, k)}>{l}</button>)}
+              </div>
             </div>
           );
         })}
-        {!shown.length && <p className="note">{syncing && needle && src !== 'custom' ? 'None of yours match. Find it in the catalog with + Add.' : items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + Add.'}</p>}
+        {!shown.length && <p className="note">{syncing && q.trim() && src !== 'custom' ? 'None of yours match. Find it in the catalog with + Add.' : rows.length ? 'No supplement matches. Clear the search or the filters.' : 'No supplements yet. Add one with + Add.'}</p>}
       </div>
     </section>
   );
