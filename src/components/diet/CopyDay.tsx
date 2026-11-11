@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import './Diet.css';
 
-// "Copy from yesterday" (brief diet-suggest-and-copy): the day before the one shown, as a checklist with everything ticked; untick what you skip, then add the rest. The caller keys it by day, so an open checklist never outlives the day it was opened on.
+// "Copy yesterday" (brief diet-suggest-and-copy): the day before the one shown, as a checklist with everything ticked; untick what you skip, then add the rest. The caller keys it by day, so an open checklist never outlives the day it was opened on.
 export default function CopyDay({ day, onAdded }: { day: string; onAdded: (text: string) => void }) {
   const diet = useAppStore(s => s.diet);
   const today = ymd(useToday(s => s.today));
@@ -32,14 +32,14 @@ export default function CopyDay({ day, onAdded }: { day: string; onAdded: (text:
   if (!open) {
     return (
       <div className="dt-copy">
-        <button type="button" className="btn sm" disabled={list.length === 0} onClick={show}>Copy from {was}</button>
+        <button type="button" className="btn sm" disabled={list.length === 0} onClick={show}>Copy {was}</button>
         {list.length === 0 && <span className="note"> Nothing logged {was}.</span>}
       </div>
     );
   }
   return (
     <fieldset className="dt-copy">
-      <legend>Copy from {was}</legend>
+      <legend>Copy {was}</legend>
       <ul className="dt-copylist">
         {list.map(e => (
           <li key={e.id}>

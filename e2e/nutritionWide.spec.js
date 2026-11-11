@@ -29,17 +29,44 @@ for (const w of [1440, 1920, 2560]) {
   });
 }
 
-for (const w of [375, 768, 1024, 1279, 1439]) {
-  test(`at ${w}px Nutrition shows one day with the day stepper`, async ({ page }) => {
+for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 3], [1439, 3]]) {
+  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and the day stepper`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);
-    await expect(page.locator('.nb-col')).toHaveCount(1);
+    await expect(page.locator('.nb-col')).toHaveCount(n);
     await expect(page.locator('.nb-step')).toBeVisible();
-    const { x } = await page.evaluate(() => { const b = document.querySelector('.nb-col').getBoundingClientRect(); return { x: b.x, w: b.width, right: b.right }; });
-    expect(x).toBeGreaterThanOrEqual(0);
+    const cols = await page.evaluate(() => [...document.querySelectorAll('.nb-col')].map(c => { const b = c.getBoundingClientRect(); return { x: b.x, y: b.y, right: b.right }; }));
+    expect(cols[0].x).toBeGreaterThanOrEqual(0);
+    const board = await page.locator('.nb-board').evaluate(b => b.getBoundingClientRect().width);
+    expect(cols[n - 1].right - cols[0].x).toBeGreaterThan(board - 2); // the days fill the board, a lone day is not squeezed into one of seven tracks
+    for (let i = 1; i < n; i++) { expect(cols[i].x).toBeGreaterThan(cols[i - 1].right - 1); expect(Math.abs(cols[i].y - cols[0].y)).toBeLessThan(2); }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
 }
+
+test('at 1280px tapping a day inside the window keeps the three days where they are', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await open(page);
+  const names = () => page.locator('.nb-col').evaluateAll(cs => cs.map(c => c.getAttribute('data-day')));
+  await page.getByRole('button', { name: 'Next day' }).click();
+  const before = await names();
+  await page.locator('.nb-dayname').nth(1).click();
+  expect(await names()).toEqual(before);
+});
+
+test('at 1280px the stepper picks the first of three days and the window holds inside the week', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await open(page);
+  const names = () => page.locator('.nb-col').evaluateAll(cs => cs.map(c => c.getAttribute('data-day')));
+  const first = await names();
+  await page.getByRole('button', { name: 'Next day' }).click();
+  const next = await names();
+  expect(next).toHaveLength(3);
+  expect(new Set([...first, ...next]).size).toBeGreaterThanOrEqual(3);
+  await page.locator('.nb-steppick').selectOption({ index: 13 }); // a Saturday of this week: the window ends on it
+  const sat = await names();
+  expect(sat).toHaveLength(3);
+});
 
 test('the header holds Targets and goal and Manage, and no Diet panel sits under the board', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });

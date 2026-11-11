@@ -111,6 +111,32 @@
 .nb-col.today {
   border-color: var(--muted);
 }
+/* A past day's Supplements fold to their header line: the whole line is the button (44px tall), its chevron on the right. */
+.nb-fold {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-fold .wb-slothd {
+  flex: 1;
+}
+.nb-fold svg {
+  flex: none;
+}
+.nb-slotadd {
+  justify-self: start;
+  min-height: 44px;
+}
 .nb-col.past {
   background: var(--surface);
 }
@@ -210,6 +236,16 @@
 .nb-short {
   display: none;
 }
+/* One day below 768 px, two and three days side by side at 768 to 1439 px (1440 px and up keeps `.wb-board`'s seven tracks). */
+.nb-board-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+.nb-board-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nb-board-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .wb {
   --wb-water: #2f5fa8;
   --m-supp: #3b7d2c;
@@ -272,13 +308,21 @@
   border-color: var(--m-supp);
 }
 @media (max-width: 699px) {
+  /* One row: the week switcher takes the room the two buttons leave and drops under them only when text is enlarged so far that all three do not fit. */
   .nb-headbtns {
     order: 2;
   }
+  .nb-head {
+    gap: var(--sp-8);
+  }
   .nb-weeksw {
-    order: 3;
-    flex: 1 0 100%;
+    order: 1;
+    flex: 1 1 auto;
+    gap: var(--sp-4);
     justify-content: space-between;
+  }
+  .nb-weekname {
+    min-width: 0;
   }
   .nb-weeksw button {
     min-height: 44px;
@@ -382,19 +426,39 @@
 }
 .nb-menu {
   display: grid;
+  gap: var(--sp-12);
+}
+.nb-menu ul {
+  display: grid;
   gap: var(--sp-6);
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.nb-grouph {
+  margin: 0 0 var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Every way is one row with the same left edge: its icon, its name, and its hint under the name; a long hint wraps under the name, not under the icon. */
 .nb-menu .btn {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--sp-10);
   justify-items: start;
   width: 100%;
   min-height: 44px;
   text-align: left;
 }
+.nb-menu .btn svg {
+  grid-row: 1 / span 2;
+}
 .nb-menu .btn span {
+  grid-column: 2;
   font-weight: 400;
   font-size: var(--fs-sm);
   color: var(--muted);

@@ -7,7 +7,7 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows } from '../../lib/quickMeals.js';
-import { ADD_FLOWS, addFlows, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addFlows, addGroups, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
 import { ymd } from '../../shared/dates.js';
@@ -21,14 +21,16 @@ import FindFood from '../diet/FindFood.js';
 import SaveMeal from '../diet/SaveMeal.js';
 import SavedMeals from '../diet/SavedMeals.js';
 import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
+import Icon, { type IconName } from '../Icon.jsx';
 import Sheet from '../Sheet.js';
 
+const FLOW_ICON: Record<AddFlow, IconName> = { quick: 'spark', barcode: 'scan', oneoff: 'edit', find: 'search', meals: 'star', recipes: 'book', copy: 'undo', savemeal: 'plus' };
 const KEY = 'nb-last-meal';
 const lastMeal = (): PlanSlot | null => { try { const v = localStorage.getItem(KEY); return PLAN_SLOTS.find(s => s === v) ?? null; } catch { return null; } };
 const remember = (s: PlanSlot) => { try { localStorage.setItem(KEY, s); } catch { /* private window: the pick just is not remembered */ } };
 
 // The add sheet (brief nutrition-board): the ways of adding that exist today. A day ahead asks which meal (pre-picked from the time of day, remembering the last pick) and plans recipes and saved meals into it; today logs what was eaten, which has no meal, so it asks nothing (owner, 2026-11-10: no Plan on today).
-// `modal.day` is the day it adds to, `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan barcode opens the camera itself).
+// `modal.day` is the day it adds to, `modal.meal` the meal to start on (an empty meal's Add control), `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan barcode opens the camera itself).
 export default function AddFoodSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
@@ -37,7 +39,7 @@ export default function AddFoodSheet() {
   const flows = addFlows(day, today);
   const first = typeof modal?.flow === 'string' && (flows as readonly string[]).includes(modal.flow) ? (modal.flow as AddFlow) : null;
   const [flow, setFlow] = useState<AddFlow | null>(first);
-  const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); });
+  const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return PLAN_SLOTS.find(s => s === modal?.meal) ?? startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); }); // `modal.meal`: the empty meal's Add control picked it
   const [msg, setMsg] = useState('');
   const [fill, setFill] = useState<{ key: number; food?: FoodFill }>({ key: 0 });
   const scan = () => {
@@ -64,9 +66,16 @@ export default function AddFoodSheet() {
         </div>
       )}
       {!flow && flows.length > 0 && (
-        <ul className="nb-menu" aria-label="Ways to add food">
-          {flows.map(f => <li key={f}><button type="button" className="btn" onClick={() => choose(f)}>{ADD_FLOWS[f].label}<span>{ADD_FLOWS[f].hint}</span></button></li>)}
-        </ul>
+        <div className="nb-menu" aria-label="Ways to add food" role="group">
+          {addGroups(day, today).map(g => (
+            <section key={g.label} aria-labelledby={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>
+              <h3 className="nb-grouph" id={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>{g.label}</h3>
+              <ul>
+                {g.flows.map(f => <li key={f}><button type="button" className="btn" onClick={() => choose(f)}><Icon name={FLOW_ICON[f]} /><b>{ADD_FLOWS[f].label}</b><span>{ADD_FLOWS[f].hint}</span></button></li>)}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
       {body}
       <p className="note" role="status">{msg}</p>
