@@ -166,7 +166,9 @@ describe('switching and returning', () => {
     const tagged = list.personas.find(p => p.id === 'meal-planner') as { scenarios: { id: string; title: string }[] };
     expect(tagged.scenarios.map(s => s.id)).toEqual(scenariosForPersona('meal-planner').map(s => s.id));
     expect(Object.keys(tagged.scenarios[0]!).sort()).toEqual(['id', 'title']);
-    expect((list.personas.find(p => p.id === 'legacy-beta') as { scenarios: unknown[] }).scenarios).toEqual([]);
+    const legacy = list.personas.find(p => p.id === 'legacy-beta') as { scenarios: { id: string }[] }; // every account has a scenario since the QA audit (S-268)
+    expect(legacy.scenarios.map(s => s.id)).toEqual(scenariosForPersona('legacy-beta').map(s => s.id));
+    expect(legacy.scenarios.length).toBeGreaterThan(0);
 
     expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'paid-past-due' })).status).toBe(200);
     expect(jar.has('admin_session')).toBe(true);
