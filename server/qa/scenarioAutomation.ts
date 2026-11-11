@@ -243,6 +243,10 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-270': { auto: 'manual' },
   'S-271': { auto: 'manual' },
   'S-272': { auto: 'manual' },
+  'S-273': { auto: 'e2e', specs: ['e2e/issuesFilter.spec.js', 'e2e/adminIssues.spec.js'], partial: 'the specs stub the issues API with their own four issues, and check each status option in turn only through Fixed and All' },
+  'S-274': { auto: 'manual' }, // the day rule has an e2e in nutritionQuickLog.spec.js; the camera scan itself is phone-only
+  'S-275': { auto: 'manual' }, // launcher shortcuts show only on an Android home screen (Play wrapper 6 or later, or the installed web app); the manifest entries are not asserted in a browser
+  'S-276': { auto: 'manual' }, // the share-sheet entry shows only on an Android phone (Play app or the installed web app); not driven in a browser
   'S-100': { auto: 'unit', specs: ['src/lib/shareFiles.test.ts', 'src/lib/plainPageTitles.test.ts', 'src/lib/envName.test.ts', 'e2e-qa/plainPages.spec.js', 'e2e-qa/qaModePicker.spec.js', 'server/static.test.ts'], partial: 'the served QA title and icons and the hostname rule are tested; plainPages.spec.js asserts the title on the local build, not the real QA host' },
   'S-102': { auto: 'api', specs: ['server/static.test.ts'], partial: 'the file the app serves is tested; the live production answer after a deploy is a curl the owner runs' },
   'S-103': { auto: 'unit', specs: ['src/lib/movedFromLabel.test.ts'], partial: 'only the tag wording is tested; the card menu Move to, the planned option and the tag on the Board are not walked by any spec' },
