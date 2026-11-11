@@ -203,6 +203,20 @@ test('supplements tick on today, last week and a day ahead, each with its own co
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
 });
 
+test('an empty meal on a day ahead has an Add control that opens the add sheet on that day with that meal picked; last week has none', async ({ page }) => {
+  await openNutrition(page);
+  await col(page, '2026-09-25').getByRole('button', { name: 'Add to Lunch' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText('Adding to Fri 25')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Lunch' })).toHaveAttribute('aria-pressed', 'true');
+  await closeSheet(page);
+  await col(page, '2026-09-25').getByRole('button', { name: 'Add to Dinner' }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true');
+  await closeSheet(page);
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Add to / })).toHaveCount(0); // the week cannot be changed
+});
+
 test('the Calories, Protein and Fat bars are filled in their legend colours, and a bar past its target turns the over colour', async ({ page }) => {
   await page.evaluate(() => { // a goal weight and a weigh-in give the day its calorie and protein targets, so the bars have a width
     localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: 180 } }));

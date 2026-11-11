@@ -133,6 +133,10 @@
 .nb-fold svg {
   flex: none;
 }
+.nb-slotadd {
+  justify-self: start;
+  min-height: 44px;
+}
 .nb-col.past {
   background: var(--surface);
 }

@@ -10,8 +10,8 @@ const ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const SLOT_KEY = ['', ...ORDER];
 
 // A day's meals (brief nutrition-board): Breakfast, Lunch and Dinner always, with "Nothing planned" and no button when empty; Snack only when it holds something. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to and Remove (today it also has a check box that logs it as eaten);
-// drag moves it to another meal or day. Meals are the plan, so last week has none.
-export default function MealSections({ view, today, days, editable, onLog, onMsg }: { view: BoardDay; today: string; days: { id: string; label: string }[]; editable: boolean; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void }) {
+// drag moves it to another meal or day. An empty meal has an Add control that opens the Add sheet on that day with that meal picked (brief nutrition-header-sheet-wording). Meals are the plan, so last week has none.
+export default function MealSections({ view, today, days, editable, onLog, onMsg, onAdd }: { view: BoardDay; today: string; days: { id: string; label: string }[]; editable: boolean; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void; onAdd: (meal: PlanSlot) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [moving, setMoving] = useState<string | null>(null);
   const st = () => useAppStore.getState();
@@ -31,6 +31,7 @@ export default function MealSections({ view, today, days, editable, onLog, onMsg
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
           <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{s.items.length ? `${s.kcal.toLocaleString('en-US')}${s.share ? ` / ${s.share.toLocaleString('en-US')}` : ''} kcal` : ''}</span></div>
           {s.items.length === 0 && <span className="nb-empty">Nothing planned</span>}
+          {s.items.length === 0 && s.slot && editable && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot]}`} onClick={() => onAdd(s.slot!)}>Add</button>}
           {s.need.length > 0 && s.items.length > 0 && (
             <div className="wb-plate" role="group" aria-label={`${s.slot ? SLOT_LABEL[s.slot] : ''} plate check`}>
               {s.need.map(m => <span key={m} className={`wb-mk${s.have.includes(m) ? ' on' : ''}`}>{s.have.includes(m) ? '✓ ' : ''}{MARK_LABEL[m]}</span>)}

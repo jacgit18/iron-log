@@ -8,7 +8,7 @@ import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
-import type { SavedMeal } from '../../types.ts';
+import type { PlanSlot, SavedMeal } from '../../types.ts';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
@@ -70,7 +70,7 @@ export default function NutritionBoard() {
     setMsg(`Logged ${done} from ${r.name}.${stopped ? ` ${stopped}` : left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
   };
   const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
-  const open = (flow?: string) => st().openModal({ type: 'nbadd', day, ...(flow ? { flow } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day }), onMsg: setMsg });
+  const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
   const editable = foodEditable(day, today);
   const target = addingTo(day, today);
   return (
@@ -103,11 +103,11 @@ export default function NutritionBoard() {
       <p className="note nb-msg" role="status">{msg}</p>
       <div className="wb-legend" aria-hidden="true"><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span><span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>
       {shown === 7 ? (
-        <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} />)}</div>
+        <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
         <>
           <DayStepper today={today} day={day} onPick={d => { setPicked(d); setMsg(''); }} />
-          <div className={`wb-board nb-board nb-board-${shown}`}>{windowDays(days, day, shown).map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} />)}</div>
+          <div className={`wb-board nb-board nb-board-${shown}`}>{windowDays(days, day, shown).map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}
     </section>

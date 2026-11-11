@@ -28,7 +28,7 @@ const lastMeal = (): PlanSlot | null => { try { const v = localStorage.getItem(K
 const remember = (s: PlanSlot) => { try { localStorage.setItem(KEY, s); } catch { /* private window: the pick just is not remembered */ } };
 
 // The add sheet (brief nutrition-board): the ways of adding that exist today. A day ahead asks which meal (pre-picked from the time of day, remembering the last pick) and plans recipes and saved meals into it; today logs what was eaten, which has no meal, so it asks nothing (owner, 2026-11-10: no Plan on today).
-// `modal.day` is the day it adds to, `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan barcode opens the camera itself).
+// `modal.day` is the day it adds to, `modal.meal` the meal to start on (an empty meal's Add control), `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan barcode opens the camera itself).
 export default function AddFoodSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
@@ -37,7 +37,7 @@ export default function AddFoodSheet() {
   const flows = addFlows(day, today);
   const first = typeof modal?.flow === 'string' && (flows as readonly string[]).includes(modal.flow) ? (modal.flow as AddFlow) : null;
   const [flow, setFlow] = useState<AddFlow | null>(first);
-  const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); });
+  const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return PLAN_SLOTS.find(s => s === modal?.meal) ?? startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); }); // `modal.meal`: the empty meal's Add control picked it
   const [msg, setMsg] = useState('');
   const [fill, setFill] = useState<{ key: number; food?: FoodFill }>({ key: 0 });
   const scan = () => {
