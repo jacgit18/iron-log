@@ -139,6 +139,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   // editing the recipe afterwards does not change what was logged
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();

@@ -23,6 +23,7 @@ test('the chips start on the category, a pressed choice is saved, and Back to au
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await back(page);
   await page.locator('.rc-row', { hasText: 'Chili with beans' }).first().click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
   await unfoldAll(page);
   await on(page, 'Protein'); await on(page, 'Veg'); // the choice was kept
