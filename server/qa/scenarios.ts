@@ -3096,7 +3096,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Resize to 375 px wide.',
     ],
     expected: [
-      'With limits set and nothing ticked the line reads "nothing ticked yet"; a day with no ingredients ticked and no limits shows no line.',
+      'With limits set, any day with nothing ticked (an earlier day, or today after unticking) reads "nothing ticked yet"; with no limits set there is no line.',
       'At 375 px there is no sideways scroll and the bars stay readable.',
     ],
   },
@@ -3108,7 +3108,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Each week runs Sunday to Saturday like the Board; the arrows step one week at a time and This week returns to the current one.',
-      'No "Nutrition" heading is drawn above the switcher (the Daily tab already says it).',
+      'No visible "Nutrition" heading sits above the switcher (the Daily tab already says it; screen readers still get one).',
     ],
   },
   {
@@ -3138,7 +3138,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Reset on Grocery shopper first (switch to another account to do it), then switch back.',
       'Open Groceries, At home. Note this month\'s Spending. Untick a priced item (it was bought) and press Ran out if asked.',
-      'Open Spending and Who owes who, then To get.',
+      'Open Bought and its Spending history switch, then, if a sharing group exists, the Who owes who button under This month. Then open To get.',
     ],
     expected: [
       'The item\'s cost stays in the month\'s Spending and in who owes who, and the item is back on To get, unticked.',
@@ -3265,7 +3265,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Edit a supplement, press Add row in the nutrients, and read the picker. Then open One-off food on Nutrition and its vitamin and mineral amounts picker.',
     ],
     expected: [
-      'Both pickers offer all 28 nutrients, grouped under headings, and a nutrient already on the item is not offered twice.',
+      'Both pickers offer all 28 nutrients, grouped under headings. A new row starts on a nutrient the item does not have yet, and choosing one it already has says "X in mg is listed twice; only the first is kept."',
     ],
   },
   {

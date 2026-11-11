@@ -45,6 +45,11 @@ test('ingredient rows save, add up on the Totals sheet with the note, and a type
   await page.getByLabel('Name of ingredient 1').fill('OMEGA-3'); await page.getByLabel('Amount of ingredient 1').fill('0.5'); await page.getByLabel('Unit of ingredient 1').selectOption('g');
   await page.getByRole('button', { name: 'Save' }).click();
   await closeSupplementEditor(page);
+  const u = await openTotals(page); // scheduled but unticked: on Everything scheduled it shows its figure with Set your limit
+  await u.getByRole('button', { name: 'Everything scheduled' }).click();
+  await expect(u.locator('#stt-ing-omega-3')).toContainText('Cod liver 500 mg');
+  await expect(u.locator('#stt-limit-omega-3')).toHaveText('Set your limit');
+  await u.getByRole('button', { name: 'Done' }).click();
   await todayCol(page).getByLabel('Cod liver', { exact: false }).first().check();
   const t = await openTotals(page);
   await expect(t.locator('#stt-ing-omega-3')).toContainText('975 mg');
@@ -56,6 +61,18 @@ test('the editor has the not-medical-advice note and the Supplement Facts note',
   await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
   await expect(page.locator('#supp-ingredient-note')).toContainText('not a recommendation or medical advice');
   await expect(page.locator('#supp-panel-note')).toContainText('Amount Per Serving');
+  await expect(page.locator('select[aria-label^="Ingredient "]')).toHaveCount(0); // no ingredient rows until one is added
+  await page.locator('#supp-add-nutrient').click();
+  await expect(page.getByLabel('Nutrient 1').locator('option')).toHaveCount(28); // the nutrient picker offers all 28, grouped
+  await expect(page.getByLabel('Nutrient 1').locator('optgroup')).toHaveCount(3);
+  await page.getByRole('button', { name: /^Remove .* row$/ }).first().click();
+  await page.locator('#supp-name').fill('Multivitamin'); // a supplement with no ingredient rows saves as it always did
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('#sched-h')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit Multivitamin' }).click();
+  await expect(page.locator('select[aria-label^="Ingredient "]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('#sched-h')).toBeVisible();
 });
 
 test('Set your limit saves a cap, shows the bar in words, survives a reload, changes and removes, and Back closes the sheet', async ({ page }) => {
@@ -69,6 +86,10 @@ test('Set your limit saves a cap, shows the bar in words, survives a reload, cha
   await lim.locator('#ilim-cap').click();
   await lim.locator('#ilim-amount').fill('0'); await lim.locator('#ilim-save').click(); // refused
   await expect(lim.getByRole('alert')).toContainText('above zero');
+  await lim.locator('#ilim-amount').fill('-5'); await lim.locator('#ilim-save').click(); // a negative amount is refused too
+  await expect(lim.getByRole('alert')).toContainText('above zero');
+  await lim.locator('#ilim-amount').fill('20000000'); await lim.locator('#ilim-save').click(); // and an oversized one
+  await expect(lim.getByRole('alert')).toContainText('too large');
   await lim.locator('#ilim-amount').fill('1000'); await lim.locator('#ilim-save').click();
   s = dialog(page);
   await expect(s.locator('#stt-ing-omega-3')).toContainText('48% of your cap');
@@ -103,6 +124,8 @@ test('a cap passed shows the over-cap line under the day and the row says so in 
   await s.getByRole('button', { name: 'Set your limit for Omega-3' }).click();
   await dialog(page).locator('#ilim-cap').click(); await dialog(page).locator('#ilim-amount').fill('400'); await dialog(page).locator('#ilim-save').click();
   await expect(dialog(page).locator('#stt-ing-omega-3')).toContainText('Over your cap by 75 mg');
+  await expect(dialog(page).locator('#stt-ing-omega-3 .stt-bar')).toBeVisible(); // the bar and the words together: colour is never the only signal
+  await expect(dialog(page).locator('#stt-ing-omega-3 .stt-st b')).toHaveText(/over/i);
   await dialog(page).getByRole('button', { name: 'Done' }).click();
   await expect(col.locator('[id^=nb-supp-capwarn]')).toContainText('Over your own cap today: Omega-3');
 });

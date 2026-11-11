@@ -71,17 +71,32 @@ test('Add saves the product with its amounts in the chosen time of day, and addi
   await sheet(page).getByRole('button', { name: /2020 label/ }).click();
   await expect(sheet(page).locator('.lblrows')).toContainText('15 mg');
   await sheet(page).getByLabel('Morning').check();
+  await sheet(page).getByLabel('Night').check();
+  await sheet(page).getByLabel('Library only').check(); // Library only stands alone: it clears the times
+  await expect(sheet(page).getByLabel('Morning')).not.toBeChecked(); await expect(sheet(page).getByLabel('Night')).not.toBeChecked();
+  await sheet(page).getByLabel('Morning').check(); // and a time clears Library only
+  await expect(sheet(page).getByLabel('Library only')).not.toBeChecked();
+  await sheet(page).getByLabel('Night').check();
   await page.fill('#suppadd-dose', '1 tab');
-  await page.click('#suppadd-go');
+  await page.click('#suppadd-go'); // Morning and Night in one press of Add
   await expect(sheet(page)).toHaveCount(0);
   await expectScheduledAt(page, 'Morning', ['Fish Oil1 g', 'Mega Men1 tab']);
+  await expectScheduledAt(page, 'Night', ['Mega Men1 tab']);
   await page.locator('#suplib-add').click();
   await sheet(page).locator('#suppadd-q').fill('mega');
   await sheet(page).getByRole('button', { name: /^Mega Men.*Library/ }).click();
-  await sheet(page).getByLabel('Night').check();
+  await sheet(page).getByLabel('Morning').uncheck();
+  await sheet(page).getByLabel('Noon').check();
   await page.click('#suppadd-go');
-  await expectScheduledAt(page, 'Night', ['Mega Men1 tab']);
+  await expectScheduledAt(page, 'Noon', ['Mega Men1 tab']);
   await expectScheduledAt(page, 'Morning', ['Fish Oil1 g', 'Mega Men1 tab']);
+  const source = page.getByLabel('Source'); // both a Library and a Custom supplement are listed, so the Source filter appears
+  await source.selectOption('library');
+  await expect(page.locator('.exlib .exrow')).toHaveCount(1);
+  await expect(page.locator('.exlib .exrow').first()).toContainText('Mega Men');
+  await source.selectOption('custom');
+  await expect(page.locator('.exlib .exrow').first()).toContainText('Fish Oil');
+  await source.selectOption('');
   await page.getByRole('button', { name: 'Edit Mega Men' }).click();
   await expect(page.getByLabel('Amount 1')).toHaveValue('15'); // the label's amounts came along
 });

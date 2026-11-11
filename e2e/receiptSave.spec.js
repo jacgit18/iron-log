@@ -144,6 +144,14 @@ test.describe('for everyone, with no admin flag', () => {
     expect(text).toContain('receipt-2026-09-24-bjs.jpg');
     expect(text).toContain('receipt-2026-09-24-bjs-2.jpg');
     await expect(page.locator('#rcs-all-note')).toHaveText('Downloaded all your saved receipts.');
+
+    // A photo that cannot load is named in the note and left out of the zip (its row stays in receipts.csv).
+    await page.route('**/api/receipts/2/photo', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{"ok":false}' }));
+    const [second] = await Promise.all([page.waitForEvent('download'), page.click('#rcs-all')]);
+    const partial = (await (await import('node:fs/promises')).readFile(await second.path())).toString('latin1');
+    expect(partial).toContain('receipt-2026-09-24-bjs-2.jpg'); // the newest row (id 2) is named plain, so the older one keeps -2
+    expect(partial).not.toContain('receipt-2026-09-24-bjs.jpg'); // the photo that failed has no file and no csv name
+    await expect(page.locator('#rcs-all-note')).toContainText('1 photo could not be loaded and is left out');
   });
 
   test('a failed save keeps the prices applied, says the photo was not saved, and Try again saves it', async ({ page }) => {

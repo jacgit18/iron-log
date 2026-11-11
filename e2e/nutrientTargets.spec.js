@@ -51,6 +51,25 @@ test('the supplement form groups all 28 nutrients under Vitamins, Minerals and O
   expect(await select.locator('optgroup').evaluateAll(gs => gs.map(g => g.label))).toEqual(['Vitamins', 'Minerals', 'Other']);
   const last = await select.locator('optgroup').last().locator('option').allTextContents();
   expect(last).toEqual(['Choline', 'Fiber']);
+  // a second row starts on a nutrient the item does not have yet; choosing one it already has (with amounts) says it is listed twice
+  const dupNote = async nutrient => {
+    await page.locator(nutrient).click();
+    expect(await page.getByLabel('Nutrient 2').inputValue()).not.toBe(await page.getByLabel('Nutrient 1').inputValue());
+    await page.getByLabel('Amount 1').fill('5'); await page.getByLabel('Amount 2').fill('5');
+    await page.getByLabel('Nutrient 2').selectOption(await page.getByLabel('Nutrient 1').inputValue());
+    await expect(page.getByText(/is listed twice; only the first is kept/)).toBeVisible();
+  };
+  await dupNote('#supp-add-nutrient');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  // the One-off food form's vitamin and mineral picker offers the same 28, grouped the same way
+  await closeSupplementEditor(page);
+  const sheet = await openAdd(page, 'One-off food');
+  await sheet.getByRole('button', { name: /^Vitamins and minerals/ }).click();
+  await sheet.getByRole('button', { name: '+ Add a nutrient' }).click();
+  const food = sheet.getByLabel('Nutrient 1');
+  expect(await food.locator('option').count()).toBe(28);
+  expect(await food.locator('optgroup').evaluateAll(gs => gs.map(g => g.label))).toEqual(['Vitamins', 'Minerals', 'Other']);
+  await dupNote('button:has-text("+ Add a nutrient")');
 });
 
 test('a supplement and a food add up under No upper limit, in words, with no warning and no over-limit colour', async ({ page }) => {
