@@ -114,15 +114,15 @@
 .nb-col.past {
   background: var(--surface);
 }
-/* Calories, Protein and Fat fills: DayMeters.tsx names its bars `nb-<key>`, and the week board's `.wb-meter.kcal/.prot/.fat` rules never matched them, so the bars were empty. `:not(.over)` leaves a bar past its target to the rust `.wb-meter.over i` rule in WeekBoard.css. */
+/* Calories, Protein and Fat fills: DayMeters.tsx names its bars `nb-<key>`, and the week board's `.wb-meter.kcal/.prot/.fat` rules never matched them, so the bars were empty. `:not(.over)` leaves a bar past its target to the rust `.wb-meter.over i` rule in WeekBoard.css. `background-color`, not `background`: the shorthand would reset the hatch `.wb-meter.part i` draws on a partial Fat bar. */
 .wb-meter.nb-kcal:not(.over) i {
-  background: var(--wb-kcal);
+  background-color: var(--wb-kcal);
 }
 .wb-meter.nb-protein:not(.over) i {
-  background: var(--wb-prot);
+  background-color: var(--wb-prot);
 }
 .wb-meter.nb-fat:not(.over) i {
-  background: var(--wb-fat);
+  background-color: var(--wb-fat);
 }
 .wb-meter.nb-water i {
   background: var(--wb-water);
