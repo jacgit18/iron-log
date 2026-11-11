@@ -81,6 +81,7 @@ test('Type a list keeps the rows of lines you did not change, and the pin and Sk
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await page.getByRole('button', { name: /^Sauce/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await page.getByRole('button', { name: 'Type a list' }).click();
@@ -138,6 +139,7 @@ test.describe('on a phone, a recipe with an Alternative', () => {
     await page.reload();
     await page.click('#tab-daily'); await page.click('#daily-recipes');
     await page.locator('.rc-row', { hasText: /Oats/ }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await unfoldAll(page);
     const alt = page.getByLabel('Alternative for ingredient 1');

@@ -66,6 +66,7 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await page.reload();
   await open(page);
   await page.locator('.rc-row', { hasText: /Chicken and rice/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await editNutrition(page);
