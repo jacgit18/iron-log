@@ -1,0 +1,100 @@
+@layer base, components;
+@layer components {
+/* The recipe and food forms (brief recipe-form-sections): folding sections, rounded fields, and a Save bar that stays at the bottom of a phone screen. */
+.rcf {
+  gap: var(--sp-8);
+}
+.rcf input:not([type='checkbox']):not([type='radio']),
+.rcf select,
+.rcf textarea {
+  border-radius: var(--r-md);
+}
+.rcf-sec {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.rcf-shd {
+  margin: 0;
+  font: inherit;
+}
+.rcf-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--sp-8) var(--sp-12);
+  border: 0;
+  border-radius: var(--r-lg);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rcf-title {
+  font-weight: 600;
+}
+.rcf-sum {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rcf-toggle .icon {
+  flex: none;
+  margin-left: auto;
+}
+.rcf-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  padding: 0 var(--sp-12) var(--sp-12);
+}
+.rcf-body[hidden] {
+  display: none;
+}
+/* The Ingredients box is a plain group inside its section: no border of its own. */
+.rcf .rc-ings {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.rcf-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.rcf-foot .note {
+  margin: 0;
+}
+.rcf .rc-bar {
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.rcf .rc-bar .btn:first-child {
+  flex: 1 1 auto;
+}
+@media (max-width: 700px) {
+  .rcf-foot {
+    position: sticky;
+    bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px));
+    z-index: var(--z-sticky);
+    padding: var(--sp-8) 0;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+}
+@media (min-width: 701px) {
+  .rcf .rc-bar .btn:first-child {
+    flex: 0 0 auto;
+  }
+}
+}
