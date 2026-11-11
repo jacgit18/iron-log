@@ -37,10 +37,22 @@ for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 
     await expect(page.locator('.nb-step')).toBeVisible();
     const cols = await page.evaluate(() => [...document.querySelectorAll('.nb-col')].map(c => { const b = c.getBoundingClientRect(); return { x: b.x, y: b.y, right: b.right }; }));
     expect(cols[0].x).toBeGreaterThanOrEqual(0);
+    const board = await page.locator('.nb-board').evaluate(b => b.getBoundingClientRect().width);
+    expect(cols[n - 1].right - cols[0].x).toBeGreaterThan(board - 2); // the days fill the board, a lone day is not squeezed into one of seven tracks
     for (let i = 1; i < n; i++) { expect(cols[i].x).toBeGreaterThan(cols[i - 1].right - 1); expect(Math.abs(cols[i].y - cols[0].y)).toBeLessThan(2); }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
 }
+
+test('at 1280px tapping a day inside the window keeps the three days where they are', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await open(page);
+  const names = () => page.locator('.nb-col').evaluateAll(cs => cs.map(c => c.getAttribute('data-day')));
+  await page.getByRole('button', { name: 'Next day' }).click();
+  const before = await names();
+  await page.locator('.nb-dayname').nth(1).click();
+  expect(await names()).toEqual(before);
+});
 
 test('at 1280px the stepper picks the first of three days and the window holds inside the week', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });

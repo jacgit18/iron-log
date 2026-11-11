@@ -62,5 +62,5 @@ test('supplement library has no accessibility violations', async ({ page }) => {
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
   await closeSupplementEditor(page); // Done: the board alone, with the supplement to tick
-  await expect(page.getByRole('checkbox', { name: 'Vitamin D3' })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Vitamin D3' }).first()).toBeVisible(); // the board shows several days at this width, each with the tick
 });

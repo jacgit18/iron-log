@@ -21,7 +21,7 @@ import './NutritionBoard.css';
 const NO_PLAN: Plan = {};
 const NO_MEALS: SavedMeal[] = [];
 
-// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1440 px).
+// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day, with a stepper under seven.
 // Each day holds five meters (calories, protein, fat, supplements, water), its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
@@ -33,11 +33,13 @@ export default function NutritionBoard() {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [picked, setPicked] = useState(today);
+  const [anchor, setAnchor] = useState(today); // the first day of the 1 to 3 day window; tapping a column inside it keeps the window still, only the stepper moves it
   const [msg, setMsg] = useState('');
   const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
   const day = onBoard(today, picked) ? picked : today;
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
+  const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
   const plan = cfg.diet?.plan ?? NO_PLAN;
   const meals = cfg.diet?.meals ?? NO_MEALS;
   const targets = useMemo(() => {
@@ -106,8 +108,8 @@ export default function NutritionBoard() {
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
         <>
-          <DayStepper today={today} day={day} onPick={d => { setPicked(d); setMsg(''); }} />
-          <div className={`wb-board nb-board nb-board-${shown}`}>{windowDays(days, day, shown).map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
+          <DayStepper today={today} day={day} onPick={d => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); }} />
+          <div className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}
     </section>
