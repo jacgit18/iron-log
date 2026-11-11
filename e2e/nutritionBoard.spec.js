@@ -26,6 +26,8 @@ test('Nutrition is one board with a week switcher; the old Water, Last 7 days an
   await expect(page.getByRole('heading', { name: 'Food eaten' })).toHaveCount(0);
   await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block moved into the Targets and goal sheet
   await expect(page.getByRole('status').filter({ hasText: 'This week · Sep 20 to 26' })).toBeVisible();
+  const h = await page.locator('#nb-h').boundingBox(); // the heading stays for screen readers but is visually hidden: nothing is drawn above the switcher (the Daily tab already says it)
+  expect(h.width).toBeLessThanOrEqual(1); expect(h.height).toBeLessThanOrEqual(1);
 });
 
 test('Weeks run Sunday to Saturday: This week holds today and the days before it; Last week and Next week show other seven days, so no day appears twice', async ({ page }) => {
@@ -44,17 +46,23 @@ test('Weeks run Sunday to Saturday: This week holds today and the days before it
   const next = await days();
   expect(next[0]).toBe('2026-09-27');
   expect(new Set([...last, ...next]).size).toBe(14);
+  await page.getByRole('button', { name: 'This week', exact: true }).click(); // from another week, This week returns to the current one
+  expect(await days()).toEqual(mine);
+  await expect(page.locator('.nb-weekname')).toHaveText('This week');
 });
 
 test('the toolbar names its day, starts on today and follows the day you tap; last week is read-only for food', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('.nb-target')).toHaveText('Adding to Thu 24 · today');
+  for (const f of ['Scan barcode', 'Quick add', 'One-off food']) await expect(page.locator('.nb-toolbar').getByRole('button', { name: f, exact: true })).toBeVisible(); // today logs eaten food
+  await expect(page.locator('.nb-toolbar').getByRole('button', { name: 'Recipes', exact: true })).toHaveCount(0);
   await col(page, '2026-09-26').getByRole('button', { name: /^Sat 26/ }).click();
   await expect(page.locator('.nb-target')).toHaveText('Adding to Sat 26');
   const bar = page.locator('.nb-toolbar');
   await expect(bar.getByRole('button', { name: 'Recipes', exact: true })).toBeVisible(); // a day ahead plans: its own shortcuts, so the toolbar keeps its shape
   await expect(bar.getByRole('button', { name: 'Saved meals', exact: true })).toBeVisible();
   await expect(bar.getByRole('button', { name: 'Quick add' })).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Scan barcode', exact: true })).toHaveCount(0);
   const edge = sel => page.locator(sel).evaluate(e => { const c = getComputedStyle(e); return { border: c.borderColor, ring: c.boxShadow }; });
   const picked = await edge('.nb-col[data-day="2026-09-26"]'), todayEdge = await edge('.nb-col.today');
   expect(picked.ring).not.toBe('none'); expect(todayEdge.ring).toBe('none'); // the accent ring marks only the picked day

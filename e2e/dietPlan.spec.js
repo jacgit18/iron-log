@@ -76,10 +76,20 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await expect(col(page, TOMORROW).getByRole('button', { name: 'Remove Breakfast' })).toBeVisible();
   // today: plan the recipe and check it; it is not listed again under Also eaten
   await planRecipe(page, 'Chili', '2026-09-24');
+  const kcal = () => todayCol(page).getByRole('img', { name: /^Calories / });
+  await expect(kcal()).toHaveAttribute('aria-label', /: 350 /);
   await todayCol(page).getByRole('checkbox', { name: 'Check Chili as eaten' }).click();
   await expect(todayCol(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' })).toBeChecked();
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // Oats, which was typed in, not planned
+  await expect(todayCol(page).locator('.wb-slothd b', { hasText: 'Also eaten' })).toBeVisible(); // only the unplanned food is under Also eaten
   await expect(status(page)).toContainText('Logged 1 from Chili.');
+  await expect(kcal()).toHaveAttribute('aria-label', /: 950 /); // the meters moved by the planned 600
+  await todayCol(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' }).click(); // unticking removes that log
+  await expect(todayCol(page).getByRole('checkbox', { name: 'Check Chili as eaten' })).not.toBeChecked();
+  await expect(kcal()).toHaveAttribute('aria-label', /: 350 /);
+  await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1);
+  await todayCol(page).getByRole('checkbox', { name: 'Check Chili as eaten' }).click();
+  await expect(todayCol(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' })).toBeChecked();
   await page.reload();
   await nutrition(page);
   await expect(col(page, TOMORROW).locator('.wb-card', { hasText: 'Breakfast' })).toBeVisible();

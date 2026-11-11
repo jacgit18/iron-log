@@ -20,6 +20,18 @@ test('one row per supplement; a chip tap adds or removes a time, Undo brings it 
   await lit(page, 'Vitamin D3', 'Night'); await lit(page, 'Vitamin D3', 'Morning');
   await expect(suppRow(page, 'Vitamin D3')).toHaveCount(1); // two times, still one row
   await expect(suppRow(page, 'Vitamin D3')).toContainText('2 a day');
+  const dlg = await page.getByRole('dialog').innerText(); // no schedule list repeats the name under each time: it is written once in the whole sheet
+  expect(dlg.split('Vitamin D3').length - 1).toBe(1);
+  await suppChip(page, 'Vitamin D3', 'Noon').click(); // a third time adds a copy at one serving
+  await lit(page, 'Vitamin D3', 'Noon');
+  await expect(suppRow(page, 'Vitamin D3')).toContainText('3 a day');
+  await suppChip(page, 'Vitamin D3', 'Noon').click();
+  await unlit(page, 'Vitamin D3', 'Noon');
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await lit(page, 'Vitamin D3', 'Noon');
+  await suppChip(page, 'Vitamin D3', 'Noon').click();
+  await unlit(page, 'Vitamin D3', 'Noon');
   await suppChip(page, 'Vitamin D3', 'Night').click(); // off, another time stays
   await unlit(page, 'Vitamin D3', 'Night');
   await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
@@ -48,6 +60,9 @@ test('the filter counts and narrows the list, and a scheduled time shows on the 
   await page.locator('#suplib-filter-all').click();
   await page.getByRole('searchbox', { name: 'Search' }).fill('creat');
   await expect(page.locator('.exlib .exrow')).toHaveCount(1);
+  await page.getByRole('searchbox', { name: 'Search' }).fill('zzzz');
+  await expect(page.locator('.exlib .exrow')).toHaveCount(0);
+  await expect(page.getByText('No supplement matches. Clear the search or the filters.')).toBeVisible(); // an empty result says so
   await page.getByRole('searchbox', { name: 'Search' }).fill('');
   await suppChip(page, 'Zinc', 'Noon').click();
   await closeSupplementEditor(page);

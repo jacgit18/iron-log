@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { expectScheduledAt, openNutrition, openSupplementEditor, suppChip, suppRow } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, expectScheduledAt, openNutrition, openSupplementEditor, suppChip, suppRow, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief supplement-split-times: one supplement at several times of day, each with its own amount, set from the sheet's time chips. The plan, the totals line and the store
 // action are node tests (supplementTimes.test.ts, supplementTimesStore.test.ts); this covers the wiring a node test cannot: the chips and steppers on the sheet, Save turning them
@@ -31,10 +31,22 @@ test('two softgels in the morning are split into Morning and Night from the chip
   await page.locator('#stimes-less-morning').click();
   await expect(page.locator('#stimes-total')).toContainText('2 softgels a day');
   await expect(page.locator('#stimes-total')).toContainText('Morning 1 · Night 1');
+  await expect(page.locator('[id^="stimes-val-"]')).toHaveCount(2); // a time cannot repeat: one stepper per lit chip
+  await page.locator('#stimes-more-night').click();
+  await expect(page.locator('#stimes-total')).toContainText('Morning 1 · Night 2');
   await saveSheet(page);
   await expectScheduledAt(page, 'Morning', ['Fish oil']);
   await expectScheduledAt(page, 'Night', ['Fish oil']);
   await expect(suppRow(page, 'Fish oil')).toHaveCount(1); // one row for both times
+  await closeSupplementEditor(page);
+  const col = todayCol(page); // Daily: each time is its own row, the amount shows only when it is not 1, and each ticks on its own
+  const at = slot => col.locator('.nb-suppslot').filter({ hasText: slot }).locator('label.nb-tick').filter({ hasText: 'Fish oil' });
+  await expect(at('Morning')).toHaveCount(1); await expect(at('Night')).toHaveCount(1);
+  await expect(at('Morning').locator('.nb-portion')).toHaveCount(0);
+  await expect(at('Night').locator('.nb-portion')).toContainText('2 softgels');
+  await at('Night').getByRole('checkbox').check();
+  await expect(at('Night').getByRole('checkbox')).toBeChecked();
+  await expect(at('Morning').getByRole('checkbox')).not.toBeChecked();
 });
 
 test('a time turned off is removed with an Undo notice, and the last time cannot be turned off', async ({ page }) => {

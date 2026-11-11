@@ -51,6 +51,8 @@ test('one note on an exercise shows on every card and sheet, and an edit from an
   await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: /^Day 5/ }).click();
   await page.locator('.edpanel:not(.lib) .edrow', { hasText: NAME }).getByRole('button', { name: /^Edit / }).click();
   await expect(note(dialog(page))).toHaveValue('Brace hard');
+  await note(dialog(page)).fill('x'.repeat(250)); // the field stops at 200 characters
+  expect((await note(dialog(page)).inputValue()).length).toBe(200);
   await note(dialog(page)).fill('');
   await dialog(page).getByRole('button', { name: 'Save' }).click();
   await page.click('#tab-board');

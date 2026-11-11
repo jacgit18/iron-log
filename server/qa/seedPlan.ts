@@ -10,7 +10,7 @@ export interface SeedLog { clientId: string; exerciseId: string; d: string; wk: 
 export interface SeedBody { wk: string; d: string; weightLb: number }
 export interface SeedGrocery { clientId: string; position: number; data: { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean } }
 export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number; micro?: Record<string, number> } }
-export interface SeedSupplement { clientId: string; position: number; data: { id: string; n: string; slot: 'morning' | 'noon' | 'night'; dose?: string; serving?: { units: number; form: string }; nutrients?: { key: string; amount: number; unit: string }[]; portion?: number } }
+export interface SeedSupplement { clientId: string; position: number; data: { id: string; n: string; slot: 'morning' | 'noon' | 'night'; dose?: string; serving?: { units: number; form: string }; nutrients?: { key: string; amount: number; unit: string }[]; ingredients?: { name: string; amount: number; unit: string }[]; portion?: number } }
 export interface SeedSupplementDay { day: string; taken: Record<string, true> }
 export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f: number; pairs?: string[]; counts?: string[]; micro?: Record<string, number> } }
 export interface PersonaRows {
@@ -19,7 +19,7 @@ export interface PersonaRows {
   supplementDays: SeedSupplementDay[];
   recipes: SeedRecipe[];
   /** The config row's document, or null when the account has no settings. */
-  config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string }> } | null;
+  config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string }>; ingredientLimits?: Record<string, { kind: 'target' | 'cap'; amount: number; unit: string }> } | null;
   logs: SeedLog[];
   body: SeedBody[];
   groceryItems: SeedGrocery[];
@@ -173,11 +173,29 @@ const VITAMIN_FOODS: Readonly<Record<string, Record<string, number>>> = {
 /** The ready-made food of the vitamin persona: a Recipes card that carries amounts per serving (the same figures as the label-scan spec). */
 const VITAMIN_READY_MADE = { n: 'Fortified cereal', kcal: 120, p: 3, c: 26, f: 1, micro: { iron: 4.5, vitaminD: 2, calcium: 130, zinc: 1.2 } };
 
+/* ---------- The 'supplement-stack' persona (QA data for active ingredients, split times and the merged Manage list) ----------
+   Kept apart from 'vitamin-tracker' so the walked vitamin scenarios keep their numbers. Fish oil is two entries, Morning and Night, one capsule pair each (omega-3 1,000 mg, EPA 300 mg, DHA 200 mg per serving);
+   the cap is 1,500 mg omega-3 and the target 500 mg EPA. Today both fish oil entries are ticked (omega-3 2,000 mg, over its cap), creatine and caffeine are scheduled but unticked, and a multivitamin has no ingredient rows. */
+const STACK_SUPPLEMENTS: readonly SeedSupplement['data'][] = [
+  { id: 'fish-am', n: 'Fish oil', slot: 'morning', serving: { units: 2, form: 'Softgel' }, nutrients: [{ key: 'vitaminD', amount: 10, unit: 'mcg' }], ingredients: [{ name: 'Omega-3', amount: 1000, unit: 'mg' }, { name: 'EPA', amount: 300, unit: 'mg' }, { name: 'DHA', amount: 200, unit: 'mg' }] },
+  { id: 'fish-pm', n: 'Fish oil', slot: 'night', serving: { units: 2, form: 'Softgel' }, nutrients: [{ key: 'vitaminD', amount: 10, unit: 'mcg' }], ingredients: [{ name: 'Omega-3', amount: 1000, unit: 'mg' }, { name: 'EPA', amount: 300, unit: 'mg' }, { name: 'DHA', amount: 200, unit: 'mg' }] },
+  { id: 'creatine', n: 'Creatine monohydrate', slot: 'noon', serving: { units: 1, form: 'Scoop' }, ingredients: [{ name: 'Creatine', amount: 5, unit: 'g' }] },
+  { id: 'caffeine', n: 'Caffeine capsule', slot: 'morning', serving: { units: 1, form: 'Capsule' }, ingredients: [{ name: 'Caffeine', amount: 200, unit: 'mg' }] },
+  { id: 'multi', n: 'Multivitamin', slot: 'morning', nutrients: [{ key: 'zinc', amount: 11, unit: 'mg' }] },
+];
+const STACK_TICKS: readonly (readonly [number, readonly string[]])[] = [
+  [0, ['fish-am', 'fish-pm', 'multi']],
+  [1, ['fish-am', 'creatine', 'caffeine', 'multi']],
+  [2, ['fish-am', 'fish-pm']],
+];
+const STACK_LIMITS = { 'omega-3': { kind: 'cap' as const, amount: 1500, unit: 'mg' }, epa: { kind: 'target' as const, amount: 500, unit: 'mg' } };
+
 function buildVitamins(persona: Persona, today: Date): { supplements: SeedSupplement[]; supplementDays: SeedSupplementDay[] } {
-  if (!persona.data.vitamins) return { supplements: [], supplementDays: [] };
+  if (!persona.data.vitamins && !persona.data.supplementStack) return { supplements: [], supplementDays: [] };
   const id = (k: string) => `qa-${persona.id}-${k}`;
-  const supplements = VITAMIN_SUPPLEMENTS.map((s, position): SeedSupplement => ({ clientId: id(s.id), position, data: { ...s, id: id(s.id) } }));
-  const supplementDays = VITAMIN_TICKS.map(([back, ids]) => ({ day: iso(addDays(today, -back)), taken: Object.fromEntries(ids.map(k => [id(k), true as const])) }));
+  const [items, ticks] = persona.data.supplementStack ? [STACK_SUPPLEMENTS, STACK_TICKS] : [VITAMIN_SUPPLEMENTS, VITAMIN_TICKS];
+  const supplements = items.map((s, position): SeedSupplement => ({ clientId: id(s.id), position, data: { ...s, id: id(s.id) } }));
+  const supplementDays = ticks.map(([back, ids]) => ({ day: iso(addDays(today, -back)), taken: Object.fromEntries(ids.map(k => [id(k), true as const])) }));
   return { supplements, supplementDays };
 }
 
@@ -241,5 +259,6 @@ function buildConfig(persona: Persona, today: Date, recipes: SeedRecipe[], exerc
   const config: NonNullable<PersonaRows['config']> = {};
   if (Object.keys(ex).length) config.ex = ex;
   if (Object.keys(diet).length) config.diet = diet;
+  if (spec.supplementStack) config.ingredientLimits = STACK_LIMITS;
   return Object.keys(config).length ? config : null;
 }

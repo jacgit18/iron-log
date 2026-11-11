@@ -4,8 +4,15 @@ import { test, expect, seedExperiments } from './fixtures.js';
 const add = (page) => page.locator('.explist .expcard').first().getByRole('button', { name: /^Add /, exact: false }).first().click();
 
 test('the sheet is titled for the idea, marks the days it is on, and Undo takes out only the card it added', async ({ page }) => {
-  await seedExperiments(page, ['hack']);
+  await page.addInitScript(() => localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items: [{ id: 'E0', ex: 'zercher', ph: 'hyp', note: 'try light' }] })));
   await page.goto('/');
+  const card = page.locator('.explist .expcard').first(); // the card reads status, name, up to two muscle chips, the note, a Watch tile (Zercher has a video) and Add
+  await expect(card.locator('.ideastatus')).toHaveText('Never logged');
+  expect(await card.locator('.ideachip').count()).toBeGreaterThanOrEqual(1);
+  expect(await card.locator('.ideachip').count()).toBeLessThanOrEqual(2);
+  await expect(card.locator('.ideanote')).toHaveText('try light');
+  await expect(card.locator('a.watch-large')).toHaveCount(1);
+  await expect(card.getByRole('button', { name: /^Add / })).toBeVisible();
   const name = (await page.locator('.explist .rmname').first().innerText()).trim();
   const inCol3 = page.locator('#col-3 article.card').filter({ hasText: name });
   const before = await inCol3.count();
@@ -13,6 +20,7 @@ test('the sheet is titled for the idea, marks the days it is on, and Undo takes 
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('heading', { name: /^Add / })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'This week only' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await sheet.locator('.iaday').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).toEqual([1, 2, 3, 4, 5, 6, 7].map(n => `Day ${n}`)); // the Board's order
   await sheet.getByRole('button', { name: 'Day 3', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const notice = page.locator('.removednote');
