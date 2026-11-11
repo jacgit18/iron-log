@@ -124,15 +124,15 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-01', feature: 'Diet targets and log', title: 'Read today and add a one-off food', persona: 'diet-on-target', brief: 'diet-targets-and-log',
     steps: [
-      'Open Daily, Nutrition and find today\'s column (its name ends "· today"). Read its Calories and Protein meters and its Eaten list.',
+      'Open Daily, Nutrition and find today\'s column (its name ends "· today"). Read its Calories and Protein meters and its Also eaten list.',
       'Press + Add food, then One-off food, enter "Rice", 200 kcal and 4 g protein, and press Add. Press Done.',
-      'In today\'s Eaten list press Edit on Rice, change the calories to 250 and press Save, then press Delete on Rice.',
-      'Press Last week and read the last column (yesterday).',
+      'In today\'s Also eaten list press Edit on Rice, change the calories to 250 and press Save, then press Delete on Rice.',
+      'Read yesterday\'s column, the one just before today\'s (on a phone press Previous day; if today is a Sunday, press the previous-week arrow first).',
     ],
     expected: [
-      'Before adding: the Eaten list holds three foods and the meters read "1,440 / 2,400 kcal" and "58 / 160 g".',
+      'Before adding: the Also eaten list holds three foods and the meters read "1,440 / 2,400 kcal" and "58 / 160 g".',
       'Adding Rice moves the totals by 200 kcal and 4 g; editing and deleting move them again; the total returns to where it began.',
-      'Yesterday shows its own full day of five foods in an Eaten list, not today\'s, with no Edit or Delete buttons (see S-209).',
+      'Yesterday shows its own full day of five foods in an Eaten list, not today\'s, with no Edit or Delete buttons (only today\'s food can be changed; last week: S-209).',
     ],
   },
   {
@@ -144,7 +144,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Today is about 120% of the calories (about "2,880 / 2,400 kcal"); the bar stays full and turns red, and protein reads short (about "106 / 160 g").',
-      'A 21st one-off food is refused with "You can log 20 things a day."; Quick add shows "That’s 20 things for the day. Delete one to add another." instead of its choices. Deleting one entry from the Eaten list brings both back.',
+      'A 21st one-off food is refused with "You can log 20 things a day."; Quick add shows "That’s 20 things for the day. Delete one to add another." instead of its choices. Deleting one entry from the Also eaten list brings both back.',
     ],
   },
 
@@ -476,7 +476,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Edit "Chicken and rice bowl" and add an ingredient "water" with amount "2 cups"; Save.',
       'Open the recipe and read the ingredient status.',
-      'Press Add missing to Groceries.',
+      'Press Add missing to Shopping.',
     ],
     expected: [
       'Water shows as Have with the note "Always at home" and is included in "Have x of y"; the Have, Missing and On your list marks line up in one column down the page.',
@@ -731,7 +731,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
+      'On a phone. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
@@ -741,14 +741,14 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a non-admin account', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
+    id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a label with per 100 g only', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
     steps: [
-      'On a phone as an admin, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
-      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
+      'On a phone, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
+      'Check that every account (not only an admin) sees Scan label and Choose photo on the Ready-made form.',
     ],
     expected: [
-      'The form stays empty and says it could not read the numbers (or that the label shows per 100 g only); you can still type the numbers and save.',
-      'The non-admin account sees no Scan label button.',
+      'The form stays empty and says "Could not read the numbers. Try a closer, flatter photo or type them in." (or "That label only shows numbers per 100 g, so nothing was filled in. Type the numbers for one serving."); you can still type the numbers and save.',
+      'Every account sees Scan label and Choose photo.',
     ],
   },
   // ---- Whole pack ----
@@ -777,9 +777,9 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Receipt scan ----
   {
-    id: 'S-53', feature: 'Receipt scan', title: 'Scan a BJ\'s receipt and apply it', persona: 'grocery-shopper', brief: 'receipt-scan', device: true,
+    id: 'S-53', feature: 'Receipt scan', title: 'Scan a Costco receipt and apply it', persona: 'grocery-shopper', brief: 'receipt-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account with items like the ones on your receipt. On Groceries, Shopping, press Scan receipt and photograph a BJ\'s receipt.',
+      'On a phone, with items like the ones on your receipt. On Groceries, Shopping, press Scan receipt and photograph a Costco receipt.',
       'In the sheet, compare each line with the paper: the item it matched, the quantity and the price after the instant savings. Change one match and untick one line.',
       'Check the Total check line, pick the store for the tax if it asks, then press Apply and look at the list; then press Undo.',
     ],
@@ -792,13 +792,12 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-54', feature: 'Receipt scan', title: 'A bad photo or a total that does not add up', persona: 'grocery-shopper', brief: 'receipt-scan', edge: true, device: true,
     steps: [
-      'On a phone as an admin, press Scan receipt and photograph something that is not a receipt, or half of one.',
+      'On a phone, press Scan receipt and photograph something that is not a receipt, or half of one.',
       'Scan a real receipt again with the bottom cut off, so a line is missing, and look at the Total check.',
-      'Sign in as a test account that is not an admin and open Groceries.',
     ],
     expected: [
       'A photo that is not a receipt says it could not read it and changes nothing on the list.',
-      'A cut-off receipt shows the missing amount in the Total check but still lets you Apply; a non-admin account sees no Scan receipt button.',
+      'A cut-off receipt shows the missing amount in the Total check but still lets you Apply.',
     ],
   },
   // ---- Usual amount ----
@@ -829,7 +828,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-57', feature: 'Receipt scan', title: 'Add an unmatched receipt line to the list', persona: 'grocery-shopper', brief: 'receipt-add-item', device: true,
     steps: [
-      'On a phone as an admin, scan a BJ\'s receipt that has a line your list does not have (for example a soda).',
+      'On a phone, scan a Costco receipt that has a line your list does not have (for example a soda).',
       'On that line press Add to list. Check the name, store, count and price the form filled in, then press Add item.',
       'Look at the row and the footer, then press Apply and open the Shopping list and Bought this month. Then press Undo.',
     ],
@@ -841,7 +840,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-58', feature: 'Receipt scan', title: 'Close, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
     steps: [
-      'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Close at the top of the sheet.',
+      'On a phone, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Close at the top of the sheet.',
       'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs), then press Add item. Empty the name and press Add item.',
     ],
     expected: [
@@ -853,7 +852,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-59', feature: 'Receipt photos', title: 'Keep a receipt photo, then open, note, download and delete it', persona: 'grocery-shopper', brief: 'receipt-save-photo', device: true,
     steps: [
-      'On a phone as an admin, scan a BJ\'s receipt. In the sheet, tick Keep a copy of this photo and press Apply.',
+      'On a phone, scan a Costco receipt. In the sheet, tick Keep a copy of this photo and press Apply.',
       'Press Receipts beside Scan receipt. Find the receipt under its month, open it, read every line of the photo (scroll inside it), type a note and press Save note.',
       'Press Download, then Delete this receipt and Keep it, then Delete this receipt and Delete. Press Back.',
     ],
@@ -865,13 +864,12 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-60', feature: 'Receipt photos', title: 'Not ticked saves nothing; a failed or full save says so', persona: 'grocery-shopper', brief: 'receipt-save-photo', edge: true, device: true,
     steps: [
-      'On a phone as an admin, scan a receipt and press Apply with the box unticked; then scan another, tick the box and press Cancel. Open Receipts.',
+      'On a phone, scan a receipt and press Apply with the box unticked; then scan another, tick the box and press Close. Open Saved receipts.',
       'Scan a receipt, tick the box, turn on airplane mode and press Apply; turn it off and press Try again.',
-      'Sign in as a test account that is not an admin and open Groceries.',
     ],
     expected: [
-      'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
-      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. Opening a saved receipt and closing it, or pressing Retry, before the photo has loaded never shows that photo on the wrong sheet. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+      'Neither the unticked Apply nor the cancelled one leaves a receipt on the Saved receipts page, which says "No saved receipts yet" when it is empty.',
+      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. Opening a saved receipt and closing it, or pressing Retry, before the photo has loaded never shows that photo on the wrong sheet. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
     ],
   },
   {
@@ -991,7 +989,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-71', feature: 'Recipe auto-match', title: 'A missing ingredient already on the list says On your list', persona: 'recipe-collector', brief: 'feature-map',
     steps: [
       'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, Shopping (add one with the ingredient\'s name if there is none).',
-      'Look at that line, then press Add missing to Groceries.',
+      'Look at that line, then press Add missing to Shopping.',
       'Open Groceries, Shopping and check how many times the item appears.',
     ],
     expected: [
@@ -1041,16 +1039,14 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account still sees the scan', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
     steps: [
       'Open + New, then Add a food by hand, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
-      'Sign in as a test account that is not an admin and open + New, then Add a food by hand.',
     ],
     expected: [
-      'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
-      'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
-      'The non-admin account sees the Scan barcode button and it works; the Photo the label offer (the AI scan) is not shown to it.',
+      'The sheet says "That barcode is not in USDA or Open Food Facts." with a Tried list (USDA: not found, Open Food Facts: not found), makes Type the name the main choice and offers Photo the label; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
+      'With the camera blocked the sheet says "The camera is not available. Choose a photo of the barcode instead." and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
     ],
   },
   {
@@ -1090,7 +1086,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-79', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
     steps: [
-      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, Inventory, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
+      'On a phone (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, Inventory, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
       'On Shopping press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
       'In the sheet read the rows and the line under the list, then press Apply.',
       'Open Shopping and Inventory, then press Undo on the notice.',
@@ -1209,7 +1205,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press + New, then Add a food by hand, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'On a phone. On Recipes press + New, then Add a food by hand, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
       'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
       'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
       'Scan a product USDA does know (oatmeal) and read the same place.',
@@ -1223,7 +1219,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
     steps: [
-      'On a phone, as an admin, open + New, then Add a food by hand, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'On a phone, open + New, then Add a food by hand, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
       'Read the sheet, then press Photo the label.',
       'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
     ],
@@ -1236,7 +1232,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-90', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Groceries, Shopping, tick three items as if you were in the store without typing a price (or with an old one).',
+      'On a phone. On Groceries, Shopping, tick three items as if you were in the store without typing a price (or with an old one).',
       'Later, press Scan receipt and photograph a receipt that has those three items, and read the note under each of their rows.',
       'Press Apply and look at the three items; then press Undo.',
     ],
@@ -1273,7 +1269,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-93', feature: 'Barcode scan', title: 'A missed scan makes typing the name the main choice and offers the AI label photo second', persona: 'diet-fresh', brief: 'barcode-miss-ladder', device: true,
     steps: [
-      'On a phone, as an admin, open Daily, Nutrition, press + Add food, Find food and Scan barcode; scan a code neither source knows. Watch the line while it looks.',
+      'On a phone, open Daily, Nutrition, press + Add food, Find food and Scan barcode; scan a code neither source knows. Watch the line while it looks.',
       'Read the sheet: the steps tried, the main button, the button under it and the small note under that.',
       'Press Type the name and see where the cursor is. Scan the code again and press Photo the label.',
       'Photograph a nutrition label and read the result before pressing Use; then press Use.',
@@ -1322,7 +1318,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-97', feature: 'Security headers', title: 'The barcode scanner\'s live camera opens on a phone', persona: 'diet-fresh', brief: 'camera-and-headers', device: true,
     steps: [
-      'On a phone, sign in as an admin on QA, open Daily, Nutrition and press Scan barcode in the toolbar.',
+      'On a phone, open Daily, Nutrition and press Scan barcode in the toolbar.',
       'When the browser asks to use the camera, allow it. Read the line under the camera view.',
       'Scan any product barcode, then close the sheet and reopen it.',
     ],
@@ -1686,7 +1682,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-126', feature: 'Receipt scan', title: 'Apply the receipt with one wide button, and Close never applies', persona: 'grocery-shopper', brief: 'receipt-apply-footer', device: true,
     steps: [
-      'On a phone as an admin, scan a BJ\'s receipt whose lines add up to its total. Read the bar at the bottom and the top corner of the sheet.',
+      'On a phone, scan a Costco receipt whose lines add up to its total. Read the bar at the bottom and the top corner of the sheet.',
       'Press Close in the top corner. Scan again, scroll the sheet up and down with your thumb near the bottom edge, then press the wide Apply button once.',
     ],
     expected: [
@@ -1697,7 +1693,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-127', feature: 'Receipt scan', title: 'A receipt that does not add up needs a second tap to apply', persona: 'grocery-shopper', brief: 'receipt-apply-footer', edge: true, device: true,
     steps: [
-      'On a phone as an admin, scan a receipt with the bottom cut off so a line is missing and the Total check says the lines differ.',
+      'On a phone, scan a receipt with the bottom cut off so a line is missing and the Total check says the lines differ.',
       'Press Apply anyway once, then tap somewhere else on the sheet. Press Apply anyway, then Tap again to apply anyway.',
     ],
     expected: [
@@ -1708,7 +1704,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-128', feature: 'Receipt scan', title: 'The last receipt row clears the bar and the row links are easy to hit', persona: 'grocery-shopper', brief: 'receipt-apply-footer', edge: true, device: true,
     steps: [
-      'On a phone as an admin, scan a long receipt with at least one line that is not on your list, and scroll to the end of the sheet.',
+      'On a phone, scan a long receipt with at least one line that is not on your list, and scroll to the end of the sheet.',
       'Tap Add to list on that line, add the item, then tap Remove on its row.',
     ],
     expected: [
@@ -1765,7 +1761,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-133', feature: 'Receipt scan', title: 'Rename a matched receipt line and apply', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
     steps: [
-      'On a phone as an admin, scan a receipt. Find a line that matched an item and look at its name field and the area under it.',
+      'On a phone, scan a receipt. Find a line that matched an item and look at its name field and the area under it.',
       'Type a different name in that line’s name field, leave the field, and look under it. Leave Remember this name ticked and press Apply.',
     ],
     expected: [
@@ -1776,7 +1772,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-134', feature: 'Receipt scan', title: 'Scan again and see the saved name matched', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
     steps: [
-      'On a phone as an admin, scan a receipt that has the same printed line text as the one you renamed.',
+      'On a phone, scan a receipt that has the same printed line text as the one you renamed.',
       'Look at that line’s item and the chip beside its name.',
     ],
     expected: [
@@ -1787,7 +1783,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-135', feature: 'Receipt scan', title: 'Name a line that is not on your list', persona: 'grocery-shopper', brief: 'receipt-rename-memory', device: true,
     steps: [
-      'On a phone as an admin, scan a receipt with a line that matched nothing. Type a name in its name field and leave the field.',
+      'On a phone, scan a receipt with a line that matched nothing. Type a name in its name field and leave the field.',
       'Press Apply, then scan the same text again.',
     ],
     expected: [
@@ -1798,7 +1794,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-136', feature: 'Receipt scan', title: 'A receipt text saved for another item moves', persona: 'grocery-shopper', brief: 'receipt-rename-memory', edge: true, device: true,
     steps: [
-      'On a phone as an admin, scan a receipt, pick an item that already holds a receipt name on a line with that text, choose a different item for the line, and read under the name field.',
+      'On a phone, scan a receipt, pick an item that already holds a receipt name on a line with that text, choose a different item for the line, and read under the name field.',
       'Press Apply, then open the first item’s edit row in Inventory.',
     ],
     expected: [
@@ -1836,7 +1832,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Scan receipt and the search box are full width. Sort, Select items and More are three equal buttons in one row.',
-      'More holds Pick from photos, Saved receipts, Show details on all rows and Skip the N left. A computer keeps its own toolbar.',
+      'More holds Pick from photos, Saved receipts and Skip the N left (Details by screen size appears there only after a details choice was made). Show details sits under the list summary, not in More. A computer keeps its own toolbar.',
     ],
   },
   {
@@ -2377,7 +2373,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Dinner shows Protein, Carb and Veg marks; Protein has a check and Carb and Veg do not.',
-      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button appears only if you have a recipe that counts as Veg (a side or a favorite); with the starter recipes there is none: add a food by hand called Steamed broccoli (50 kcal, 4 g protein) with the Veg chip on, and a "+ Add a veg: Steamed broccoli" button then appears and gives Veg its check.',
+      'The button reads "+ Add a carb: Rice (goes with Chili)". One tap puts Rice in Dinner and Carb gets a check. A Veg button appears only if you have a recipe that counts as Veg (a recipe in Sides, or one set to count as Veg); with the starter recipes there is none: add a food by hand called Steamed broccoli (50 kcal, 4 g protein) with the Veg chip on, and a "+ Add a veg: Steamed broccoli" button then appears and gives Veg its check.',
     ],
   },
   {
@@ -2453,7 +2449,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Before: Calories reads "1,440 / 2,400 kcal" and Protein "58 / 160 g"; Fat is a number against 70 g; Supplements reads "n of m taken" (or "None scheduled"); Water is "0 / <goal> oz". A screen reader says "Calories eaten so far: …", and Water "drunk".',
-      'After Rice: Calories reads "1,740 / 2,400 kcal", Protein "78 / 160 g", Fat 5 g higher, and Rice is in the Eaten list.',
+      'After Rice: Calories reads "1,740 / 2,400 kcal", Protein "78 / 160 g", Fat 5 g higher, and Rice is in the Also eaten list.',
       'After the drink: Water reads "16.9 / <goal> oz", and Hydration says how many oz are to go.',
     ],
   },
@@ -2530,9 +2526,9 @@ export const SCENARIOS: readonly Scenario[] = [
       'Tap one suggestion under Suggested now.',
     ],
     expected: [
-      '"Added Rice." shows under the toolbar and in the sheet; Rice is in today\'s Eaten list and the Calories and Protein meters rise.',
+      '"Added Rice." shows under the toolbar and in the sheet; Rice is in today\'s Also eaten list and the Calories and Protein meters rise.',
       'The portion sheet opens at the usual amount; Log it adds an entry and Undo removes only that entry.',
-      'A suggestion adds one portion and says "Added <food>." (there is no Undo here: delete it from the Eaten list).',
+      'A suggestion adds one portion and says "Added <food>." (there is no Undo here: delete it from the Also eaten list).',
     ],
   },
   {
@@ -2553,10 +2549,10 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press + Add food, Copy yesterday, then Copy from yesterday. Untick one food and press Add selected.',
       'Press Back to ways of adding, then Save as a meal. Press Save as meal, tick two foods from today, name it "Lunch two" and save.',
-      'Delete every food in today\'s Eaten list, then press + Add food and Save as a meal.',
+      'Delete every food in today\'s Also eaten list, then press + Add food and Save as a meal.',
     ],
     expected: [
-      'Only the ticked foods are added to today and appear in the Eaten list; the notice reads "Added <n>.".',
+      'Only the ticked foods are added to today and appear in the Also eaten list; the notice reads "Added <n>.".',
       'The meal "Lunch two" is in Recipes under Meals and in Saved meals (S-185).',
       'With nothing eaten yet the sheet says "Nothing eaten yet to save."',
     ],
@@ -2571,7 +2567,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The camera sheet closes and the Add food sheet should come back on Find food with the product picked (name, calories per 100 g, grams at its serving); you should not have to open the add sheet again. (Expected from the code; not yet walked on a phone, so record what you see.)',
-      'Use fills the One-off food form; Add says "Added <name>." and the food is in today\'s Eaten list and meters.',
+      'Use fills the One-off food form; Add says "Added <name>." and the food is in today\'s Also eaten list and meters.',
       'After a miss, Type the name and Photo the label are offered, as in S-93.',
     ],
   },
@@ -2584,7 +2580,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The camera opens straight away, without the add sheet. A panel for the found product appears under the toolbar.',
-      'The food is in today\'s Eaten list once and in Recipes once, and the meters moved once (S-155).',
+      'The food is in today\'s Also eaten list once and in Recipes once, and the meters moved once (S-155).',
     ],
   },
   {
@@ -2615,10 +2611,10 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-208', feature: 'Nutrition board', title: 'Edit and delete today\'s eaten food; carbs and fat survive an edit', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'In today\'s Eaten list press Edit on Greek yogurt, change only the name to "Plain yogurt" and press Save.',
+      'In today\'s Also eaten list press Edit on Greek yogurt, change only the name to "Plain yogurt" and press Save.',
       'Read the Fat meter before and after.',
       'Press Delete on Plain yogurt.',
-      'Add a one-off food with only a name, calories and protein, and read the line under the Eaten list.',
+      'Add a one-off food with only a name, calories and protein, and read the line under the Also eaten list.',
     ],
     expected: [
       'The row shows "Plain yogurt"; Calories, Protein and Fat meters do not change, because the edit kept its carbs and fat.',
