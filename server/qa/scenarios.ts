@@ -652,7 +652,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-42', feature: 'Admin accounts', title: 'Suspend and restore a test account', persona: 'new-user', brief: 'admin-accounts-screen',
     steps: [
-      'On the Accounts page find the New user test account and press Suspend, then press Press again to suspend.',
+      'On the Accounts page find the New user test account (its masked email is n***@qa.invalid) and press Suspend, then press Press again to suspend.',
       'Use the account menu to switch to the New user test account.',
       'Return to your admin account and press Restore on that row.',
       'Switch to the New user test account again.',
@@ -688,7 +688,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-45', feature: 'Admin accounts', title: 'Delete a suspended test account for good', persona: 'recipe-collector', brief: 'admin-delete-account',
     steps: [
-      'Signed in as your own admin account, open Settings, Open accounts, and suspend the Recipe collector test account.',
+      'Signed in as your own admin account, open Settings, Open accounts, and suspend the Recipe collector test account (its masked email is r***@qa.invalid).',
       'Press Delete forever on that row, type the account number shown, and press Delete forever again.',
       'Re-seed the QA test accounts afterwards so Recipe collector exists again.',
     ],
@@ -700,7 +700,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-46', feature: 'Admin accounts', title: 'Delete forever only on a suspended row', persona: 'new-user', brief: 'admin-delete-account', edge: true,
     steps: [
-      'On the Accounts page look at the New user row while it is active, then at your own admin row.',
+      'On the Accounts page look at the New user row (n***@qa.invalid) while it is active, then at your own admin row.',
       'Suspend New user and look at its row again, then restore it.',
     ],
     expected: [
@@ -1720,14 +1720,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-129', feature: 'Groceries views', title: 'Store chips filter Shopping, and All is one column with no empty blocks', persona: 'grocery-shopper', brief: 'groceries-store-chips-owes',
     steps: [
-      'Sign in as Grocery shopper and open Groceries, Shopping. Read the chips above the list (All and one per store, each with a count).',
-      'Press a store chip, then look at the list. Press All.',
+      'Sign in as Grocery shopper and open Groceries, Shopping. Read the Store filter above the list (a dropdown: with four stores and All it is too many for chips; All and one entry per store, each with a count).',
+      'Choose a store from the Store dropdown, then look at the list. Choose All.',
       'Make the window about 1900 px wide, then about 390 px wide, and look at the list each time.',
     ],
     expected: [
-      'The chips read All n, then each store with how many items are still to get.',
-      'A store chip shows only that store, with taller rows and no split tags; All shows every store, one under the other.',
-      'At both widths the stores are in one column with no empty block beside a short store. At 1100 px and wider a rail on the right shows the summary and a Stores list that also picks the chip.',
+      'The Store dropdown reads All n, then each store with how many items are still to get.',
+      'A chosen store shows only that store, with taller rows and no split tags; All shows every store, one under the other.',
+      'At both widths the stores are in one column with no empty block beside a short store. At 1100 px and wider a rail on the right shows the summary and a Stores list that also picks the store.',
     ],
   },
   {
@@ -1980,13 +1980,12 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
       'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
-      'Open two recipes and press Star in each recipe\'s header, press Back, reload the page, then press a starred chip above the list.',
-      'Unstar both from their headers.',
+      'After starring two recipes (S-173 walks the star), reload the page and press a starred chip above the list.',
     ],
     expected: [
       'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
-      'A starred row shows a small filled star after its name (not a button) and it is still there after the reload. The chips above the list show the starred recipes first and open the one pressed.',
-      'With no stars and nothing logged or opened the row is not shown.',
+      'The chips above the list show the starred recipes first and open the one pressed.',
+      'After a reload with no stars and nothing logged or opened since, the row is not shown (a recipe opened in the same visit still counts as recent).',
     ],
   },
   // ---- Nutrition quick log ----
@@ -2070,7 +2069,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Type 400 and press Save. Then open Bought.',
     ],
     expected: [
-      'The card reads "Budget", then "<this month\'s spent> of $400.00", with a bar filled to the share spent and an Edit button. "<amount> left" sits beside the spent figure; when this month\'s list costs more than the budget, it is replaced by the amber note under the bar, "You still have <amount> left in your budget to spend." (see S-166).',
+      'The card reads "Budget", then "<this month\'s spent> of $400.00", with a bar filled to the share spent and an Edit button. "<amount> left" sits beside the spent figure (S-166 covers a list that costs more than the budget).',
       'Bought shows the same card with the same figures (spent includes tax, as the summary does).',
     ],
   },
@@ -2247,7 +2246,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Groceries and make sure a few items are in At home. Open Recipes, press Library.',
       'Press Meals, Ingredients and Drinks in turn. Read the "n of m at home" on rows.',
-      'Press Ingredients, then the Dessert filter (no loaded ingredient is a dessert).',
+      'Press Ingredients, then Show more until the tab empties.',
     ],
     expected: [
       'Library has All, Meals, Ingredients and Drinks (no Foods) and no counts. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
@@ -2294,7 +2293,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-182', feature: 'Goes with', title: 'A recipe goes with at most three, and a sauce is not offered', persona: 'recipe-collector', brief: 'recipes-goes-with', edge: true,
     steps: [
       'Open a recipe and add three recipes in Goes with. Look for a fourth. (This account already has Chicken and rice bowl and Baked salmon each going with Tuna salad: open Tuna salad and read its Goes with first.)',
-      'Press Remove on one and add a different one. Look at the choices for a recipe you categorised as Sauces.',
+      'Press Remove on one and add a different one. Make a recipe in + New with the category Sauces (this account has none), then open another recipe and look at its Goes with choices.',
     ],
     expected: [
       'After three, the drop-down is gone and the note says "It goes with 3 recipes. Remove one to add another."',
@@ -2961,17 +2960,17 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-236', feature: 'Supplement portions', title: 'The seeded Night capsule is at half a serving', persona: 'vitamin-tracker', brief: 'supplement-portions',
     steps: [
-      'Read the Night supplement on today, then press Manage, Supplements and library and open Magnesium glycinate at Night, then the one at Morning.',
+      'Read the Night supplement on today, then press Manage, Supplements and library, find the one Magnesium glycinate row (Morning and Night both lit) and press Edit.',
     ],
     expected: [
-      'The day shows "1 capsule" beside Night\'s Magnesium glycinate and nothing beside Morning\'s. Night\'s stepper reads "1 capsule" with "100 mg magnesium"; Morning\'s reads "2 capsules" with "200 mg magnesium". Both show the same nutrient rows and serving size (2 capsules).',
+      'The day shows "1 capsule" beside Night\'s Magnesium glycinate and nothing beside Morning\'s. In "When you take it" the total reads "3 capsules a day" with "Morning 2 · Night 1", and there is one set of nutrient rows (200 mg magnesium per serving of 2 capsules).',
     ],
   },
   {
     id: 'S-237', feature: 'Vitamin and mineral totals', title: 'Every account sees every vitamin and mineral part', persona: 'paid-monthly', brief: 'feature-map', edge: true,
     steps: [
-      'Press Manage, Supplements and library, then + New, and look for "What is in one serving (optional)" and "How much you take each time".',
-      'Open Settings > App and look for "Recommended amounts". On Nutrition press Add food, One-off food and look for "Vitamins and minerals (optional)". Open Recipes, add a ready-made food and look for "Vitamins and minerals per serving (optional)".',
+      'Press Manage, Supplements and library, then + Add, then "Open the full form, with amounts", and look for "What is in one serving (optional)" and "How much you take each time".',
+      'Open Settings > App and look for "Recommended amounts". On Nutrition press Add food, One-off food and look for "Vitamins and minerals (optional)". Open Recipes, press + New, Add a food by hand, and look for "Vitamins and minerals per serving (optional)".',
     ],
     expected: [
       'All four are there for an ordinary account: the vitamin and mineral features are open to everyone (released 2026-11-09), not only to admins.',
@@ -2981,8 +2980,8 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-238', feature: 'Food vitamins and minerals', title: 'A recipe built from a food adds up its vitamins and minerals, logged or planned', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
     steps: [
       'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Write a recipe, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
-      'On the recipe\'s page press Ate this (one portion), then open Nutrition and press Totals.',
-      'Close Totals. Press Add food, Recipes, then Plan beside "Cereal duo" and press Done. Press the planned Cereal duo card under Dinner and press Log, then press Totals again.',
+      'On the recipe\'s page press Ate this, then open Nutrition and press Totals.',
+      'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card and choose "Move to…" today. On today tick "Check Cereal duo as eaten", then press Totals again.',
     ],
     expected: [
       'The form and the saved page say "Per serving, from the parts: 180 kcal · 4.5 g protein · 39 g carbs · 1.5 g fat. 1 of 1 ingredient counted." and list "1.5 portions Fortified cereal".',
@@ -3019,11 +3018,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-241', feature: 'Supplement times', title: 'Set each time and its amount in the supplement sheet', persona: 'supplement-stack', brief: 'supplement-split-times',
     steps: [
       'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
-      'In Manage, press Edit on Fish oil. In the sheet find "When to take Fish oil". Light Noon as well, then set the amount at each time with the steppers and press Save.',
+      'In Manage, press Edit on Fish oil. In the sheet find "When you take it". Light Noon as well, then set the amount at each time with the steppers and press Save.',
       'Open Daily, Nutrition and read Fish oil in the Supplements section.',
     ],
     expected: [
-      'The sheet shows a total such as "2 softgels a day" with "Morning 1 · Night 1" and updates as chips or steppers change; a time cannot repeat and at least one stays on.',
+      'The sheet shows a total such as "4 softgels a day" with "Morning 2 · Night 2" and updates as chips or steppers change; a time cannot repeat and at least one stays on.',
       'After Save, each time is its own row and ticks separately; a row shows its amount (for example "2 softgels") only when the amount is not 1.',
     ],
   },
@@ -3057,7 +3056,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
       'Open Daily, Nutrition, find today, and press Totals.',
-      'Find the Active ingredients section. Read the Omega-3 and EPA rows, and the Creatine row.',
+      'Find the Active ingredients section. Read the Omega-3 and EPA rows. Press "Everything scheduled" and read the Creatine row.',
       'Press the limit button on Creatine, set a target of 5 g and save, then reopen the row and remove the limit.',
     ],
     expected: [
@@ -3069,7 +3068,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-245', feature: 'Active ingredients', title: 'What I took versus what is scheduled, and units', persona: 'supplement-stack', brief: 'supplement-active-ingredients', edge: true,
     steps: [
       'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
-      'On Totals untick one Fish oil entry on the Supplements meter, then read the Omega-3 row on What I took and on Everything scheduled.',
+      'Close Totals and untick the Night Fish oil on the day\'s Supplements, then press Totals and read the Omega-3 row on What I took and on Everything scheduled.',
       'Add a typed ingredient "Vitamin A" in IU to Multivitamin and read its row.',
     ],
     expected: [
@@ -3225,25 +3224,25 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'One search lists your own supplements and the catalog together, each result showing brand, form and label year.',
-      'The picked product shows its UPC and label amounts inline; the sheet links to the full form for anything it does not cover.',
+      'The picked product shows its UPC and label amounts inline. (The "Open the full form, with amounts" link shows before a pick or for a typed name, not after a catalog pick.)',
     ],
   },
   {
     id: 'S-260', feature: 'Supplement label lookup', title: 'A catalog supplement arrives with its vitamins, minerals and ingredient rows', persona: 'diet-fresh', brief: 'supplement-label-amounts',
     steps: [
       'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
-      'Add a catalog fish oil (it needs the NIH database to answer from QA). Open its sheet.',
+      'Pick a catalog fish oil in the add sheet (it needs the NIH database to answer from QA) and read the label preview before pressing Add.',
     ],
     expected: [
       'The sheet shows "In one serving" with its vitamin and mineral rows and "Also on the label" for the rest; omega-3, EPA and DHA (and creatine or caffeine on those labels) are saved as ingredient rows, not listed under Also on the label.',
-      'If NIH does not answer, the add still works and says no label was found.',
+      'If NIH does not answer, the add still works: the sheet says it could not load the product\'s amounts (with Try again) and you can type them.',
     ],
   },
   {
     id: 'S-261', feature: 'Supplement UPC', title: 'Type a UPC and the product fills the add sheet search', persona: 'diet-fresh', brief: 'supplement-barcode-search',
     steps: [
       'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
-      'In the add sheet type a UPC from a Thorne or Sports Research bottle that the crawl has stored, then type a number that is on no label.',
+      'In the add sheet type the UPC of a Thorne or Sports Research bottle you have (it is found only if the crawl stored it), then type a number that is on no label.',
     ],
     expected: [
       'A stored UPC fills the search with the product name and its exact catalog listing; an unknown number says it was not found and offers the label scan.',
@@ -3253,20 +3252,20 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-262', feature: 'Supplement UPC', title: 'Scan a bottle label when the product is not in NIH', persona: 'diet-fresh', brief: 'supplement-label-scan', device: true,
     steps: [
       'Press Reset on Diet, fresh first (switch to another account to do it), then switch back.',
-      'On a phone, in the add sheet press the bottle scan button and photograph a label; read the allowance line.',
+      'On a phone, press + Add, type a name the catalog lacks, press "Scan the bottle’s label" and photograph a label; read "Uses AI · N of 5 left today".',
     ],
     expected: [
-      'The label is read into vitamin, mineral and ingredient rows to review before saving; the allowance line counts down (5 a day per person); at the cap it says so. Replace on an existing supplement asks to confirm first.',
+      'The label is read into vitamin, mineral and ingredient rows to review before saving; the allowance line counts down (5 a day per person); at the cap it says so. On a typed supplement, "Scan label" shows the label beside its rows and "Replace with label amounts" changes the form only; nothing saves until Save.',
     ],
   },
   {
     id: 'S-263', feature: 'Supplement add sheet', title: 'All 28 nutrients are offered in grouped pickers', persona: 'vitamin-tracker', brief: 'supplement-more-nutrients',
     steps: [
       'Press Reset on Vitamin tracker first (switch to another account to do it), then switch back.',
-      'Edit a supplement, press Add row in the nutrients, and read the picker. Then open One-off food on Nutrition and its vitamin and mineral amounts picker.',
+      'Edit a supplement, press "+ Add a nutrient", and read the picker. Then open One-off food on Nutrition, "Vitamins and minerals (optional)" and its "+ Add a nutrient".',
     ],
     expected: [
-      'Both pickers offer all 28 nutrients, grouped under headings. A new row starts on a nutrient the item does not have yet, and choosing one it already has says "X in mg is listed twice; only the first is kept."',
+      'Both pickers offer all 28 nutrients, grouped under headings. A new row starts on a nutrient the item does not have yet, and choosing one it already has says "X in mg is listed twice; only the first is kept." on the supplement form and "X is listed twice; only the first is kept." on the food form.',
     ],
   },
   {
@@ -3276,17 +3275,17 @@ export const SCENARIOS: readonly Scenario[] = [
       'In Settings, Data, export a backup, then open the import review for that file.',
     ],
     expected: [
-      'The review counts recipes (and supplements where the account has them) and its Replace note says plainly what is replaced; a copy that lost recipes does not look as full as one that kept them.',
+      'The review counts 30 recipes (a Supplements row only for an account that has supplements) and its Replace note says plainly what is replaced; a copy that lost recipes does not look as full as one that kept them.',
     ],
   },
   {
     id: 'S-265', feature: 'Watch link', title: 'The video link looks the same on a recipe, the Board card, Stretches and the Stretch library', persona: 'recipe-collector', brief: 'ideas-card-filters-watch',
     steps: [
       'Press Reset on Recipe collector first (switch to another account to do it), then switch back.',
-      'Open a recipe that has a video link and read its Watch link, then open a Board card, Stretches and the Stretch library with a linked item.',
+      'First add a video link to a recipe and to an exercise and a stretch (no QA account has any), then read the recipe\'s Watch link and open that Board card, Stretches and the Stretch library.',
     ],
     expected: [
-      'Each shows the same Watch link, large enough to tap; nothing else on the Board card moved (the Board is hands-off: compare it with before).',
+      'Each shows the same "Watch on <site>" link with a play icon (a large tile on the recipe, compact on the Board card, Stretches and the Stretch library), at least 44 px tall; nothing else on the Board card moved (the Board is hands-off: compare it with before).',
     ],
   },
   {
