@@ -249,7 +249,7 @@ function ProgramEditor() {
                     </div>
                     <div className="edbtns">
                       <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                      <button type="button" className="btn sm" id={`more-${sl.id}`} aria-label={`More actions for ${slotSummary(cfg, sl)}`} aria-haspopup="dialog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'rowmenu', idx: i }); }}>⋯</button>
+                      <button type="button" className="btn sm edmore" id={`more-${sl.id}`} aria-label={`More actions for ${slotSummary(cfg, sl)}`} aria-haspopup="dialog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'rowmenu', idx: i }); }}><Icon name="dots" /></button>
                     </div>
                   </div>
                 </Fragment>
