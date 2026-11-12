@@ -62,7 +62,7 @@ export default function PortionSheet() {
   return (
     <Sheet className="portionsheet">
       <h2 className="cond">{recipe.n}</h2>
-      <LogControl recipe={recipe} day={day} onChange={setDone} onLogged={rememberUsual} />
+      <LogControl recipe={recipe} day={day} onChange={setDone} onLogged={rememberUsual} onUndone={() => { if (usualNote && !usualNote.stale) undoUsualNote(); }} />
       {usualNote && <p className="note" role="status">{usualNote.text} {!usualNote.stale && <button type="button" className="btn sm ghost" onClick={undoUsualNote}>Undo</button>}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={closeModal}>{done ? 'Done' : 'Cancel'}</button>

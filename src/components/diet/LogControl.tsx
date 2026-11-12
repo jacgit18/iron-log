@@ -30,7 +30,7 @@ const ports = (): Ports => {
 };
 
 /** `day` (the day the screen shows) when it is one the control offers, else today. */
-export default function LogControl({ recipe, day: from, onChange, onLogged, bare = false }: { recipe: Recipe; day?: string; onChange?: (done: boolean) => void; /** Called after an entry is logged (not planned) with the portions logged: the portion sheet remembers a changed portion as the usual (brief nutrition-usual-portion). */ onLogged?: (servings: number) => void; /** A food you logged before with no recipe behind it (`pastFoodAsRecipe`): log only, no plan days, no pair suggestion. */ bare?: boolean }) {
+export default function LogControl({ recipe, day: from, onChange, onLogged, onUndone, bare = false }: { recipe: Recipe; day?: string; onChange?: (done: boolean) => void; /** Called after an entry is logged (not planned) with the portions logged: the portion sheet remembers a changed portion as the usual (brief nutrition-usual-portion). */ onLogged?: (servings: number) => void; /** Called after the entry's own Undo, so the portion sheet can take back the usual that log set. */ onUndone?: () => void; /** A food you logged before with no recipe behind it (`pastFoodAsRecipe`): log only, no plan days, no pair suggestion. */ bare?: boolean }) {
   const uid = useId();
   const today = ymd(useToday(s => s.today)); // the shared "today" (it moves at midnight), not a Date read during render
   const { min, max: planMax } = dayRange(today);
@@ -79,7 +79,7 @@ export default function LogControl({ recipe, day: from, onChange, onLogged, bare
       {pack !== null && pack > top && <p className="note">A whole pack ({pack} servings) is more than one {ahead ? 'plan item' : 'entry'} can hold. {ahead ? 'Plan' : 'Log'} it in parts, up to {top} portions at a time.</p>}
       {err && <p className="note" role="alert">{err}</p>}
       {done ? (
-        <p className="note" role="status">{done.text} <button type="button" className="btn sm ghost" onClick={() => { done.undo(); setDone(null); set(false); }}>Undo</button> <button type="button" className="btn sm ghost" onClick={() => { setDone(null); set(false); }}>{word} another</button></p>
+        <p className="note" role="status">{done.text} <button type="button" className="btn sm ghost" onClick={() => { done.undo(); setDone(null); set(false); onUndone?.(); }}>Undo</button> <button type="button" className="btn sm ghost" onClick={() => { setDone(null); set(false); }}>{word} another</button></p>
       ) : (
         <div className="lc-go"><button type="button" className="btn primary" onClick={go}>{word}</button></div>
       )}
