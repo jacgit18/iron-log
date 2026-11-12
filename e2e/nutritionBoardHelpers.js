@@ -63,3 +63,12 @@ export const expectScheduledAt = async (page, slot, texts) => {
     if (dose) await expect(suppRow(page, name)).toContainText(dose);
   }
 };
+// Open a day's Totals sheet from its column (brief nutrition-manage-cleanup): the Supplements section's Totals button when it is shown, otherwise the vitamin meter's own way in (open the line, then Open Totals / All N in Totals).
+export const openDayTotals = async col => {
+  const direct = col.locator('[id^="nb-supp-totals-"]');
+  const tog = col.locator('.nb-vit-tog');
+  await expect(direct.or(tog).first()).toBeVisible();
+  if (await direct.count()) { await direct.click(); return; }
+  if ((await tog.getAttribute('aria-expanded')) !== 'true') await tog.click();
+  await col.locator('.nb-vit-all').click();
+};

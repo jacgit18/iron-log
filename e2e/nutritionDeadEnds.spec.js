@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, openManage, openNutrition } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openManage, openNutrition, openTargets } from './nutritionBoardHelpers.js';
 
 // Brief nutrition-items-row-sheet-and-more: three lines of text that pointed at another screen are buttons now: "New recipe", "Edit in Recipes" and "Water reminder". The fixed clock is Thursday 2026-09-24.
 const seedRecipes = async (page, list) => { await page.evaluate(l => localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })), list); await page.reload(); };
@@ -28,9 +28,9 @@ test('a recipe without calories and protein: its portion sheet has an Edit in Re
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Plain rice');
 });
 
-test('Manage: Water reminder opens Settings at the Alerts panel', async ({ page }) => {
+test('Targets and goal: Water reminder opens Settings at the Alerts panel', async ({ page }) => {
   await openNutrition(page);
-  await openManage(page);
+  await openTargets(page);
   await page.locator('#nb-manage-water').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');

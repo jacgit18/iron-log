@@ -44,12 +44,12 @@ test('the drink sheet sends the base goal to Targets and goal, and the new goal 
   await expect(sheet(page).getByRole('heading', { name: 'Targets and goal' })).toBeVisible();
 });
 
-test('Manage reaches the supplement editor, saved meals and foods, and the water reminder', async ({ page }) => {
+test('Manage reaches the supplement editor, and saved meals and foods, and no longer holds the water reminder', async ({ page }) => {
   await openNutrition(page);
   const m = await openManage(page);
   await expect(m.getByRole('button', { name: 'Supplements and library' })).toBeVisible();
   await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toBeVisible();
-  await expect(m.getByRole('button', { name: 'Water reminder' })).toBeVisible();
+  await expect(m.getByRole('button', { name: 'Water reminder' })).toHaveCount(0); // moved to Targets and goal
   await expect(page.locator('#sched-h')).toHaveCount(0); // the editor is not on the page
 });
 
@@ -67,9 +67,9 @@ test('Manage: Supplements and library has a way back, and Meals and foods (opens
   await expect(page.locator('#nb-h')).toBeVisible();
 });
 
-test('Manage: Water reminder opens Settings', async ({ page }) => {
+test('Targets and goal: Water reminder opens Settings', async ({ page }) => {
   await openNutrition(page);
-  await openManage(page);
+  await openTargets(page);
   await page.locator('#nb-manage-water').click();
   await expect(sheet(page)).toHaveCount(0);
   await expect(page.locator('#tab-settings, #view').first()).toBeVisible();
