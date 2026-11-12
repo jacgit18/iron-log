@@ -3,6 +3,7 @@ import { monthLabel } from '../../lib/grocery.js';
 import { fetchPhoto, groupByMonth, listReceipts, receiptTitle, usageText, type SavedList, type SavedReceipt } from '../../lib/receiptsClient.js';
 import { receiptsZip } from '../../lib/receiptsExport.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import EmptyState from '../EmptyState.jsx';
 import { goUp } from '../useRoute.js';
 import './Receipts.css';
 
@@ -67,7 +68,7 @@ export default function Receipts() {
             </div>
           )}
           {state.data.receipts.length === 0 ? (
-            <p className="note" id="rcs-empty">No saved receipts yet. When you scan a receipt, tick Keep a copy of this photo and it shows up here.</p>
+            <EmptyState id="rcs-empty">No saved receipts yet. When you scan a receipt, tick Keep a copy of this photo and it shows up here.</EmptyState>
           ) : groupByMonth(state.data.receipts).map(g => (
             <section key={g.month} className="rcsgroup" aria-labelledby={`rcs-m-${g.month}`}>
               <h3 id={`rcs-m-${g.month}`}>{monthLabel(g.month)}</h3>

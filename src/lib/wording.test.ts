@@ -58,3 +58,16 @@ describe('button labels in src/components', () => {
     expect(stale, 'lower or remove these rows in KNOWN').toEqual([]);
   });
 });
+
+// Label drift (ownership map, brief nutrition-recipes-ownership-leftovers): one spelling for the same button. "Copy yesterday" and "Save as a meal" are the words; the variants must not come back.
+describe('one spelling for the same button', () => {
+  const DRIFT: readonly { bad: RegExp; use: string }[] = [
+    { bad: /Copy from yesterday/, use: 'Copy yesterday' },
+    { bad: /Save as meal\b/, use: 'Save as a meal' },
+  ];
+  it('has no variant spelling in a component or in the Add sheet table', () => {
+    const files = [...walk('src/components'), 'src/lib/nutritionBoard.ts'];
+    const hits = files.flatMap(f => { const t = readFileSync(f, 'utf8'); return DRIFT.filter(d => d.bad.test(t)).map(d => `${f}: say "${d.use}"`); });
+    expect(hits).toEqual([]);
+  });
+});

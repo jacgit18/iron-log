@@ -96,6 +96,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
             <button type="button" className="btn sm" disabled={scanning} onClick={() => camera.current?.click()}>{scanning ? 'Reading label...' : 'Scan label'}</button>
             <button type="button" className="btn sm" disabled={scanning} onClick={() => library.current?.click()}>Choose photo</button>
           </div>
+          <p className="note">Fills the form; nothing is saved until you save.</p>
           {scanNote && <p className="note" role="status">{scanNote}</p>}
         </div>
       )}

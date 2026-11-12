@@ -2,6 +2,7 @@ import type { PhaseKey } from '../../types.ts';
 import { useEffect, useMemo } from 'react';
 import { withoutSkipMarks } from '../../lib/skipMark.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import EmptyState from '../EmptyState.jsx';
 import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
@@ -84,8 +85,8 @@ export function LiftList({ byMuscle = false }: { byMuscle?: boolean }) {
   const needsAttention = (id: string) => phasesOf(id).some(p => backoffOf(cfg, logs, { ex: id }, p) || stallOf(cfg, logs, id, p));
   const kept = useFiltered(Object.keys(logs)); // the muscle picked on the map, when the list sits under it (Progress on one page)
   const ids = sortLiftIds(newestFirst(byMuscle ? kept : Object.keys(logs), logs, nameOf), sort, nameOf, needsAttention); // only the Stalled first sort calls needsAttention, once per lift
-  if (!ids.length && byMuscle && Object.keys(logs).length) return <div className="empty">Nothing logged for this muscle yet.</div>;
-  if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
+  if (!ids.length && byMuscle && Object.keys(logs).length) return <EmptyState>Nothing logged for this muscle yet.</EmptyState>;
+  if (!ids.length) return <EmptyState>No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</EmptyState>;
   return (
     <>
       {ids.length > 1 && <div className="inline"><SortControl options={LIFT_SORTS} value={sort} onChange={setSort} /></div>}
@@ -124,7 +125,7 @@ export function LiftList({ byMuscle = false }: { byMuscle?: boolean }) {
 // The summary cards, or one tile when there is nothing to chart. Subscribes here so the hub on a phone does not re-render on every logged set.
 function Overview() {
   const logs = useAppStore(s => s.logs); const bodyCount = useAppStore(s => s.body.length);
-  return hasProgressData(logs, bodyCount) ? <Trends /> : <div className="empty">Nothing to chart yet. Log a lift on the Board and your weeks, charts and bests fill this page.</div>;
+  return hasProgressData(logs, bodyCount) ? <Trends /> : <EmptyState>Nothing to chart yet. Log a lift on the Board and your weeks, charts and bests fill this page.</EmptyState>;
 }
 
 function ProgressMain() {
