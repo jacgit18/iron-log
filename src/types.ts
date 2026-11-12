@@ -192,12 +192,17 @@ export interface SplitCard {
   item: ProgramItem;
 }
 
+/** One stay of a moved card: from `on` it sat on program day `day` (0 = its own day). */
+export interface MoveLeg { on: string; day: number }
+
 /** One week's state. Keys are card ids ("A-d1s1"), item keys ("A-d1s1#0" / "A-d1s1:0") and day numbers. */
 export interface Week {
   prog: ProgKey | null;
   done: Record<string, true>;
   skipped: Record<string, true>;
   moved: Record<string, number>;
+  /** Where each moved card sat and since when: legs `{ on: YYYY-MM-DD, day }` in date order, `day` the program day it moved to (0 = back on its own day). Lets `dayDate` count an entry only for the stay it was written in. Kept only while its last leg matches `moved`. */
+  moveTrail?: Record<string, MoveLeg[]>;
   ph: Record<string, PhaseKey>;
   warm: Record<string, Record<string, boolean>>;
   rest?: number[];
