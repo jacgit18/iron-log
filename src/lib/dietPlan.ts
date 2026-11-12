@@ -60,9 +60,12 @@ export const isEaten = (item: PlanItem, entries: readonly { id: string }[]): boo
 /** A planned item looked up: its name, the numbers it carries, and whether the recipe or meal is gone. */
 export interface Resolved { item: PlanItem; name: string; gone: boolean; kcal?: number; p?: number; c?: number; f?: number; portion: number; recipe?: Recipe; meal?: SavedMeal }
 
-export function resolve(item: PlanItem, recipes: Recipe[], meals: SavedMeal[]): Resolved {
+/** `meals` is the saved meals still held back from Recipes and `moved` the saved-meal id to recipe id record (brief saved-meals-removal): a saved-meal item shows the recipe it became, else the held meal, else the gone state. */
+export function resolve(item: PlanItem, recipes: Recipe[], meals: SavedMeal[], moved: Readonly<Record<string, string>> = {}): Resolved {
   const portion = item.x ?? 1;
   if (item.k === 'm') {
+    const to = moved[item.id];
+    if (to) return { ...resolve({ k: 'r', id: to }, recipes, meals), item }; // the recipe it became, one portion; the item stays the plan's own so a tap still edits it
     const meal = meals.find(m => m.id === item.id);
     if (!meal) return { item, name: 'Removed', gone: true, portion: 1 };
     return { item, name: meal.n, gone: false, portion: 1, meal, kcal: meal.items.reduce((a, i) => a + i.kcal, 0), p: meal.items.reduce((a, i) => a + i.p, 0) };
@@ -74,10 +77,10 @@ export function resolve(item: PlanItem, recipes: Recipe[], meals: SavedMeal[]): 
 }
 
 /** What a day's list adds up to: calories and protein, and how many items have no numbers (a recipe without them). Removed items count as nothing. */
-export function dayTotals(items: PlanItem[], recipes: Recipe[], meals: SavedMeal[]): { kcal: number; protein: number; without: number } {
+export function dayTotals(items: PlanItem[], recipes: Recipe[], meals: SavedMeal[], moved: Readonly<Record<string, string>> = {}): { kcal: number; protein: number; without: number } {
   let kcal = 0, protein = 0, without = 0;
   for (const it of items) {
-    const r = resolve(it, recipes, meals);
+    const r = resolve(it, recipes, meals, moved);
     if (r.gone) continue;
     if (r.kcal === undefined || r.p === undefined) { without++; continue; }
     kcal += r.kcal; protein += r.p;

@@ -170,9 +170,9 @@ export function mealKcalText(plan: { kcal: number; share: number | null; items: 
 export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null; carbs?: number | null }
 
 /** A day as the board draws it: four meters (calories, protein, fat from the diet log for last week and today, from the plan for days ahead; water from the water log against that day's goal), the plan's meals, and the eaten food. */
-export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets }): DayView {
+export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; moved?: Readonly<Record<string, string>>; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets }): DayView {
   const basis = basisOf(day, today);
-  const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal);
+  const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal, a.moved);
   const eaten = a.diet.filter(e => e.d === day);
   const tot = totalsFor(a.diet, day);
   const water = goalFor(a.supp, a.body, day);

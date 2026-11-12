@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe, SavedMeal } from '../types.ts';
-import { mealItems, moveMeals, quickMeals, quickRows, remapPlan } from './quickMeals.js';
+import { legacyMeals, mealItems, moveMeals, quickMeals, quickRows, remapPlan, savedMealsNote } from './quickMeals.js';
 
 const rec = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'carbs', ing: [{ n: 'x' }], steps: ['Cook.'], ...extra });
 const rice = rec('rice', 'Rice', { kcal: 200, p: 4 }), chili = rec('chili', 'Chili', { cat: 'protein', kcal: 400, p: 30 });
@@ -90,14 +90,38 @@ describe('moveMeals link depth', () => {
 });
 
 describe('quickRows', () => {
-  const saved: SavedMeal[] = [{ id: 'a', n: 'Waiting', items: [{ n: 'Oats', kcal: 300, p: 10 }] }, { id: 'b', n: 'Moved', items: [{ n: 'Eggs', kcal: 150, p: 12 }] }];
-  it('lists Recipes meals and saved meals not yet moved together, A to Z, and marks the waiting ones', () => {
-    const rows = quickRows([linked, rice, chili, plain], saved, { b: 'snack' });
-    expect(rows.map(r => [r.n, r.waiting])).toEqual([['Dinner', false], ['Snack box', false], ['Waiting', true]]);
+  const held: SavedMeal[] = [{ id: 'a', n: 'Waiting', items: [{ n: 'Oats', kcal: 300, p: 10 }] }];
+  it('lists only the Recipes meals when no saved meal is held back', () => {
+    const rows = quickRows([linked, rice, chili, plain], []);
+    expect(rows.map(r => r.n)).toEqual(['Dinner', 'Snack box']);
+    expect(rows.every(r => !('waiting' in r))).toBe(true);
+  });
+  it('adds the held-back saved meals, A to Z, only while the gate holds them', () => {
+    expect(quickRows([linked, plain], held).map(r => r.n)).toEqual(['Dinner', 'Snack box', 'Waiting']);
   });
   it('gives a recipe and a saved meal with one id different row ids, and drops a meal with no foods', () => {
-    const rows = quickRows([rec('a', 'Cake', { cat: 'other', kcal: 100, p: 1 })], [{ id: 'a', n: 'Pie', items: [{ n: 'x', kcal: 1, p: 0 }] }, { id: 'e', n: 'Empty', items: [] }], {});
+    const rows = quickRows([rec('a', 'Cake', { cat: 'other', kcal: 100, p: 1 })], [{ id: 'a', n: 'Pie', items: [{ n: 'x', kcal: 1, p: 0 }] }, { id: 'e', n: 'Empty', items: [] }]);
     expect(rows.map(r => r.id)).toEqual(['r:a', 's:a']);
+  });
+});
+
+describe('legacyMeals (the gate: the old list is read only while a saved meal has not moved)', () => {
+  const saved: SavedMeal[] = [{ id: 'a', n: 'Waiting', items: [{ n: 'Oats', kcal: 300, p: 10 }] }, { id: 'b', n: 'Moved', items: [{ n: 'Eggs', kcal: 150, p: 12 }] }];
+  it('holds back exactly the meals with no recipe yet, and carries the moved record', () => {
+    expect(legacyMeals({ meals: saved, mealsMoved: { b: 'snack' } })).toEqual({ held: [saved[0]], moved: { b: 'snack' } });
+  });
+  it('holds nothing once every saved meal has moved, however many are in the old list', () => {
+    expect(legacyMeals({ meals: saved, mealsMoved: { a: 'x', b: 'y' } }).held).toEqual([]);
+    expect(legacyMeals(undefined)).toEqual({ held: [], moved: {} });
+    expect(legacyMeals({}).held).toEqual([]);
+  });
+  it('says to make room in Recipes only while a meal is held back', () => {
+    expect(savedMealsNote([])).toBe('Rename or edit a meal in Recipes.');
+    expect(savedMealsNote([saved[0]!])).toContain('make room in Recipes');
+  });
+  it('returns the same object for the same input so a view can keep it', () => {
+    const d = { meals: saved, mealsMoved: { b: 'snack' } };
+    expect(legacyMeals(d)).toBe(legacyMeals(d));
   });
 });
 

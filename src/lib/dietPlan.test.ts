@@ -15,6 +15,21 @@ const meals: SavedMeal[] = [{ id: 'm1', n: 'Breakfast', items: [{ n: 'Oats', kca
 const r = (id: string, x?: number): PlanItem => ({ k: 'r', id, ...(x ? { x } : {}) });
 const m = (id: string): PlanItem => ({ k: 'm', id });
 
+describe('a saved-meal item resolves through mealsMoved to its recipe (brief saved-meals-removal)', () => {
+  it('shows the recipe it became: same numbers as the recipe, portion 1', () => {
+    expect(resolve(m('m1'), recipes, [], { m1: 'r1' })).toMatchObject({ name: 'Chili', kcal: 600, p: 40, gone: false, portion: 1 });
+    expect(resolve(m('m1'), recipes, [], { m1: 'r1' }).recipe?.id).toBe('r1');
+  });
+  it('prefers the recipe over a held old meal with the same id', () => {
+    expect(resolve(m('m1'), recipes, meals, { m1: 'r3' })).toMatchObject({ name: 'Rice', gone: false });
+  });
+  it('shows the existing gone state, not a crash, when the recipe was deleted or the meal never moved and is not held', () => {
+    expect(resolve(m('m1'), recipes, [], { m1: 'deleted' })).toMatchObject({ gone: true, name: 'Removed' });
+    expect(resolve(m('m1'), recipes, [])).toMatchObject({ gone: true, name: 'Removed' });
+    expect(dayTotals([m('m1'), r('r3')], recipes, [], { m1: 'deleted' })).toEqual({ kcal: 200, protein: 4, without: 0 });
+  });
+});
+
 describe('window', () => {
   it('daysFrom counts forward and inWindow is today to 13 days after', () => {
     expect(daysFrom('2026-10-30', 3)).toEqual(['2026-10-30', '2026-10-31', '2026-11-01']);

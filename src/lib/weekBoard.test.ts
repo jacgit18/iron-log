@@ -55,6 +55,21 @@ describe('boardDay with a saved meal', () => {
   });
 });
 
+describe('boardDay with a saved-meal item that moved (brief saved-meals-removal)', () => {
+  it('counts the recipe it became in its meal, and judges the plate with it', () => {
+    const d = boardDay({ [D]: [{ k: 'm', id: 'm1', s: 'dinner' }] }, D, recipes, [], null, { m1: 'chili' });
+    const dinner = d.slots.find(s => s.slot === 'dinner');
+    expect(dinner?.items[0]?.r).toMatchObject({ name: 'Chili', gone: false });
+    expect(d.kcal).toBeGreaterThan(0);
+    expect(dinner?.have.length).toBeGreaterThan(0);
+  });
+  it('shows a gone row, and counts nothing, when its recipe is gone', () => {
+    const d = boardDay({ [D]: [{ k: 'm', id: 'm1', s: 'dinner' }] }, D, recipes, [], null, { m1: 'deleted' });
+    expect(d.slots.find(s => s.slot === 'dinner')?.items[0]?.r.gone).toBe(true);
+    expect(d.kcal).toBe(0);
+  });
+});
+
 describe('moveItem', () => {
   const plan = { [D]: [pi('chili', 'dinner'), pi('rice', 'dinner')], [D2]: [pi('rice', 'lunch')] };
   it('changes only the meal on the same day', () => {
