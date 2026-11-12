@@ -34,5 +34,5 @@ test('Manage: Water reminder opens Settings at the Alerts panel', async ({ page 
   await page.locator('#nb-manage-water').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');
-  await expect(page.locator('#pushalerts, #set-app-h').first()).toBeInViewport(); // a browser with no push shows the App group's heading instead
+  await expect(page.locator('#pushalerts, #set-app-h').last()).toBeInViewport(); // the Alerts panel comes after the App heading in the page, so .last() is it; a browser with no push shows the App group's heading instead
 });
