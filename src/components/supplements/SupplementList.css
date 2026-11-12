@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* The merged supplement list in Manage (brief supplement-merged-list): a row is name, line and Edit on top, the three time chips under it. Chips look like the sheet's time chips (SupplementTimes.css). */
+/* The merged supplement list in Manage (brief supplement-merged-list): a row is name, line and Edit on top, the three time chips under it. The chips and the filter are the shared .pillbtn (Pill.css). */
 .slrow {
   display: flex;
   flex-direction: column;
@@ -23,22 +23,6 @@
   flex-wrap: wrap;
   gap: var(--sp-8);
 }
-.slchip {
-  min-height: 44px;
-  padding: 0 var(--sp-16);
-  border: 1px solid var(--field-line);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.slchip[aria-pressed="true"] {
-  background: var(--accent-fill);
-  border-color: transparent;
-  color: var(--accent-ink);
-}
 .slbar {
   display: flex;
   flex-wrap: wrap;
@@ -50,22 +34,6 @@
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--sp-4);
-}
-.slfilter button {
-  min-height: 44px;
-  padding: 0 var(--sp-12);
-  border: 1px solid var(--field-line);
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.slfilter button[aria-pressed="true"] {
-  background: var(--accent-fill);
-  border-color: transparent;
-  color: var(--accent-ink);
 }
 .slfilter button span {
   font-variant-numeric: tabular-nums;
