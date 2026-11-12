@@ -115,9 +115,11 @@ test('editing an eaten food keeps its carbs and fat', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   await expect(meter(todayCol(page), 'Fat')).toHaveAttribute('aria-label', /: 5 /);
-  await todayCol(page).getByRole('button', { name: 'Edit Rice' }).click();
-  await todayCol(page).locator('.nb-eat input[id$="-n"]').fill('Brown rice');
-  await todayCol(page).getByRole('button', { name: 'Save', exact: true }).click();
+  await todayCol(page).locator('.nb-eat', { hasText: 'Rice' }).getByRole('button').click(); // the row opens its sheet (brief nutrition-items-row-sheet-and-more)
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('dialog').locator('input[id$="-n"]').fill('Brown rice');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
   await expect(todayCol(page).locator('.nb-eat')).toContainText('Brown rice');
   await expect(meter(todayCol(page), 'Fat')).toHaveAttribute('aria-label', /: 5 /);
 });
@@ -341,7 +343,7 @@ test.describe('on a phone', () => {
     const step = page.getByRole('group', { name: 'Day stepper' });
     await step.getByRole('button', { name: 'Next day' }).click();
     await expect(page.locator('#nb-add')).toBeVisible();
-    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['+ Add food', 'Recipes', 'Saved meals']);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Add food', 'Recipes', 'Saved meals']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
     await expect(page.locator('#nb-add')).toHaveCount(0);
     await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, editEaten, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 import { startFood } from './recipesNav.js';
 
 // Brief type-food-amounts: typing vitamin and mineral amounts on a food (open to everyone since 2026-11-09). The row-to-amount rules (unit conversion, cap, duplicates, the calorie-change
@@ -85,12 +85,12 @@ test.describe('admin session', () => {
     await add.getByRole('button', { name: 'Add', exact: true }).click();
     await closeSheet(page);
     const [e] = await stored(page);
-    await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
+    await editEaten(page);
     await expect(page.getByLabel('Amount 1')).toHaveValue('100');
     await page.getByLabel('Amount 1').fill('150');
     await page.getByRole('button', { name: 'Save' }).click();
     expect((await stored(page))[0].micro).toEqual({ calcium: 150, iron: 2 });
-    await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
+    await editEaten(page);
     for (const n of ['Calcium', 'Iron']) { const rm = page.getByRole('button', { name: `Remove ${n} row` }); await rm.click(); await rm.click(); } // two taps: arm, then confirm
     await page.getByRole('button', { name: 'Save' }).click();
     expect('micro' in (await stored(page))[0]).toBe(false);

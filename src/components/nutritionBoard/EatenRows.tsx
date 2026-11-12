@@ -16,7 +16,7 @@ export function EatenRow({ e, editable }: { e: DietEntry; editable: boolean }) {
     </>
   );
   return (
-    <li>
+    <li className="nb-eat">
       {editable
         ? <button type="button" className="nb-eatrow" aria-haspopup="dialog" onClick={() => useAppStore.getState().openModal({ type: 'nbeaten', id: e.id })}>{body}</button>
         : <div className="nb-eatrow ro">{body}</div>}
