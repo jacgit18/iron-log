@@ -59,3 +59,13 @@ test('the same sheet from a Recipes row remembers the portion too', async ({ pag
   await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click();
   await expect(dlg(page).getByText('1.5 portions').first()).toBeVisible();
 });
+
+test('the recipe page remembers a changed portion too, with the same notice', async ({ page }) => {
+  await seed(page);
+  await page.click('#tab-daily');
+  await page.click('#daily-recipes');
+  await page.locator('.rc-item', { hasText: 'Chili' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText('Usual portion saved: 1.5 portions.')).toBeVisible();
+});

@@ -328,6 +328,7 @@ export interface RecipesSlice {
   recipes: Recipe[];
   recipesLoaded: boolean; // the recipes list has been read (from this browser, or pulled from the account): a write built on it before then could replace the account's list
   saveRecipes(): void;
+  setRecipeUsual(id: string, usual: number | undefined): string | null; // the usual portion alone (undefined clears it); an error text when the recipe is gone, else null
   toggleRecipeFav(id: string): void; // the star on a recipe (brief recipes-find-type-tabs); saved with the recipes
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)

@@ -347,3 +347,19 @@ describe('toggleRecipeFav (brief recipes-find-type-tabs)', () => {
     expect(st().recipes[0]!.edited).toBeUndefined();
   });
 });
+
+describe('setRecipeUsual', () => {
+  it('sets, replaces and clears the usual portion and changes nothing else on the recipe', () => {
+    st().saveRecipe(draft);
+    const before = st().recipes[0]!;
+    expect(st().setRecipeUsual(before.id, 2)).toBeNull();
+    expect(st().recipes[0]).toEqual({ ...before, usual: 2 });
+    expect(st().setRecipeUsual(before.id, 1.5)).toBeNull();
+    expect(st().recipes[0]!.usual).toBe(1.5);
+    expect(st().setRecipeUsual(before.id, undefined)).toBeNull();
+    expect(st().recipes[0]).toEqual(before);
+  });
+  it('says so when the recipe is gone', () => {
+    expect(st().setRecipeUsual('nope', 2)).toBe('That food is gone.');
+  });
+});
