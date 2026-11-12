@@ -25,5 +25,8 @@ test('S-01: read today, add a one-off food, edit and delete it, then look at yes
   await expect(meter(todayCol(page), 'Calories', '1,440 / 2,400')).toBeVisible();
   const yesterday = dayCol(page, '2026-09-23');
   await expect(yesterday.locator('.nb-eat')).toHaveCount(5);
+  await yesterday.locator('.nb-eat').first().getByRole('button').click(); // an earlier day's row opens its sheet too (food added there can be corrected)
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await closeSheet(page);
   await context.close();
 });
