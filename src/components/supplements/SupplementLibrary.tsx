@@ -5,6 +5,7 @@ import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOTS } from '../../lib/supplements.js';
 import { chipTap, filterRows, groupSupplements, hasBothSources, perDay, rowCounts, rowSub, type ListFilter, type ListRow, type ListSource } from '../../lib/supplementList.js';
+import '../Pill.css';
 import './SupplementList.css';
 
 // Every supplement you keep, once, in Manage > Supplements and library (brief supplement-merged-list; it replaced a schedule list and a library list that repeated each other).
@@ -48,7 +49,7 @@ export default function SupplementLibrary() {
       </div>
       <div className="slbar">
         <div className="slfilter" role="group" aria-label="Show">
-          {FILTERS.map(([k, l]) => <button key={k} type="button" id={`suplib-filter-${k}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l} <span>{k === 'all' ? n.all : k === 'scheduled' ? n.scheduled : n.library}</span></button>)}
+          {FILTERS.map(([k, l]) => <button key={k} type="button" className="pillbtn" id={`suplib-filter-${k}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l} <span>{k === 'all' ? n.all : k === 'scheduled' ? n.scheduled : n.library}</span></button>)}
         </div>
         {!filtering && rows.length > 1 && <button type="button" className="btn sm ghost" id="suplib-reorder" aria-pressed={reorder} onClick={() => setReorder(!reorder)}>{reorder ? 'Done reordering' : 'Reorder'}</button>}
       </div>
@@ -77,7 +78,7 @@ export default function SupplementLibrary() {
                 </div>
               </div>
               <div className="slchips" role="group" aria-label={`When to take ${label(r)}`}>
-                {SLOTS.map(([k, l]) => <button key={k} type="button" className="slchip" id={`suplib-${r.id}-${k}`} aria-pressed={r.slots.includes(k)} onClick={() => tap(r, k)}>{l}</button>)}
+                {SLOTS.map(([k, l]) => <button key={k} type="button" className="pillbtn" id={`suplib-${r.id}-${k}`} aria-pressed={r.slots.includes(k)} onClick={() => tap(r, k)}>{l}</button>)}
               </div>
             </div>
           );
