@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
 import { effectivePlan } from '../lib/dailySnacks.js';
+import { shiftDay } from '../lib/dietLog.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
@@ -12,6 +13,14 @@ beforeEach(() => { clearStorage(); useAppStore.setState({ diet: [], removed: nul
 
 const day = '2026-10-29';
 const rice = { d: day, n: 'Rice', kcal: 200, p: 4 };
+
+describe('a diet key this build does not know (ADR 122)', () => {
+  it('survives the writers that rebuild cfg.diet', () => {
+    st().mutateCfg(c => { c.diet = { kcal: 3000, future: { on: true } } as never; });
+    st().saveDailySnacks([{ id: 'yog' }]);
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, snacks: [{ id: 'yog' }], future: { on: true } });
+  });
+});
 
 describe('addDietEntry', () => {
   it('adds an entry with an id and keeps the numbers', () => {
@@ -316,6 +325,18 @@ describe('planToShopping (week to Shopping)', () => {
     expect(st().planToShopping([today])).toMatchObject({ added: 0, recipes: 0, ids: [] });
     expect(st().planToShopping([])).toMatchObject({ added: 0, recipes: 0 });
   });
+  it('adds the missing ingredients of listed daily snacks once, not those skipped today, and counts match', () => {
+    st().saveRecipe({ n: 'Yogurt bowl', cat: 'carbs', ing: [{ n: 'yogurt' }, { n: 'honey' }], steps: [] });
+    st().saveRecipe({ n: 'Nuts', cat: 'protein', ing: [{ n: 'almonds' }, { n: 'honey' }], steps: [] });
+    st().saveRecipe({ n: 'Fruit', cat: 'carbs', ing: [{ n: 'apple' }], steps: [] });
+    const [a, b, c] = st().recipes;
+    st().mutateCfg(cfg => { cfg.diet = { snacks: [{ id: a!.id, x: 2 }, { id: b!.id }, { id: c!.id }], snackSkips: { [today]: [c!.id] } }; });
+    const tomorrow = shiftDay(today, 1);
+    const r = st().planToShopping([today, tomorrow], undefined, today);
+    expect(itemNames()).toEqual(['almonds', 'apple', 'honey', 'yogurt']); // Fruit is skipped today only, so tomorrow still brings its apple; honey once
+    expect(r).toMatchObject({ added: 4, recipes: 3, refused: null });
+    expect(st().planToShopping([today], undefined, today)).toMatchObject({ added: 0, recipes: 2 }); // a second tap adds nothing twice
+  });
   it('lets Undo remove exactly the items the call created', () => {
     st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
     st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
@@ -389,10 +410,22 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().realizeDailySnack(today, 'bar')).toBe(0);
     expect(st().cfg.diet!.plan).toEqual({ [today]: [{ k: 'r', id: 'bar', x: 2, s: 'snack' }] });
   });
-  it('reports a full day instead of losing the snack', () => {
-    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` })) } }; });
-    expect(st().realizeDailySnack(tomorrow, 'yog')).toMatch(/8 planned things/);
-    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(8);
+  it('ticks a shown snack on a day already holding 8 planned things: it is stored, survives the clean, and the ninth planned thing is still refused (brief snacks-day-cap)', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: eight } }; });
+    expect(st().realizeDailySnack(tomorrow, 'yog')).toBe(8);
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    st().saveDailySnacks([{ id: 'yog' }]); // any later write cleans the plan again
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    expect(st().addPlanItem(tomorrow, 'r', 'bar')).toMatch(/hold 8/);
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+  });
+  it('moves a ticked snack to another full day in Snack, and refuses it into another meal there', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [today]: [{ k: 'r', id: 'yog', s: 'snack' }], [tomorrow]: eight } }; });
+    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toMatch(/hold 8/);
+    expect(st().movePlanItem(today, 0, tomorrow, 'snack')).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
   });
   it('skips a snack on one day without touching the list or other days', () => {
     st().saveDailySnacks([{ id: 'yog' }]);

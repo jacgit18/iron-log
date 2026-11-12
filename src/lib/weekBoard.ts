@@ -1,5 +1,5 @@
-import { MAX_PLAN_ITEMS, PLAN_SLOTS, samePlanItem } from '../shared/diet.js';
-import type { PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
+import { MAX_DAY_ITEMS, MAX_PLAN_ITEMS, PLAN_SLOTS, isDailySnackItem, plannedCount, samePlanItem } from '../shared/diet.js';
+import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { servingNumbers } from './dietLog.js';
 import { SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
@@ -64,7 +64,7 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
 type Moved = { plan: Plan; error: null } | { plan: null; error: string };
 
 /** `plan` with the item at `index` of `fromDay` moved to meal `slot` of `toDay` (the same day changes only its meal). An error text when the day is outside the window or full, or the food is already in that meal. */
-export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string): Moved {
+export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string, snacks?: readonly DailySnack[]): Moved {
   const it = plan[fromDay]?.[index];
   if (!it) return { plan: null, error: 'That is gone.' };
   if (!inWindow(toDay, today)) return { plan: null, error: 'You can plan today and the next two weeks.' };
@@ -73,7 +73,8 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
   if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
-  if (toDay !== fromDay && target.length >= MAX_PLAN_ITEMS) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };
+  const counts = !isDailySnackItem(moved, snacks), counted = !isDailySnackItem(it, snacks); // a listed daily snack in Snack never counts toward MAX_PLAN_ITEMS (brief snacks-day-cap); moving one into another meal makes it a planned thing
+  if ((toDay !== fromDay || (counts && !counted)) && (counts ? plannedCount(target, snacks) >= MAX_PLAN_ITEMS : target.length >= MAX_DAY_ITEMS)) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };
   const from = (plan[fromDay] ?? []).filter((_, i) => i !== index);
   const next: Plan = { ...plan };
   if (toDay === fromDay) next[toDay] = (plan[toDay] ?? []).map((x, i) => (i === index ? moved : x));

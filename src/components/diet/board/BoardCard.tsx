@@ -17,7 +17,7 @@ export default function BoardCard({ item, day, today, days, open, moving, onOpen
   const eaten = useAppStore(s => isEaten(r.item, s.diet));
   const checkable = day === today && !r.gone;
   const name = r.item.k === 'm' ? `${r.name} (meal)` : r.name;
-  // The item's place in the stored plan: a shown daily snack is stored now (a full day says so and changes nothing).
+  // The item's place in the stored plan: a shown daily snack is stored now (never refused for a full day: snacks do not count toward the 8).
   const real = (): number => {
     if (!item.virtual) return index;
     const at = st().realizeDailySnack(day, r.item.id);
