@@ -27,7 +27,7 @@
   font-size: var(--h-label);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: .08em;
   color: var(--muted);
 }
 .ph-name {
