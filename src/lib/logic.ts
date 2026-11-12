@@ -4,8 +4,8 @@ import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp, validStep } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { normExperimentItem } from '../shared/listItems.js';
-import { isOrder, normWeek, restDatesIn, restTookIn } from '../shared/week.js';
-import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week, WeekRan } from '../types.ts';
+import { MAX_LEGS, isOrder, normWeek, restDatesIn, restTookIn } from '../shared/week.js';
+import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, MoveLeg, PhaseKey, ProgKey, Program, Week, WeekRan } from '../types.ts';
 
 export { isOrder, normWeek };
 
@@ -580,18 +580,38 @@ export function planRows(cfg: Cfg, logs: Logs, it: CardItem, ph: PhaseKey | null
 export const AUTO_NOTE = 'From check-off';
 /** The note on the entry a skip writes for the day it was skipped (an auto entry with no numbers, so stats and last-session lookups ignore it). */
 export { SKIPPED_NOTE };
+/** Keeps `week.moveTrail` in step with `week.moved` after a change: a card whose place changed gets a leg `{ on: date, day }` (day 0 = back on its own
+ *  day); a second change on the same date replaces that leg, and a leg that puts the card back where it already was is dropped, so a move and
+ *  its undo on one date leave nothing behind. Earlier legs stay, so a return home on a later date keeps the history. */
+export function stampMoves(before: WeekIn, after: Week, date: string): void {
+  const was = before.moved || {}; const now = after.moved || {}; const trail: Record<string, MoveLeg[]> = { ...(after.moveTrail || {}) };
+  new Set([...Object.keys(was), ...Object.keys(now)]).forEach(id => {
+    const day = now[id] ?? 0;
+    if ((was[id] ?? 0) === day) return;
+    const legs = [...(trail[id] || [])]; const leg = { on: date, day };
+    if (legs.length && legs[legs.length - 1].on === date) legs[legs.length - 1] = leg; else legs.push(leg);
+    if (legs[legs.length - 1].day === (legs.length > 1 ? legs[legs.length - 2].day : 0)) legs.pop(); // back where that stay began (a move and its undo on one date): no leg
+    if (legs.length) trail[id] = legs.slice(-MAX_LEGS); else delete trail[id];
+  });
+  if (Object.keys(trail).length) after.moveTrail = trail; else delete after.moveTrail;
+}
+/** The program day a card sat on at the end of `date` (0 = its own day), from its trail. */
+const placeOn = (legs: MoveLeg[], date: string) => legs.reduce((day, l) => (l.on <= date ? l.day : day), 0);
 const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
 // The day a board was worked: the date most of its cards were logged on (each card counts once, by its earliest entry this week).
 // A tie goes to the later date, so a session that runs past midnight shows the day it ended. One card moved in from another day
 // therefore cannot take over the stamp.
 // A card that is not done only counts by what was logged on it by hand: the entries a check-off writes (`auto`, a skip's too) belong to a day it was ticked on, so
 // cards moved in from a day that was worked cannot hand this day their date (Day 5 and 6 reading 0/9 and 0/6 under "Thursday 11/12"). A day with nothing done and nothing logged is never stamped.
+// A card counts only by what was written during the stay it is on now (`week.moveTrail`): what it was ticked for on another day, or while it was
+// away, belongs to that stay. A move made on the same date as the tick still counts at the new place (the date is all an entry holds). A trail
+// that does not end where the card sits (a merge left it behind) is ignored.
 export function dayDate(cards: Slot[], logs: Logs, wk: string, week: WeekIn): string | null {
   const count = new Map<string, number>();
   cards.forEach(s => {
-    const worked = doneUnitsOf(s, week) > 0;
+    const worked = doneUnitsOf(s, week) > 0; const place = week.moved?.[s.id] ?? 0; const trail = week.moveTrail?.[s.id]; const legs = trail && trail.length && trail[trail.length - 1].day === place ? trail : undefined;
     let first: string | null = null;
-    s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (worked || !e.auto) && (!first || e.d < first)) first = e.d; }));
+    s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (worked || !e.auto) && (!legs || placeOn(legs, e.d) === place) && (!first || e.d < first)) first = e.d; }));
     if (first) count.set(first, (count.get(first) || 0) + 1);
   });
   let best: string | null = null;

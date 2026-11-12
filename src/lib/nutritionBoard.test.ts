@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -102,17 +102,20 @@ describe('the toolbar and what can be added', () => {
     expect(addingTo(TODAY, TODAY)).toBe('Adding to Sun 8 · today');
     expect(addingTo('2026-11-10', TODAY)).toBe('Adding to Tue 10');
   });
-  it('last week is read-only for food; a day ahead plans; today logs', () => {
-    expect(foodEditable('2026-11-07', TODAY)).toBe(false);
+  it('an earlier day and today log eaten food, a day ahead plans (the day-to-log rule)', () => {
+    expect(addMode('2026-11-07', TODAY)).toBe('log');
+    expect(addMode(TODAY, TODAY)).toBe('log');
+    expect(addMode('2026-11-09', TODAY)).toBe('plan');
+    expect(addFlows('2026-11-07', TODAY)).toEqual(addFlows(TODAY, TODAY));
+    expect(foodEditable('2026-11-07', TODAY)).toBe(false); // rows of an earlier day are not edited in place
     expect(foodEditable(TODAY, TODAY)).toBe(true);
-    expect(addFlows('2026-11-07', TODAY)).toEqual([]);
     expect(addFlows('2026-11-10', TODAY)).toEqual(['meals', 'recipes']);
     expect(addFlows(TODAY, TODAY)).toEqual(expect.arrayContaining(['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes']));
   });
   it('the toolbar shortcuts follow the day: today logs, a day ahead plans, last week has none, and each is a way the add sheet offers', () => {
     expect(toolbarFlows(TODAY, TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
     expect(toolbarFlows('2026-11-12', TODAY)).toEqual(['recipes', 'meals']);
-    expect(toolbarFlows('2026-11-07', TODAY)).toEqual([]);
+    expect(toolbarFlows('2026-11-07', TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
     for (const d of ['2026-11-07', TODAY, '2026-11-12']) for (const f of toolbarFlows(d, TODAY)) expect(addFlows(d, TODAY)).toContain(f);
   });
 });
@@ -260,8 +263,8 @@ describe('addGroups', () => {
     expect(g.map(x => x.label)).toEqual(['From what you have', 'Whole days and meals']);
     expect(g.flatMap(x => x.flows)).toEqual(['recipes', 'meals']);
   });
-  it('last week has none', () => {
-    expect(addGroups('2026-11-01', TODAY)).toEqual([]);
+  it('an earlier day lists the same ways as today', () => {
+    expect(addGroups('2026-11-01', TODAY)).toEqual(addGroups(TODAY, TODAY));
   });
 });
 
