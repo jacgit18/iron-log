@@ -10,6 +10,7 @@ import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { PlanSlot, Recipe } from '../../types.ts';
+import '../Pill.css';
 import PairSuggestion from './PairSuggestion.js';
 import './LogControl.css';
 
@@ -68,7 +69,7 @@ export default function LogControl({ recipe, day: from, onChange }: { recipe: Re
         <div>
           <p className="note" id={`${uid}-meal`}>Which meal?</p>
           <div className="lc-meals" role="group" aria-labelledby={`${uid}-meal`}>
-            {PLAN_SLOTS.map(s => <button key={s} type="button" className="btn sm" aria-pressed={meal === s} disabled={lock} onClick={() => { setMeal(s); remember(s); }}>{SLOT_LABEL[s]}</button>)}
+            {PLAN_SLOTS.map(s => <button key={s} type="button" className="pillbtn" aria-pressed={meal === s} disabled={lock} onClick={() => { setMeal(s); remember(s); }}>{SLOT_LABEL[s]}</button>)}
           </div>
         </div>
       )}
