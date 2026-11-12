@@ -3,6 +3,7 @@ import type { Cfg, WarmupItem } from '../types.ts';
 import { normDietCfg } from './diet.js';
 import { cleanProfile } from './profile.js';
 import { normRecipeChips } from './recipes.js';
+import { UNSAFE } from './unknownKeys.js';
 import { ingredientLimitsOf } from './supplementIngredients.js';
 import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
 
@@ -11,7 +12,6 @@ import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoa
    Framework-free, so the client and the API share it (ADR 015). */
 
 // The config from a file: the keys the app reads as plain objects must be plain objects, or it would throw on every load.
-const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
 const EX_NOTE_MAX = 200; // the longest note an exercise keeps (src/lib/exerciseNote.ts has the same cap)
 const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals', 'equipment', 'freqGoals'];
 // A goal that scales with body weight keeps `bw` and `bwd` only as a valid pair; either one bad drops both and it becomes a plain goal.

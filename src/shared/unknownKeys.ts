@@ -4,7 +4,7 @@
    because this is a security boundary: the value came from storage, a file or a request. Framework-free (client and API share it). */
 
 /** Never a key: they would rewrite the prototype of the object the value is copied into. */
-const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
+export const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
 const KEY = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
 
 export const MAX_UNKNOWN_KEYS = 8; // kept keys per object
