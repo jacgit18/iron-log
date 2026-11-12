@@ -19,11 +19,12 @@ export function quickMeals(recipes: readonly Recipe[]): Recipe[] {
 export interface LegacyMeals { held: SavedMeal[]; moved: Readonly<Record<string, string>> }
 
 const NO_HELD: SavedMeal[] = [], NO_MOVED: Readonly<Record<string, string>> = {};
+const NO_LEGACY: LegacyMeals = { held: NO_HELD, moved: NO_MOVED }; // one object for "no diet settings yet": a store selector that got a new one each call would never settle
 const gated = new WeakMap<object, LegacyMeals>();
 
 /** The gate: what is still read from `cfg.diet`'s old list. The same object comes back for the same `diet`, so a view can keep it. */
 export function legacyMeals(diet: Pick<DietCfg, 'meals' | 'mealsMoved'> | undefined): LegacyMeals {
-  if (!diet) return { held: NO_HELD, moved: NO_MOVED };
+  if (!diet) return NO_LEGACY;
   const hit = gated.get(diet);
   if (hit) return hit;
   const moved = diet.mealsMoved ?? NO_MOVED;

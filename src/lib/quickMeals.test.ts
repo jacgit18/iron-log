@@ -114,6 +114,7 @@ describe('legacyMeals (the gate: the old list is read only while a saved meal ha
   it('holds nothing once every saved meal has moved, however many are in the old list', () => {
     expect(legacyMeals({ meals: saved, mealsMoved: { a: 'x', b: 'y' } }).held).toEqual([]);
     expect(legacyMeals(undefined)).toEqual({ held: [], moved: {} });
+    expect(legacyMeals(undefined)).toBe(legacyMeals(undefined)); // stable, or a store selector loops with no diet settings
     expect(legacyMeals({}).held).toEqual([]);
   });
   it('says to make room in Recipes only while a meal is held back', () => {

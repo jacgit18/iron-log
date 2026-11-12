@@ -15,6 +15,7 @@ describe('legacyOf', () => {
   it('holds nothing when the diet settings have no saved meals', () => {
     expect(legacyOf(st())).toEqual({ held: [], moved: {} });
     expect(typeof useLegacyMeals).toBe('function');
+    expect(legacyOf({ cfg: {} } as Parameters<typeof legacyOf>[0])).toBe(legacyOf({ cfg: {} } as Parameters<typeof legacyOf>[0])); // no diet settings at all: still one object, or the selector loops
   });
   it('holds exactly the saved meals with no recipe yet, and carries the moved record', () => {
     st().mutateCfg(c => { c.diet = { meals: [meal('a'), meal('b')], mealsMoved: { b: 'rb' } }; });
