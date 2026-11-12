@@ -7,8 +7,6 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows } from '../../lib/quickMeals.js';
-import { afterSheetClose } from '../../lib/backNav.js';
-import { requestRecipesJump } from '../../lib/recipesJump.js';
 import { ADD_FLOWS, addFlows, addGroups, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
@@ -24,7 +22,7 @@ import SaveMeal from '../diet/SaveMeal.js';
 import SavedMeals from '../diet/SavedMeals.js';
 import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
 import Icon, { type IconName } from '../Icon.jsx';
-import { navigate } from '../useRoute.js';
+import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
 
 const FLOW_ICON: Record<AddFlow, IconName> = { quick: 'spark', barcode: 'scan', oneoff: 'edit', find: 'search', meals: 'star', recipes: 'book', copy: 'undo', savemeal: 'plus' };
@@ -96,7 +94,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const saved = useAppStore(s => s.cfg.diet?.meals) ?? [];
   const moved = useAppStore(s => s.cfg.diet?.mealsMoved) ?? {};
   const [q, setQ] = useState('');
-  const newRecipe = () => { requestRecipesJump({ kind: 'new' }); afterSheetClose(window.history, window, () => { useAppStore.getState().setTab('daily'); navigate('daily/recipes/form', 'push'); }); useAppStore.getState().closeModal(); }; // the blank form in Recipes, after the sheet's own Back step (lib/backNav.ts)
+  const newRecipe = () => openRecipesForm({ kind: 'new' });
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
   const eat = day === today;
   const st = () => useAppStore.getState();

@@ -13,3 +13,12 @@ describe('the one-shot request to open Recipes on a form', () => {
     expect(takeRecipesJump()).toBeNull();
   });
 });
+
+describe('a request nobody read', () => {
+  it('goes stale after ten seconds, so it cannot open an unrelated form later', () => {
+    requestRecipesJump({ kind: 'edit', id: 'r1' }, 1000);
+    expect(takeRecipesJump(1000 + 10_001)).toBeNull();
+    requestRecipesJump({ kind: 'new' }, 1000);
+    expect(takeRecipesJump(1000 + 9_000)).toEqual({ kind: 'new' });
+  });
+});
