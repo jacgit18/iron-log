@@ -51,7 +51,7 @@ test('Weeks run Sunday to Saturday: This week holds today and the days before it
   await expect(page.locator('.nb-weekname')).toHaveText('This week');
 });
 
-test('the toolbar names its day, starts on today and follows the day you tap; last week is read-only for food', async ({ page }) => {
+test('the toolbar names its day, starts on today and follows the day you tap; an earlier day logs like today', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('.nb-target')).toHaveText('Adding to Thu 24 · today');
   for (const f of ['Scan barcode', 'Quick add', 'One-off food']) await expect(page.locator('.nb-toolbar').getByRole('button', { name: f, exact: true })).toBeVisible(); // today logs eaten food
@@ -72,8 +72,9 @@ test('the toolbar names its day, starts on today and follows the day you tap; la
   await col(page, '2026-09-24').getByRole('button', { name: /^Thu 24/ }).click();
   await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible(); // back on today: log shortcuts
   await page.getByRole('button', { name: 'Previous week', exact: true }).click();
-  await expect(page.locator('#nb-add')).toHaveCount(0);
-  await expect(page.locator('.nb-toolbar')).toContainText('read-only');
+  await expect(page.locator('#nb-add')).toBeVisible(); // an earlier day logs eaten food on that date (brief nutrition-any-day-add)
+  await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible();
+  await expect(page.locator('.nb-toolbar')).not.toContainText('read-only');
 });
 
 test('the add sheet pre-picks the meal from the time (Dinner at 18:30) on a day ahead and remembers the last pick; today asks no meal, and a logged food moves the meters', async ({ page }) => {
@@ -341,15 +342,15 @@ test.describe('on a phone', () => {
     });
   }
 
-  test('on a day ahead Add food shows with Recipes and Saved meals; on last week the food buttons are gone', async ({ page }) => {
+  test('on a day ahead Add food shows with Recipes and Saved meals; on last week it logs like today', async ({ page }) => {
     await openNutrition(page);
     const step = page.getByRole('group', { name: 'Day stepper' });
     await step.getByRole('button', { name: 'Next day' }).click();
     await expect(page.locator('#nb-add')).toBeVisible();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Recipes', 'Saved meals', 'Add food']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
-    await expect(page.locator('#nb-add')).toHaveCount(0);
-    await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan barcode', 'Quick add', 'One-off food', 'Add food']);
+    await expect(page.getByText('Last week\'s food cannot be changed')).toHaveCount(0);
   });
 });
 
