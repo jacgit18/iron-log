@@ -104,7 +104,7 @@ export function normRecipe(x: unknown): Recipe | null {
   const steps = (Array.isArray(o.steps) ? o.steps : []).map(s => str(s, MAX_STEP)).filter(Boolean).slice(0, MAX_STEPS);
   const servings = cleanWhole(o.servings, 99), minutes = cleanWhole(o.minutes, 1440);
   const serving = str(o.serving, MAX_SERVING), servingG = cleanWhole(o.servingG, MAX_SERVING_G); // what one serving is: words and/or grams (brief recipe-serving-size)
-  const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM);
+  const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM), fromMealText = typeof o.fromMeal === 'string' ? o.fromMeal.trim() : '', fromMeal = fromMealText.length <= MAX_RECIPE_ID ? fromMealText : ''; // fromMeal: the saved meal this was moved from (brief saved-meals-removal); an id is dropped, never cut
   const urlText = typeof o.url === 'string' ? o.url.trim() : '', url = urlText.length <= MAX_URL && /^https?:\/\/\S+$/i.test(urlText) ? urlText : ''; // only a web link, cut never (a cut address would not open): a script or file address never becomes a link
   const library = from.startsWith('c:');
   const ready = cleanCategory(o.cat) === 'ready'; // a unit name belongs to a ready-made food only; a usual amount may sit on any recipe
@@ -117,7 +117,7 @@ export function normRecipe(x: unknown): Recipe | null {
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
   const micro = cleanMicro(o.micro); // vitamins and minerals per serving, filled by a scan, the ingredient calculator or a meal's roll-up; never typed
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(fromMeal ? { fromMeal } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

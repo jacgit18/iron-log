@@ -92,9 +92,11 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const st = get(), meals = mealsOf(get), have = st.cfg.diet?.mealsMoved ?? {};
     if (!st.isReady() || !st.recipesLoaded || meals.every(m => have[m.id])) return 0;
     const r = moveMeals(meals, have, st.recipes);
-    if (!r.added) return 0;
-    set({ recipes: r.recipes });
-    get().saveRecipes(); // recipes first: if the settings write below fails, the next load moves again (a copy), never loses a meal
+    if (!r.added && !r.found) return 0;
+    if (r.added) {
+      set({ recipes: r.recipes });
+      get().saveRecipes(); // recipes first: if the settings write below fails, the next load finds each recipe by its fromMeal mark and rebuilds the moved record (no copy, no lost meal)
+    }
     get().mutateCfg(c => {
       const next = { ...(c.diet || {}), mealsMoved: r.moved };
       const plan = remapPlan(next.plan, r.moved);
