@@ -125,11 +125,13 @@ test('editing an eaten food keeps its carbs and fat', async ({ page }) => {
   await expect(meter(todayCol(page), 'Fat')).toHaveAttribute('aria-label', /: 5 /);
 });
 
-test('empty meals say Nothing planned and have no button; an empty Snack is hidden', async ({ page }) => {
+test('empty meals say Nothing planned and have no button; Snack sits between Lunch and Dinner and offers to set up daily snacks', async ({ page }) => {
   await openNutrition(page);
   const c = todayCol(page);
   for (const m of ['Breakfast', 'Lunch', 'Dinner']) await expect(c.locator('.wb-slot', { hasText: m }).first()).toContainText('Nothing planned');
-  await expect(c.locator('.wb-slot', { hasText: 'Snack' })).toHaveCount(0);
+  await expect(c.locator('.wb-slothd b')).toHaveText(['Breakfast', 'Lunch', 'Snack', 'Dinner', 'Supplements', 'Hydration']); // the four meals in order, then the day's other sections
+  await expect(c.locator('.wb-slot', { hasText: 'Snack' })).toContainText('No daily snacks yet');
+  await expect(c.getByRole('button', { name: 'Set up daily snacks' })).toBeVisible();
   await expect(c.getByRole('button', { name: /^\+ Add/ })).toHaveCount(0);
 });
 

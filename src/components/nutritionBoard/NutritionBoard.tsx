@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { bwSorted, goalStatus } from '../../lib/body.js';
+import { effectivePlan } from '../../lib/dailySnacks.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { runInstantLog } from '../../lib/instantLog.js';
-import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
+import { planLog, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
@@ -22,7 +23,6 @@ import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
-const NO_PLAN: Plan = {};
 
 // Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day, with a stepper under seven.
 // Each day holds six meters (calories, protein, carbs when there is a target or data, fat, supplements, water), its meals with the food eaten in them, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
@@ -46,7 +46,7 @@ export default function NutritionBoard() {
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
   const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
-  const plan = cfg.diet?.plan ?? NO_PLAN;
+  const plan = useMemo(() => effectivePlan(cfg.diet, days, today), [cfg.diet, days, today]); // the stored plan plus the saved daily snacks shown on each day (brief daily-snacks)
   const legacy = useLegacyMeals();
   const targets = useMemo(() => {
     const weights = bwSorted(body);

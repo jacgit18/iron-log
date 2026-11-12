@@ -11,7 +11,8 @@ import { sortByName } from './sort.js';
 export const SLOT_LABEL: Record<PlanSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
 export const MARK_LABEL: Record<PlateMark, string> = { protein: 'Protein', carb: 'Carb', veg: 'Veg' };
 
-export interface BoardItem { index: number; r: Resolved; fat: number | undefined }
+/** `virtual` is a listed daily snack shown on this day but not stored (brief daily-snacks): ticking, changing or moving it stores a real item first. */
+export interface BoardItem { index: number; r: Resolved; fat: number | undefined; virtual?: true }
 /** One meal of a day. `slot` null is the group of items with no meal set. `fixes` are the one-tap additions for what the meal lacks. */
 export interface BoardSlot { slot: PlanSlot | null; items: BoardItem[]; kcal: number; share: number | null; need: readonly PlateMark[]; have: PlateMark[]; fixes: { mark: PlateMark; recipe: Recipe; why: string | null }[] }
 export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[] }
@@ -40,7 +41,7 @@ export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: read
 /** One day of the plan as meals: each item with its numbers, each meal with its calories against its share of the target, its plate check and fixes, and the day's three totals. */
 export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}): BoardDay {
   const items = plan[day] ?? [];
-  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r) }; });
+  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r), ...(it.v ? { virtual: true as const } : {}) }; });
   const live = rows.filter(x => !x.r.gone);
   const sum = (pick: (x: BoardItem) => number | undefined) => round1(live.reduce((a, x) => a + (pick(x) ?? 0), 0));
   const foods = live.map(x => ({ r: { ...(x.r.kcal !== undefined ? { kcal: x.r.kcal } : {}), ...(x.fat !== undefined ? { f: x.fat } : {}) }, x: 1 }));

@@ -1,4 +1,4 @@
-import type { DietCfg, DietEntry, PlanItem, PlanSlot, SavedItem, SavedMeal } from '../types.ts';
+import type { DailySnack, DietCfg, DietEntry, PlanItem, PlanSlot, SavedItem, SavedMeal } from '../types.ts';
 import { addDays, parseDate, ymd } from './dates.js';
 import { cleanMicro } from './foodMicro.js';
 import { same } from './same.js';
@@ -69,9 +69,39 @@ export function normMealsMoved(v: unknown): Record<string, string> {
 }
 
 /** The meals of a day, in order (brief week-board). */
-export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
-export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8;
+export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8, MAX_DAILY_SNACKS = 6;
+
+/** A portion in half steps from 0.5 to 10, or null when it is 1 (stored as no `x`) or unusable. */
+const portionOf = (x: unknown): number | null => (fin(x) && x >= 0.5 && x <= 10 && x * 2 === Math.round(x * 2) && x !== 1 ? x : null);
+
+/** The daily snack list of a stored value, cleaned: recipe ids only, a repeated one dropped, at most MAX_DAILY_SNACKS. */
+export function normSnacks(v: unknown): DailySnack[] {
+  const out: DailySnack[] = [];
+  for (const raw of Array.isArray(v) ? v : []) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const o = raw as Record<string, unknown>, id = str(o.id, MAX_DIET_ID), x = portionOf(o.x);
+    if (!id || out.some(s => s.id === id) || out.length >= MAX_DAILY_SNACKS) continue;
+    out.push({ id, ...(x !== null ? { x } : {}) });
+  }
+  return out;
+}
+
+/** The skips of a stored value, cleaned: real dates, at most MAX_DAILY_SNACKS ids a day, none empty. With `today` the plan window is applied, as for the plan. */
+export function normSnackSkips(v: unknown, today?: string): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const lo = today && validDate(today) ? today : null;
+  const hi = lo ? ymd(addDays(parseDate(lo), MAX_PLAN_AHEAD)) : null;
+  for (const d of Object.keys(v as object).sort()) {
+    if (!validDate(d) || (lo && d < lo) || (hi && d > hi)) continue;
+    const raw = (v as Record<string, unknown>)[d];
+    const ids = [...new Set((Array.isArray(raw) ? raw : []).map(x => str(x, MAX_DIET_ID)).filter((x): x is string => !!x))].slice(0, MAX_DAILY_SNACKS);
+    if (ids.length) out[d] = ids;
+  }
+  return out;
+}
 
 /** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1). */
 export function normPlanItem(x: unknown): PlanItem | null {
@@ -174,5 +204,9 @@ export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   if (Object.keys(moved).length) out.mealsMoved = moved;
   const plan = normPlan(o.plan, today);
   if (Object.keys(plan).length) out.plan = plan;
+  const snacks = normSnacks(o.snacks);
+  if (snacks.length) out.snacks = snacks;
+  const skips = normSnackSkips(o.snackSkips, today);
+  if (Object.keys(skips).length) out.snackSkips = skips;
   return Object.keys(out).length ? out : undefined;
 }
