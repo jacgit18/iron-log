@@ -80,7 +80,7 @@ html:has(.prail) {
   font-weight: 700;
   text-transform: uppercase;
 }
-.psec-overview > .empty {
+.psec-overview > .emptystate {
   margin: 0;
 }
 .psec-muscles > .chiprow {

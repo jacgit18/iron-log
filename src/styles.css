@@ -1450,14 +1450,6 @@ body.timing {
   fill: var(--accent);
   fill-opacity: .15;
 }
-.empty {
-  color: var(--muted);
-  padding: 24px;
-  text-align: center;
-  background: var(--surface);
-  border-radius: var(--r-xl);
-  border: 1px dashed var(--line);
-}
 
 /* Settings */
 .settings {
