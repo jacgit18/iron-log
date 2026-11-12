@@ -321,7 +321,7 @@ export interface DietSlice {
   removePlanItem(day: string, index: number): void; // a listed daily snack removed from a day is skipped on that day only
   saveDailySnacks(list: DailySnack[]): void; // the daily snack list (cfg.diet.snacks, at most 6; brief daily-snacks); an empty list clears it
   skipDailySnack(day: string, id: string): void; // a listed snack is not shown on that day (it returns on the others)
-  realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (a day already holding 8 planned things)
+  realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (outside the plan window; a day already holding 8 planned things still takes it, snacks never count toward the 8)
   unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
   planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo

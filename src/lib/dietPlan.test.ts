@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
-import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
+import { MAX_DAILY_SNACKS, MAX_DAY_ITEMS, MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
 import { normPlan } from '../shared/diet.js';
 import { moveItem } from './weekBoard.js';
 import { addItem, dayTotals, daysFrom, findMatches, inWindow, isEaten, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
@@ -54,6 +54,15 @@ describe('addItem, setPortion, removeItem', () => {
     expect(addItem(p, '2026-10-29', r('r3'), today).error).toMatch(/two weeks/);
     const full: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`)) };
     expect(addItem(full, today, r('r1'), today).error).toContain(String(MAX_PLAN_ITEMS));
+  });
+  it('a listed daily snack never counts toward the 8 planned things, and a day holds at most 8 plus one snack per listed recipe (brief snacks-day-cap)', () => {
+    const list = [{ id: 's1' }, { id: 's2' }], snack = (id: string): PlanItem => ({ k: 'r', id, s: 'snack' });
+    const eight: PlanItem[] = Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`));
+    const withSnack = addItem({ [today]: eight }, today, snack('s1'), today, list);
+    expect(withSnack.error).toBeNull(); expect(withSnack.plan![today]).toHaveLength(9);
+    expect(addItem(withSnack.plan!, today, r('y'), today, list).error).toContain(String(MAX_PLAN_ITEMS)); // the ninth planned thing is still refused
+    expect(addItem(withSnack.plan!, today, snack('s2'), today, list).plan![today]).toHaveLength(10);
+    expect(addItem({ [today]: eight }, today, snack('s1'), today).error).toContain(String(MAX_PLAN_ITEMS)); // not on the list: counts as planned, so a full day refuses it
   });
   it('sets a portion in half steps, stores 1 as no x, and leaves a meal or a bad portion alone', () => {
     const p = { [today]: [r('r1'), m('m1')] };
@@ -141,6 +150,9 @@ describe('a planned item checked as eaten', () => {
     expect(moveItem(on, today, 0, '2026-10-31', 'dinner', today).plan!['2026-10-31']![0]!.e).toBeUndefined();
   });
   it('is kept when the plan is cleaned, with junk ids dropped', () => {
+    const snacks = Array.from({ length: MAX_PLAN_ITEMS + MAX_DAILY_SNACKS + 2 }, (_, i) => ({ k: 'r', id: `q${i}`, s: i < MAX_PLAN_ITEMS ? undefined : 'snack' }));
+    expect(normPlan({ [today]: snacks }, today)[today]).toHaveLength(MAX_DAY_ITEMS);
+    expect(normPlan({ [today]: snacks.map(x => ({ ...x, s: undefined })) }, today)[today]).toHaveLength(MAX_PLAN_ITEMS); // the cleaner keeps a ticked snack beside 8 planned things, and still bounds the day
     const clean = normPlan({ [today]: [{ k: 'r', id: 'r1', e: ['e1', 'e1', 5, ''] }] }, today);
     expect(clean[today]![0]!.e).toEqual(['e1']);
   });

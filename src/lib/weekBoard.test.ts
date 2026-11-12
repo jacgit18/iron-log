@@ -87,6 +87,16 @@ describe('moveItem', () => {
     expect(moveItem(full, D, 0, D2, 'dinner', TODAY).error).toMatch(/hold 8/);
     expect(moveItem(plan, D, 0, '2099-03-01', 'dinner', TODAY).error).toMatch(/two weeks/);
   });
+  it('a listed daily snack moves between days in Snack without counting, and into another meal it counts as planned (brief snacks-day-cap)', () => {
+    const list = [{ id: 'yog' }], eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `r${i}` }));
+    const full = { [D]: [pi('yog', 'snack')], [D2]: eight };
+    expect(moveItem(full, D, 0, D2, 'snack', TODAY, list).plan![D2]).toHaveLength(9);
+    expect(moveItem(full, D, 0, D2, 'lunch', TODAY, list).error).toMatch(/hold 8/);
+    expect(moveItem(full, D, 0, D2, 'snack', TODAY).error).toMatch(/hold 8/); // not on the list: a planned thing
+    const sameDay = { [D]: [...eight, pi('yog', 'snack')] };
+    expect(moveItem(sameDay, D, 8, D, 'dinner', TODAY, list).error).toMatch(/hold 8/); // into a meal it would be the ninth planned thing
+    expect(moveItem(sameDay, D, 0, D, 'dinner', TODAY, list).error).toBeNull(); // moving a planned thing within its day is not capped
+  });
   it('allows the same food in another meal of the day, as adding does', () => {
     const r = moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'dinner')] }, D, 0, D2, 'lunch', TODAY);
     expect(r.error).toBeNull();

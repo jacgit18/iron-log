@@ -410,10 +410,22 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().realizeDailySnack(today, 'bar')).toBe(0);
     expect(st().cfg.diet!.plan).toEqual({ [today]: [{ k: 'r', id: 'bar', x: 2, s: 'snack' }] });
   });
-  it('reports a full day instead of losing the snack', () => {
-    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` })) } }; });
-    expect(st().realizeDailySnack(tomorrow, 'yog')).toMatch(/8 planned things/);
-    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(8);
+  it('ticks a shown snack on a day already holding 8 planned things: it is stored, survives the clean, and the ninth planned thing is still refused (brief snacks-day-cap)', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: eight } }; });
+    expect(st().realizeDailySnack(tomorrow, 'yog')).toBe(8);
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    st().saveDailySnacks([{ id: 'yog' }]); // any later write cleans the plan again
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    expect(st().addPlanItem(tomorrow, 'r', 'bar')).toMatch(/hold 8/);
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+  });
+  it('moves a ticked snack to another full day in Snack, and refuses it into another meal there', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [today]: [{ k: 'r', id: 'yog', s: 'snack' }], [tomorrow]: eight } }; });
+    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toMatch(/hold 8/);
+    expect(st().movePlanItem(today, 0, tomorrow, 'snack')).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
   });
   it('skips a snack on one day without touching the list or other days', () => {
     st().saveDailySnacks([{ id: 'yog' }]);
