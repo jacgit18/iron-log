@@ -80,7 +80,7 @@ export const packServings = (r: Pick<Recipe, 'cat' | 'servings'>): number | null
 /** The top of the log control's portion stepper: PORTION_MAX, or the pack size (ready-made foods) or usual amount (any recipe) when that is larger (up to 99), lowered in half steps until the totals still fit one entry
  * (calories and protein have caps in shared/diet.ts), so More and Whole pack never reach a number the log control would refuse. */
 export function ateMax(r: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual'>): number {
-  let top = Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0, r.usual ?? 0)); // a usual amount over 10 (brief usual-amount-and-unit) can be reached too
+  let top = Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0, r.usual ?? 0)); // a usual amount over 10 (briefs usual-amount-and-unit, nutrition-usual-portion-field) can be reached too
   if (!hasMacros(r)) return top;
   while (top > 0.5 && servingNumbers(r, top) === null) top -= 0.5;
   return top;

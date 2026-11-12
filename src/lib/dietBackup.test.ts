@@ -38,5 +38,8 @@ describe('usual amount in the backup file (brief nutrition-usual-portion-field)'
     const bad = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...meal, usual: 2.3 }, { ...meal, id: 'b', usual: 100 }, { ...meal, id: 'c', usual: 'x' }]), {})));
     expect(bad.recipes).toHaveLength(3);
     for (const r of bad.recipes ?? []) expect(r).not.toHaveProperty('usual');
+    const never = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...meal, usual: 1 }, { ...meal, id: 'b', usual: 0.25 }]), {}))); // the stored field never holds 1, and 0.5 is the least
+    expect(never.recipes).toHaveLength(2);
+    for (const r of never.recipes ?? []) expect(r).not.toHaveProperty('usual');
   });
 });
