@@ -7,6 +7,7 @@ import RecipeDetail from './RecipeDetail.js';
 import RecipeDetailPane, { useDetailPaneWidth } from './RecipeDetailPane.js';
 import RecipeNewMenu, { type NewChoice } from './RecipeNewMenu.js';
 import RecipeTypeTabs from './RecipeTypeTabs.js';
+import { useKept } from './useRecipesViewState.js';
 import ReadyMadeForm from './ReadyMadeForm.js';
 import RecipeForm from './RecipeForm.js';
 import '../Pill.css';
@@ -16,10 +17,10 @@ import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
 import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
-import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, inTab, librarySortedBy, recipeMeta, sortRecipes, tabCounts, typeTag, type RecipeTab } from '../../lib/recipeList.js';
+import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, inTab, librarySortedBy, recipeMeta, sortRecipes, tabCounts, typeTag } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
 import { loggableRecipe, recentRows } from '../../lib/recipeRows.js';
-import { NUTRITION_FILTERS, nutritionBadge, type NutritionKey } from '../../lib/recipeNutrition.js';
+import { NUTRITION_FILTERS, nutritionBadge } from '../../lib/recipeNutrition.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
@@ -66,23 +67,24 @@ export default function Recipes() {
   }, [page, view]);
   // Opening a linked sauce is a page opened from a page: it pushes its own address, so Back returns to the recipe.
   const openLinked = (id: string, from: string) => { setViewNow({ kind: 'mine', id, from }); navigate('daily/recipes/mine/sauce', 'push'); };
-  const [src, setSrc] = useState<'mine' | 'library'>('mine');
-  const [q, setQ] = useState('');
-  const [tab, setTab] = useState<RecipeTab>('all');
-  const [recent, setRecent] = useState(false); // the Recent pill: favourites and recently used recipes instead of a type tab
+  // Kept while another Daily section is open and until reload (lib/recipesViewState.ts): the source, search, tabs, filters and the recipe in the pane.
+  const [src, setSrc] = useKept('src');
+  const [q, setQ] = useKept('q');
+  const [tab, setTab] = useKept('tab');
+  const [recent, setRecent] = useKept('recent'); // the Recent pill: favourites and recently used recipes instead of a type tab
   const [filtersChoice, setFiltersChoice] = useSortChoice('recipes-filters', FILTER_CHOICES, 'closed'); // closed until opened; remembered on this device
   const filtersOpen = filtersChoice === 'open';
-  const [selId, setSelId] = useState<string | null>(null); // the recipe in the detail pane (wide screens)
+  const [selId, setSelId] = useKept('selId'); // the recipe in the detail pane (wide screens)
   const [paneChoice] = useSortChoice('recipes-detail', PANE_CHOICES, 'auto');
   const pane = useDetailPaneWidth() && paneChoice === 'auto';
-  const [cat, setCat] = useState<RecipeCategory | null>(null);
-  const [canMake, setCanMake] = useState(false);
-  const [tagSel, setTagSel] = useState<string[]>([]);
-  const [nutSel, setNutSel] = useState<NutritionKey[]>([]);
+  const [cat, setCat] = useKept('cat');
+  const [canMake, setCanMake] = useKept('canMake');
+  const [tagSel, setTagSel] = useKept('tagSel');
+  const [nutSel, setNutSel] = useKept('nutSel');
   const [mineSort, setMineSort] = useSortChoice('recipes', RECIPE_SORTS, DEFAULT_RECIPE_SORT);
   const [libSort, setLibSort] = useSortChoice('recipes-library', LIBRARY_SORTS, DEFAULT_LIBRARY_SORT);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
-  const [libTab, setLibTab] = useState<LibraryTab>('all');
+  const [libTab, setLibTab] = useKept('libTab');
   const [added, setAdded] = useState<{ id: string; name: string } | { error: string } | null>(null); // the last one-tap Add from the Library, for its Undo
   const [tries, setTries] = useState(0);
   const month = monthKey(new Date());
