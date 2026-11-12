@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief food-vitamins-minerals, PR B: food joins the vitamin and mineral totals. The sums, the scope rule (food added only where the limit counts food), the coverage count and the warning are node
 // tests (foodTotals.test.ts, supplementNutrients.test.ts); this covers the wiring a node test cannot: a food found by name logged through the real sheets, the Totals link on a day with no scheduled
@@ -42,7 +42,7 @@ test('food adds to a limit that counts food, sits beside one that does not, and 
   await expect(col.locator('.nb-suppwarn')).toHaveCount(0); // 38 of 40 mg of zinc, supplements alone
   await eatSpinach(page);
   await expect(col.locator('.nb-suppwarn')).toContainText('Over an upper limit today: Zinc'); // 38 + 5 = 43 mg
-  await col.getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(col);
   const s = dialog(page);
   await expect(s.locator('#stt-coverage')).toHaveText('Food: 1 of 1 eaten food had vitamin or mineral data.');
   await expect(s.locator('#stt-zinc')).toContainText('43 mg');
@@ -63,7 +63,7 @@ test('a day with food data and no scheduled supplement still has Totals, and the
   await page.locator('#dt-add-p').fill('4');
   await dialog(page).getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
-  await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(todayCol(page));
   const s = dialog(page);
   await expect(s.locator('#stt-coverage')).toContainText('Food: 1 of 2 eaten foods had vitamin or mineral data. Foods without data add nothing');
   await expect(s.locator('#stt-zinc')).toContainText('5 mg');
@@ -74,7 +74,7 @@ test('the totals sheet with food has no axe violations in either theme at 375 px
   await page.setViewportSize({ width: 375, height: 800 });
   await openNutrition(page);
   await eatSpinach(page);
-  await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(todayCol(page));
   await expect(dialog(page).locator('#stt-magnesium')).toContainText('is not added');
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

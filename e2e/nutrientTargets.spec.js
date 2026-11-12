@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief nutrients-without-upper-limit, PR 2 (ADR 108): the five nutrients without an upper limit in the Totals sheet and the supplement form. The sums, the position words and the "never a warning" rule are
 // node tests (nutrientTargetTotals.test.ts); this covers the wiring a node test cannot: the form offering the five, a supplement and a food found by name adding up in a "No upper limit" section, sodium's
@@ -76,7 +76,7 @@ test('a supplement and a food add up under No upper limit, in words, with no war
   await setUp(page);
   const col = todayCol(page);
   await expect(col.locator('.nb-suppwarn')).toHaveCount(0); // 500 mcg of B12 and 3,000 mg of sodium are far above their recommended figures, and neither is a warning
-  await col.getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(col);
   const s = dialog(page);
   await expect(s.getByRole('heading', { name: 'No upper limit' })).toBeVisible();
   await expect(s.locator('#stt-fiber')).toContainText('7.2 g'); // 5 g supplement + 2.2 g food
@@ -94,7 +94,7 @@ test('a supplement and a food add up under No upper limit, in words, with no war
 test('the totals sheet with the new section has no axe violations in either theme at 375 px and does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await setUp(page);
-  await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(todayCol(page));
   await expect(dialog(page).locator('#stt-sodium')).toBeVisible();
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

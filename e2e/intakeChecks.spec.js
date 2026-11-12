@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief intake-target-and-safety-checks, PR 2: the Totals sheet's separate target line, the 7-day average, the disclaimer and the form hint. Every rule (below, meets and above, scope, the average's
 // days, the banned words) is a node test (lib/intakeChecks.test.ts, lib/intakeSheet.test.ts); this covers the wiring a node test cannot: the lines on the real sheet, a food logged through the real sheets
@@ -29,7 +29,7 @@ test('supplements alone show an average and no target verdict; a logged food add
   await closeSupplementEditor(page);
   const col = todayCol(page);
   await col.getByLabel('Zinc cap', { exact: false }).first().check();
-  await col.getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(col);
   const s = dialog(page);
   await expect(s.locator('#stt-zinc')).toContainText('13% of the limit'); // 5 of 40 mg, 12.5 rounds up
   await expect(s.locator('#stt-zinc .stt-avg')).toHaveText('7-day average: 5 mg (1 day with data)');
@@ -44,7 +44,7 @@ test('supplements alone show an average and no target verdict; a logged food add
   await add.getByRole('button', { name: 'Use', exact: true }).click();
   await add.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
-  await col.getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(col);
   await expect(dialog(page).locator('#stt-zinc .stt-target')).toHaveText('Target: Meets the recommended amount'); // 5 + 5 = 10 mg, within 8 to 11
   await expect(dialog(page).locator('#stt-zinc')).toContainText('25% of the limit'); // 10 of 40 mg: the limit line is its own
 });
