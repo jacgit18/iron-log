@@ -326,7 +326,7 @@ test.describe('on a phone', () => {
       expect(await page.locator('#nb-h').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // the Nutrition heading stays for screen readers but is not drawn: the tab already says it
       expect(Math.min(targets.h, manage.h)).toBeGreaterThanOrEqual(43.5);
       const add = await box('#nb-add');
-      const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
+      const three = await page.locator('.nb-tbtns .btn:not(#nb-add):not(#nb-shopping)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
       expect(three).toHaveLength(3);
       expect(add.w).toBeGreaterThan(width - 40);
       expect(three.every(t => t.y > add.b - 1 && Math.abs(t.y - three[0].y) < 1 && Math.abs(t.w - three[0].w) < 1 && t.h >= 43.5)).toBe(true);
@@ -340,7 +340,7 @@ test.describe('on a phone', () => {
     const step = page.getByRole('group', { name: 'Day stepper' });
     await step.getByRole('button', { name: 'Next day' }).click();
     await expect(page.locator('#nb-add')).toBeVisible();
-    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Add food', 'Recipes', 'Saved meals']);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Add food', 'Recipes', 'Saved meals', 'Add missing to Shopping']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
     await expect(page.locator('#nb-add')).toHaveCount(0);
     await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();
