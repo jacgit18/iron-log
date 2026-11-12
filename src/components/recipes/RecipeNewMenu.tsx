@@ -6,7 +6,7 @@ export type NewChoice = 'scan' | 'recipe' | 'food';
 // "Add a food by hand" is the old New ready-made food button: the brief lists four entries, and without it a food with no barcode and no label photo could not be typed in.
 const CHOICES: { key: NewChoice; label: string; hint: string }[] = [
   { key: 'recipe', label: 'Recipe or meal', hint: 'Ingredients and steps' },
-  { key: 'scan', label: 'Scan a food', hint: 'Barcode or label. Fills the form; nothing is saved until you save' },
+  { key: 'scan', label: 'Scan to fill a food form', hint: 'Barcode or label photo. Nothing is saved until you save' },
   { key: 'food', label: 'Add a food by hand', hint: 'A packaged food and its numbers' },
 ];
 

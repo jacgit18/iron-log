@@ -31,6 +31,13 @@ describe('Food naming (Recipes)', () => {
   });
 });
 
+describe('Scan wording', () => {
+  it('has a row that bans the old "Scan barcode" and "Scan a food" for a scan that fills a form', () => {
+    const row = WORDING.find(r => r.say.startsWith('Scan to fill'));
+    expect(row?.notThis).toEqual(expect.arrayContaining(['Scan barcode', 'Scan a food']));
+  });
+});
+
 describe('WORDING table', () => {
   it('has one row per word and every row says when', () => {
     expect(new Set(WORDING.map(r => r.say)).size).toBe(WORDING.length);
