@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
+import Icon from '../Icon.js';
 import { hasMacros, packServings } from '../../lib/dietLog.js';
 import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
 import { amountText } from '../../lib/foodUnit.js';
@@ -67,7 +68,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
-      {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. The parts add up to ${rollText || 'no numbers yet'}.` : `Per serving, from the parts: ${rollText || 'no numbers yet'}.`} {countedNote(roll)}.</p>}
+      {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. ${rollText ? `The parts add up to ${rollText}.` : 'The parts: Needs numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
       <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}
       <div className="rc-col">
       <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling || scaled} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
@@ -151,7 +152,7 @@ const MoreActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: '
   }, [open]);
   return (
     <div className="rc-more" ref={box}>
-      <button type="button" className="btn sm ghost" aria-label="More actions" aria-expanded={open} onClick={() => setOpen(o => !o)}>⋯</button>
+      <button type="button" className="btn sm ghost" aria-label="More actions" aria-expanded={open} onClick={() => setOpen(o => !o)}><Icon name="dots" /></button>
       {open && (
         <div className="rc-morelist" role="group" aria-label="Recipe actions">
           <button type="button" className="btn" onClick={onEdit}>Edit</button>
