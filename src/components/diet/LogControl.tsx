@@ -30,7 +30,7 @@ const ports = (): Ports => {
 };
 
 /** `day` (the day the screen shows) when it is one the control offers, else today. */
-export default function LogControl({ recipe, day: from, onChange, bare = false }: { recipe: Recipe; day?: string; onChange?: (done: boolean) => void; /** A food you logged before with no recipe behind it (`pastFoodAsRecipe`): log only, no plan days, no pair suggestion. */ bare?: boolean }) {
+export default function LogControl({ recipe, day: from, onChange, onLogged, bare = false }: { recipe: Recipe; day?: string; onChange?: (done: boolean) => void; /** Called after an entry is logged (not planned) with the portions logged: the portion sheet remembers a changed portion as the usual (brief nutrition-usual-portion). */ onLogged?: (servings: number) => void; /** A food you logged before with no recipe behind it (`pastFoodAsRecipe`): log only, no plan days, no pair suggestion. */ bare?: boolean }) {
   const uid = useId();
   const today = ymd(useToday(s => s.today)); // the shared "today" (it moves at midnight), not a Date read during render
   const { min, max: planMax } = dayRange(today);
@@ -52,6 +52,7 @@ export default function LogControl({ recipe, day: from, onChange, bare = false }
     const made = bare ? logPastFood(ports(), recipe, shown, day, today) : logOrPlan(ports(), recipe, shown, day, today, ahead ? meal : null);
     if (!made.ok) { setErr(made.error); return; }
     setErr(''); setDone({ text: made.text, undo: made.undo, key: Date.now() }); set(true);
+    if (!ahead && !bare) onLogged?.(shown);
   };
   const lock = !!done;
   return (
