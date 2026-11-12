@@ -186,7 +186,7 @@ describe('normRecipeChips', () => {
   });
 });
 
-describe('usual amount and unit name (ready-made foods)', () => {
+describe('usual amount (any recipe) and unit name (ready-made foods)', () => {
   const food = { id: 'egg', n: 'Egg', cat: 'ready', ing: [], steps: [], kcal: 72, p: 6 };
   it('keeps a usual amount, a unit and a plural on a ready-made food and round-trips through validRecipe', () => {
     const r = normRecipe({ ...food, usual: 4, unit: 'loaf', plural: 'loaves' });
