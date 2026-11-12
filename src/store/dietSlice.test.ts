@@ -13,6 +13,14 @@ beforeEach(() => { clearStorage(); useAppStore.setState({ diet: [], removed: nul
 const day = '2026-10-29';
 const rice = { d: day, n: 'Rice', kcal: 200, p: 4 };
 
+describe('a diet key this build does not know (ADR 122)', () => {
+  it('survives the writers that rebuild cfg.diet', () => {
+    st().mutateCfg(c => { c.diet = { kcal: 3000, future: { on: true } } as never; });
+    st().saveDailySnacks([{ id: 'yog' }]);
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, snacks: [{ id: 'yog' }], future: { on: true } });
+  });
+});
+
 describe('addDietEntry', () => {
   it('adds an entry with an id and keeps the numbers', () => {
     const r = st().addDietEntry(rice);

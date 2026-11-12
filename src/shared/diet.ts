@@ -3,6 +3,7 @@ import { addDays, parseDate, ymd } from './dates.js';
 import { cleanMicro } from './foodMicro.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
+import { keepUnknownKeys } from './unknownKeys.js';
 import { validDate } from './validate.js';
 
 /* ---------- Diet shapes: one thing you ate, and the targets you typed (ADR 086) ----------
@@ -190,7 +191,10 @@ export function targetError(key: TargetKey, value: number | null): string | null
 export const MIN_RATE = 0.1, MAX_RATE = 3; // lb a week you may type for Custom (the app holds you to its own limit when it works out the calories)
 export const rateError = (v: number | null): string | null => (v !== null && Number.isFinite(v) && v >= MIN_RATE && v <= MAX_RATE ? null : `Pace must be ${MIN_RATE} to ${MAX_RATE} lb a week.`);
 
-/** The targets you typed and your pace pick (`cfg.diet`): only the keys that are in range survive; undefined when none do. */
+/** Every key `normDietCfg` cleans itself; a key it adds must be listed here (a test fails otherwise), or a bad value of it would pass through as an unknown key. */
+export const DIET_KEYS = ['kcal', 'protein', 'carbs', 'fat', 'pace', 'rate', 'meals', 'mealsMoved', 'plan', 'snacks', 'snackSkips'] as const;
+
+/** The targets you typed and your pace pick (`cfg.diet`): only the keys that are in range survive; undefined when none do. Keys this build does not know are kept when they are safe bounded JSON (ADR 122), so an older build does not erase a newer one's. */
 export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const o = v as Record<string, unknown>;
@@ -208,5 +212,6 @@ export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   if (snacks.length) out.snacks = snacks;
   const skips = normSnackSkips(o.snackSkips, today);
   if (Object.keys(skips).length) out.snackSkips = skips;
+  Object.assign(out, keepUnknownKeys(o, DIET_KEYS));
   return Object.keys(out).length ? out : undefined;
 }
