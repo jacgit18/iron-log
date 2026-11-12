@@ -1,7 +1,9 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
+import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
 import { moveItem } from '../lib/weekBoard.js';
+import { idsAdded, shoppingRecipeIds } from '../lib/weekShopping.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
 import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
@@ -127,6 +129,14 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index)); },
 
   setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },
+
+  // Week to Shopping (brief week-shopping): each planned, uneaten recipe on those days puts its missing ingredients on Shopping through the recipe's own button; `ids` are the items this call created, for Undo.
+  planToShopping(days) {
+    const recipeIds = shoppingRecipeIds(planOf(get), days, get().recipes, get().diet), month = monthKey(new Date()), before = get().grocery.items;
+    let added = 0, already = 0, refused: string | null = null;
+    for (const id of recipeIds) { const r = get().addMissingToGrocery(id, month); added += r.added; already += r.already; refused ??= r.refused; }
+    return { added, already, refused, recipes: recipeIds.length, ids: idsAdded(before, get().grocery.items) };
+  },
 
   uncheckPlanItem(day, index) {
     const ids = planOf(get)[day]?.[index]?.e ?? [];
