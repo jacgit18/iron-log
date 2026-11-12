@@ -38,3 +38,10 @@ export function dayNutrientMeter(v: TotalsView): DayMeterView | null {
   const top = ranked.slice(0, CLOSED_NAMES);
   return { kind: 'rows', top, subs: ranked.slice(0, SUB_LIMIT), tracked: ranked.length, hidden: Math.max(0, ranked.length - SUB_LIMIT), closed: top.map(t => `${t.label} ${t.status === 'over' ? 'over' : t.text}`).join(' · ') };
 }
+
+/** Whether the Supplements section keeps its own Totals button (brief nutrition-manage-cleanup). `hasTotals` is what the button needed before: something scheduled, or a food eaten with vitamin or mineral data.
+ *  The meter's own "Open Totals" / "All N in Totals" then reaches the same sheet, so the section's button is hidden while the meter draws its rows. The meter's "nothing ticked yet" line and a day with no meter have no way in,
+ *  so the button stays there: Totals is reachable on every day it was. */
+export function sectionTotalsVisible(hasTotals: boolean, meter: DayMeterView | null): boolean {
+  return hasTotals && meter?.kind !== 'rows';
+}
