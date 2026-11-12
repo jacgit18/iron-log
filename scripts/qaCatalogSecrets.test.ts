@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain .mjs script
-import { checkTarget, childEnv, hasCatalog, plan, QA_MARK, upcsProblem } from './qa-catalog-secrets.mjs';
+import { checkTarget, childEnv, hasCatalog, plan, QA_MARK, upcsPreflight, upcsProblem } from './qa-catalog-secrets.mjs';
 
 // scripts/qa-catalog-secrets.mjs reads QA's URL from Secret Manager, checks it, and runs an import script with it. Pure parts are called directly; the
 // whole script is run with a stub `gcloud` first on the PATH, so no real secret is read and no database is reached.
@@ -45,6 +45,33 @@ describe('upcsProblem', () => {
       expect(upcsProblem([], '/main/.cache', mtime, now)).toContain('--refresh-hits');
       expect(upcsProblem(['--refresh-hits'], '/main/.cache', mtime, now)).toBeNull();
     }
+  });
+});
+
+describe('upcsPreflight (the real cache folder, as the upcs command reads it)', () => {
+  const folder = (hits: 'fresh' | 'old' | 'none') => {
+    const dir = mkdtempSync(join(tmpdir(), 'qa-cache-'));
+    writeFileSync(join(dir, 'dsld-upcs.tsv'), '1\t00074312706400\n');
+    if (hits !== 'none') {
+      const f = join(dir, 'dsld-upcs.hits.json');
+      writeFileSync(f, '[]');
+      const when = new Date(Date.now() - (hits === 'old' ? 8 : 1) * 86_400_000);
+      utimesSync(f, when, when);
+    }
+    return dir;
+  };
+  it('passes with a hits file under 7 days old', () => {
+    expect(upcsPreflight([], folder('fresh'))).toBeNull();
+  });
+  it('reads the age from disk: an old or missing hits file stops it, --refresh-hits lets it through', () => {
+    for (const hits of ['old', 'none'] as const) {
+      expect(upcsPreflight([], folder(hits))).toContain('--refresh-hits');
+      expect(upcsPreflight(['--refresh-hits'], folder(hits))).toBeNull();
+    }
+  });
+  it('stops with no cache folder at all, and --cache skips the check', () => {
+    expect(upcsPreflight([], undefined)).toContain('--cache <file>');
+    expect(upcsPreflight(['--cache', 'x.tsv'], undefined)).toBeNull();
   });
 });
 

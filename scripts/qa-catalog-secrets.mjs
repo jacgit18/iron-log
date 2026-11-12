@@ -75,6 +75,13 @@ export function upcsProblem(extra, cacheDir, hitsMtimeMs, now = Date.now()) {
   return null;
 }
 
+/** `upcsProblem` for a real cache folder: the hits file's age is read from disk (a missing file or folder is the problem upcsProblem reports). */
+export function upcsPreflight(extra, cacheDir, now = Date.now()) {
+  let hitsMtime;
+  try { hitsMtime = cacheDir && statSync(join(cacheDir, 'dsld-upcs.hits.json')).mtimeMs; } catch { /* missing: upcsProblem says so */ }
+  return upcsProblem(extra, cacheDir, hitsMtime, now);
+}
+
 /** The import child's environment: QA's URL, and no production URL left over from the guard. */
 export const childEnv = (url, base = process.env) => {
   const env = { ...base, DATABASE_URL: url };
@@ -99,15 +106,14 @@ function mainCacheDir() {
 async function main() {
   const [sub, ...extra] = process.argv.slice(2);
   if (!['catalog', 'upcs'].includes(sub)) die(USAGE);
+  const cacheDir = sub === 'upcs' ? mainCacheDir() : undefined;
   let command;
-  try { command = plan(sub, extra, { cacheDir: sub === 'upcs' ? mainCacheDir() : undefined }); } catch (e) { die(e.message); }
+  try { command = plan(sub, extra, { cacheDir }); } catch (e) { die(e.message); }
   const url = secret(URL_SECRET);
   let host;
   try { host = await checkTarget(url); } catch (e) { die(e.message); }
   if (sub === 'upcs') {
-    let hitsMtime;
-    try { hitsMtime = cacheDir && statSync(join(cacheDir, 'dsld-upcs.hits.json')).mtimeMs; } catch { /* missing: upcsProblem says so */ }
-    const problem = upcsProblem(extra, cacheDir, hitsMtime);
+    const problem = upcsPreflight(extra, cacheDir);
     if (problem) die(problem);
     const client = await connect(url, 'QA');
     try { if (!(await hasCatalog(client))) die(`QA's catalog at ${host} has no live dsld rows. Run: npm run qa:catalog:sm -- catalog --apply (first). Nothing was changed.`); } finally { await client.end(); }
