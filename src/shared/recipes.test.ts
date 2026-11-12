@@ -186,9 +186,13 @@ describe('usual amount and unit name (ready-made foods)', () => {
     expect(r).toMatchObject({ usual: 4, unit: 'loaf', plural: 'loaves' });
     expect(validRecipe(r)).toBe(true);
   });
-  it('drops them from any other category, and drops bad values', () => {
-    expect(normRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).not.toHaveProperty('usual');
-    expect(normRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).not.toHaveProperty('unit');
+  it('keeps a usual amount on any category, drops the unit outside ready-made foods, and drops bad values', () => {
+    const meal = normRecipe({ ...food, cat: 'protein', usual: 1.5, unit: 'egg' });
+    expect(meal).toMatchObject({ usual: 1.5 });
+    expect(meal).not.toHaveProperty('unit');
+    expect(validRecipe(meal)).toBe(true);
+    expect(validRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).toBe(false); // unit would be dropped
+    expect(normRecipe({ ...food, cat: 'sauces', usual: '2' })).not.toHaveProperty('usual'); // not a number
     const bad = normRecipe({ ...food, usual: 2.3, unit: '4 eggs', plural: 'x' });
     expect(bad).not.toHaveProperty('usual');
     expect(bad).not.toHaveProperty('unit');

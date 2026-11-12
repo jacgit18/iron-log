@@ -28,3 +28,14 @@ describe('food log in the backup file', () => {
     expect(shouldWrite(full, backupScore(buildDataFile(snap(entries(30)), {})))).toBe(true); // a normal edit still saves
   });
 });
+
+describe('usual amount in the backup file (brief nutrition-usual-portion-field)', () => {
+  const meal = { id: 'chili', n: 'Chili', cat: 'protein', ing: [], steps: [], kcal: 400, p: 30, usual: 1.5 };
+  const withRecipes = (recipes: unknown[]) => ({ ...snap([]), recipes } as unknown as Snapshot);
+  it('keeps a usual amount on a non-ready recipe through export and import, and drops a bad one', () => {
+    const back = parseDataFile(JSON.stringify(buildDataFile(withRecipes([meal]), {})));
+    expect(back.recipes?.[0]).toMatchObject({ id: 'chili', usual: 1.5 });
+    const bad = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...meal, usual: 2.3 }, { ...meal, id: 'b', usual: 100 }, { ...meal, id: 'c', usual: 'x' }]), {})));
+    for (const r of bad.recipes ?? []) expect(r).not.toHaveProperty('usual');
+  });
+});
