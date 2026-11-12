@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fmtNum, macroLine } from './macroLine.js';
+import { fmtNum, macroLine, macroWords } from './macroLine.js';
 
 describe('macroLine', () => {
   it('words calories, protein, carbs and fat in the agreed format', () => {
@@ -29,4 +29,18 @@ describe('macroLine', () => {
 
 describe('fmtNum', () => {
   it('groups thousands', () => expect(fmtNum(2775)).toBe('2,775'));
+});
+
+describe('macroWords', () => {
+  it('words the same numbers in full for a screen reader', () => {
+    expect(macroWords({ kcal: 410, p: 22, c: 58, f: 9 })).toBe('410 calories, 22 grams protein, 58 grams carbs, 9 grams fat');
+  });
+  it('leaves out missing parts, rounds like macroLine and is empty with no numbers', () => {
+    expect(macroWords({ kcal: 1520, p: 42 })).toBe('1,520 calories, 42 grams protein');
+    expect(macroWords({ kcal: 419.6, p: 31.04, c: 47.75 })).toBe('420 calories, 31 grams protein, 47.8 grams carbs');
+    expect(macroWords({ kcal: 90, p: 0 })).toBe('90 calories, 0 grams protein');
+    expect(macroWords({ kcal: 1, p: 1, f: 1.04 })).toBe('1 calorie, 1 gram protein, 1 gram fat');
+    expect(macroWords({ kcal: NaN })).toBe('');
+    expect(macroWords({})).toBe('');
+  });
 });

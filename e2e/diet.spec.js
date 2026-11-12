@@ -130,7 +130,7 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   await expect(page.getByText('Per portion: 600 kcal · P 40 · C 51 · F 11 g')).toBeVisible();
   await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 servings: 900 kcal, 60 g
   await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText('Logged 1.5 portions to today.')).toBeVisible();
+  await expect(page.getByText(/Logged .+: 1\.5 portions to today\./)).toBeVisible();
   await nutrition(page);
   await expect(eaten(page)).toContainText('Chili');
   await expect(eaten(page)).toContainText('900 kcal');

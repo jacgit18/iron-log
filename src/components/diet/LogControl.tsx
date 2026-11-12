@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
-import { ateMax, entryText, packServings, servingNumbers } from '../../lib/dietLog.js';
+import { ateMax, packServings, servingNumbers } from '../../lib/dietLog.js';
+import { macroLine, macroWords, type MacroParts } from '../../lib/macroLine.js';
 import { amountText, unitWord } from '../../lib/foodUnit.js';
 import { actionWord, dayRange, isAhead, logOrPlan, startAmount, type Ports } from '../../lib/logOrPlan.js';
 import { startMeal } from '../../lib/nutritionBoard.js';
@@ -9,6 +10,7 @@ import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { PlanSlot, Recipe } from '../../types.ts';
+import '../Pill.css';
 import PairSuggestion from './PairSuggestion.js';
 import './LogControl.css';
 
@@ -17,6 +19,9 @@ import './LogControl.css';
 const KEY = 'nb-last-meal';
 const lastMeal = (): PlanSlot | null => { try { const v = localStorage.getItem(KEY); return PLAN_SLOTS.find(s => s === v) ?? null; } catch { return null; } };
 const remember = (s: PlanSlot) => { try { localStorage.setItem(KEY, s); } catch { /* private window: the pick just is not remembered */ } };
+
+/** The macro line for the eye; a screen reader gets the same numbers in words ("P 22" would be read as a letter). */
+const Macros = ({ m }: { m: MacroParts }) => <><span aria-hidden="true">{macroLine(m)}</span><span className="vh">{macroWords(m)}</span></>;
 
 const ports = (): Ports => {
   const st = useAppStore.getState();
@@ -49,14 +54,14 @@ export default function LogControl({ recipe, day: from, onChange }: { recipe: Re
   const lock = !!done;
   return (
     <div className="lc">
-      <p className="note">{nums ? entryText(nums) : 'Those numbers are out of range.'} for {amountText(shown, recipe)}</p>
+      <p className="note" role="status">{nums ? <Macros m={nums} /> : 'Those numbers are out of range.'} for {amountText(shown, recipe)}</p>
       <div className="lc-step">
         <button type="button" className="btn sm" disabled={shown <= 0.5 || lock} onClick={() => setServings(Math.max(0.5, shown - 0.5))}>Less</button>
         <span role="status">{amountText(shown, recipe)}</span>
         <button type="button" className="btn sm" disabled={shown >= top || lock} onClick={() => setServings(Math.min(top, shown + 0.5))}>More</button>
         {pack !== null && pack <= top && <button type="button" className="btn sm" disabled={shown === pack || lock} onClick={() => setServings(pack)}>Whole pack ({pack})</button>}
       </div>
-      <p className="note">Per {unitWord(1, recipe)}: {entryText({ kcal: recipe.kcal!, p: recipe.p!, c: recipe.c, f: recipe.f })}</p>
+      <p className="note">Per {unitWord(1, recipe)}: <Macros m={{ kcal: recipe.kcal!, p: recipe.p!, c: recipe.c, f: recipe.f }} /></p>
       <label className="field" htmlFor={`${uid}-day`}>Day
         <input id={`${uid}-day`} type="date" value={day} min={min} max={max} disabled={lock} onChange={e => { if (e.target.value) setDay(e.target.value); setErr(''); }} />
       </label>
@@ -64,7 +69,7 @@ export default function LogControl({ recipe, day: from, onChange }: { recipe: Re
         <div>
           <p className="note" id={`${uid}-meal`}>Which meal?</p>
           <div className="lc-meals" role="group" aria-labelledby={`${uid}-meal`}>
-            {PLAN_SLOTS.map(s => <button key={s} type="button" className="btn sm" aria-pressed={meal === s} disabled={lock} onClick={() => { setMeal(s); remember(s); }}>{SLOT_LABEL[s]}</button>)}
+            {PLAN_SLOTS.map(s => <button key={s} type="button" className="pillbtn" aria-pressed={meal === s} disabled={lock} onClick={() => { setMeal(s); remember(s); }}>{SLOT_LABEL[s]}</button>)}
           </div>
         </div>
       )}
