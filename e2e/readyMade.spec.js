@@ -53,7 +53,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
 test('The log control logs a ready-made food as a snapshot, to today or to a chosen day, and offers a future day as a plan', async ({ page }) => {
   await make(page);
   await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText('Logged 1 portion to today.')).toBeVisible();
+  await expect(page.getByText(/Logged .+: 1 portion to today\./)).toBeVisible();
   await page.getByRole('button', { name: 'Log another' }).click(); // the control locks after a log until Undo or Log another
   const yesterday = await page.evaluate(() => { const d = new Date(Date.now() - 86400000); return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); });
   const tomorrow = await page.evaluate(() => { const d = new Date(Date.now() + 86400000); return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); });
@@ -61,7 +61,7 @@ test('The log control logs a ready-made food as a snapshot, to today or to a cho
   await expect(page.getByText('Which meal?')).toBeVisible();
   await page.getByLabel('Day').fill(yesterday);
   await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText(`Logged 1 portion to ${yesterday}.`)).toBeVisible();
+  await expect(page.getByText(new RegExp(`Logged .+: 1 portion to ${yesterday}\\.`))).toBeVisible();
   await openDiet(page);
   await expect(eaten(page)).toHaveCount(1); // today's column only; yesterday's is in the other day's column
   await expect(eaten(page)).toContainText('Frozen lasagna');

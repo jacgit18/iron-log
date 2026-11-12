@@ -3,6 +3,7 @@ import type { DietEntry, PlanItem, PlanSlot, Recipe } from '../types.ts';
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { addItem, removeItem, setPortion } from './dietPlan.js';
 import { oldestDay, shiftDay } from './dietLog.js';
+import { amountText } from './foodUnit.js';
 import { actionWord, dayRange, isAhead, logOrPlan, startAmount, type Ports } from './logOrPlan.js';
 
 const TODAY = '2026-11-11';
@@ -48,6 +49,13 @@ describe('today or earlier logs', () => {
     expect(s.entries).toHaveLength(1);
     expect(s.entries[0]).toMatchObject({ d: TODAY, n: 'Rice', kcal: 400, p: 8, from: 'r1' });
     expect(s.plan).toEqual({});
+  });
+  it('names the food in the sentence, so the Undo message reads on its own', () => {
+    const { ports } = fake();
+    const r = logOrPlan(ports, rice, 2, TODAY, TODAY, null);
+    expect(r.ok && r.text).toBe(`Logged Rice: ${amountText(2, rice)} to today.`);
+    const planned = logOrPlan(ports, rice, 1, shiftDay(TODAY, 1), TODAY, 'dinner');
+    expect(planned.ok && planned.text).toBe(`Planned Rice: ${amountText(1, rice)} for Dinner on ${shiftDay(TODAY, 1)}.`);
   });
   it('logs an earlier day and needs no meal', () => {
     const { s, ports } = fake();

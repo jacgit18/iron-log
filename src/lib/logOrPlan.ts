@@ -45,7 +45,7 @@ export function logOrPlan(ports: Ports, recipe: Pick<Recipe, 'id' | 'n' | 'kcal'
     const r = ports.addDietEntry(made.entry);
     if (r.error || !r.id) return fail(r.error ?? 'Couldn’t log that.');
     const id = r.id;
-    return { ok: true, text: `Logged ${amount} to ${day === today ? 'today' : day}.`, undo: () => ports.removeDietEntry(id, false) };
+    return { ok: true, text: `Logged ${recipe.n}: ${amount} to ${day === today ? 'today' : day}.`, undo: () => ports.removeDietEntry(id, false) };
   }
   if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
   if (!meal) return fail('Pick a meal.');
@@ -63,5 +63,5 @@ export function logOrPlan(ports: Ports, recipe: Pick<Recipe, 'id' | 'n' | 'kcal'
     const i = now.findIndex(x => x.k === 'r' && x.id === recipe.id && x.s === meal);
     if (i >= 0) ports.removePlanItem(day, i);
   };
-  return { ok: true, text: `Planned ${amount} for ${SLOT_LABEL[meal]} on ${day}.`, undo };
+  return { ok: true, text: `Planned ${recipe.n}: ${amount} for ${SLOT_LABEL[meal]} on ${day}.`, undo };
 }

@@ -27,9 +27,9 @@ test('The log control opens at the usual amount in the unit name, and logs it in
   await expect(amount(page)).toHaveText('4.5 eggs');
   await page.getByRole('button', { name: 'Less' }).click();
   await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText('Logged 4 eggs to today.')).toBeVisible();
+  await expect(page.getByText(/Logged .+: 4 eggs to today\./)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByText('Logged 4 eggs')).toHaveCount(0);
+  await expect(page.getByText(/Logged .+: 4 eggs/)).toHaveCount(0);
 });
 
 test('the plural box appears with a unit, an odd plural is used, and the three boxes come back on edit', async ({ page }) => {
