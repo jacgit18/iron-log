@@ -19,6 +19,7 @@ import LogControl from '../diet/LogControl.js';
 import GoesWith from './GoesWith.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
+import './RecipeDesktop.css';
 import './RecipeDetail.css';
 import type { Recipe } from '../../types.ts';
 
@@ -67,6 +68,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. The parts add up to ${rollText || 'no numbers yet'}.` : `Per serving, from the parts: ${rollText || 'no numbers yet'}.`} {countedNote(roll)}.</p>}
+      <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}
+      <div className="rc-col">
       <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling || scaled} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
       {(scaling || scaled) && recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
@@ -100,7 +103,9 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         </div>
       )}
       <p className="note" role="status">{msg}</p>
-      {recipe.steps.length > 0 && (<><h3>Steps</h3><ol className="rc-steps">{recipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></>)}
+      </div>
+      {recipe.steps.length > 0 && (<div className="rc-col"><h3>Steps</h3><ol className="rc-steps">{recipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></div>)}
+      </div>
       {recipe.note && <p className="note">{recipe.note}</p>}
       {credit && <p className="rc-attrib">{credit}</p>}
       <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
