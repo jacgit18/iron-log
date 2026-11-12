@@ -6,9 +6,9 @@ import { moveMeals, remapPlan } from '../lib/quickMeals.js';
 import { copyEaten } from '../lib/moveCopyEaten.js';
 import { shortDay } from '../lib/nutritionBoard.js';
 import { moveItem } from '../lib/weekBoard.js';
-import { idsAdded, shoppingRecipeIds } from '../lib/weekShopping.js';
+import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
-import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PLAN_ITEMS, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 import type { DailySnack, DietEntry, SavedMeal } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
@@ -139,14 +139,14 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   addPlanItem(day, kind, id, slot) {
     const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
     if (!there) return kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
-    const r = addItem(planOf(get), day, { k: kind, id, ...(slot ? { s: slot } : {}) }, ymd(new Date()));
+    const r = addItem(planOf(get), day, { k: kind, id, ...(slot ? { s: slot } : {}) }, ymd(new Date()), get().cfg.diet?.snacks);
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return null;
   },
 
   movePlanItem(day, index, toDay, slot) {
-    const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()));
+    const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()), get().cfg.diet?.snacks);
     if (r.plan === null) return r.error;
     putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, planOf(get)[day]?.[index]) : undefined);
     return null;
@@ -177,13 +177,12 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   // One listed snack, today only: it is skipped on that day and comes back on the next.
   skipDailySnack(day, id) { putPlan(get, planOf(get), skipSnack(get().cfg.diet?.snackSkips, day, id)); },
 
-  // A listed snack that is only shown becomes a real item of that day's Snack (so it can be ticked, changed or moved); the index of the real item, or an error text (a full day).
+  // A listed snack that is only shown becomes a real item of that day's Snack (so it can be ticked, changed or moved); the index of the real item, or an error text (the day is outside the plan window).
   realizeDailySnack(day, id) {
     const have = (planOf(get)[day] ?? []).findIndex(i => i.k === 'r' && i.id === id && i.s === 'snack');
     if (have >= 0) return have;
     const listed = get().cfg.diet?.snacks?.find(x => x.id === id);
-    if ((planOf(get)[day] ?? []).length >= MAX_PLAN_ITEMS) return `This day already holds ${MAX_PLAN_ITEMS} planned things, so this snack cannot be ticked or changed there. Remove one first.`; // a stored item over the cap would be dropped when the plan is cleaned, so the snack is not stored: the way out is to make room
-    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()));
+    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()), get().cfg.diet?.snacks); // a listed snack never counts toward the day's 8 planned things, so a full day still lets it be ticked
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return r.plan[day]!.length - 1;
@@ -198,9 +197,9 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
 
   setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },
 
-  // Week to Shopping (brief week-shopping): each planned, uneaten recipe on those days puts its missing ingredients on Shopping through the recipe's own button; `ids` are the items this call created, for Undo.
-  planToShopping(days, month = monthKey(new Date())) {
-    const recipeIds = shoppingRecipeIds(planOf(get), days, get().recipes, get().diet), before = get().grocery.items;
+  // Week to Shopping (briefs week-shopping, snacks-into-shopping): each planned, uneaten recipe on those days, and each listed daily snack that shows there, puts its missing ingredients on Shopping through the recipe's own button; `ids` are the items this call created, for Undo.
+  planToShopping(days, month = monthKey(new Date()), today = ymd(new Date())) {
+    const recipeIds = plannedShoppingIds(get().cfg.diet, days, today, get().recipes, get().diet), before = get().grocery.items;
     let added = 0, already = 0, refused: string | null = null;
     for (const id of recipeIds) { const r = get().addMissingToGrocery(id, month); added += r.added; already += r.already; refused ??= r.refused; }
     return { added, already, refused, recipes: recipeIds.length, ids: idsAdded(before, get().grocery.items) };
