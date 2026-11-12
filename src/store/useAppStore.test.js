@@ -510,11 +510,11 @@ describe('day dates', () => {
   });
   it('a check-off dates its board, and unchecking removes the date', () => {
     const cards = () => currentLayout(st().week, st().activeSlots())[3];
-    expect(dayDate(cards(), st().logs, st().weekKey())).toBeNull();
+    expect(dayDate(cards(), st().logs, st().weekKey(), st().week)).toBeNull();
     st().checkCard('A-d3s1', true);
-    expect(dayDate(cards(), st().logs, st().weekKey())).toBe(defaultLogDate(st().weekStart));
+    expect(dayDate(cards(), st().logs, st().weekKey(), st().week)).toBe(defaultLogDate(st().weekStart));
     st().checkCard('A-d3s1', false);
-    expect(dayDate(cards(), st().logs, st().weekKey())).toBeNull();
+    expect(dayDate(cards(), st().logs, st().weekKey(), st().week)).toBeNull();
   });
   it('a card ticked on another day and moved in does not take over the day’s date', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -523,14 +523,26 @@ describe('day dates', () => {
       vi.setSystemTime(new Date('2026-11-10T20:00:00')); st().checkCard('A-d2s1', true);
       vi.setSystemTime(new Date('2026-11-11T09:00:00')); st().moveSlot('A-d2s1', 3); st().checkCard('A-d3s1', true);
       const col3 = currentLayout(st().week, st().activeSlots())[3];
-      expect(dayDate(col3, st().logs, st().weekKey())).toBe('2026-11-11');
+      expect(dayDate(col3, st().logs, st().weekKey(), st().week)).toBe('2026-11-11');
+    } finally { vi.useRealTimers(); useAppStore.setState({ weekStart: was }); }
+  });
+  it('a skipped card moved into a day with nothing ticked does not date it', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const was = st().weekStart; useAppStore.setState({ weekStart: new Date(2026, 10, 8) });
+    try {
+      vi.setSystemTime(new Date('2026-11-12T09:00:00'));
+      st().skipCards(['A-d2s1']); // writes an auto 'skipped' entry dated today
+      st().moveSlot('A-d2s1', 5);
+      const col5 = currentLayout(st().week, st().activeSlots())[5];
+      expect(col5.some(c => c.id === 'A-d2s1')).toBe(true);
+      expect(dayDate(col5, st().logs, st().weekKey(), st().week)).toBeNull();
     } finally { vi.useRealTimers(); useAppStore.setState({ weekStart: was }); }
   });
   it('the date stays with the workout when days are swapped', () => {
     st().checkCard('A-d6s1', true);
     st().swapDays(6, 1);
     const col7 = currentLayout(st().week, st().activeSlots())[7];
-    expect(dayDate(col7, st().logs, st().weekKey())).toBe(defaultLogDate(st().weekStart));
+    expect(dayDate(col7, st().logs, st().weekKey(), st().week)).toBe(defaultLogDate(st().weekStart));
   });
 });
 
