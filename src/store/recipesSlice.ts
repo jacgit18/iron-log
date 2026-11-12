@@ -2,6 +2,7 @@ import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../
 import { linkError, settleMeals } from '../lib/mealRollup.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
+import { withUsual } from '../lib/usualPortion.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
 import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
@@ -17,6 +18,14 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   recipesLoaded: false,
 
   saveRecipes() { get().saveDoc(MAIN, { items: get().recipes }); },
+
+  // The usual portion alone (brief nutrition-usual-portion): no edited mark, no meal re-settling, nothing else on the recipe changes. An error text, or null.
+  setRecipeUsual(id, usual) {
+    if (!get().recipes.some(r => r.id === id)) return 'That food is gone.';
+    set({ recipes: get().recipes.map(r => (r.id === id ? withUsual(r, usual) : r)) });
+    get().saveRecipes();
+    return null;
+  },
 
   saveRecipe(d) {
     const list = get().recipes;

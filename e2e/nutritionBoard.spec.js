@@ -317,7 +317,7 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: Targets and Manage are text links under the day stepper, the week switcher has its row, Add food over three equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: Targets and Manage are text links under the day stepper, the week switcher has its row, Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
@@ -328,8 +328,14 @@ test.describe('on a phone', () => {
       const add = await box('#nb-add');
       const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
       expect(three).toHaveLength(3);
-      expect(add.w).toBeGreaterThan(width - 40);
-      expect(three.every(t => t.y > add.b - 1 && Math.abs(t.y - three[0].y) < 1 && Math.abs(t.w - three[0].w) < 1 && t.h >= 43.5)).toBe(true);
+      expect(await page.locator('.nb-tbtns .btn').allInnerTexts()).toEqual(['Scan barcode', 'Quick add', 'One-off food', 'Add food']); // Add food is last, so it is the rightmost
+      expect(three.every(t => Math.abs(t.y - add.y) < 1 && t.h >= 43.5 && Math.abs(t.w - add.w) < 1)).toBe(true); // one row, four equal buttons
+      expect(add.x).toBeGreaterThan(await page.locator('.nb-tbtns .btn').nth(2).evaluate(e => e.getBoundingClientRect().x));
+      await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; }); // enlarged text: still one row, Add food still rightmost, nothing scrolls sideways
+      const big = await page.locator('.nb-tbtns .btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: Math.round(r.y) }; }));
+      expect(new Set(big.map(b => b.y)).size).toBe(1);
+      expect(big[3].x).toBeGreaterThan(big[2].x);
+      await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
       expect(await page.locator('.nb-steppick').evaluate(e => getComputedStyle(e).textAlignLast)).toBe('center');
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     });
@@ -340,7 +346,7 @@ test.describe('on a phone', () => {
     const step = page.getByRole('group', { name: 'Day stepper' });
     await step.getByRole('button', { name: 'Next day' }).click();
     await expect(page.locator('#nb-add')).toBeVisible();
-    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Add food', 'Recipes', 'Saved meals']);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Recipes', 'Saved meals', 'Add food']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
     await expect(page.locator('#nb-add')).toHaveCount(0);
     await expect(page.getByText('Last week\'s food cannot be changed')).toBeVisible();
