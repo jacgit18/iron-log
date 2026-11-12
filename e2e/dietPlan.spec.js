@@ -81,7 +81,7 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await expect(todayCol(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' })).toBeChecked();
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // Oats, which was typed in, not planned
   await expect(todayCol(page).locator('.wb-slothd b', { hasText: 'Also eaten' })).toHaveCount(0); // no Also eaten list: the unplanned food sits in its meal (the clock is 18:30: Dinner)
-  await expect(status(page)).toContainText('Logged 1 from Chili.');
+  await expect(status(page)).toContainText('Added 1 from Chili.');
   await expect(kcal()).toHaveAttribute('aria-label', /: 950 /); // the meters moved by the planned 600
   await todayCol(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' }).click(); // unticking removes that log
   await expect(todayCol(page).getByRole('checkbox', { name: 'Check Chili as eaten' })).not.toBeChecked();
