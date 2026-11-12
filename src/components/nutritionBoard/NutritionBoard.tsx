@@ -8,9 +8,10 @@ import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, week
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useLegacyMeals } from '../../store/useLegacyMeals.js';
 import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
-import type { PlanSlot, SavedMeal } from '../../types.ts';
+import type { PlanSlot } from '../../types.ts';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
@@ -22,7 +23,6 @@ import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
 const NO_PLAN: Plan = {};
-const NO_MEALS: SavedMeal[] = [];
 
 // Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day, with a stepper under seven.
 // Each day holds six meters (calories, protein, carbs when there is a target or data, fat, supplements, water), its meals with the food eaten in them, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
@@ -47,7 +47,7 @@ export default function NutritionBoard() {
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
   const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
   const plan = cfg.diet?.plan ?? NO_PLAN;
-  const meals = cfg.diet?.meals ?? NO_MEALS;
+  const legacy = useLegacyMeals();
   const targets = useMemo(() => {
     const weights = bwSorted(body);
     const latest = weights.length ? Number(weights[weights.length - 1]!.w) : null;
@@ -57,12 +57,12 @@ export default function NutritionBoard() {
     const t = targetsFor(cfg.diet, recommend(goalLb, latest, weeksLeft, cfg.diet));
     return { kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs };
   }, [cfg, body, now]);
-  const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals, diet, supp, body, targets })), [days, today, plan, recipes, meals, diet, supp, body, targets]);
+  const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets })), [days, today, plan, recipes, legacy, diet, supp, body, targets]);
   const moveTargets = days.map(d => ({ id: d, label: longDay(d) }));
   const st = () => useAppStore.getState();
   const goWeek = (o: WeekOffset) => { setPicked(o === 0 ? today : weekDays(today, o)[0]!); setMsg(''); };
   const log = (r: Resolved, index: number) => {
-    const out = planLog(r, st().diet, today);
+    const out = planLog(r, st().diet, today, recipes);
     if ('error' in out) { setMsg(out.error); return; }
     const run = runInstantLog(st().addDietEntry, out.add.map(f => entryFromFood(today, f)), { from: r.name, left: out.left });
     if (run.ids.length) st().setPlanEaten(today, index, run.ids); // the planned item shows a check

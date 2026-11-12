@@ -15,10 +15,36 @@ export function quickMeals(recipes: readonly Recipe[]): Recipe[] {
   return sortByName(recipes.filter(isMeal), r => r.n, r => r.id);
 }
 
-/** What Quick add lists: the Recipes meals, then any saved meal that has not moved yet (waiting for room in Recipes), A to Z, each with the foods one tap logs. Ids are prefixed so a recipe and a saved meal never share one. */
-export function quickRows(recipes: readonly Recipe[], saved: readonly SavedMeal[], moved: Readonly<Record<string, string>>): { id: string; n: string; items: SavedItem[]; waiting: boolean }[] {
-  const own = quickMeals(recipes).map(r => ({ id: `r:${r.id}`, n: r.n, items: mealItems(r, recipes), waiting: false }));
-  const old = saved.filter(m => !moved[m.id]).map(m => ({ id: `s:${m.id}`, n: m.n, items: m.items, waiting: true }));
+/** The old saved-meals list as the views may read it, while it is still kept for one release (brief saved-meals-removal): `held` is the saved meals that have no recipe yet (the 300-recipe limit stopped their move), `moved` the saved-meal id to recipe id record that plan items resolve through. Once every saved meal has moved, `held` is empty and the old list is not read at all. */
+export interface LegacyMeals { held: SavedMeal[]; moved: Readonly<Record<string, string>> }
+
+const NO_HELD: SavedMeal[] = [], NO_MOVED: Readonly<Record<string, string>> = {};
+const NO_LEGACY: LegacyMeals = { held: NO_HELD, moved: NO_MOVED }; // one object for "no diet settings yet": a store selector that got a new one each call would never settle
+const gated = new WeakMap<object, LegacyMeals>();
+
+/** The gate: what is still read from `cfg.diet`'s old list. The same object comes back for the same `diet`, so a view can keep it. */
+export function legacyMeals(diet: Pick<DietCfg, 'meals' | 'mealsMoved'> | undefined): LegacyMeals {
+  if (!diet) return NO_LEGACY;
+  const hit = gated.get(diet);
+  if (hit) return hit;
+  const moved = diet.mealsMoved ?? NO_MOVED;
+  const held = (diet.meals ?? NO_HELD).filter(m => !moved[m.id]);
+  const out: LegacyMeals = { held: held.length ? held : NO_HELD, moved };
+  gated.set(diet, out);
+  return out;
+}
+
+/** The line under Saved meals: the usual one, or, while saved meals are held back, why. Recipes being full (`recipeCount` at the limit) is the one reason with something to do; a meal that stays held while there is room (the move skips one it cannot make into a recipe) is only said to be kept here. */
+export const savedMealsNote = (held: readonly SavedMeal[], recipeCount: number): string => {
+  if (!held.length) return 'Rename or edit a meal in Recipes.';
+  if (recipeCount >= MAX_RECIPES) return `Some saved meals are waiting because Recipes is full (${MAX_RECIPES} recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens. Rename or edit a meal in Recipes.`;
+  return 'Some saved meals could not move into Recipes, so they are kept here and still work. Rename or edit a meal in Recipes.';
+};
+
+/** What Quick add lists: the Recipes meals, then any saved meal held back by the gate, A to Z, each with the foods one tap logs. Ids are prefixed so a recipe and a saved meal never share one. */
+export function quickRows(recipes: readonly Recipe[], held: readonly SavedMeal[]): { id: string; n: string; items: SavedItem[] }[] {
+  const own = quickMeals(recipes).map(r => ({ id: `r:${r.id}`, n: r.n, items: mealItems(r, recipes) }));
+  const old = held.map(m => ({ id: `s:${m.id}`, n: m.n, items: m.items }));
   return sortByName([...own, ...old].filter(m => m.items.length > 0), m => m.n, m => m.id);
 }
 
