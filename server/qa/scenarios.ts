@@ -95,7 +95,11 @@ export type ScenarioFeature =
   | 'Issues filter'
   | 'Scan keeps its day'
   | 'Launcher shortcuts'
-  | 'Week to Shopping';
+  | 'Week to Shopping'
+  | 'Add food any day'
+  | 'Move and copy eaten'
+  | 'Usual portion'
+  | 'Saved meals removal';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -107,6 +111,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
   'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts', 'Week to Shopping',
+  'Add food any day', 'Move and copy eaten', 'Usual portion', 'Saved meals removal',
 ];
 
 export interface Scenario {
@@ -3441,6 +3446,86 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients.',
+    ],
+  },
+  {
+    id: 'S-281', feature: 'Add food any day', title: 'Tap an earlier day and log what you ate on it', persona: 'diet-on-target', brief: 'nutrition-any-day-add',
+    steps: [
+      'Open Daily, Nutrition. On a phone use the day stepper; on a wide screen tap the name of an earlier day this week (or in last week). Read the line beside + Add food.',
+      'Press + Add food, One-off food, enter "Toast", 120 kcal and 4 g protein, and press Add. Read the message and the day\'s column.',
+      'Tap today\'s name, then reload the page.',
+      'Tap the name of a day after today and press + Add food.',
+    ],
+    expected: [
+      'The toolbar reads "Adding to <that day>" and offers + Add food, Scan and log, Quick add and One-off food, as it does on today.',
+      'One sentence says "Added Toast." The food shows in that day\'s "Not in a meal" list and that day\'s Calories and Protein meters rise by 120 kcal and 4 g; today\'s meters do not move.',
+      'Reload opens on today (the address is unchanged by the picked day).',
+      'A day ahead lists only Recipes and Saved meals, which plan items (S-200).',
+    ],
+  },
+  {
+    id: 'S-282', feature: 'Move and copy eaten', title: 'Copy an eaten food to another day', persona: 'diet-on-target', brief: 'nutrition-move-copy-eaten',
+    steps: [
+      'In today\'s Also eaten list tap the Greek yogurt row and press Copy to…. Read the days offered.',
+      'Pick an earlier day. Read the message, then that day\'s column and today\'s list.',
+      'Tap the copy on that earlier day and read its sheet.',
+    ],
+    expected: [
+      'Today and earlier days are offered, never the food\'s own day and never a day ahead.',
+      'A sentence says "Added 1 from Greek yogurt." The original stays in today\'s list. The copy shows on the earlier day under "Not in a meal" with the same calories, protein, carbs and fat, and that day\'s meters rise by the same amount.',
+      'The copy\'s sheet offers Edit, Delete, Move to… and Copy to… like any eaten row.',
+    ],
+  },
+  {
+    id: 'S-283', feature: 'Move and copy eaten', title: 'Move an eaten food to another day, undo it, and hit the daily limit', persona: 'diet-on-target', brief: 'nutrition-move-copy-eaten', edge: true,
+    steps: [
+      'Tap the Greek yogurt row on today, press Move to… and pick an earlier day. Read the notice, then both days\' lists.',
+      'Press Undo on the notice and read both days\' lists again.',
+      'Add one-off foods to an earlier day until it holds 20, then copy a food from today to that day.',
+    ],
+    expected: [
+      'The notice reads "Moved Greek yogurt to <day>." with Undo. The food leaves today\'s list and appears on that day; both days\' meters follow.',
+      'Undo puts the original back on today and takes the moved copy away: nothing is doubled and no other entry changes.',
+      'The copy is refused with "You can log 20 things a day." and nothing is added.',
+    ],
+  },
+  {
+    id: 'S-284', feature: 'Usual portion', title: 'A changed portion becomes the food\'s usual, and Undo puts the old one back', persona: 'recipe-collector', brief: 'nutrition-usual-portion',
+    steps: [
+      'In Recipes press Log on a recipe, change the portion from the amount the sheet opened at and press Log it. Read the notice.',
+      'Press Log on the same recipe again and read the portion the sheet opens at. Log it at that portion and read the notice area.',
+      'Log a different amount, then press Undo on the notice. Open Log again.',
+    ],
+    expected: [
+      'The notice reads "Usual portion saved: <amount>." and the entry is logged.',
+      'The sheet opens on the saved portion. Logging at it shows no notice and rewrites nothing.',
+      'Undo puts the previous usual (or none) back and keeps the logged entry. If the usual was changed after that log, Undo says "The usual portion was changed since, so it was left as it is." Planning a day ahead never changes the usual.',
+    ],
+  },
+  {
+    id: 'S-285', feature: 'Saved meals removal', title: 'Saved meals come from Recipes only, and a planned meal whose recipe is gone shows as removed', persona: 'meal-planner', brief: 'saved-meals-removal',
+    steps: [
+      'Open Recipes, Meals and rename "Chicken bowl" to "Chicken bowl 2". Open Nutrition, + Add food, Saved meals and read the list.',
+      'Plan "Quick dinner" for a day ahead, then delete the Quick dinner meal in Recipes (More actions, Delete).',
+      'Open that day on the Nutrition board and the planner.',
+    ],
+    expected: [
+      'Saved meals lists the Recipes meals, with the new name; there is no separate old list or "waiting" note.',
+      'The planned item is on the day ahead until the meal is deleted.',
+      'After the delete the planned item shows the existing removed state, not a crash, and Remove clears it.',
+    ],
+  },
+  {
+    id: 'S-286', feature: 'Saved meals removal', title: 'With Recipes full, the old saved meals stay and a note says to make room', persona: 'recipes-full', brief: 'saved-meals-removal', edge: true,
+    steps: [
+      'Sign in to this account on QA, open Recipes and read the count, then open Nutrition, + Add food and Saved meals.',
+      'Read the note on the list, then tap "Chicken bowl".',
+      'Delete one recipe in Recipes, reload the app and open Saved meals again.',
+    ],
+    expected: [
+      'Recipes holds 300 recipes, so the four saved meals could not move into it.',
+      'The old list is still offered with a note: "Some saved meals are waiting because Recipes is full (300 recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens." One tap logs the meal as before.',
+      'After a delete and a reload at least one saved meal has moved into Recipes and the list reads from Recipes; the meals that still do not fit stay listed with the note.',
     ],
   },
 ];

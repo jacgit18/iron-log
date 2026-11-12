@@ -108,9 +108,9 @@ describe('QA personas', () => {
     const rowsOf = (id: string) => buildPersonaRows(personaById(id)!, EXERCISES, TODAY);
     const sumOn = (rows: ReturnType<typeof rowsOf>, d: string, k: 'kcal' | 'p') => rows.dietEntries.filter(e => e.data.d === d).reduce((a, e) => a + e.data[k], 0);
 
-    it('has the seven diet accounts, and 19 in all', () => {
-      expect(PERSONAS.filter(p => p.group === 'Diet').map(p => p.id)).toEqual(['diet-on-target', 'diet-over-target', 'diet-fresh', 'meal-planner', 'vitamin-tracker', 'supplement-stack', 'recipe-collector']);
-      expect(PERSONAS).toHaveLength(19);
+    it('has the eight diet accounts, and 20 in all', () => {
+      expect(PERSONAS.filter(p => p.group === 'Diet').map(p => p.id)).toEqual(['diet-on-target', 'diet-over-target', 'diet-fresh', 'meal-planner', 'recipes-full', 'vitamin-tracker', 'supplement-stack', 'recipe-collector']);
+      expect(PERSONAS).toHaveLength(20);
     });
 
     it('puts the on-target account at about 60% of its calories today, with 14 days logged and targets set', () => {
