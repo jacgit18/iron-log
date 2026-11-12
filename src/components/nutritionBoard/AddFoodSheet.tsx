@@ -106,7 +106,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   };
   if (flow === 'quick') {
     const items = quickItems(diet, recipes);
-    const suggested = suggestNow(diet, hour, today);
+    const suggested = day === today ? suggestNow(diet, hour, today) : []; // 'now' means today's clock: an earlier day gets no suggestions built from it
     return !roomOn(diet, day) ? <p className="note">That’s 20 things for the day. Delete one to add another.</p> : (
       <div>
         {suggested.length > 0 && (<><p className="note" id="nb-sugg-h">Suggested now</p><ul className="dt-recents" aria-labelledby="nb-sugg-h">{suggested.map(f => <li key={f.n}><button type="button" className="btn sm" onClick={() => addFood(f)}>{f.n} · {fmtNum(f.kcal)} kcal</button></li>)}</ul></>)}
