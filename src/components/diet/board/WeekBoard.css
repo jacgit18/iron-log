@@ -50,31 +50,16 @@
   font-size: var(--fs-sm);
   color: var(--muted);
 }
-.wb-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-4) var(--sp-12);
-  margin: var(--sp-4) 0 var(--sp-8);
-  font-size: var(--fs-sm);
-  color: var(--muted);
-}
-.wb-legend i {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-inline-end: var(--sp-4);
-  border-radius: 2px;
-}
-.wb-legend .kcal, .wb-meter.kcal i {
+.wb-meter.kcal i {
   background: var(--wb-kcal);
 }
-.wb-legend .prot, .wb-meter.prot i {
+.wb-meter.prot i {
   background: var(--wb-prot);
 }
-.wb-legend .fat, .wb-meter.fat i {
+.wb-meter.fat i {
   background: var(--wb-fat);
 }
-.wb-legend .over, .wb-meter.over i {
+.wb-meter.over i {
   background: var(--wb-over);
 }
 .wb-bars {

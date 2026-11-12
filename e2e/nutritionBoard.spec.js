@@ -24,7 +24,7 @@ test('Nutrition is one board with a week switcher; the old Water, Last 7 days an
   await expect(page.locator('.nb-weekname')).toHaveText('This week');
   await expect(page.locator('#water-h, #water7-h, #sched-h')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Food eaten' })).toHaveCount(0);
-  await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block moved into the Targets and goal sheet
+  await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block moved into the Manage sheet
   await expect(page.getByRole('status').filter({ hasText: 'This week · Sep 20 to 26' })).toBeVisible();
   const h = await page.locator('#nb-h').boundingBox(); // the heading stays for screen readers but is visually hidden: nothing is drawn above the switcher (the Daily tab already says it)
   expect(h.width).toBeLessThanOrEqual(1); expect(h.height).toBeLessThanOrEqual(1);
@@ -236,7 +236,8 @@ test('the Calories, Protein and Fat bars are filled in their legend colours, and
   await expect(sheet.getByRole('status').last()).toContainText('Added Rice');
   await closeSheet(page);
   const bg = l => l.evaluate(e => getComputedStyle(e).backgroundColor);
-  const legend = cls => bg(page.locator(`.wb-legend i.${cls}`));
+  const token = v => page.evaluate(n => { const p = document.createElement('i'); p.style.backgroundColor = `var(${n})`; document.querySelector('.wb').append(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c; }, v); // a bar's colour is its CSS token (no colour legend any more)
+  const legend = cls => token(`--wb-${cls}`);
   const fill = name => bg(meter(todayCol(page), name).locator('i'));
   for (const [name, cls] of [['Calories', 'kcal'], ['Protein', 'prot']]) {
     expect(await fill(name), name).not.toBe('rgba(0, 0, 0, 0)');
@@ -318,14 +319,14 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: Targets and Manage are text links under the day stepper, the week switcher has its row, Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: Manage is a text link under the day stepper, the week switcher has its row, Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
-      const targets = await box('#nb-targets'), manage = await box('#nb-manage');
-      expect(await page.locator('#nb-targets').evaluate(e => e.innerText)).toBe('Targets'); // the short name on a phone; the accessible name stays Targets and goal
+      const manage = await box('#nb-manage');
+      await expect(page.locator('#nb-targets')).toHaveCount(0); // the Targets and goal sheet is gone: its parts live in Manage
       expect(await page.locator('#nb-h').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // the Nutrition heading stays for screen readers but is not drawn: the tab already says it
-      expect(Math.min(targets.h, manage.h)).toBeGreaterThanOrEqual(43.5);
+      expect(manage.h).toBeGreaterThanOrEqual(43.5);
       const add = await box('#nb-add');
       const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
       expect(three).toHaveLength(3);

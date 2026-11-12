@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { openTargets } from './nutritionBoardHelpers.js';
+import { openManage } from './nutritionBoardHelpers.js';
 
 // Diet pace: how fast to gain or lose. The numbers (presets, limits, the calorie floor, the goal date) are node tests in dietTarget.test.ts; this covers
 // what a unit test cannot see: the picker on the card, the pick surviving a reload, Custom, the goal date's "By date" choice, and the missing-input buttons.
@@ -9,8 +9,8 @@ const seed = (page, { goal, weight, by }) => page.addInitScript(([g, w, b]) => {
   localStorage.setItem('ironlog:config/main', JSON.stringify(g ? { bwGoal: { w: g, ...(b ? { by: b } : {}) } } : {}));
   if (w) localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w }] }));
 }, [goal, weight, by]);
-const diet = page => page.getByRole('dialog', { name: 'Targets and goal' }); // the pace picker is in the Targets and goal sheet
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await openTargets(page); };
+const diet = page => page.getByRole('dialog', { name: 'Manage' }); // the pace picker is in the Manage sheet
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await openManage(page); };
 const chip = (page, name) => diet(page).getByRole('button', { name: new RegExp(`^${name}`) });
 
 test('gaining: Steady is picked, Fast and Slow change the calories, and the pick survives a reload', async ({ page }) => {
