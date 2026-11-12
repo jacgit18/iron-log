@@ -8,7 +8,7 @@ import { shortDay } from '../lib/nutritionBoard.js';
 import { moveItem } from '../lib/weekBoard.js';
 import { idsAdded, shoppingRecipeIds } from '../lib/weekShopping.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
-import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PLAN_ITEMS, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 import type { DailySnack, DietEntry, SavedMeal } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
@@ -35,9 +35,10 @@ const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>) =>
   if (clean) c.diet = clean; else delete c.diet;
 });
 
-// A listed daily snack (brief daily-snacks) that leaves a day (removed there, or moved to another day) is skipped on that day, so its listed copy does not come back in its place.
-const skipsAfterLeaving = (get: StoreGet, day: string, item: { k: string; id: string } | undefined): Record<string, string[]> | undefined =>
-  item && item.k === 'r' && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
+// A listed daily snack (brief daily-snacks) that leaves a day from Snack (removed there, or moved to another day) is skipped on that day, so its listed copy does not come back in its place.
+// Only an item in Snack counts: the same recipe planned by hand in another meal is the person's own plan, and taking it out leaves the listed snack as it was.
+const skipsAfterLeaving = (get: StoreGet, day: string, item: { k: string; id: string; s?: string } | undefined): Record<string, string[]> | undefined =>
+  item && item.k === 'r' && item.s === 'snack' && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
 
 export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   diet: [],
@@ -181,10 +182,18 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const have = (planOf(get)[day] ?? []).findIndex(i => i.k === 'r' && i.id === id && i.s === 'snack');
     if (have >= 0) return have;
     const listed = get().cfg.diet?.snacks?.find(x => x.id === id);
+    if ((planOf(get)[day] ?? []).length >= MAX_PLAN_ITEMS) return `This day already holds ${MAX_PLAN_ITEMS} planned things, so this snack cannot be ticked or changed there. Remove one first.`; // a stored item over the cap would be dropped when the plan is cleaned, so the snack is not stored: the way out is to make room
     const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()));
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return r.plan[day]!.length - 1;
+  },
+
+  // Takes back a snack realizeDailySnack just stored when what it was stored for did not happen (the log failed): it has no eaten mark, so it only goes back to being shown.
+  unstoreDailySnack(day, index) {
+    const it = planOf(get)[day]?.[index];
+    if (!it || it.e?.length) return;
+    putPlan(get, removeItem(planOf(get), day, index));
   },
 
   setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },

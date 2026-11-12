@@ -42,7 +42,7 @@ export default function MealSections({ view, placed, today, days, editable, onLo
           {s.items.length === 0 && s.slot && view.day > today && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot]}`} onClick={() => onAdd(s.slot!)}>Add</button>}
           {s.slot === 'snack' && editable && (hasSnacks
             ? <button type="button" className="btn sm ghost nb-slotadd" onClick={() => st().openModal({ type: 'nbsnacks' })}>Daily snacks</button>
-            : view.day === today && <button type="button" className="btn sm nb-slotadd" onClick={() => st().openModal({ type: 'nbsnacks' })}>Set up daily snacks</button>)}
+            : <button type="button" className={`btn sm${view.day === today ? '' : ' ghost'} nb-slotadd`} onClick={() => st().openModal({ type: 'nbsnacks' })}>Set up daily snacks</button>)}
           {s.need.length > 0 && s.items.length > 0 && (
             <div className="wb-plate" role="group" aria-label={`${s.slot ? SLOT_LABEL[s.slot] : ''} plate check`}>
               {s.need.map(m => <span key={m} className={`wb-mk${s.have.includes(m) ? ' on' : ''}`}>{s.have.includes(m) ? '✓ ' : ''}{MARK_LABEL[m]}</span>)}

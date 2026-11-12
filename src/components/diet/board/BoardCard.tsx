@@ -26,7 +26,13 @@ export default function BoardCard({ item, day, today, days, open, moving, onOpen
   };
   const move = (toDay: string, slot: PlanSlot | undefined) => { const at = real(); if (at < 0) return; onMsg(st().movePlanItem(day, at, toDay, slot) ?? ''); onOpen(); };
   const portion = (to: number) => { const at = real(); if (at >= 0) st().setPlanPortion(day, at, to); };
-  const tick = () => { if (eaten) { st().uncheckPlanItem(day, index); return; } const at = real(); if (at >= 0) onLog(r, at); };
+  const tick = () => {
+    if (eaten) { st().uncheckPlanItem(day, index); return; }
+    const at = real();
+    if (at < 0) return;
+    onLog(r, at);
+    if (item.virtual) st().unstoreDailySnack(day, at); // a log that failed leaves nothing stored: the snack is only shown again
+  };
   return (
     <div className={`wb-cardwrap${eaten ? ' eaten' : ''}`}>
       <div className="nb-cardrow">

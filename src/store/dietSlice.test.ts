@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
+import { effectivePlan } from '../lib/dailySnacks.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
@@ -390,7 +391,7 @@ describe('daily snacks (brief daily-snacks)', () => {
   });
   it('reports a full day instead of losing the snack', () => {
     st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` })) } }; });
-    expect(st().realizeDailySnack(tomorrow, 'yog')).toMatch(/8 things/);
+    expect(st().realizeDailySnack(tomorrow, 'yog')).toMatch(/8 planned things/);
     expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(8);
   });
   it('skips a snack on one day without touching the list or other days', () => {
@@ -429,9 +430,33 @@ describe('daily snacks (brief daily-snacks)', () => {
     const i = st().realizeDailySnack(today, 'yog') as number;
     expect(st().movePlanItem(today, i, today, 'dinner')).toBeNull();
     expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    expect(st().movePlanItem(today, 0, today, 'snack')).toBeNull(); // back in Snack
     expect(st().movePlanItem(today, 0, tomorrow, 'snack')).toBeNull();
     expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
     expect(st().cfg.diet!.plan).toEqual({ [tomorrow]: [{ k: 'r', id: 'yog', s: 'snack' }] });
+  });
+  it('a recipe on the list and planned by hand in another meal hides the listed copy; taking the hand-planned one out or away leaves the listed snack as it was', () => {
+    st().saveDailySnacks([{ id: 'yog' }]);
+    st().addPlanItem(tomorrow, 'r', 'yog', 'lunch');
+    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'lunch' }]);
+    st().removePlanItem(tomorrow, 0);
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }]);
+    st().addPlanItem(today, 'r', 'yog', 'lunch');
+    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toBeNull();
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [today], today)[today]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }]);
+  });
+  it('a snack stored for a tick that did not happen is taken back, but an eaten one stays', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
+    const a = st().realizeDailySnack(today, 'yog') as number;
+    st().unstoreDailySnack(today, a);
+    expect(st().cfg.diet!.plan).toBeUndefined();
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    const b = st().realizeDailySnack(today, 'bar') as number;
+    st().setPlanEaten(today, b, ['e1']);
+    st().unstoreDailySnack(today, b);
+    expect(st().cfg.diet!.plan![today]).toHaveLength(1);
   });
   it('removing an unlisted planned item adds no skip', () => {
     st().addPlanItem(today, 'r', 'bar', 'snack');

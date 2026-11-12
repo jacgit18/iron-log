@@ -25,6 +25,7 @@ test('Snack sits between Lunch and Dinner, says so when empty, and a saved list 
   await openNutrition(page);
   await expect(todayCol(page).locator('.wb-slothd b')).toHaveText(['Breakfast', 'Lunch', 'Snack', 'Dinner', 'Supplements', 'Hydration']); // the four meals in order, then the day's other sections
   await expect(snack(todayCol(page))).toContainText('No daily snacks yet');
+  await expect(snack(col(page, TOMORROW)).getByRole('button', { name: 'Set up daily snacks' })).toBeVisible(); // any editable day can start it, not only today
   await setUp(page);
   for (const c of [todayCol(page), col(page, TOMORROW)]) {
     await expect(snack(c).locator('.wb-card')).toHaveCount(2);
