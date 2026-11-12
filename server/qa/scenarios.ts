@@ -105,7 +105,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Supplement times', 'Active ingredients', 'Ingredient day line',
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
-  'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts',
+  'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts', 'Week to Shopping',
 ];
 
 export interface Scenario {
@@ -3400,6 +3400,49 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Loadbearer is listed in the share sheet for a plain-text link and opens "Save this link" over the board (S-30 covers saving it). A Play wrapper built before the share entry was added is missing from the list.',
+    ],
+  },
+  {
+    id: 'S-277', feature: 'Week to Shopping', title: 'Add missing to Shopping puts the week\'s missing ingredients on the list once', persona: 'meal-planner', brief: 'week-shopping',
+    steps: [
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back. On Nutrition, plan two recipes that share an ingredient on days ahead (Add food, Recipes, pick the meal).',
+      'In the toolbar press Add missing to Shopping, then open Shopping.',
+    ],
+    expected: [
+      'A notice reads "Added n to Shopping" (with "; m already there" when an ingredient was needed twice) and has an Undo button.',
+      'Shopping lists each missing ingredient once; an ingredient already at home or already on the list is not added again.',
+    ],
+  },
+  {
+    id: 'S-278', feature: 'Week to Shopping', title: 'Undo takes back only what the tap added', persona: 'meal-planner', brief: 'week-shopping',
+    steps: [
+      'With a few Shopping items of your own and two planned recipes with missing ingredients, press Add missing to Shopping.',
+      'Press Undo on the notice, check Shopping, then press Add missing to Shopping again.',
+    ],
+    expected: [
+      'After Undo Shopping holds exactly the items it had before the tap, including yours, and the notice says Removed from Shopping.',
+      'The second tap adds the same items again.',
+    ],
+  },
+  {
+    id: 'S-279', feature: 'Week to Shopping', title: 'The button is off when there is nothing to add, and last week has none', persona: 'meal-planner', brief: 'week-shopping', edge: true,
+    steps: [
+      'On a day with nothing planned, read the toolbar. Then plan a recipe whose ingredients are all at home or already on Shopping and read it again.',
+      'Pick a day in last week (the day dropdown on a phone, Last week on a wide screen) and read the toolbar.',
+    ],
+    expected: [
+      'Add missing to Shopping is dimmed with nothing to add, and turns on when a planned recipe has an ingredient that is not at home or on the list.',
+      'Last week shows no Add missing to Shopping (its food cannot be changed).',
+    ],
+  },
+  {
+    id: 'S-280', feature: 'Week to Shopping', title: 'An item already eaten adds nothing', persona: 'meal-planner', brief: 'week-shopping', edge: true,
+    steps: [
+      'Plan a recipe with an ingredient you do not have for today (plan it for a day ahead and move it to today), then tick it as eaten.',
+      'Read Add missing to Shopping.',
+    ],
+    expected: [
+      'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients.',
     ],
   },
 ];
