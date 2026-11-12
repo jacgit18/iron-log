@@ -350,8 +350,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
       <div className="rcf-foot">
         {err && <p className="note gerr" role="alert">{err}</p>}
         <div className="rc-actions rc-bar">
-          <button type="submit" className="btn primary">Save recipe</button>
           <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+          <button type="submit" className="btn primary">Save recipe</button>
         </div>
       </div>
     </form>

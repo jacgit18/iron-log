@@ -11,6 +11,7 @@ const OWED: Record<string, number[]> = {
   'styles.css': [1870], // the Board's seven days from a 1920 px screen with its scrollbar: hands off, stays
   'components/board/DayHeader.css': [320], // the Board's day header (20em): hands off, stays
   'components/nutritionBoard/NutritionBoard.css': [699], // slice 6 (700 / 701 with the phone header)
+  'components/nutritionBoard/useWideBoard.ts': [699], // slice 6, with NutritionBoard.css: the phone header hook reads the same break
   'components/recipes/RecipeDesktop.css': [641, 1024], // slice 6
   'components/recipes/RecipeDetail.css': [641], // slice 6
   'components/recipes/Recipes.css': [640], // slice 6

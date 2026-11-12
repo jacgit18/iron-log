@@ -2702,7 +2702,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Scroll the page sideways and look at the toolbar and the day.',
     ],
     expected: [
-      'One day shows, with Previous day, Day to show and Next day; the toolbar reads "Adding to <that day>".',
+      'One day shows, with Previous day, Day to show and Next day; the day it names is the day food is added to (on a phone the "Adding to" line is read by a screen reader but not drawn).',
       'After the seventh press the stepper has crossed into Next week and Next week is pressed; Next day stops at the end of next week (13 days on). Day to show has groups Last week, This week and Next week.',
       'Previous day stops seven days back. There is no sideways scroll and every button is at least 44 px tall.',
     ],
