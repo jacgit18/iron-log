@@ -378,7 +378,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Recipes and press + New, then Add a food by hand.',
       'Save it with only a name; then add 250 kcal and 20 g protein and save.',
-      'Find it under the Ready-made chip, open it and press Ate this.',
+      'Find it under the Foods tab, open it and press Ate this.',
       'Edit the food to 300 kcal and look at the entry already logged.',
     ],
     expected: [
@@ -745,14 +745,14 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The form fills in a few seconds with the name, per-serving numbers and a Note like "1 serving = 2/3 cup (55 g). About 6 servings per pack." and says to check the numbers; nothing is saved yet.',
-      'After Save food the food is in the Ready-made list; Ate this logs 1.5 times the calories and protein to today.',
+      'After Save food the food is in the Foods list; Ate this logs 1.5 times the calories and protein to today.',
     ],
   },
   {
     id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a label with per 100 g only', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
     steps: [
       'On a phone, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
-      'Check that every account (not only an admin) sees Scan label and Choose photo on the Ready-made form.',
+      'Check that every account (not only an admin) sees Scan label and Choose photo on the New food form.',
     ],
     expected: [
       'The form stays empty and says "Could not read the numbers. Try a closer, flatter photo or type them in." (or "That label only shows numbers per 100 g, so nothing was filled in. Type the numbers for one serving."); you can still type the numbers and save.',
@@ -775,7 +775,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-52', feature: 'Whole pack', title: 'A wrong pack size is refused', persona: 'diet-fresh', brief: 'whole-pack', edge: true,
     steps: [
-      'On the new ready-made food form fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
+      'On the New food form fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
       'Change it to 8, save, then edit the food and clear the box.',
     ],
     expected: [
@@ -1986,7 +1986,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'After starring two recipes (S-173 walks the star), reload the page and press a starred chip above the list.',
     ],
     expected: [
-      'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the ready-made form with the barcode sheet on top.',
+      'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the New food form with the barcode sheet on top.',
       'The chips above the list show the starred recipes first and open the one pressed.',
       'After a reload with no stars and nothing logged or opened since, the row is not shown (a recipe opened in the same visit still counts as recent).',
     ],
@@ -2930,7 +2930,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-233', feature: 'Label scan', title: 'A label photo fills the vitamin and mineral rows, to check against the label', persona: 'diet-fresh', brief: 'food-vitamins-minerals', device: true,
     steps: [
-      'On a phone, press Add food, Find food, then the label photo option after a miss (or scan from the Ready-made form), and photograph the Nutrition Facts of a fortified cereal or a packaged food that lists sodium and fiber.',
+      'On a phone, press Add food, Find food, then the label photo option after a miss (or scan from the New food form), and photograph the Nutrition Facts of a fortified cereal or a packaged food that lists sodium and fiber.',
       'Compare every vitamin and mineral row with the label, remove one row, then change the calories.',
     ],
     expected: [
