@@ -1,4 +1,5 @@
 import { FORM_WORDS, formWord, milligramLines, portionText, stepPortion, unitsOf } from '../../lib/supplementPortion.js';
+import Icon from '../Icon.js';
 import './PortionStepper.css';
 
 // "How much you take each time" on the supplement sheet (brief supplement-portions): capsules (or tablets) in one label serving, then a stepper that moves one capsule per tap, with the amount that comes to under it.
@@ -26,9 +27,9 @@ export default function PortionStepper({ portion, units, form, row, onPortion, o
       </div>
       <p className="note">{n ? `The label serving is ${portionText(1, serving)}.` : 'Add how many capsules make one serving to count capsules; until then this counts servings.'}</p>
       {!sizeOnly && <div className="pstep-row" role="group" aria-label={serving ? `${word}s I take each time` : 'Servings I take each time'}>
-        <button type="button" className="btn pstep-btn" id="supp-portion-less" aria-label={`Fewer ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, -1, n))}>−</button>
+        <button type="button" className="btn pstep-btn" id="supp-portion-less" aria-label={`Fewer ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, -1, n))}><Icon name="minus" /></button>
         <output id="supp-portion-value" className="pstep-val" aria-live="polite">{portionText(portion, serving)}</output>
-        <button type="button" className="btn pstep-btn" id="supp-portion-more" aria-label={`More ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, 1, n))}>+</button>
+        <button type="button" className="btn pstep-btn" id="supp-portion-more" aria-label={`More ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, 1, n))}><Icon name="plus" /></button>
       </div>}
       {!sizeOnly && <p className="pstep-sum" id="supp-portion-sum">
         {lines.main && <b className="pstep-main">{lines.main}</b>}
