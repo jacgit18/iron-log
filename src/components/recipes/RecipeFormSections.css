@@ -88,7 +88,7 @@
   border: 0;
   background: none;
 }
-.rcf .rc-bar .btn:first-child {
+.rcf .rc-bar .btn:last-child {
   flex: 1 1 auto;
 }
 @media (max-width: 700px) {
@@ -102,7 +102,7 @@
   }
 }
 @media (min-width: 701px) {
-  .rcf .rc-bar .btn:first-child {
+  .rcf .rc-bar .btn:last-child {
     flex: 0 0 auto;
   }
 }

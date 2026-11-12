@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FRACTIONS, UNITS, composeAmount, parseAmount, stepWhole, type AmountParts } from '../../lib/amountPicker.js';
 import { MAX_AMOUNT } from '../../shared/recipes.js';
+import Icon from '../Icon.js';
 
 // The amount picker under an ingredient row (brief recipe-form-mobile-desktop): a number stepper, fraction and unit chips, the amounts used
 // last, and a line to type anything else. It writes only on Done, and only when something was changed, so opening an old amount and closing it
@@ -22,9 +23,9 @@ export default function AmountPicker({ value, name, recents, onDone, onClose }: 
         <div>
           <span className="rc-picklab">Whole number</span>
           <div className="rc-step">
-            <button type="button" className="btn" aria-label="Fewer" disabled={parts.whole === 0} onClick={() => pick({ whole: stepWhole(parts.whole, -1) })}>−</button>
+            <button type="button" className="btn" aria-label="Fewer" disabled={parts.whole === 0} onClick={() => pick({ whole: stepWhole(parts.whole, -1) })}><Icon name="minus" /></button>
             <output aria-label="Whole number">{parts.whole}</output>
-            <button type="button" className="btn" aria-label="More" onClick={() => pick({ whole: stepWhole(parts.whole, 1) })}>+</button>
+            <button type="button" className="btn" aria-label="More" onClick={() => pick({ whole: stepWhole(parts.whole, 1) })}><Icon name="plus" /></button>
           </div>
         </div>
         <div>

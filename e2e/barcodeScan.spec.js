@@ -118,7 +118,7 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible();
     await page.goBack();
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'New ready-made food' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New food' })).toBeVisible();
   });
 
   test('a live camera finds the code by itself, and the camera is let go when the sheet closes', async ({ page }) => {
