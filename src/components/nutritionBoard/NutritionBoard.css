@@ -341,7 +341,8 @@
     margin-bottom: 0;
   }
   .nb-link {
-    min-height: 44px; /* a real 44px row: the tap area overlaps nothing */
+    min-height: 44px;
+    /* a real 44px row: the tap area overlaps nothing */
     padding: 0 var(--sp-8);
     border: 0;
     background: none;
