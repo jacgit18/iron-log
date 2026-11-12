@@ -149,7 +149,7 @@
   min-height: 44px;
 }
 .rchead {
-  font-size: var(--fs-xs);
+  font-size: var(--h-label);
   letter-spacing: .06em;
   text-transform: uppercase;
 }
