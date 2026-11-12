@@ -349,7 +349,7 @@ test.describe('on a phone', () => {
     await expect(page.locator('#nb-add')).toBeVisible();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Recipes', 'Saved meals', 'Add food']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
-    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Add food', 'Scan barcode', 'Quick add', 'One-off food']);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan barcode', 'Quick add', 'One-off food', 'Add food']);
     await expect(page.getByText('Last week\'s food cannot be changed')).toHaveCount(0);
   });
 });
