@@ -35,7 +35,7 @@ export function legacyMeals(diet: Pick<DietCfg, 'meals' | 'mealsMoved'> | undefi
 
 /** The line under Saved meals: the usual one, or, while saved meals are held back, why and what to do. */
 export const savedMealsNote = (held: readonly SavedMeal[]): string =>
-  held.length ? 'Some saved meals are waiting because Recipes is full (300 recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens. Rename or edit a meal in Recipes.' : 'Rename or edit a meal in Recipes.';
+  held.length ? `Some saved meals are waiting because Recipes is full (${MAX_RECIPES} recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens. Rename or edit a meal in Recipes.` : 'Rename or edit a meal in Recipes.';
 
 /** What Quick add lists: the Recipes meals, then any saved meal held back by the gate, A to Z, each with the foods one tap logs. Ids are prefixed so a recipe and a saved meal never share one. */
 export function quickRows(recipes: readonly Recipe[], held: readonly SavedMeal[]): { id: string; n: string; items: SavedItem[] }[] {
