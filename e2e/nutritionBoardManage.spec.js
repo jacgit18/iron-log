@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { openDrink, openManage, openNutrition, openTargets } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openDrink, openManage, openNutrition, openTargets } from './nutritionBoardHelpers.js';
 
 // PR 2 of brief nutrition-board: the Targets and goal sheet and the Manage sheet, both opened from the board's header. The numbers behind them are node tests (dietTarget.test.ts, water.test.ts);
 // this covers the wiring: each sheet opens and closes, a saved number shows where it is used, the old Targets panel and the on-page editor are gone, and Manage reaches the other screens. The fixed clock is Thursday 2026-09-24.
@@ -107,4 +107,20 @@ test('phone Back from a supplement opened in the library closes it, then Manage,
   await expect(page.locator('#nb-h')).toBeVisible();
   await page.goBack();
   await expect.poll(() => page.evaluate(() => location.hash)).not.toContain('nutrition');
+});
+
+test('the Add food sheet (Find food included) is 640 px wide from 768 px; every other sheet keeps 480 px (brief nutrition-items-row-sheet-and-more)', async ({ page }) => {
+  await openNutrition(page);
+  const add = await openAdd(page);
+  expect((await add.boundingBox()).width).toBeCloseTo(640, 0);
+  await add.getByRole('button', { name: /^Find food/ }).click();
+  expect((await page.getByRole('dialog').boundingBox()).width).toBeCloseTo(640, 0);
+  await closeSheet(page);
+  expect((await (await openManage(page)).boundingBox()).width).toBeLessThanOrEqual(480);
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  expect((await (await openTargets(page)).boundingBox()).width).toBeLessThanOrEqual(480);
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  await page.setViewportSize({ width: 600, height: 800 });
+  await page.locator('#nb-add').click();
+  expect((await page.getByRole('dialog').boundingBox()).width).toBeLessThanOrEqual(480); // below 768 px the Add food sheet is the normal width too
 });

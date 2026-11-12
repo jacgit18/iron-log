@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { afterSheetClose } from '../../lib/backNav.js';
+import { requestSettingsJump } from '../../lib/settingsJump.js';
 import { navigate } from '../useRoute.js';
 import Sheet from '../Sheet.js';
 import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
@@ -31,7 +32,7 @@ export default function ManageSheet() {
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>
         <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Meals and foods (opens Recipes)</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>
-        <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => useAppStore.getState().setTab('settings'))}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
+        <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => { requestSettingsJump('alerts'); useAppStore.getState().setTab('settings'); })}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
       </ul>
       <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>
     </Sheet>

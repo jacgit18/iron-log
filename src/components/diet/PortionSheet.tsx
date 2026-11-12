@@ -4,6 +4,7 @@ import { dayRange } from '../../lib/logOrPlan.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
+import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
 import LogControl from './LogControl.js';
 import './Diet.css';
@@ -16,9 +17,10 @@ export default function PortionSheet() {
   const recipe = useAppStore(s => s.recipes.find(r => r.id === modal?.id));
   const today = ymd(useToday(s => s.today));
   const [done, setDone] = useState(false);
+  const editInRecipes = () => { if (recipe) openRecipesForm({ kind: 'edit', id: recipe.id }); };
   if (!recipe) return <Sheet className="portionsheet"><h2 className="cond">Log a food</h2><p className="note">That food is gone.</p><div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Close</button></div></Sheet>;
   if (!hasMacros(recipe)) {
-    return <Sheet className="portionsheet"><h2 className="cond">{recipe.n}</h2><p className="note">Add calories and protein per serving to log this. Open it in Recipes and choose Edit.</p><div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Close</button></div></Sheet>;
+    return <Sheet className="portionsheet"><h2 className="cond">{recipe.n}</h2><p className="note">Add calories and protein per serving to log this.</p><div className="actions"><button type="button" className="btn" id="portion-edit" onClick={editInRecipes}>Edit in Recipes</button><button type="button" className="btn primary" onClick={closeModal}>Close</button></div></Sheet>;
   }
   const { min, max } = dayRange(today);
   const day = typeof modal?.day === 'string' && modal.day >= min && modal.day <= max ? modal.day : today;

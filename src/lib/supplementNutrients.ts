@@ -49,7 +49,7 @@ export function toLimitUnit(key: NutrientKey, amount: number, unit: NutrientUnit
 
 export const countedItems = (items: SupplementItem[], taken: Taken, date: string, basis: TotalsBasis): SupplementItem[] => {
   const day = taken[date] || {};
-  return scheduled(items).filter(i => basis === 'scheduled' || day[i.id]);
+  return basis === 'scheduled' ? scheduled(items) : items.filter(i => day[i.id]); // 'taken' also counts a library-only supplement ticked through the board's Add supplement button
 };
 
 /** The foods of a day that list at least one vitamin or mineral, and how many were eaten in all: the sheet says so, because a food with no data adds nothing and the total can be low. */

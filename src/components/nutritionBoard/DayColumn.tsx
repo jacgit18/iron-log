@@ -2,19 +2,13 @@ import { foodEditable, shortDay, type DayView } from '../../lib/nutritionBoard.j
 import type { Resolved } from '../../lib/dietPlan.js';
 import type { PlanSlot } from '../../types.ts';
 import DayMeters from './DayMeters.js';
-import EatenList from './EatenList.js';
 import HydrationSection from './HydrationSection.js';
 import MealSections from './MealSections.js';
+import NotInMeal from './EatenRows.js';
 import SupplementsSection from './SupplementsSection.js';
 
-// One day of the board: its name (tap to pick it as the day the toolbar adds to), four meters, meals or the eaten list, Supplements and Hydration.
-// Last week has no meals (the plan holds no past days) and its food is read-only; supplements and water stay editable on every day.
-/** Today's food that no planned item's check added: the planned items show their own check, so only the rest is listed. */
-const alsoEaten = (v: DayView) => {
-  const checked = new Set(v.plan.slots.flatMap(s => s.items.flatMap(x => x.r.item.e ?? [])));
-  return v.eaten.filter(e => !checked.has(e.id));
-};
-
+// One day of the board: its name (tap to pick it as the day the toolbar adds to), meters, its meals with the food eaten in them, a "Not in a meal" group for food with no meal, Supplements and Hydration.
+// Last week has no meals (the plan holds no past days): its food is one "Not in a meal" group, read-only; supplements and water stay editable on every day.
 export default function DayColumn({ v, today, selected, days, onPick, onLog, onMsg, onAdd }: { v: DayView; today: string; selected: boolean; days: { id: string; label: string }[]; onPick: () => void; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void; onAdd: (meal: PlanSlot) => void }) {
   const editable = foodEditable(v.day, today);
   return (
@@ -23,8 +17,9 @@ export default function DayColumn({ v, today, selected, days, onPick, onLog, onM
         <button type="button" className="nb-dayname" aria-pressed={selected} aria-label={`${shortDay(v.day)}${v.day === today ? ' · today' : ''}, add food here`} onClick={onPick}><b>{shortDay(v.day)}{v.day === today ? ' · today' : ''}</b></button>
       </div>
       <DayMeters v={v} />
-      {v.kind !== 'past' && <MealSections view={v.plan} today={today} days={days} editable={editable} onLog={onLog} onMsg={onMsg} onAdd={onAdd} />}
-      {v.kind !== 'future' && <EatenList day={v.day} entries={v.kind === 'today' ? alsoEaten(v) : v.eaten} editable={v.kind === 'today'} note={v.fatNote} also={v.kind === 'today'} />}
+      {v.kind !== 'past' && <MealSections view={v.plan} placed={v.placed.meals} today={today} days={days} editable={editable} onLog={onLog} onMsg={onMsg} onAdd={onAdd} />}
+      {v.kind !== 'future' && <NotInMeal day={v.day} entries={v.placed.none} editable={v.kind === 'today'} always={v.kind === 'past'} />}
+      {v.fatNote && <p className="wb-fatnote">{v.fatNote}</p>}
       <SupplementsSection day={v.day} folded={v.kind === 'past'} />
       <HydrationSection day={v.day} today={today} />
     </div>

@@ -150,6 +150,9 @@
 .wb-meter.nb-fat:not(.over) i {
   background-color: var(--wb-fat);
 }
+.wb-meter.nb-carbs:not(.over) i {
+  background-color: var(--nb-carbs);
+}
 .wb-meter.nb-water i {
   background: var(--wb-water);
 }
@@ -158,6 +161,9 @@
 }
 .wb-legend .nbw {
   background: var(--wb-water);
+}
+.wb-legend .nbc {
+  background: var(--nb-carbs);
 }
 /* Vitamins and minerals under Supplements (brief vitamin-mineral-day-meter, layout B): a closed line, then thin bars in the new teal `--m-vit`. Own classes only; the Board's rules are untouched. */
 .wb-meter.nb-vit-meter {
@@ -476,5 +482,29 @@
   display: flex;
   justify-content: space-between;
   gap: var(--sp-8);
+}
+
+/* The carbs bar (brief nutrition-items-row-sheet-and-more): its own amber, light and dark, so it is told apart from the calories, protein and fat bars by more than its label. */
+.nb {
+  --nb-carbs: #8a6200;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nb {
+    --nb-carbs: #e0b050;
+  }
+}
+:root[data-theme="dark"] .nb {
+  --nb-carbs: #e0b050;
+}
+/* The Add food sheet (its Find food way included) is 640 px wide from 768 px; every other sheet keeps the shared 480 px `.sheet` width. */
+@media (min-width: 768px) {
+  .sheet.sheet-wide {
+    max-width: 640px;
+  }
+}
+.nb-suppact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
 }
 }
