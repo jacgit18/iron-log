@@ -30,3 +30,17 @@ export const addOneOff = async (sheet, name, kcal, protein) => {
   await sheet.getByLabel('Protein (g)').fill(String(protein));
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
 };
+// An eaten row on today's column opens its row sheet (the numbers, Copy to, Move to, Edit, a two-tap Delete). Returns the dialog.
+export const openRow = async (page, name) => {
+  // The exact name: hasText alone is a case-insensitive substring ("Rice" would open "Chicken and rice bowl", "Tea" would open "Steak").
+  await todayCol(page).locator('.nb-eat').filter({ has: page.locator('.nb-eatn', { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }) }).first().getByRole('button').click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('heading', { name, exact: true })).toBeVisible(); // exact too: the sheet is the one for this food, not one whose name contains it
+  return sheet;
+};
+// Delete in a row sheet takes two presses and the armed button's name starts with "Tap again to delete" (the app adds the old name after it, so the exact words after that are not relied on); the sheet closes itself when the food is gone.
+export const deleteInRowSheet = async (page, sheet, name) => {
+  await sheet.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+  await sheet.getByRole('button', { name: /^Tap again to delete/ }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+};

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { addOneOff, closeSheet, dayCol, eaten, meter, openAdd, openNutrition, todayCol } from './nutritionBoard.js';
+import { addOneOff, closeSheet, dayCol, deleteInRowSheet, eaten, meter, openAdd, openNutrition, openRow, todayCol } from './nutritionBoard.js';
 import { signInAs } from './persona.js';
 
 // QA scenario S-01 (Diet, on target): today's column reads the totals, a one-off food moves them, edit and delete move them back, and yesterday shows its own
-// full day of five foods with no Edit or Delete (only today's food can be changed).
+// full day of five foods.
 test('S-01: read today, add a one-off food, edit and delete it, then look at yesterday', async ({ browser }) => {
   const { context, page } = await signInAs(browser, 'diet-on-target');
   await openNutrition(page);
@@ -15,14 +15,18 @@ test('S-01: read today, add a one-off food, edit and delete it, then look at yes
   await closeSheet(page);
   await expect(meter(todayCol(page), 'Calories', '1,640 / 2,400')).toBeVisible();
   await expect(meter(todayCol(page), 'Protein', '62 / 160')).toBeVisible();
-  await todayCol(page).getByRole('button', { name: 'Edit Rice' }).click();
-  await todayCol(page).getByLabel('Calories', { exact: true }).fill('250');
-  await todayCol(page).getByRole('button', { name: 'Save', exact: true }).click();
+  const row = await openRow(page, 'Rice'); // a row opens its sheet; Edit and Delete are in it
+  await row.getByRole('button', { name: 'Edit', exact: true }).click();
+  await row.getByLabel('Calories', { exact: true }).fill('250');
+  await row.getByRole('button', { name: 'Save', exact: true }).click();
+  await closeSheet(page);
   await expect(meter(todayCol(page), 'Calories', '1,690 / 2,400')).toBeVisible();
-  await todayCol(page).getByRole('button', { name: 'Delete Rice' }).click();
+  await deleteInRowSheet(page, await openRow(page, 'Rice'), 'Rice');
   await expect(meter(todayCol(page), 'Calories', '1,440 / 2,400')).toBeVisible();
   const yesterday = dayCol(page, '2026-09-23');
   await expect(yesterday.locator('.nb-eat')).toHaveCount(5);
-  await expect(yesterday.getByRole('button', { name: /^(Edit|Delete) / })).toHaveCount(0);
+  await yesterday.locator('.nb-eat').first().getByRole('button').click(); // an earlier day's row opens its sheet too (food added there can be corrected)
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await closeSheet(page);
   await context.close();
 });

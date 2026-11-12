@@ -17,7 +17,7 @@ test('S-08: ticking the plan logs it, and a later day has no check box', async (
     const name = (await box.getAttribute('aria-label')).replace(/^Check /, '').replace(/ as eaten$/, '');
     await box.click();
     await expect(today.getByRole('checkbox', { name: `Uncheck ${name} as eaten` })).toBeChecked();
-    await expect(page.locator('.nb-msg')).toContainText(/^Logged \d+ from /);
+    await expect(page.locator('.nb-msg')).toContainText(/^Added \d+ from /);
   }
   await expect(ticks).toHaveCount(0);
   const later = dayCol(page, '2026-09-25');
