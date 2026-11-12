@@ -36,15 +36,17 @@ test('empty Groceries: Set up sharing opens Sharing; Browse recipes opens Recipe
   await expect(page.locator('.emptytiles')).toHaveCount(0);
 });
 
-test('empty Recipes shows three tiles that open the form, the Library and the ready-made form; they go once a recipe exists', async ({ page }) => {
+test('empty Recipes shows two tiles that open the form and the Library (the food form is + New, Add a food by hand); they go once a recipe exists', async ({ page }) => {
   await recipes(page);
   await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();
-  await expect(tiles(page)).toHaveCount(3);
+  await expect(tiles(page)).toHaveCount(2);
+  await expect(page.locator('#rc-tile-ready')).toHaveCount(0);
   await noViolations(page);
   await page.click('#rc-tile-library');
   await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
   await page.click('#recipes-mine');
-  await page.click('#rc-tile-ready');
+  await page.click('#recipes-new');
+  await page.getByRole('button', { name: /Add a food by hand/ }).click();
   await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
   await page.goBack();
   await recipes(page);
