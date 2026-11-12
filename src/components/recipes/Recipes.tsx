@@ -250,7 +250,6 @@ export default function Recipes() {
             <EmptyTiles heading="Add your first recipe" tiles={[
               { id: 'rc-tile-new', label: 'Write a recipe', hint: 'Your own, ingredient by ingredient', onClick: () => setView({ kind: 'form' }) },
               { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setSrc('library') },
-              { id: 'rc-tile-ready', label: 'Add a ready-made food', hint: 'A packaged food with its nutrition', onClick: () => setView({ kind: 'form', ready: true }) },
             ]} />
           )}
           {recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}

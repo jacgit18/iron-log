@@ -4,7 +4,7 @@ import { MAX_INGREDIENTS } from '../../shared/recipes.js';
 import type { Recipe } from '../../types.ts';
 import './FoodPicker.css';
 
-const numbers = (r: Recipe): string => (r.kcal !== undefined && r.p !== undefined ? `${r.kcal} kcal · ${r.p} g protein` : 'needs numbers');
+const numbers = (r: Recipe): string => (r.kcal !== undefined && r.p !== undefined ? `${r.kcal} kcal · ${r.p} g protein` : 'Needs numbers');
 
 // The "+ Food or meal" list under the ingredient rows (brief meals-from-foods): your own Foods first, then your Meals, A to Z, filtered as you type.
 // Picking one adds a linked row with an amount; `onPick` answers a reason the link is refused (a loop, too deep), shown here. Like the Sauce picker.
