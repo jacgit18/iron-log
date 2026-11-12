@@ -133,8 +133,8 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },
 
   // Week to Shopping (brief week-shopping): each planned, uneaten recipe on those days puts its missing ingredients on Shopping through the recipe's own button; `ids` are the items this call created, for Undo.
-  planToShopping(days) {
-    const recipeIds = shoppingRecipeIds(planOf(get), days, get().recipes, get().diet), month = monthKey(new Date()), before = get().grocery.items;
+  planToShopping(days, month = monthKey(new Date())) {
+    const recipeIds = shoppingRecipeIds(planOf(get), days, get().recipes, get().diet), before = get().grocery.items;
     let added = 0, already = 0, refused: string | null = null;
     for (const id of recipeIds) { const r = get().addMissingToGrocery(id, month); added += r.added; already += r.already; refused ??= r.refused; }
     return { added, already, refused, recipes: recipeIds.length, ids: idsAdded(before, get().grocery.items) };
