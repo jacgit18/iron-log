@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* The shared empty view: same dashed line, corner, padding and muted text wherever a whole screen or list has nothing to show. Its own class name; styles.css `.empty` goes in slice 6. */
+/* The shared empty view: same dashed line, corner, padding and muted text wherever a whole screen or list has nothing to show. It replaced styles.css `.empty`. */
 .emptystate {
   display: grid;
   justify-items: center;
