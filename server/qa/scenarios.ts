@@ -310,11 +310,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-14', feature: 'Auto macros', title: 'Search past meals and recipes, with a portion stepper', persona: 'meal-planner', brief: 'diet-auto-macros',
     steps: [
       'Press Add food, then Find food. In the "Search your past meals and recipes" box type "oat".',
-      'Pick Overnight oats, set the portion to 1.5, and press Add.',
+      'Pick Overnight oats, set the portion to 1.5 in the portion sheet and press Log.',
     ],
     expected: [
       'Matching foods you logged before and your own recipes that have calories and protein are listed newest first, at most six, with their numbers.',
-      'The portion stepper (0.5 to 10) scales the numbers; Add logs them; the recipe entry keeps its recipe link.',
+      'The portion stepper (0.5 to 10) scales the numbers; Log logs them; the recipe entry keeps its recipe link. A food you logged before with no recipe behind it opens the same portion sheet, log only.',
     ],
   },
 
@@ -369,10 +369,10 @@ export const SCENARIOS: readonly Scenario[] = [
 
   // ---- Recipe-first log ----
   {
-    id: 'S-19', feature: 'Recipe-first log', title: 'Ate this on a recipe, for a chosen day', persona: 'meal-planner', brief: 'recipe-first-diet-log',
+    id: 'S-19', feature: 'Recipe-first log', title: 'Log a recipe from its page, for a chosen day', persona: 'meal-planner', brief: 'recipe-first-diet-log',
     steps: [
       'Open Recipes, then a recipe with calories and protein (for example Overnight oats).',
-      'Press Ate this, choose yesterday in the Day field and confirm.',
+      'Choose yesterday in the Day field and press Log.',
       'Press Undo. Then try a day 401 days back and a day in the future.',
     ],
     expected: [
@@ -381,16 +381,16 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-20', feature: 'Recipe-first log', title: 'New ready-made food', persona: 'diet-fresh', brief: 'recipe-first-diet-log',
+    id: 'S-20', feature: 'Recipe-first log', title: 'New food', persona: 'diet-fresh', brief: 'recipe-first-diet-log',
     steps: [
       'Open Recipes and press + New, then Add a food by hand.',
       'Save it with only a name; then add 250 kcal and 20 g protein and save.',
-      'Find it under the Foods tab, open it and press Ate this.',
+      'Find it under the Foods tab, open it and press Log.',
       'Edit the food to 300 kcal and look at the entry already logged.',
     ],
     expected: [
       'A name alone is refused; the form needs a name, calories and protein.',
-      'The detail has no ingredients, steps, scaler or grocery buttons; Ate this logs a snapshot with its recipe link.',
+      'The detail has no ingredients, steps, scaler or grocery buttons; Log records a snapshot with its recipe link.',
       'The earlier entry keeps 250 kcal after the food changes.',
     ],
   },
@@ -620,11 +620,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-38', feature: 'Wide layouts', title: 'Settings in two columns', persona: 'new-user', brief: 'settings-two-columns',
     steps: [
       'Open Settings at 1920 px, then 1280 px, then 1279 px, then 375 px.',
-      'At 1920 px use a rail jump link.',
+      'At 1920 px press a pill in the jump row at the top of Settings (there is no left rail).',
     ],
     expected: [
       'From 1280 px Data and App sit beside Training; below that it is one column in the same order.',
-      'The jump link scrolls to the right group; no sideways scroll at any width.',
+      'The pill scrolls to the right group and the group being read is marked; no sideways page scroll at any width (at 375 px the pill row itself scrolls sideways).',
     ],
   },
   {
@@ -744,15 +744,15 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Label scan ----
   {
-    id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
+    id: 'S-49', feature: 'Label scan', title: 'Fill a food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
       'On a phone. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
-      'Press Save food, open it, and use Ate this with 1.5 portions.',
+      'Press Save food, open it, and set the amount to 1.5 portions, then press Log.',
     ],
     expected: [
       'The form fills in a few seconds with the name, per-serving numbers and a Note like "1 serving = 2/3 cup (55 g). About 6 servings per pack." and says to check the numbers; nothing is saved yet.',
-      'After Save food the food is in the Foods list; Ate this logs 1.5 times the calories and protein to today.',
+      'After Save food the food is in the Foods list; Log adds 1.5 times the calories and protein to today.',
     ],
   },
   {
@@ -768,15 +768,15 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Whole pack ----
   {
-    id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
+    id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a food', persona: 'diet-on-target', brief: 'whole-pack',
     steps: [
       'On Recipes press + New, then Add a food by hand, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
       'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
-      'Press Whole pack (12) again, press Ate this, then press Undo.',
+      'Press Whole pack (12) again, press Log, then press Undo.',
     ],
     expected: [
       'The page says "12 servings per pack"; Whole pack (12) sets the stepper to 12 portions and More is disabled at 12.',
-      'Ate this logs "12 portions" with 2,520 calories to today; Undo removes it. A food saved with no pack size has no Whole pack button and its stepper stops at 10.',
+      'The sentence reads "Logged <name>: 12 portions to today." with 2,520 calories; Undo removes it. A food saved with no pack size has no Whole pack button and its stepper stops at 10.',
     ],
   },
   {
@@ -821,17 +821,17 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On Recipes press + New, then Add a food by hand, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
       'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
-      'Press Ate this, look at today\'s eaten rows on Nutrition, then press Undo.',
+      'Press Log, look at today\'s eaten rows on Nutrition, then press Undo.',
     ],
     expected: [
       'The page says "Usual: 4 eggs", "Per egg: 72 kcal · 6 g protein" and the stepper opens at "4 eggs"; More shows "4.5 eggs".',
-      'Ate this says "Logged 4 eggs of Egg (large) to today." and adds 288 calories to the day; Undo removes it. A food saved with neither box still opens at "1 portion".',
+      'The sentence reads "Logged Egg (large): 4 eggs to today." and adds 288 calories to the day; Undo removes it. A food saved with neither box still opens at "1 portion".',
     ],
   },
   {
     id: 'S-56', feature: 'Usual amount', title: 'An odd plural, and a wrong amount is refused', persona: 'diet-fresh', brief: 'usual-amount-and-unit', edge: true,
     steps: [
-      'Make a ready-made food Bread with Usual amount 2, One serving is called loaf and Plural loaves; open it and press Less twice.',
+      'Make a food Bread with Usual amount 2, One serving is called loaf and Plural loaves; open it and press Less twice.',
       'Edit it and type 2.3 in Usual amount, then 4 eggs in One serving is called, pressing Save food each time.',
       'Clear all three boxes, save, and open the food again.',
     ],
@@ -1040,7 +1040,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Barcode scan ----
   {
-    id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
+    id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
     steps: [
       'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan to fill form and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
@@ -1930,7 +1930,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Food type ----
   {
-    id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new ready-made food', persona: 'diet-fresh', brief: 'food-type-and-migration',
+    id: 'S-148', feature: 'Food type', title: 'Pick a Type on a new food', persona: 'diet-fresh', brief: 'food-type-and-migration',
     steps: [
       'Open Recipes and press + New, then Add a food by hand. Look at the Used as chips, press Drink, name it Goat milk kefir, type 150 calories and 8 protein, and press Save food.',
       'Open the food and press Edit.',
@@ -1943,7 +1943,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-149', feature: 'Food type', title: 'Review types: suggestions, one change, Looks right, Undo', persona: 'recipe-collector', brief: 'food-type-and-migration',
     steps: [
-      'Make three ready-made foods without a Type (an older account that has them; or on a test account add them in an older build): Whole milk, Eggs large, Frozen lasagna. Open Recipes.',
+      'Make three foods without a Type (an older account that has them; or on a test account add them in an older build): Whole milk, Eggs large, Frozen lasagna. Open Recipes.',
       'Read the banner and press Review types. Change Frozen lasagna to Drink (its Ready to eat chip turns off), then press Looks right.',
       'Press Undo on the notice.',
     ],
@@ -1956,7 +1956,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-150', feature: 'Food type', title: 'Nothing to review, and a food edited later', persona: 'diet-fresh', brief: 'food-type-and-migration', edge: true,
     steps: [
-      'With no ready-made foods open Recipes. Then add one food and, from its Edit form, change its Used as from Ready to eat to Ingredient and save.',
+      'With no foods open Recipes. Then add one food and, from its Edit form, change its Used as from Ready to eat to Ingredient and save.',
     ],
     expected: [
       'There is no banner and no Review types button. The edited food keeps Ingredient when it is opened again.',
@@ -2002,7 +2002,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-154', feature: 'Nutrition quick log', title: 'Log a recent food from Quick add with the portion sheet and Undo', persona: 'recipe-collector', brief: 'nutrition-quick-log',
     steps: [
-      'Open a recipe that has calories and protein, press Ate this once, then open Daily, Nutrition, press Quick add in the toolbar and look under Recent and favorites. Press the food, press Less once, then Log it, and press Undo.',
+      'Open a recipe that has calories and protein, press Log once, then open Daily, Nutrition, press Quick add in the toolbar and look under Recent and favorites. Press the food, press Less once, then Log it, and press Undo.',
     ],
     expected: [
       'Recent and favorites lists the food. The sheet opens at the usual amount (1 portion if none is set), Less lowers it by a half and the numbers change with it. Log it says Logged ... to today with an Undo, and Undo removes only that entry.',
@@ -2029,7 +2029,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-157', feature: 'Meals from foods', title: 'Build a cereal bowl from two foods and see its numbers add up', persona: 'recipe-collector', brief: 'meals-from-foods',
     steps: [
-      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Recipe or meal, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
+      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Recipe or meal, name it Cereal bowl, open Ingredients, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
     ],
     expected: [
       'While you build it the form says Per serving, from the parts: 375 kcal and 15.5 g protein, with 2 of 2 ingredients counted. After Save the recipe\'s page says the same, lists 1.5 portions Oat cereal and 1 portion Whole milk, and Log offers those numbers.',
@@ -2065,7 +2065,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
     steps: [
-      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Recipe or meal, name it Mystery, type one ingredient (a pinch of something) and no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes (More actions, Delete, then Tap again to delete) and open the bowl.',
+      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Recipe or meal, name it Mystery, open Ingredients and type one ingredient (a pinch of something) with no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes (More actions, Delete, then Tap again to delete) and open the bowl.',
     ],
     expected: [
       'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
@@ -2207,7 +2207,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-174', feature: 'Used as', title: 'Sauces and seasonings are Ingredients, not Meals', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
     steps: [
-      'Open Recipes, press + New, Recipe or meal. Name it Garlic aioli, set the category to Sauces and add one ingredient. Read the Used as chips, then Save.',
+      'Open Recipes, press + New, Recipe or meal. Name it Garlic aioli, set the category to Sauces, then open the Ingredients section and add one ingredient. Read the Used as chips, then Save.',
       'Go Back to recipes and press the Meals tab, then the Ingredients tab.',
     ],
     expected: [
@@ -2266,7 +2266,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-179', feature: 'Goes with', title: 'Pair chili with rice; it shows from both and Remove clears both', persona: 'meal-planner', brief: 'recipes-goes-with',
     steps: [
-      'In Recipes press + New, Recipe or meal: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
+      'In Recipes press + New, Recipe or meal: Chili, category Protein, one ingredient (open Ingredients), 400 kcal and 30 g protein (open Nutrition per serving). Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
       'Open Chili. In Goes with press "Add a recipe it goes with…" and pick Rice.',
       'Open Rice and read its Goes with. Press Remove on Chili, then Tap again to remove, then open Chili again.',
     ],
@@ -2290,7 +2290,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-181', feature: 'Goes with', title: 'After you log a food, what goes with it is one tap away', persona: 'meal-planner', brief: 'recipes-goes-with',
     steps: [
-      'With Chili and Rice paired, open Chili, press Ate this, then read under the message.',
+      'With Chili and Rice paired, open Chili, press Log, then read under the message.',
       'Press "+ Rice" and read the message. Press Undo next to Rice.',
       'Go back to Recipes, press Log on the Chili row, press Log it and read the sheet.',
     ],
@@ -2536,7 +2536,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-201', feature: 'Nutrition board', title: 'Log with One-off food and Quick add', persona: 'recipe-collector', brief: 'nutrition-board',
     steps: [
       'Press One-off food in the toolbar, add "Rice" 300 kcal and 20 g protein.',
-      'In Recipes press Ate this on one recipe (the chips list recipes you have logged or starred, and this account has none logged yet). Press Quick add in the toolbar. Read Suggested now and Recent and favorites. Tap a food under Recent and favorites, press Log it, then Undo.',
+      'In Recipes press Log on one recipe (the chips list recipes you have logged or starred, and this account has none logged yet). Press Quick add in the toolbar. Read Suggested now and Recent and favorites. Tap a food under Recent and favorites, press Log it, then Undo.',
       'Tap one suggestion under Suggested now.',
     ],
     expected: [
@@ -2548,12 +2548,12 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-202', feature: 'Nutrition board', title: 'Log with Find food, Saved meals and Recipes', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Press Add food, Find food, type "oat" in "Search your past meals and recipes", pick a result and press Add.',
+      'Press Add food, Find food, type "oat" in "Search your past meals and recipes", pick a result and press Log.',
       'Press Back to ways of adding, then Saved meals, and tap "Usual breakfast".',
       'Press Back to ways of adding, then Recipes. Type a few letters in Find a recipe and press Log on one recipe. Then tap the name of a day after today, press Add food, Recipes, and press Plan on a recipe.',
     ],
     expected: [
-      'The food is added ("Added 1 portion of <food>.") and listed under Eaten.',
+      'The food is logged (the sentence names it with its portion and says "to today") and shows among today\'s eaten food.',
       'Usual breakfast logs two entries (the scramble and the oats); today\'s meters follow.',
       'On today a recipe has only Log, which opens the portion sheet (there is no Plan on today). On the day ahead Plan says "Planned <recipe> for <meal>." and the recipe appears in that meal on that day\'s column.',
     ],
@@ -2617,7 +2617,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press This week and tap today\'s name; press Add food and Recipes.',
     ],
     expected: [
-      'Breakfast, Lunch and Dinner say "Nothing planned" and have no button; Snack says "No daily snacks yet" (no daily snacks are saved).',
+      'Breakfast, Lunch and Dinner say "Nothing planned" with an Add button each; Snack says "No daily snacks yet" with Add and Set up daily snacks (no daily snacks are saved).',
       'The note reads "Recipes and saved meals you add go into Snack."; each recipe has only Plan (no Log). The notice reads "Planned Overnight oats for Snack."',
       'The Snack section now holds an Overnight oats card, and that day\'s Calories meter reads its planned calories. Today\'s recipes list has only Log (no Plan), and today\'s add sheet shows no Which meal? question.',
     ],
@@ -2895,7 +2895,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-230', feature: 'Food vitamins and minerals', title: 'A ready-made food carries amounts per serving and logging it adds them to the day', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
+    id: 'S-230', feature: 'Food vitamins and minerals', title: 'A food carries amounts per serving and logging it adds them to the day', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
     steps: [
       'Open Recipes, find "Fortified cereal" and press Edit. Read "Vitamins and minerals per serving (optional)", then press Cancel.',
       'Go to Nutrition, press Add food, Recipes, then Log beside Fortified cereal and confirm one serving. Press Done, then Totals.',
@@ -2910,10 +2910,10 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Add food, then One-off food. Type the name "Burrito bowl", 300 calories and 20 protein. Press "Vitamins and minerals (optional)".',
       'Press "+ Add a nutrient", leave Calcium and type 180. Press "+ Add a nutrient" again, choose Vitamin B12, type 0.01 and change its unit to mg. Press Add, then close the sheet.',
-      'In Eaten, press Edit on Burrito bowl, read the rows, then Cancel. Open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
+      'On today, tap the Burrito bowl row, press Edit in its sheet, read the rows, then Cancel. Open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
     ],
     expected: [
-      'The section is closed when the form opens. After Add the food is in Eaten.',
+      'The section is closed when the form opens. After Add the food is among today\'s eaten food.',
       'Edit shows Calcium 180 mg and Vitamin B12 10 mcg (0.01 mg is stored as 10 mcg).',
       'Totals: Calcium 180 mg "9% of the limit"; Vitamin B12 10 mcg "417% of the recommended amount" in the No upper limit section.',
     ],
@@ -2923,7 +2923,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Add food, Find food, pick a food from the results and press Use. Press "+ Add a nutrient", choose a nutrient the food does not list in the new row (Iodine; a food from the database already lists zinc and copper) and type 1.5. Then change the calories.',
       'On a fresh One-off form open the section, add Vitamin B12 with 1 and unit mg, then add Zinc twice (5 mg, then 2000 mcg). Read the lines under the rows.',
-      'Press Add, then Edit the food in Eaten and change only its name.',
+      'Press Add, then tap the food\'s row, press Edit and change only its name.',
     ],
     expected: [
       'After the calorie change the filled rows go and the line says "Calories changed: amounts you did not retype were cleared."; the Zinc row you typed stays. While rows are showing, the "Vitamins and minerals" heading cannot be folded.',
@@ -2987,7 +2987,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-238', feature: 'Food vitamins and minerals', title: 'A recipe built from a food adds up its vitamins and minerals, logged or planned', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
     steps: [
       'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Recipe or meal, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
-      'On the recipe\'s page press Ate this, then open Nutrition and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
+      'On the recipe\'s page press Log, then open Nutrition and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
       'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card, press "Move to…" and choose today under Day (the card stays under Dinner: the Day buttons keep the meal, the Meal buttons stay on the same day). On today tick "Check Cereal duo as eaten", then press Totals again.',
     ],
     expected: [
