@@ -16,13 +16,14 @@ const seed = async (page, month) => {
 };
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-shopping'); };
 
-test('the view buttons carry no counts and sit centred', async ({ page }) => {
+test('the view buttons carry no counts and sit in one pill row from the left edge', async ({ page }) => {
   await seed(page, { lines: { rice: { got: true } }, pulled: [] });
   await open(page);
   await expect(page.locator('#groc-view-shopping')).toHaveText('Shopping');
   await expect(page.locator('#groc-view-bought')).toHaveText('Bought');
-  const off = await page.locator('.gtop .seg').evaluate(el => { const r = el.getBoundingClientRect(); const p = el.parentElement.getBoundingClientRect(); const b = [...el.children].map(c => c.getBoundingClientRect()); return Math.abs((b[0].left - p.left) - (p.right - b[b.length - 1].right)); });
-  expect(off).toBeLessThan(2);
+  const row = await page.locator('.gtop .subnav').evaluate(el => { const p = el.getBoundingClientRect(); const b = [...el.querySelectorAll('button')].map(c => c.getBoundingClientRect()); return { left: b[0].left - p.left, tops: b.map(r => Math.round(r.top)) }; });
+  expect(row.left).toBeLessThan(8); // the pills start at the row's left edge
+  expect(new Set(row.tops).size).toBe(1); // every pill is on the one line
 });
 
 test('set a budget, watch the bar, go over it, and it survives a reload', async ({ page }) => {

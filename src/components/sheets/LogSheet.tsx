@@ -123,7 +123,7 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
           ))}
         </div>
         <div className="setbtns">
-          <button type="button" className="btn sm" onClick={() => setRows(rs => [...rs, { ...(rs[rs.length - 1] || { w: '', r: '' }), tw: false, tr: false }])}>+ Set</button>
+          <button type="button" className="btn sm" onClick={() => setRows(rs => [...rs, { ...(rs[rs.length - 1] || { w: '', r: '' }), tw: false, tr: false }])}>Add set</button>
           <button type="button" className="btn sm ghost" onClick={() => setRows(rs => (rs.length > 1 ? rs.slice(0, -1) : rs))}>− Set</button>
           <span className="note">Change set 1 and the sets below follow, until you edit them.</span>
         </div>

@@ -51,7 +51,7 @@ test('on a phone each phase is one block: the % stays beside its box and the col
   await expect(page.getByLabel('Strength sets × reps')).toBeVisible();
 });
 
-for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row (a bar on a phone, a rail on a wide screen) stays on screen, marks the group being read, and a jump lands clear of it (${width} px)`, async ({ page }) => {
+for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row (the same pills at every width) stays on screen, marks the group being read, and a jump lands clear of it (${width} px)`, async ({ page }) => {
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await openSettings(page);
@@ -63,9 +63,8 @@ for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row (a b
   await nav.getByRole('button', { name: 'Data' }).click();
   await expect(page.locator('#set-data-h')).toBeFocused();
   await expect(nav.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-current', 'true');
-  // Once the smooth scroll settles: on a phone the heading sits just below the sticky row, not under it; on a wide screen the row is a rail beside it, and the heading is at the top.
-  if (width > 900) await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('set-data-h').getBoundingClientRect().top))).toBeLessThan(40);
-  else await expect.poll(() => page.evaluate(() => document.getElementById('set-data-h').getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
+  // Once the smooth scroll settles the heading sits just below the sticky row, not under it, at every width.
+  await expect.poll(() => page.evaluate(() => document.getElementById('set-data-h').getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
   await expect(page.locator('#set-data-h')).toBeInViewport();
 });
 
@@ -89,25 +88,25 @@ test('each panel keeps its background in a closed fold named for it', async ({ p
 const settled = page => page.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); }));
 const gapBelowRow = (page, id) => page.evaluate(i => document.getElementById(i).getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom, id);
 
-test('on a wide screen the jump row is a rail beside the groups, so focus is never hidden under it', async ({ page }) => {
+test('on a wide screen the jump row is one sticky row above the groups, so focus is never hidden under it', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/');
   await openSettings(page);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await page.evaluate(() => document.getElementById('set-training-h').scrollIntoView({ block: 'nearest' }));
   await settled(page);
-  const { rail, head } = await page.evaluate(() => ({ rail: document.querySelector('.sjump').getBoundingClientRect().toJSON(), head: document.getElementById('set-training-h').getBoundingClientRect().toJSON() }));
-  expect(rail.right).toBeLessThanOrEqual(head.left); // beside the group, never over it
-  expect(rail.width).toBeLessThan(260);
+  const { row, head } = await page.evaluate(() => ({ row: document.querySelector('.sjump').getBoundingClientRect().toJSON(), head: document.getElementById('set-training-h').getBoundingClientRect().toJSON() }));
+  expect(row.bottom).toBeLessThanOrEqual(head.top + 1); // above the group, never over it
 });
 
-test('with large text the chips wrap, and a jump still lands below the row', async ({ page }) => {
+test('with large text the pills scroll inside the row, the page does not, and a jump still lands below the row', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   await openSettings(page);
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   const nav = page.getByRole('navigation', { name: 'Jump to a settings group' });
-  expect(await nav.evaluate(n => n.getBoundingClientRect().height)).toBeGreaterThan(100); // two lines of chips
+  expect(await nav.evaluate(n => n.scrollWidth > n.clientWidth)).toBe(true); // one line that scrolls inside its own box
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   await nav.getByRole('button', { name: 'Data' }).click();
   await expect(page.locator('#set-data-h')).toBeFocused();
   await expect(page.locator('#set-data-h')).toBeInViewport();
