@@ -3,6 +3,7 @@ import { SLOTS, slotLabel } from '../../lib/supplements.js';
 import { formWord, portionText, unitsOf } from '../../lib/supplementPortion.js';
 import { dayTotal, stepTime, toggleTime } from '../../lib/supplementTimes.js';
 import type { TimeChoice } from '../../lib/supplementTimes.js';
+import '../Pill.css';
 import './SupplementTimes.css';
 
 // "When you take it" on the supplement sheet (brief supplement-split-times): a chip per time of day, an amount stepper under each time that is on, and the total a day.
@@ -16,7 +17,7 @@ export default function SupplementTimes({ times, serving, onChange }: Props) {
     <div className="stimes">
       <div className="stimes-chips" role="group" aria-label="Times of day">
         {SLOTS.map(([k, l]) => { const on = times.some(t => t.slot === k); return (
-          <button key={k} type="button" className="stimes-chip" id={`stimes-chip-${k}`} aria-pressed={on} onClick={() => onChange(toggleTime(times, k as SupplementSlot))}>{l}</button>
+          <button key={k} type="button" className="pillbtn" id={`stimes-chip-${k}`} aria-pressed={on} onClick={() => onChange(toggleTime(times, k as SupplementSlot))}>{l}</button>
         ); })}
       </div>
       {times.map(t => (
