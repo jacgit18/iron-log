@@ -125,8 +125,8 @@
   align-items: baseline;
 }
 .wb-slothd b {
-  font-size: var(--fs-sm);
-  letter-spacing: 0.08em;
+  font-size: var(--h-label);
+  letter-spacing: .06em;
   text-transform: uppercase;
 }
 .wb-slothd span {
@@ -185,8 +185,8 @@
 }
 .wb-movegrp {
   width: 100%;
-  font-size: var(--fs-sm);
-  letter-spacing: 0.08em;
+  font-size: var(--h-label);
+  letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--muted);
 }

@@ -38,10 +38,10 @@
   }
 }
 .fig figcaption {
-  font-size: var(--fs-xs);
-  font-weight: 600;
+  font-size: var(--h-label);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   color: var(--muted);
 }
 .sil {
@@ -89,7 +89,7 @@
 }
 .msec h2 {
   margin: 0;
-  font-size: var(--fs-3xl);
+  font-size: var(--h-section);
   font-weight: 700;
   text-transform: uppercase;
 }

@@ -157,7 +157,7 @@ html:has(.sjump) {
   padding-bottom: var(--sp-6);
   border-bottom: 2px solid var(--line);
   font-family: "Barlow Condensed","Barlow Fallback",system-ui,sans-serif;
-  font-size: var(--fs-5xl);
+  font-size: var(--h-section);
   font-weight: 700;
   letter-spacing: .02em;
   text-transform: uppercase;
@@ -211,7 +211,7 @@ html:has(.sjump) {
   vertical-align: middle;
 }
 .tbl th {
-  font-size: var(--fs-2xs);
+  font-size: var(--h-label);
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--muted);
@@ -246,7 +246,7 @@ html:has(.sjump) {
 .phfield {
   display: grid;
   gap: var(--sp-2);
-  font-size: var(--fs-2xs);
+  font-size: var(--h-label);
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--muted);
