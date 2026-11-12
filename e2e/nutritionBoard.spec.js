@@ -331,6 +331,11 @@ test.describe('on a phone', () => {
       expect(await page.locator('.nb-tbtns .btn').allInnerTexts()).toEqual(['Scan barcode', 'Quick add', 'One-off food', 'Add food']); // Add food is last, so it is the rightmost
       expect(three.every(t => Math.abs(t.y - add.y) < 1 && t.h >= 43.5 && Math.abs(t.w - add.w) < 1)).toBe(true); // one row, four equal buttons
       expect(add.x).toBeGreaterThan(await page.locator('.nb-tbtns .btn').nth(2).evaluate(e => e.getBoundingClientRect().x));
+      await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; }); // enlarged text: still one row, Add food still rightmost, nothing scrolls sideways
+      const big = await page.locator('.nb-tbtns .btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: Math.round(r.y) }; }));
+      expect(new Set(big.map(b => b.y)).size).toBe(1);
+      expect(big[3].x).toBeGreaterThan(big[2].x);
+      await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
       expect(await page.locator('.nb-steppick').evaluate(e => getComputedStyle(e).textAlignLast)).toBe('center');
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     });

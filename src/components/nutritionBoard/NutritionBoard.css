@@ -392,15 +392,16 @@
   }
   .nb-tbtns {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
-    /* four across at normal text, fewer as text grows (the rem scales with it), so large text wraps instead of scrolling sideways; Add food is last, so it sits at the right end */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    /* always one row of equal columns, so Add food (last) stays at the right end; a long label wraps inside its button (below), so large text grows the buttons and never scrolls sideways */
     flex: 1 0 100%;
   }
   .nb-tbtns .btn {
     min-height: 44px;
     padding-inline: var(--sp-4);
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
   }
 }
 .nb-empty {
