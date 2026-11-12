@@ -68,3 +68,9 @@ export function afterSheetClose(history: Pick<Hist, 'state'>, win: Win, go: () =
   const once = () => { win.removeEventListener('popstate', once); go(); };
   win.addEventListener('popstate', once);
 }
+
+/** Leaves a sheet for another screen: waits for the sheet's own Back step (`afterSheetClose`), then runs `go`, and closes the sheet. One place for what Manage and Targets and goal both do. */
+export function leaveSheet(history: Pick<Hist, 'state'>, win: Win, go: () => void, close: () => void): void {
+  afterSheetClose(history, win, go);
+  close();
+}

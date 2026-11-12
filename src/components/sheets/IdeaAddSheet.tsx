@@ -40,7 +40,7 @@ export default function IdeaAddSheet({ id }: { id: string }) {
       {days.length ? (
         <div className="mvs-chips rowdays" role="group" aria-labelledby="ia-day">
           {days.map(d => (
-            <button key={d.col} type="button" className={`btn mvs-chip mvs-day iaday${d.on ? ' on' : ''}${d.today ? ' today' : ''}`} aria-label={`Day ${d.col}`} onClick={() => pick(d.col)}>
+            <button key={d.col} type="button" className={`pillbtn iaday${d.on ? ' on' : ''}${d.today ? ' today' : ''}`} aria-label={`Day ${d.col}`} aria-pressed={d.on} onClick={() => pick(d.col)}>
               <span>{d.col}</span>{d.on ? <small>On</small> : d.today ? <small>Today</small> : null}
             </button>
           ))}

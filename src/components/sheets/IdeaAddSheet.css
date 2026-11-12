@@ -11,6 +11,8 @@
 .iaday {
   flex-direction: column;
   gap: 0;
+  min-width: 44px;
+  padding: var(--sp-6) var(--sp-4);
   line-height: 1.1;
 }
 .iaday small {

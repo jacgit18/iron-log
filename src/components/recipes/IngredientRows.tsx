@@ -55,9 +55,9 @@ export default function IngredientRows({ rows, options, sauces, foods, meals, pa
           </div>
           {x.rid && x.q !== undefined && (
             <div className="rc-qline" role="group" aria-label={`Amount of ${x.n}`}>
-              <button type="button" className="btn sm" aria-label={`Less ${x.n}`} disabled={x.q <= STEP} onClick={() => onSet(i, { q: Math.max(STEP, Math.round((x.q! - STEP) * 100) / 100) })}>−</button>
+              <button type="button" className="btn sm" aria-label={`Less ${x.n}`} disabled={x.q <= STEP} onClick={() => onSet(i, { q: Math.max(STEP, Math.round((x.q! - STEP) * 100) / 100) })}><Icon name="minus" /></button>
               <output aria-live="polite">{amountText(x.q, partOf(x.rid))}</output>
-              <button type="button" id={`rc-more-${i}`} className="btn sm" aria-label={`More ${x.n}`} disabled={x.q >= MAX_Q} onClick={() => onSet(i, { q: Math.min(MAX_Q, Math.round((x.q! + STEP) * 100) / 100) })}>+</button>
+              <button type="button" id={`rc-more-${i}`} className="btn sm" aria-label={`More ${x.n}`} disabled={x.q >= MAX_Q} onClick={() => onSet(i, { q: Math.min(MAX_Q, Math.round((x.q! + STEP) * 100) / 100) })}><Icon name="plus" /></button>
               <span className="note">Linked to your {partOf(x.rid)?.cat === 'ready' ? 'food' : 'meal'}.</span>
             </div>
           )}

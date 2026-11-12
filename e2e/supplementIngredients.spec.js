@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief supplement-active-ingredients, PR 1: ingredient rows on a supplement, the Active ingredients section of the Totals sheet, your own limit and the not-medical-advice note. The sums, units and words are node tests
 // (supplementIngredients.test.ts); this covers the wiring a node test cannot: the form rows, the sheet, the history entry, a reload and axe. The fixed clock is Thursday 2026-09-24.
@@ -21,7 +21,7 @@ async function addFishOil(page) {
   await expect(page.locator('#sched-h')).toBeVisible();
 }
 const setUp = async page => { await openNutrition(page); await openSupplementEditor(page); await addFishOil(page); await closeSupplementEditor(page); };
-const openTotals = async page => { await todayCol(page).getByRole('button', { name: 'Totals' }).click(); return dialog(page); };
+const openTotals = async page => { await openDayTotals(todayCol(page)); return dialog(page); };
 
 test('ingredient rows save, add up on the Totals sheet with the note, and a typed name that matches a curated one merges', async ({ page }) => {
   await setUp(page);

@@ -9,6 +9,7 @@ export const WORDING: readonly WordRule[] = [
   { say: 'Remove', when: 'take it off a list; the thing itself stays', notThis: ['Delete'] },
   { say: 'Done', when: 'a sheet that applies changes as you go', notThis: ['Close'] },
   { say: 'Close', when: 'a sheet that only shows something', notThis: ['Done'] },
+  { say: 'Food', when: 'a packaged food in Recipes: the tab is "Foods", one is a "Food" (its pill and category), the forms are "New food" and "Edit food"; the + New entry stays "Add a food by hand"', notThis: ['Ready-made', 'ready-made food'] },
   { say: 'Save and Cancel', when: 'a form', notThis: ['Done'] },
 ];
 

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief ingredient-day-bars (layout A): the line under a day's Supplements for the ingredient limits you set. Which ingredients appear, the percentages and the words are node tests
 // (dayIngredientMeter.test.ts); this covers the wiring: the line on the Board, the tap that opens the bars, Open Totals, a day with nothing ticked, axe at 375 px. The fixed clock is Thursday 2026-09-24.
@@ -26,7 +26,7 @@ async function setUp(page, cap, epaTarget) {
   const col = todayCol(page);
   await col.getByLabel('Fish oil', { exact: false }).first().check();
   if (cap) {
-    await col.getByRole('button', { name: 'Totals' }).click();
+    await openDayTotals(col);
     await setLimit(page, 'Omega-3', 'cap', cap);
     if (epaTarget) await setLimit(page, 'EPA', 'target', epaTarget);
     await dialog(page).getByRole('button', { name: 'Done' }).click();
@@ -38,7 +38,7 @@ test('no line without a limit; with a cap the closed line names it and a tap ope
   const col = await setUp(page);
   await expect(line(col)).toHaveCount(0); // an ingredient with no limit has no bar here
   await expect(page.locator('.nb-col[data-day="2026-09-23"]').getByText('Active ingredients')).toHaveCount(0); // an earlier day with nothing ticked and no limits has no line
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   await dialog(page).getByRole('button', { name: 'Set your limit for Omega-3' }).click();
   await dialog(page).locator('#ilim-cap').click(); await dialog(page).locator('#ilim-amount').fill('1000'); await dialog(page).locator('#ilim-save').click();
   await dialog(page).getByRole('button', { name: 'Done' }).click();

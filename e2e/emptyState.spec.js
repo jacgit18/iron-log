@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openNutrition, openSupplementEditor, suppRow } from './nutritionBoardHelpers.js';
 
 // One empty view (brief design-language-later-slices, slice 5): Progress and Saved programs show the shared EmptyState when there is nothing to show and not when there is.
 // The fixture's clock is Thu Sep 24 2026.
@@ -37,5 +38,17 @@ test('Saved programs: none saved shows the shared empty view, a saved copy repla
   await page.getByRole('textbox', { name: /^Save Program A as/ }).fill('Old block');
   await page.getByRole('button', { name: 'Save a copy' }).click();
   await expect(page.getByRole('button', { name: 'Edit Old block' })).toBeVisible();
+  await expect(box).toHaveCount(0);
+});
+
+test('Supplement library: nothing saved shows the shared empty view, a saved supplement replaces it', async ({ page }) => {
+  await openNutrition(page); await openSupplementEditor(page);
+  const box = page.locator('#suplib-empty');
+  await expect(box).toHaveClass(/emptystate/);
+  await expect(box).toContainText('No supplements yet');
+  await page.locator('#suplib-add').click(); await page.locator('#suppadd-full').click();
+  await page.locator('#supp-name').fill('Zinc');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(suppRow(page, 'Zinc')).toHaveCount(1);
   await expect(box).toHaveCount(0);
 });

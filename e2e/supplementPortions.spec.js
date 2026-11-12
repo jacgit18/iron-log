@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief supplement-portions: how many capsules you take each time. The maths, words and steps are node tests (supplementPortion.test.ts, supplementPortionTotals.test.ts,
 // supplementPortionStore.test.ts); this covers what they cannot: the stepper on the sheet, the amount line, the day's tag, the shared rows of a product in two sections, an old item unchanged,
@@ -42,7 +42,7 @@ test('a capsule stepper moves one capsule per tap, shows the amount, and the day
   const col = todayCol(page);
   await expect(col.locator('.nb-portion')).toHaveText('1 capsule'); // the day reads the sheet's value
   await col.getByLabel('Mag glycinate', { exact: false }).first().check();
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   await expect(dialog(page).locator('#stt-magnesium')).toContainText('Mag glycinate (1 capsule) 100 mg');
 });
 
@@ -72,7 +72,7 @@ test('a product in two sections keeps its own capsules in each and shares its nu
   await expect(col.locator('.nb-portion')).toHaveCount(1); // only the Night intake is not one serving
   await col.getByLabel('Mag glycinate', { exact: false }).nth(0).check();
   await col.getByLabel('Mag glycinate', { exact: false }).nth(1).check();
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   await expect(dialog(page).locator('#stt-magnesium')).toContainText('450 mg'); // 300 mg (Morning, 1 serving) + 150 mg (Night, 1 of 2 capsules)
 });
 
@@ -96,7 +96,7 @@ test('no serving size counts servings in quarters, and an older supplement is un
   const col = todayCol(page);
   await expect(col.locator('.nb-portion')).toHaveText('¼ serving'); // only the changed one is tagged
   await col.getByLabel('Old style', { exact: false }).first().check();
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   await expect(dialog(page).locator('#stt-magnesium')).toContainText('Old style 100 mg');
 });
 

@@ -219,7 +219,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id), sauces), [activeText, items, recipes, recipe?.id, sauces]);
   const typed = (s: string): number | undefined => { const n = Number(s.trim().replace(',', '.')); return s.trim() && Number.isFinite(n) ? n : undefined; }; // a comma decimal counts
-  const typedLine = macroLine({ kcal: typed(kcal), p: typed(protein), c: typed(carbs), f: typed(fat) }) || 'Not set';
+  const typedLine = macroLine({ kcal: typed(kcal), p: typed(protein), c: typed(carbs), f: typed(fat) }) || 'Needs numbers';
   const nutLine = fromParts ? rollText || typedLine : typedLine;
   const sv = whole(servings);
   const servingsLine = sv && sv <= 99 ? `Amounts are for ${sv} serving${sv === 1 ? '' : 's'}.` : '';
@@ -292,7 +292,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
           <p className="note">{nutLine}</p>
           {parts && roll && (
             <div className="rc-roll">
-              <p role="status">{own ? `From the parts: ${rollText || 'no numbers yet'}` : `Per serving, from the parts: ${rollText || 'no numbers yet'}`}</p>
+              <p role="status">{own ? `From the parts: ${rollText || 'Needs numbers'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}`}</p>
               <p className="note">{countedNote(roll)}</p>
               <label className="rc-own"><input type="checkbox" checked={own} onChange={e => chooseOwn(e.target.checked)} /> Use my own numbers</label>
             </div>
@@ -350,8 +350,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
       <div className="rcf-foot">
         {err && <p className="note gerr" role="alert">{err}</p>}
         <div className="rc-actions rc-bar">
-          <button type="submit" className="btn primary">Save recipe</button>
           <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+          <button type="submit" className="btn primary">Save recipe</button>
         </div>
       </div>
     </form>
