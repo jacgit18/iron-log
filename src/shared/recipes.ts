@@ -76,7 +76,7 @@ const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c =
 export const MAX_UNIT = 20;
 export const UNIT_RE = /^\p{L}[\p{L} '-]*$/u;
 export const isUnit = (s: string): boolean => s.length >= 1 && s.length <= MAX_UNIT && UNIT_RE.test(s);
-/** A usual amount of a ready-made food: 0.5 to 99 in half steps, and not 1 (that is what the log control opens at anyway). */
+/** A usual amount of any food or recipe (brief nutrition-usual-portion-field; first for ready-made foods only): 0.5 to 99 in half steps, and not 1 (that is what the log control opens at anyway). */
 export const cleanUsual = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0.5 && v <= 99 && v !== 1 && Math.round(v * 2) === v * 2 ? v : null);
 
 const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max ? v : null);
@@ -107,12 +107,12 @@ export function normRecipe(x: unknown): Recipe | null {
   const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM), fromMealText = typeof o.fromMeal === 'string' ? o.fromMeal.trim() : '', fromMeal = fromMealText.length <= MAX_RECIPE_ID ? fromMealText : ''; // fromMeal: the saved meal this was moved from (brief saved-meals-removal); an id is dropped, never cut
   const urlText = typeof o.url === 'string' ? o.url.trim() : '', url = urlText.length <= MAX_URL && /^https?:\/\/\S+$/i.test(urlText) ? urlText : ''; // only a web link, cut never (a cut address would not open): a script or file address never becomes a link
   const library = from.startsWith('c:');
-  const ready = cleanCategory(o.cat) === 'ready'; // a usual amount and a unit name belong to a ready-made food only
+  const ready = cleanCategory(o.cat) === 'ready'; // a unit name belongs to a ready-made food only; a usual amount may sit on any recipe
   const uses = cleanUses(o.uses); // any recipe may carry them; unknown labels are dropped
   const counts = cleanCounts(o.counts); // what it covers on a plate, set by the person
   const pairs = cleanPairs(o.pairs, id); // recipes it goes with; ids of recipes that no longer exist are dropped by the app, not here (the server sees one list at a time)
   const type = ready ? cleanType(o.type) : null; // a type belongs to a ready-made food only; an unknown value is dropped (the food stays untyped)
-  const usual = ready ? cleanUsual(o.usual) : null, unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
+  const usual = cleanUsual(o.usual), unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
   const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
