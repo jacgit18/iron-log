@@ -11,7 +11,7 @@
 }
 .rcf-sec {
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   background: var(--surface);
 }
 .rcf-shd {
@@ -26,7 +26,7 @@
   min-height: 48px;
   padding: var(--sp-8) var(--sp-12);
   border: 0;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   background: none;
   color: var(--ink);
   font: inherit;

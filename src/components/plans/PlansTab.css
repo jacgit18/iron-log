@@ -10,7 +10,7 @@
 }
 .plancard {
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   padding: var(--sp-16);
   display: flex;
   flex-direction: column;
