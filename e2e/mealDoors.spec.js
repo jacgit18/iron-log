@@ -2,7 +2,6 @@ import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Meal doors, tightened (owner-approved 2026-11-12). The Nutrition Add food sheet lists "Save as a meal in Recipes" only on a day with something eaten.
-// (The recipe page's Goes with link tests live in this file on branch f-meal-doors-tighten.)
 
 test('Add food: no Save as a meal row on a day with nothing eaten; with a logged food the row is there and opens the save form', async ({ page }) => {
   await openNutrition(page);
