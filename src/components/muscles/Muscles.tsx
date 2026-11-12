@@ -112,7 +112,7 @@ export default function Muscles() {
   const reveal = useRef(false);
   const revealDetail = () => {
     const panel = side.current?.querySelector<HTMLElement>('.mdetail');
-    if (!panel || !window.matchMedia('(max-width:900px)').matches) return;
+    if (!panel || !window.matchMedia('(max-width:1000px)').matches) return;
     const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     panel.scrollIntoView({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
   };
