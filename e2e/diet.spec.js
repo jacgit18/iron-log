@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, openNutrition, openTargets, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, deleteEaten, openAdd, openNutrition, openTargets, todayCol } from './nutritionBoardHelpers.js';
 import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086): the daily calorie, protein, carbs and fat targets (the Diet box under the week board), and the food log, now a day column of the Nutrition week board with food added from the add sheet.
@@ -94,7 +94,7 @@ test('quick add logs a food, the meters move, it is offered again, Delete has Un
   await quick.getByRole('button', { name: 'Rice · 200 kcal' }).click(); // offered again in one tap
   await closeSheet(page);
   await expect(eaten(page)).toHaveCount(2);
-  await todayCol(page).getByRole('button', { name: 'Delete Rice' }).first().click();
+  await deleteEaten(page, 'Rice'); // the row's sheet, two taps
   await expect(eaten(page)).toHaveCount(1);
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(eaten(page)).toHaveCount(2);

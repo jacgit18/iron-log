@@ -16,7 +16,7 @@ export default function DayMeters({ v }: { v: DayView }) {
             <DayIngredientMeter day={v.day} />
           </div>
         ) : null;
-        if (m.hidden) return <p key={m.key} className="wb-fatnote">{m.note}</p>;
+        if (m.hidden) return m.note ? <p key={m.key} className="wb-fatnote">{m.note}</p> : null;
         const pct = m.target ? Math.min(100, Math.round((m.value / m.target) * 100)) : 0;
         return (
           <Fragment key={m.key}>
