@@ -39,8 +39,7 @@ const plan = async (page, name, { day, meal = 'Dinner' } = {}) => {
 test('a wide screen opens the board: seven days, meals each, meters with words', async ({ page }) => {
   await seed(page);
   await expect(board(page).locator('.nb-col')).toHaveCount(7);
-  for (const m of ['Breakfast', 'Lunch', 'Dinner']) await expect(today(page).locator('.wb-slothd', { hasText: m })).toBeVisible();
-  await expect(today(page).locator('.wb-slothd', { hasText: 'Snack' })).toHaveCount(0); // Snack only when it holds something
+  for (const m of ['Breakfast', 'Lunch', 'Snack', 'Dinner']) await expect(today(page).locator('.wb-slothd', { hasText: m })).toBeVisible(); // Snack is always there, between Lunch and Dinner (brief daily-snacks)
   await expect(today(page).getByText('Nothing planned')).toHaveCount(3);
   await expect(today(page).getByRole('button', { name: /^Add to / })).toHaveCount(0); // meals have no add button of their own
   for (const b of ['Calories', 'Protein']) await expect(today(page).getByRole('img', { name: new RegExp(`^${b} eaten so far: `) })).toBeVisible();

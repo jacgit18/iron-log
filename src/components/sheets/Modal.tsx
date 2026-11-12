@@ -24,6 +24,7 @@ import RestDateSheet from './RestDateSheet.js';
 import BarcodeSheet from '../diet/BarcodeSheet.js';
 import PortionSheet from '../diet/PortionSheet.js';
 import AddFoodSheet from '../nutritionBoard/AddFoodSheet.js';
+import DailySnacksSheet from '../nutritionBoard/DailySnacksSheet.js';
 import DrinkSheet from '../nutritionBoard/DrinkSheet.js';
 import EatenRowSheet from '../nutritionBoard/EatenRowSheet.js';
 import ManageSheet from '../nutritionBoard/ManageSheet.js';
@@ -69,6 +70,7 @@ export default function Modal() {
     case 'nbdrink': return <DrinkSheet key={String(modal.day ?? '')} />;
     case 'nbeaten': return <EatenRowSheet key={String(modal.id ?? '')} id={String(modal.id ?? '')} />;
     case 'nbmanage': return <ManageSheet />;
+    case 'nbsnacks': return <DailySnacksSheet />;
     case 'nbsuppick': return <SupplementPickSheet key={String(modal.day ?? '')} day={String(modal.day ?? '')} />;
     case 'ingredientlimit': return <IngredientLimitSheet key={String(modal.name ?? '')} name={String(modal.name ?? '')} label={modal.label ? String(modal.label) : undefined} day={String(modal.day ?? '')} unit={(modal.unit as NutrientUnit | undefined) ?? 'mg'} />;
     case 'nbsupptotals': return <SupplementTotalsSheet day={String(modal.day ?? '')} />;

@@ -13,8 +13,8 @@ describe('boardDay', () => {
     const plan = { [D]: [pi('toast', 'breakfast'), pi('chili', 'dinner'), pi('salad')] };
     const d = boardDay(plan, D, recipes, [], 2775);
     expect(d).toMatchObject({ count: 3, kcal: 640, protein: 38 });
-    expect(d.slots.map(s => s.slot)).toEqual([null, 'breakfast', 'lunch', 'dinner', 'snack']);
-    expect(d.slots[3]).toMatchObject({ slot: 'dinner', kcal: 400, share: 971 });
+    expect(d.slots.map(s => s.slot)).toEqual([null, 'breakfast', 'lunch', 'snack', 'dinner']);
+    expect(d.slots[4]).toMatchObject({ slot: 'dinner', kcal: 400, share: 971 });
     expect(d.slots[0]!.items.map(x => x.r.name)).toEqual(['Salad']);
   });
   it('checks a meal against what it needs and offers the partner first', () => {
