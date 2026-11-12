@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief supplement-active-ingredients, PR 2: the NIH lookup and the bottle scan save omega-3, EPA, DHA, creatine and caffeine as ingredient rows (not "Also on the label"), through the add
 // sheet and Fill from label. The mapping and the validator are node tests (dsldLabel.test.ts on real labels, supplementScan.test.ts, supplementLabelFill.test.ts); what a node test cannot catch is the
@@ -54,7 +54,7 @@ test('an NIH fish oil label previews omega-3 style rows apart from the blend wei
   await page.getByRole('button', { name: 'Cancel' }).click();
   await closeSupplementEditor(page);
   await todayCol(page).getByLabel('Omega Ultra', { exact: false }).first().check();
-  await todayCol(page).getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(todayCol(page));
   await expect(page.getByRole('dialog').locator('#stt-ing-epa')).toContainText('450 mg');
   await expect(page.getByRole('dialog').locator('#stt-ing-dha')).toContainText('340 mg');
 });
@@ -81,7 +81,7 @@ test('a scanned fish oil bottle previews and saves omega-3, EPA and DHA as three
   await page.getByRole('button', { name: 'Cancel' }).click();
   await closeSupplementEditor(page);
   await todayCol(page).getByLabel('Zzyzx fish', { exact: false }).first().check();
-  await todayCol(page).getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(todayCol(page));
   await expect(page.getByRole('dialog').locator('#stt-ing-omega-3')).toContainText('1,000 mg'); // the row is the amount in one serving, taken once
 });
 

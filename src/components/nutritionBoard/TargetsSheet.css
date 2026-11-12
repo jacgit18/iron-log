@@ -1,0 +1,19 @@
+@layer base, components;
+@layer components {
+/* The Water reminder row in Targets and goal (brief nutrition-manage-cleanup): one button that leaves for Settings, with its note under it. */
+.nbt-links {
+  display: grid;
+  gap: var(--sp-12);
+  margin: 0 0 var(--sp-12);
+  padding: 0;
+  list-style: none;
+}
+.nbt-links li {
+  display: grid;
+  gap: var(--sp-4);
+}
+.nbt-links .btn {
+  min-height: 44px;
+  justify-self: start;
+}
+}

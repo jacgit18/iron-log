@@ -2748,16 +2748,16 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-218', feature: 'Nutrition board', title: 'Manage: supplements and library, Meals and foods (opens Recipes), Water reminder', persona: 'meal-planner', brief: 'nutrition-board',
+    id: 'S-218', feature: 'Nutrition board', title: 'Manage: supplements and library, Meals and foods (opens Recipes); Targets and goal: Water reminder', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Press Manage and read its three rows.',
+      'Press Manage and read its two rows.',
       'Press Supplements and library, add a supplement under Noon, press Back to Manage and then Done.',
-      'Press Manage, Meals and foods (opens Recipes); then press Back and press Manage, Water reminder.',
+      'Press Manage, Meals and foods (opens Recipes); then press Back, press Targets and press Water reminder (below the water goal).',
     ],
     expected: [
-      'The rows read Supplements and library, Meals and foods (opens Recipes) and Water reminder, each with a one-line note.',
+      'The rows read Supplements and library and Meals and foods (opens Recipes), each with a one-line note; there is no Water reminder row.',
       'The editor shows the Morning, Noon and Night editor and the whole library; the new supplement appears on every day\'s Supplements.',
-      'Meals and foods (opens Recipes) closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
+      'Meals and foods (opens Recipes) closes the sheet and opens Recipes; Water reminder in Targets and goal opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
     ],
   },
   // ---- Supplement portions (brief supplement-portions, ADR 114). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----
@@ -2766,7 +2766,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Manage, Supplements and library, then + New. Name it "Magnesium glycinate", add the row Magnesium 200 mg, and type 2 in "Capsules or tablets in one serving".',
       'In "How much you take each time" press − once, then + twice, reading the line under the stepper each time. Press Save, then Done.',
-      'On today\'s Supplements tick it, then press Totals.',
+      'On today\'s Supplements tick it, then open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
     ],
     expected: [
       'The stepper starts at "2 capsules" with "200 mg magnesium" (the row is the amount in one label serving, which is 2 capsules); − gives "1 capsule" and "100 mg magnesium"; + twice gives "3 capsules" and "300 mg magnesium", each with the working under it ("3 × 100 mg per capsule = 300 mg" style).',
@@ -2801,7 +2801,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-222', feature: 'Vitamin and mineral totals', title: 'Today\'s Totals read the supplements and the foods, with the warning line under the ticks', persona: 'vitamin-tracker', brief: 'supplement-nutrient-totals',
     steps: [
       'Open Nutrition and read today\'s Supplements: the ticks under Morning, Noon and Night, and the line under them.',
-      'Press Totals. Read the line about food at the top, then the rows for Vitamin D, Zinc and Magnesium, then the No upper limit section and the note at the bottom.',
+      'Open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line). Read the line about food at the top, then the rows for Vitamin D, Zinc and Magnesium, then the No upper limit section and the note at the bottom.',
     ],
     expected: [
       'Morning and Noon are ticked, Night (Magnesium glycinate, "1 capsule") is not. Under the ticks: "Over an upper limit today: Vitamin D. Totals shows what each limit counts. General information, not medical advice."',
@@ -2814,8 +2814,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-223', feature: 'Vitamin and mineral totals', title: 'What I took, Everything scheduled, and unticking moves the warning', persona: 'vitamin-tracker', brief: 'supplement-nutrient-totals',
     steps: [
-      'Press Totals, then "Everything scheduled". Read the Magnesium row.',
-      'Close the sheet. Untick Vitamin D3 under Noon, read the line under the ticks, then press Totals ("What I took") and look for a Vitamin D row.',
+      'Open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line), then "Everything scheduled". Read the Magnesium row.',
+      'Close the sheet. Untick Vitamin D3 under Noon, read the line under the ticks, then open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line) ("What I took") and look for a Vitamin D row.',
       'Tick Vitamin D3 again.',
     ],
     expected: [
@@ -2826,7 +2826,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-224', feature: 'Vitamin and mineral totals', title: 'The target line and the 7-day average sit apart from the limit', persona: 'vitamin-tracker', brief: 'intake-target-and-safety-checks',
     steps: [
-      'Press Totals ("What I took") and read, for Calcium, Zinc, Magnesium and Vitamin D, the line that starts "Target:" and the line that starts "7-day average".',
+      'Open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line) ("What I took") and read, for Calcium, Zinc, Magnesium and Vitamin D, the line that starts "Target:" and the line that starts "7-day average".',
       'Read the 7-day average of Potassium in the No upper limit section.',
     ],
     expected: [
@@ -2838,8 +2838,8 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-225', feature: 'Vitamin and mineral totals', title: 'Supplements alone: no target verdict, and an unticked day says nothing is ticked', persona: 'diet-fresh', brief: 'intake-target-and-safety-checks', edge: true,
     steps: [
       'Press Manage, Supplements and library, then + New. Name it "Zinc", add the row Zinc 15 mg, press Save, then Done. Do not tick it.',
-      'Read the line under Supplements on today, then press Totals.',
-      'Close the sheet, tick Zinc, and press Totals again.',
+      'Read the line under Supplements on today, then open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
+      'Close the sheet, tick Zinc, and open Totals again (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
     ],
     expected: [
       'Unticked: under the Supplements bar "Vitamins and minerals: nothing ticked yet", and Totals says "Nothing ticked on this day yet."',
@@ -2872,11 +2872,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-228', feature: 'Food vitamins and minerals', title: 'A food found by name carries its vitamins and minerals into the log', persona: 'diet-fresh', brief: 'food-vitamins-minerals',
     steps: [
       'Press Add food, then Find food. Type "spinach", pick the first result, set 100 g and press Use.',
-      'Read the form that opens, press Add, then close the sheet and press Totals on today.',
+      'Read the form that opens, press Add, then close the sheet and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line) on today.',
     ],
     expected: [
       'The One-off form opens with "Vitamins and minerals (optional)" already open and rows filled by the lookup (for example Calcium, Iron, Potassium), each in mg, mcg or g, with "Filled from the food lookup or an earlier save. Check them against the label; change or remove any row."',
-      'After Add, a Totals button appears on today. The sheet says "Food: 1 of 1 eaten food had vitamin or mineral data." and the rows show the amounts for 100 g.',
+      'After Add, today shows a Vitamins and minerals line (or, with no such line, a Totals button). Totals says "Food: 1 of 1 eaten food had vitamin or mineral data." and the rows show the amounts for 100 g.',
     ],
   },
   {
@@ -2906,7 +2906,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Add food, then One-off food. Type the name "Burrito bowl", 300 calories and 20 protein. Press "Vitamins and minerals (optional)".',
       'Press "+ Add a nutrient", leave Calcium and type 180. Press "+ Add a nutrient" again, choose Vitamin B12, type 0.01 and change its unit to mg. Press Add, then close the sheet.',
-      'In Eaten, press Edit on Burrito bowl, read the rows, then Cancel. Press Totals.',
+      'In Eaten, press Edit on Burrito bowl, read the rows, then Cancel. Open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
     ],
     expected: [
       'The section is closed when the form opens. After Add the food is in Eaten.',
@@ -2942,7 +2942,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-234', feature: 'Age and sex amounts', title: 'A birth year and sex change your own limit and recommended amount', persona: 'vitamin-tracker', brief: 'recommendations-by-age-sex',
     steps: [
       'Open Settings, find "Recommended amounts" in the App group, type 1974 as the birth year and choose Female.',
-      'Go back to Nutrition, press Totals and read Calcium, Magnesium and Zinc, then Vitamin B12.',
+      'Go back to Nutrition, open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line) and read Calcium, Magnesium and Zinc, then Vitamin B12.',
     ],
     expected: [
       'Calcium: "Limit 2,000 mg for ages 51 to 70" and "Recommended for women ages 51 to 70: 1,200 mg a day." Magnesium: "Recommended for women ages 31 and over: 320 mg a day." Zinc: "Recommended for women ages 19 and over: 8 mg a day."',
@@ -2952,7 +2952,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-235', feature: 'Age and sex amounts', title: 'A bad year, "Prefer not to say" and Clear', persona: 'vitamin-tracker', brief: 'recommendations-by-age-sex', edge: true,
     steps: [
-      'In Settings > Recommended amounts choose Female, then type 85, then replace it with 2012, then press Totals on today.',
+      'In Settings > Recommended amounts choose Female, then type 85, then replace it with 2012, then open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line) on today.',
       'Type 1974, choose "Prefer not to say", and open Totals again. Then press Clear and open Totals once more.',
     ],
     expected: [
@@ -2983,7 +2983,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-238', feature: 'Food vitamins and minerals', title: 'A recipe built from a food adds up its vitamins and minerals, logged or planned', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
     steps: [
       'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Write a recipe, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
-      'On the recipe\'s page press Ate this, then open Nutrition and press Totals.',
+      'On the recipe\'s page press Ate this, then open Nutrition and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
       'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card, press "Move to…" and choose today under Day (the card stays under Dinner: the Day buttons keep the meal, the Meal buttons stay on the same day). On today tick "Check Cereal duo as eaten", then press Totals again.',
     ],
     expected: [
@@ -3058,7 +3058,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-244', feature: 'Active ingredients', title: 'Totals shows an Active ingredients section with your own cap and target', persona: 'supplement-stack', brief: 'supplement-active-ingredients',
     steps: [
       'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
-      'Open Daily, Nutrition, find today, and press Totals.',
+      'Open Daily, Nutrition, find today, and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
       'Find the Active ingredients section. Read the Omega-3 and EPA rows. Press "Everything scheduled" and read the Creatine row.',
       'Press the limit button on Creatine, set a target of 5 g and save, then reopen the row and remove the limit.',
     ],
@@ -3071,7 +3071,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-245', feature: 'Active ingredients', title: 'What I took versus what is scheduled, and units', persona: 'supplement-stack', brief: 'supplement-active-ingredients', edge: true,
     steps: [
       'Press Reset on Supplement stack first (switch to another account to do it), then switch back.',
-      'Close Totals and untick the Night Fish oil on the day\'s Supplements, then press Totals and read the Omega-3 row on What I took and on Everything scheduled.',
+      'Close Totals and untick the Night Fish oil on the day\'s Supplements, then open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line) and read the Omega-3 row on What I took and on Everything scheduled.',
       'Add a typed ingredient "Vitamin A" in IU to Multivitamin and read its row.',
     ],
     expected: [
