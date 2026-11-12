@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
 import { effectivePlan } from '../lib/dailySnacks.js';
+import { shiftDay } from '../lib/dietLog.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
@@ -323,6 +324,18 @@ describe('planToShopping (week to Shopping)', () => {
     plan({ k: 'm', id: 'm1' });
     expect(st().planToShopping([today])).toMatchObject({ added: 0, recipes: 0, ids: [] });
     expect(st().planToShopping([])).toMatchObject({ added: 0, recipes: 0 });
+  });
+  it('adds the missing ingredients of listed daily snacks once, not those skipped today, and counts match', () => {
+    st().saveRecipe({ n: 'Yogurt bowl', cat: 'carbs', ing: [{ n: 'yogurt' }, { n: 'honey' }], steps: [] });
+    st().saveRecipe({ n: 'Nuts', cat: 'protein', ing: [{ n: 'almonds' }, { n: 'honey' }], steps: [] });
+    st().saveRecipe({ n: 'Fruit', cat: 'carbs', ing: [{ n: 'apple' }], steps: [] });
+    const [a, b, c] = st().recipes;
+    st().mutateCfg(cfg => { cfg.diet = { snacks: [{ id: a!.id, x: 2 }, { id: b!.id }, { id: c!.id }], snackSkips: { [today]: [c!.id] } }; });
+    const tomorrow = shiftDay(today, 1);
+    const r = st().planToShopping([today, tomorrow], undefined, today);
+    expect(itemNames()).toEqual(['almonds', 'apple', 'honey', 'yogurt']); // Fruit is skipped today only, so tomorrow still brings its apple; honey once
+    expect(r).toMatchObject({ added: 4, recipes: 3, refused: null });
+    expect(st().planToShopping([today], undefined, today)).toMatchObject({ added: 0, recipes: 2 }); // a second tap adds nothing twice
   });
   it('lets Undo remove exactly the items the call created', () => {
     st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
