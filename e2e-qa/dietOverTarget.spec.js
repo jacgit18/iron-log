@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addOneOff, closeSheet, eaten, meter, openAdd, openNutrition, todayCol } from './nutritionBoard.js';
+import { addOneOff, closeSheet, deleteInRowSheet, eaten, meter, openAdd, openNutrition, openRow, todayCol } from './nutritionBoard.js';
 import { signInAs } from './persona.js';
 
 // QA scenario S-02 (Diet, over target): today reads about 120% of the calories with the protein short; at 20 entries a 21st one-off food is refused and Quick
@@ -26,7 +26,7 @@ test('S-02: over target on open, and the 20-entries-a-day limit replaces the add
   const full = sheet.getByText(/That.s 20 things for the day\. Delete one to add another\./);
   await expect(full).toBeVisible();
   await closeSheet(page);
-  await todayCol(page).getByRole('button', { name: 'Delete Tea' }).first().click();
+  await deleteInRowSheet(page, await openRow(page, 'Tea'), 'Tea');
   await expect(eaten(page)).toHaveCount(19);
   await openAdd(page, 'Quick add');
   await expect(full).toBeHidden();
