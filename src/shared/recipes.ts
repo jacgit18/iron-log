@@ -16,7 +16,7 @@ export const MAX_RECIPE_ID = 60, MAX_RECIPE_NAME = 80, MAX_AMOUNT = 40, MAX_STEP
 
 export const RECIPE_CATEGORIES: readonly RecipeCategory[] = ['protein', 'carbs', 'sides', 'sauces', 'seasonings', 'drinks', 'breakfast', 'dessert', 'ready', 'other'];
 /** How a category reads on a chip and in a pill. */
-export const RECIPE_CATEGORY_LABEL: Record<RecipeCategory, string> = { protein: 'Protein', carbs: 'Carbs', sides: 'Sides', sauces: 'Sauces', seasonings: 'Seasonings', drinks: 'Drinks', breakfast: 'Breakfast', dessert: 'Dessert', ready: 'Ready-made', other: 'Other' };
+export const RECIPE_CATEGORY_LABEL: Record<RecipeCategory, string> = { protein: 'Protein', carbs: 'Carbs', sides: 'Sides', sauces: 'Sauces', seasonings: 'Seasonings', drinks: 'Drinks', breakfast: 'Breakfast', dessert: 'Dessert', ready: 'Food', other: 'Other' };
 
 /** The tags of one recipe, cleaned: spaces collapsed, cut to MAX_TAG, repeats (any case) dropped keeping the first spelling, at most MAX_TAGS_PER_RECIPE. */
 export function normTags(v: unknown): string[] {
