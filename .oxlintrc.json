@@ -19,6 +19,17 @@
   "overrides": [
     {
       "files": [
+        "scripts/**/*.mjs"
+      ],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "no-undef": "error"
+      }
+    },
+    {
+      "files": [
         "server/**"
       ],
       "rules": {

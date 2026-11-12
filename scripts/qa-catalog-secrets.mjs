@@ -67,9 +67,11 @@ const die = msg => { console.error(msg); process.exit(1); };
 
 const WEEK_MS = 7 * 86_400_000; // how long supplement-upc-import.mjs reuses its saved search results
 
-/** What would make `upcs` read NIH (labels, or the whole search list) instead of reusing the cache; null when it will not. `hitsMtimeMs` is undefined when the file is missing. */
-export function upcsProblem(extra, cacheDir, hitsMtimeMs, now = Date.now()) {
+/** What would make `upcs` read NIH (labels, or the whole search list) instead of reusing the cache; null when it will not. The hits file's age is read from `cacheDir` with `stat` (injectable). */
+export function upcsProblem(extra, cacheDir, { stat = statSync, now = Date.now() } = {}) {
   if (extra.some(a => a === '--cache' || a.startsWith('--cache='))) return null; // their own cache file, their own call
+  let hitsMtimeMs;
+  try { hitsMtimeMs = cacheDir && stat(join(cacheDir, 'dsld-upcs.hits.json')).mtimeMs; } catch { /* missing: reported below */ }
   if (!cacheDir) return 'The UPC cache .cache/dsld-upcs.tsv was not found in the main checkout, so this would read thousands of NIH labels (about 1,000 an hour). Copy it there, or pass --cache <file>. Nothing was changed.';
   if (!extra.includes('--refresh-hits') && (hitsMtimeMs === undefined || now - hitsMtimeMs >= WEEK_MS)) return 'The saved NIH search list (.cache/dsld-upcs.hits.json) is missing or older than 7 days, so this would download it again (hundreds of MB, minutes). Add --refresh-hits to do that. Nothing was changed.';
   return null;
@@ -96,27 +98,28 @@ function mainCacheDir() {
   return dir && existsSync(join(dir, 'dsld-upcs.tsv')) ? dir : undefined;
 }
 
-async function main() {
-  const [sub, ...extra] = process.argv.slice(2);
-  if (!['catalog', 'upcs'].includes(sub)) die(USAGE);
+/** The whole command. Returns the import's exit status. The parts that reach outside (gcloud, the database, the main checkout's cache, the import process, exit) are
+ *  injectable, so a test can run every line of it, including the `upcs` preflight, without a real secret or database. */
+export async function main(argv, { read = secret, check = checkTarget, open = connect, catalogLoaded = hasCatalog, cacheOf = mainCacheDir, spawn = spawnSync, fail = die } = {}) {
+  const [sub, ...extra] = argv;
+  if (!['catalog', 'upcs'].includes(sub)) fail(USAGE);
+  const cacheDir = sub === 'upcs' ? cacheOf() : undefined;
   let command;
-  try { command = plan(sub, extra, { cacheDir: sub === 'upcs' ? mainCacheDir() : undefined }); } catch (e) { die(e.message); }
-  const url = secret(URL_SECRET);
+  try { command = plan(sub, extra, { cacheDir }); } catch (e) { fail(e.message); }
+  const url = read(URL_SECRET);
   let host;
-  try { host = await checkTarget(url); } catch (e) { die(e.message); }
+  try { host = await check(url); } catch (e) { fail(e.message); }
   if (sub === 'upcs') {
-    let hitsMtime;
-    try { hitsMtime = cacheDir && statSync(join(cacheDir, 'dsld-upcs.hits.json')).mtimeMs; } catch { /* missing: upcsProblem says so */ }
-    const problem = upcsProblem(extra, cacheDir, hitsMtime);
-    if (problem) die(problem);
-    const client = await connect(url, 'QA');
-    try { if (!(await hasCatalog(client))) die(`QA's catalog at ${host} has no live dsld rows. Run: npm run qa:catalog:sm -- catalog --apply (first). Nothing was changed.`); } finally { await client.end(); }
+    const problem = upcsProblem(extra, cacheDir);
+    if (problem) fail(problem);
+    const client = await open(url, 'QA');
+    try { if (!(await catalogLoaded(client))) fail(`QA's catalog at ${host} has no live dsld rows. Run: npm run qa:catalog:sm -- catalog --apply (first). Nothing was changed.`); } finally { await client.end(); }
   }
   const apply = extra.includes('--apply');
   console.error(`QA ${sub} on ${host} (secret from project ${PROJECT}), marked as QA: ${apply ? 'writing (--apply)' : 'dry run, nothing changes (add --apply to write)'}.`);
-  const run = spawnSync('npx', ['tsx', command.file, ...command.args], { stdio: 'inherit', cwd: REPO, env: childEnv(url) });
-  if (run.error) die(`Could not start the import script (${run.error.code ?? run.error.message}).`);
-  process.exit(run.status ?? 1);
+  const run = spawn('npx', ['tsx', command.file, ...command.args], { stdio: 'inherit', cwd: REPO, env: childEnv(url) });
+  if (run.error) fail(`Could not start the import script (${run.error.code ?? run.error.message}).`);
+  return run.status ?? 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) process.exit(await main(process.argv.slice(2)));
