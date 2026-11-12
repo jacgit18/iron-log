@@ -71,11 +71,11 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
     : { type: 'barcode', onFound: (h: FoodHit) => choose(h), onLabel: openLabel });
 
   const scanned = useRef(false);
-  useEffect(() => { if (scanFirst && !scanned.current) { scanned.current = true; scan(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival: Recipes + New, Scan a food opens the barcode sheet over this form
+  useEffect(() => { if (scanFirst && !scanned.current) { scanned.current = true; scan(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival: Recipes + New, Scan to fill a food form opens the barcode sheet over this form
 
   return (
     <div className="dt-lookup">
-      <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>
+      <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan to fill form</button>
       {resume?.label && <button type="button" className="btn sm" id="dt-label-photo" onClick={() => labelCamera.current?.click()}>Photo the label</button>}
       {given === undefined && (
         <label className="field" htmlFor="dt-lookup-q">Look up nutrition

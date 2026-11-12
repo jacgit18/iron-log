@@ -49,7 +49,7 @@ test('a tab with nothing in it names the next step', async ({ page }) => {
   await page.click('#recipes-tab-drinks');
   await expect(page.locator('#recipes-empty')).toContainText('No drinks yet');
   await page.click('#recipes-tab-foods');
-  await expect(page.locator('#recipes-empty')).toContainText('Scan a food');
+  await expect(page.locator('#recipes-empty')).toContainText('Scan to fill a food form');
 });
 
 test('Filters is closed at first, and what is under it still filters and keeps the counts honest', async ({ page }) => {
@@ -151,7 +151,7 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await open(page);
   const menu = page.locator('#recipes-new-list');
   await page.click('#recipes-new');
-  await expect(menu.getByRole('button')).toHaveText([/Recipe or meal/, /Scan a food/, /Add a food by hand/]);
+  await expect(menu.getByRole('button')).toHaveText([/Recipe or meal/, /Scan to fill a food form/, /Add a food by hand/]);
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Recipe or meal' }).click();
@@ -164,7 +164,7 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#recipes-new')).toHaveCount(0); // the menu belongs to Mine
   await page.click('#recipes-mine');
-  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Scan a food' }).click();
+  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Scan to fill a food form' }).click();
   await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible(); // the barcode sheet opens over the ready-made form
   await expect(page.getByRole('heading', { name: 'New food' })).toBeVisible();
 });

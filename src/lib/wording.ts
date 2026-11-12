@@ -10,6 +10,7 @@ export const WORDING: readonly WordRule[] = [
   { say: 'Done', when: 'a sheet that applies changes as you go', notThis: ['Close'] },
   { say: 'Close', when: 'a sheet that only shows something', notThis: ['Done'] },
   { say: 'Food', when: 'a packaged food in Recipes: the tab is "Foods", one is a "Food" (its pill and category), the forms are "New food" and "Edit food"; the + New entry stays "Add a food by hand"', notThis: ['Ready-made', 'ready-made food'] },
+  { say: 'Scan to fill <form>', when: 'a scan whose result lands in a form you still save: Find food and the Recipes food form say "Scan to fill form", + New says "Scan to fill a food form". The supplement add sheet scan says it too. The camera sheet, the Scan label photo button and the Nutrition way "Scan barcode" (it scans, then saves the food and logs it, not a form) keep their names (owner, 2026-11-12)', notThis: ['Scan barcode', 'Scan a food'] },
   { say: 'Save and Cancel', when: 'a form', notThis: ['Done'] },
 ];
 

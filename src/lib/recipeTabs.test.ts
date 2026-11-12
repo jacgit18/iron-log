@@ -28,7 +28,8 @@ describe('type tabs', () => {
     expect(tabOf(list[0]!)).toBe('foods');
   });
   it('says what to do in an empty tab, and that a search found nothing', () => {
-    expect(emptyTabNote('foods', false)).toContain('Scan a food');
+    expect(emptyTabNote('foods', false)).toContain('Scan to fill a food form');
+    expect(emptyTabNote('drinks', false)).toContain('Scan to fill a food form');
     expect(emptyTabNote('meals', false)).toContain('Recipe or meal');
     expect(emptyTabNote('drinks', true)).toContain('Clear the search');
   });
