@@ -45,7 +45,7 @@ describe('folded summaries', () => {
   });
   it('shows the nutrition line as it stands', () => {
     expect(sectionSummary('nut', facts)).toBe('320 kcal · 24 g protein');
-    expect(sectionSummary('nut', { ...facts, nutLine: 'Not set' })).toBe('Not set');
+    expect(sectionSummary('nut', { ...facts, nutLine: 'Needs numbers' })).toBe('Needs numbers');
   });
   it('summarises Basics by name, category and servings', () => {
     expect(sectionSummary('basics', facts)).toBe('Chili · Dinner · 4 servings');

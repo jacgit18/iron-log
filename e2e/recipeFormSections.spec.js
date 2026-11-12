@@ -24,7 +24,7 @@ test.describe('on a phone', () => {
     await expect(toggle(page, 'Basics')).toHaveAttribute('aria-expanded', 'true');
     for (const t of ['Ingredients', 'Steps', 'Nutrition per serving', 'Tags, note and video']) await expect(toggle(page, t)).toHaveAttribute('aria-expanded', 'false');
     await expect(toggle(page, 'Ingredients')).toContainText('· None yet');
-    await expect(toggle(page, 'Nutrition per serving')).toContainText('· Not set');
+    await expect(toggle(page, 'Nutrition per serving')).toContainText('· Needs numbers');
     await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Ingredient 1', { exact: true })).toBeHidden();
   });

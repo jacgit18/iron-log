@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterSheetClose, navOf, onPop, opsFor, startBackNav } from './backNav';
+import { afterSheetClose, leaveSheet, navOf, onPop, opsFor, startBackNav } from './backNav';
 
 const board = { tab: 'board', modal: false };
 const daily = { tab: 'daily', modal: false };
@@ -102,5 +102,16 @@ describe('afterSheetClose', () => {
     afterSheetClose({ state: null }, w, () => { n++; });
     expect(n).toBe(2);
     expect(w.fns.size).toBe(0);
+  });
+});
+
+describe('leaveSheet', () => {
+  const win = () => { const fns = new Set<(e: { state: unknown }) => void>(); return { fns, addEventListener: (_: 'popstate', f: (e: { state: unknown }) => void) => fns.add(f), removeEventListener: (_: 'popstate', f: (e: { state: unknown }) => void) => fns.delete(f) }; };
+  it('closes the sheet at once and runs the move after the step back', () => {
+    const w = win(); const order: string[] = [];
+    leaveSheet({ state: { nav: { tab: 'board', modal: true } } }, w, () => order.push('go'), () => order.push('close'));
+    expect(order).toEqual(['close']);
+    w.fns.forEach(f => f({ state: null }));
+    expect(order).toEqual(['close', 'go']);
   });
 });
