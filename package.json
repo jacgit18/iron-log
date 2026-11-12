@@ -10,6 +10,7 @@
     "dev": "vite",
     "qa:seed": "tsx scripts/qa-seed.mjs",
     "qa:seed:sm": "node scripts/qa-seed-secrets.mjs",
+    "qa:catalog:sm": "node scripts/qa-catalog-secrets.mjs",
     "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
     "reset:accounts": "tsx scripts/reset-accounts.mjs",
     "beta:to-free": "tsx scripts/beta-to-free.mjs",
