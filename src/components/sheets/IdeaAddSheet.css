@@ -2,20 +2,8 @@
 @layer components {
 .iaseg {
   display: flex;
-  gap: var(--sp-2);
-  padding: var(--sp-2);
-  border-radius: var(--r-md);
-  background: var(--sunk);
-}
-.iaseg .btn {
-  flex: 1;
-  min-height: 44px;
-  border-color: transparent;
-  background: transparent;
-}
-.iaseg .btn[aria-pressed="true"] {
-  background: var(--surface);
-  border-color: var(--line);
+  flex-wrap: wrap;
+  gap: var(--sp-6);
 }
 .iahelp {
   margin: var(--sp-6) 0 0;
