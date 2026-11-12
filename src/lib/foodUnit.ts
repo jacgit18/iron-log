@@ -4,7 +4,7 @@ import { ateMax } from './dietLog.js';
 
 export { MAX_UNIT, isUnit };
 
-/* ---------- Usual amount and unit name on a ready-made food (brief usual-amount-and-unit): "4 eggs" instead of "4 portions". Pure; the log control and the food's page call these. ---------- */
+/* ---------- Usual amount on any recipe, and unit name on a ready-made food (briefs usual-amount-and-unit, nutrition-usual-portion-field): "4 eggs" instead of "4 portions". Pure; the log control and the food's page call these. ---------- */
 
 
 /** The plural of a unit by rule: es after s, x, z, ch or sh; ies after a consonant and y; otherwise s. An odd word is fixed by typing its plural. */

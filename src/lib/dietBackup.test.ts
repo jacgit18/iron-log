@@ -36,6 +36,7 @@ describe('usual amount in the backup file (brief nutrition-usual-portion-field)'
     const back = parseDataFile(JSON.stringify(buildDataFile(withRecipes([meal]), {})));
     expect(back.recipes?.[0]).toMatchObject({ id: 'chili', usual: 1.5 });
     const bad = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...meal, usual: 2.3 }, { ...meal, id: 'b', usual: 100 }, { ...meal, id: 'c', usual: 'x' }]), {})));
+    expect(bad.recipes).toHaveLength(3);
     for (const r of bad.recipes ?? []) expect(r).not.toHaveProperty('usual');
   });
 });
