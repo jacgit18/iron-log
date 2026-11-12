@@ -24,6 +24,14 @@ const addFood = async (page, name, kcal, protein) => {
 };
 const reload = async page => { await page.reload(); await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 }); };
 
+// Delete an eaten food: its row opens the row sheet, and Delete there needs two taps (ADR 023).
+const removeFood = async (page, name) => {
+  await diet(page).getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  await page.getByRole('dialog').getByRole('button', { name: `Delete ${name}` }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /Tap again to delete/ }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+};
+
 test('a food logged on one phone reaches the account, shows on a second phone, and an edit and a delete cross back', async ({ browser, user }) => {
   await server.seedPrograms(user);
   const a = await newPhone(browser, user);
@@ -44,10 +52,12 @@ test('a food logged on one phone reaches the account, shows on a second phone, a
 
   // The second phone edits one and deletes the other; the database ends with the one edited row.
   const rice = (await dietRows(user)).find(r => r.data.n === 'Rice');
-  await diet(second).getByRole('button', { name: 'Edit Rice' }).click();
+  await diet(second).getByRole('button', { name: /^Rice/ }).click(); // an eaten row opens its sheet
+  await second.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click();
   await second.locator(`#nb-e-${rice.client_id}-k`).fill('260');
-  await diet(second).getByRole('button', { name: 'Save', exact: true }).click();
-  await diet(second).getByRole('button', { name: 'Delete Chicken' }).click();
+  await second.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+  await second.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+  await removeFood(second, 'Chicken');
   await expect.poll(async () => (await dietRows(user)).map(r => [r.data.n, r.data.kcal])).toEqual([['Rice', 260]]);
 
   // The first phone picks the changes up when it next loads (as in grocery.spec.js), shows the account's log, and keeps no private copy of it.
@@ -74,8 +84,8 @@ test('restoring the account backup brings a lost food log back on screen and int
   // The copy that holds the log is the daily upload; wait for it, then lose the log.
   await page.clock.fastForward(40_000);
   await expect.poll(async () => Number((await pool.query(`select count(*) as n from backup_snapshots b join users u on u.id = b.user_id where u.auth_user_id = $1`, [`dev:${user}`])).rows[0].n), { timeout: 30_000 }).toBe(1);
-  await diet(page).getByRole('button', { name: 'Delete Oats' }).click();
-  await diet(page).getByRole('button', { name: 'Delete Eggs' }).click();
+  await removeFood(page, 'Oats');
+  await removeFood(page, 'Eggs');
   await expect.poll(async () => (await dietRows(user)).length).toBe(0);
 
   // Settings > Backups > Restore account copy opens the import review; the Food log is a ticked section; Add to my data puts the entries back.

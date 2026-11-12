@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { entriesOn, entryFromFood, entryText, shiftDay } from '../../lib/dietLog.js';
 import { planCopy } from '../../lib/dietSuggest.js';
+import { runInstantLog } from '../../lib/instantLog.js';
 import { fmtDayDate, ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -19,14 +20,7 @@ export default function CopyDay({ day, onAdded }: { day: string; onAdded: (text:
   const flip = (id: string) => setTicked(t => { const n = new Set(t); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const add = () => {
     const plan = planCopy(diet, src, day, ticked);
-    let done = 0, stopped: string | null = null;
-    for (const f of plan.add) {
-      stopped = useAppStore.getState().addDietEntry(entryFromFood(day, f)).error;
-      if (stopped) break;
-      done++;
-    }
-    // The store's own words when an add fails (a full day, a day too far back, bad numbers); the 20 a day note only for what planCopy left out.
-    onAdded(`Added ${done}.${stopped ? ` ${stopped}` : plan.left > 0 ? ` ${plan.left} left out: 20 a day is the limit.` : ''}`);
+    onAdded(runInstantLog(useAppStore.getState().addDietEntry, plan.add.map(f => entryFromFood(day, f)), { left: plan.left }).text);
     setOpen(false);
   };
   if (!open) {

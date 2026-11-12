@@ -1,4 +1,6 @@
+import { entryFromFood } from '../../lib/dietLog.js';
 import { mealLine, planMeal } from '../../lib/dietMeals.js';
+import { runInstantLog } from '../../lib/instantLog.js';
 import { quickRows } from '../../lib/quickMeals.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import './Diet.css';
@@ -16,13 +18,7 @@ export default function SavedMeals({ day, full, onAdded }: { day: string; full: 
     if (!m) return;
     const st = useAppStore.getState();
     const plan = planMeal(st.diet, day, m);
-    let done = 0, stopped: string | null = null;
-    for (const f of plan.add) {
-      stopped = st.addDietEntry({ d: day, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) }).error;
-      if (stopped) break;
-      done++;
-    }
-    onAdded(`Added ${done} from ${m.n}.${stopped ? ` ${stopped}` : plan.left > 0 ? ` ${plan.left} left out: 20 a day is the limit.` : ''}`);
+    onAdded(runInstantLog(st.addDietEntry, plan.add.map(f => entryFromFood(day, f)), { from: m.n, left: plan.left }).text);
   };
   return (
     <div className="dt-meals">
