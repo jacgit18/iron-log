@@ -103,6 +103,13 @@ describe('swap, skip and Edited', () => {
     expect(normRecipe({ ...base, edited: true })).not.toHaveProperty('edited');
     expect(normRecipe({ ...base, from: 'c:wbc:chili', edited: 'yes' })).not.toHaveProperty('edited');
   });
+  it('keeps fromMeal as a short string and drops anything else', () => {
+    expect(normRecipe({ ...base, fromMeal: ' m1 ' })).toHaveProperty('fromMeal', 'm1');
+    expect(normRecipe({ ...base, fromMeal: 5 })).not.toHaveProperty('fromMeal');
+    expect(normRecipe({ ...base, fromMeal: '' })).not.toHaveProperty('fromMeal');
+    expect(normRecipe({ ...base, fromMeal: 'x'.repeat(200) })).not.toHaveProperty('fromMeal');
+    expect(validRecipe({ ...base, fromMeal: 'm1' })).toBe(true);
+  });
   it('accepts the new fields as clean and still reads a recipe saved before them', () => {
     expect(validRecipe({ ...base, ing: [{ n: 'Beans', sub: 'pinto beans', skip: true }], from: 'c:wbc:chili', edited: true })).toBe(true);
     expect(validRecipe(base)).toBe(true);
@@ -186,9 +193,13 @@ describe('usual amount and unit name (ready-made foods)', () => {
     expect(r).toMatchObject({ usual: 4, unit: 'loaf', plural: 'loaves' });
     expect(validRecipe(r)).toBe(true);
   });
-  it('drops them from any other category, and drops bad values', () => {
-    expect(normRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).not.toHaveProperty('usual');
-    expect(normRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).not.toHaveProperty('unit');
+  it('keeps a usual amount on any category, drops the unit outside ready-made foods, and drops bad values', () => {
+    const meal = normRecipe({ ...food, cat: 'protein', usual: 1.5, unit: 'egg' });
+    expect(meal).toMatchObject({ usual: 1.5 });
+    expect(meal).not.toHaveProperty('unit');
+    expect(validRecipe(meal)).toBe(true);
+    expect(validRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).toBe(false); // unit would be dropped
+    expect(normRecipe({ ...food, cat: 'sauces', usual: '2' })).not.toHaveProperty('usual'); // not a number
     const bad = normRecipe({ ...food, usual: 2.3, unit: '4 eggs', plural: 'x' });
     expect(bad).not.toHaveProperty('usual');
     expect(bad).not.toHaveProperty('unit');

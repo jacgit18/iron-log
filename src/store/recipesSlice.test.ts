@@ -23,6 +23,14 @@ describe('saveRecipe', () => {
     expect(st().recipes).toHaveLength(1);
     expect(st().recipes[0]).toMatchObject({ id, n: 'Better chili' });
   });
+  it('keeps the saved-meal mark when a moved meal is edited, and gives a new recipe none', () => {
+    expect(st().saveRecipe({ ...draft, fromMeal: 'm1' })).toBeNull();
+    const id = st().recipes[0]!.id;
+    expect(st().saveRecipe({ ...draft, id, n: 'Better chili' })).toBeNull(); // the form does not pass the mark
+    expect(st().recipes[0]).toMatchObject({ id, n: 'Better chili', fromMeal: 'm1' });
+    expect(st().saveRecipe({ ...draft, n: 'Second chili' })).toBeNull();
+    expect(st().recipes[1]).not.toHaveProperty('fromMeal');
+  });
   it('refuses a recipe with no name or no ingredient and changes nothing', () => {
     expect(st().saveRecipe({ ...draft, n: ' ' })).toBe('Give the recipe a name.');
     expect(st().saveRecipe({ ...draft, ing: [] })).toBe('Add at least one ingredient.');
