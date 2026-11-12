@@ -24,6 +24,7 @@ import type { Micro } from '../../shared/foodMicro.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 import ServingSize from './ServingSize.js';
+import './RecipeDesktop.css';
 import './RecipeFormSections.css';
 import Icon from '../Icon.js';
 import { FORM_SECTIONS, fieldForSaveError, initialOpen, sectionOf, sectionSummary, toggled, unfoldFor } from '../../lib/recipeFormSections.js';
@@ -241,6 +242,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   return (
     <form ref={formRef} className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit recipe' : 'New recipe'}</h3>
+      <div className="rcf-cols">{/* from 1024 px two columns: basics, ingredients and steps beside nutrition and more (RecipeDesktop.css) */}
+      <div className="rcf-col">
       {section('basics', <>
         <label>Name
           <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
@@ -276,6 +279,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
           <textarea rows={5} value={steps} onChange={e => setSteps(e.target.value)} />
         </label>
       ))}
+      </div>
+      <div className="rcf-col">
       {section('nut', <>
         <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
         <div className="rc-nut">
@@ -338,6 +343,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
           <span className="note">Opens from the recipe. YouTube or any video site.</span>
         </label>
       </>)}
+      </div>
+      </div>
       <div className="rcf-foot">
         {err && <p className="note gerr" role="alert">{err}</p>}
         <div className="rc-actions rc-bar">
