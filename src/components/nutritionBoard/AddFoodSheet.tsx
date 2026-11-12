@@ -8,7 +8,7 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows } from '../../lib/quickMeals.js';
-import { ADD_FLOWS, addFlows, addGroups, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
 import { ymd } from '../../shared/dates.js';
@@ -57,8 +57,8 @@ export default function AddFoodSheet() {
   return (
     <Sheet className="nbsheet sheet-wide" aria-label={`Add food, ${addingTo(day, today)}`}>
       <h2 className="cond">{flow ? ADD_FLOWS[flow].label : 'Add food'}</h2>
-      <p className="note">{addingTo(day, today)}</p>
-      {flows.length === 0 ? <p className="note">Last week&apos;s food cannot be changed.</p> : day > today && (
+      <p className="note">{addingTo(day, today)}{day < today && ' · logs food you ate that day'}</p>
+      {addMode(day, today) === 'plan' && (
         <div role="group" aria-label="Which meal">
           <p className="note" id="nb-meal-h">Which meal?</p>
           <div className="seg" role="group" aria-labelledby="nb-meal-h">
@@ -67,7 +67,7 @@ export default function AddFoodSheet() {
           <p className="note">Recipes and saved meals you add go into {SLOT_LABEL[meal]}.</p>
         </div>
       )}
-      {!flow && flows.length > 0 && (
+      {!flow && (
         <div className="nb-menu" aria-label="Ways to add food" role="group">
           {addGroups(day, today).map(g => (
             <section key={g.label} aria-labelledby={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>
@@ -97,7 +97,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const [q, setQ] = useState('');
   const newRecipe = () => openRecipesForm({ kind: 'new' });
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
-  const eat = day === today;
+  const eat = addMode(day, today) === 'log';
   const st = () => useAppStore.getState();
   const plan = (kind: 'r' | 'm', id: string, name: string) => { const e = st().addPlanItem(day, kind, id, meal); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[meal]}.`); };
   const addFood = (f: Food) => {

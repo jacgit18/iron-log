@@ -4,7 +4,7 @@ import { entryFromFood } from '../../lib/dietLog.js';
 import { runInstantLog } from '../../lib/instantLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
-import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addingTo, dayView, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -70,7 +70,6 @@ export default function NutritionBoard() {
   const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
   const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
   const legend = <div className="wb-legend" id="nb-legend" aria-hidden={phone ? undefined : true} hidden={phone && !legendOpen}><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span>{views.some(v => v.meters.some(m => m.key === 'carbs' && !m.hidden)) && <span><i className="nbc" />Carbs</span>}<span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>;
-  const editable = foodEditable(day, today);
   const target = addingTo(day, today);
   return (
     <section className="wb nb" aria-labelledby="nb-h">
@@ -91,13 +90,11 @@ export default function NutritionBoard() {
       </div>
       <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
       <div className="nb-toolbar" role="group" aria-label="Add food">
-        <span className={editable ? 'nb-target nb-target-quiet' : 'nb-target'}>{editable ? target : `${target.replace('Adding to', '')} · food is read-only`}</span>
-        {editable ? (
-          <div className="nb-tbtns">
-            <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
-            {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
-          </div>
-        ) : <span className="note">Last week&apos;s food cannot be changed. Supplements and water can.</span>}
+        <span className="nb-target nb-target-quiet">{target}</span>
+        <div className="nb-tbtns">
+          <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
+          {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
+        </div>
       </div>
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
