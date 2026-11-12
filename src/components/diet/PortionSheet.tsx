@@ -20,7 +20,7 @@ export default function PortionSheet() {
   const recipe = useAppStore(s => s.recipes.find(r => r.id === modal?.id));
   const today = ymd(useToday(s => s.today));
   const [done, setDone] = useState(false);
-  const [usualNote, setUsualNote] = useState<{ text: string; change: UsualChange; id: string } | null>(null); // "Usual portion saved" with its Undo
+  const [usualNote, setUsualNote] = useState<{ text: string; change: UsualChange; id: string; stale?: true } | null>(null); // "Usual portion saved" with its Undo
   const editInRecipes = () => { if (recipe) openRecipesForm({ kind: 'edit', id: recipe.id }); };
   const past = recipe ? null : pastFoodOf(modal?.food); // a food logged before with no recipe behind it (Find food): the same sheet and control, log only
   if (past) {
@@ -55,7 +55,7 @@ export default function PortionSheet() {
     const now = st.recipes.find(r => r.id === usualNote.id);
     const back = now ? undoUsual(now.usual, usualNote.change) : null;
     if (now && back && !st.saveRecipe(withUsual(now, back.usual))) setUsualNote(null);
-    else setUsualNote({ ...usualNote, text: 'The usual portion was changed since, so it was left as it is.' });
+    else setUsualNote({ ...usualNote, text: 'The usual portion was changed since, so it was left as it is.', stale: true });
   };
   const { min, max } = dayRange(today);
   const day = typeof modal?.day === 'string' && modal.day >= min && modal.day <= max ? modal.day : today;
@@ -63,7 +63,7 @@ export default function PortionSheet() {
     <Sheet className="portionsheet">
       <h2 className="cond">{recipe.n}</h2>
       <LogControl recipe={recipe} day={day} onChange={setDone} onLogged={rememberUsual} />
-      {usualNote && <p className="note" role="status">{usualNote.text} {usualNote.text.startsWith('Usual') && <button type="button" className="btn sm ghost" onClick={undoUsualNote}>Undo</button>}</p>}
+      {usualNote && <p className="note" role="status">{usualNote.text} {!usualNote.stale && <button type="button" className="btn sm ghost" onClick={undoUsualNote}>Undo</button>}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={closeModal}>{done ? 'Done' : 'Cancel'}</button>
       </div>
