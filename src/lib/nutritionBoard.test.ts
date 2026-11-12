@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -29,6 +29,8 @@ describe('week days', () => {
   });
   it('labels a week and a month crossing', () => {
     expect(weekLabel(TODAY, -1)).toBe('Last week · Nov 1 to 7');
+    expect(weekDates(TODAY, -1)).toBe('Nov 1 to 7');
+    expect(weekDates('2026-12-01', 0)).toBe('Nov 29 to Dec 5');
     expect(weekLabel('2026-12-01', 0)).toBe('This week · Nov 29 to Dec 5');
   });
   it('the dropdown has three groups of seven and marks today', () => {
