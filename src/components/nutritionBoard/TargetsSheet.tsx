@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { bwSorted, goalStatus } from '../../lib/body.js';
 import { recommend } from '../../lib/dietTarget.js';
 import { ymd } from '../../shared/dates.js';
+import { afterSheetClose } from '../../lib/backNav.js';
+import { requestSettingsJump } from '../../lib/settingsJump.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import DietTargets from '../diet/DietTargets.js';
@@ -11,6 +13,7 @@ import '../diet/Diet.css';
 import '../supplements/Supplements.css';
 
 // Targets and goal (brief nutrition-board, PR 2): one sheet for the calorie and protein targets (typed or recommended), body weight, goal weight and date, and the base water goal.
+// The Water reminder row opens Settings at Alerts (moved here from Manage, brief nutrition-manage-cleanup); the sheet closes first.
 // Each part keeps the store action it always had: setDietTarget / setDietPace (DietTargets), saveBodyWeight, setBodyGoal, clearBodyGoal, setWaterGoal.
 export default function TargetsSheet() {
   const closeModal = useAppStore(s => s.closeModal);
@@ -45,6 +48,9 @@ export default function TargetsSheet() {
       </form>
       <div className="sect">Water</div>
       <WaterGoal day={ymd(now)} />
+      <ul className="nb-manage">
+        <li><button type="button" className="btn" id="nb-manage-water" onClick={() => { afterSheetClose(window.history, window, () => { requestSettingsJump('alerts'); useAppStore.getState().setTab('settings'); }); closeModal(); }}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
+      </ul>
       <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>
     </Sheet>
   );
