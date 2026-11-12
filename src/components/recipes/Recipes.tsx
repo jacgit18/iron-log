@@ -6,6 +6,7 @@ import Icon from '../Icon.js';
 import RecipeDetail from './RecipeDetail.js';
 import RecipeDetailPane, { useDetailPaneWidth } from './RecipeDetailPane.js';
 import RecipeNewMenu, { type NewChoice } from './RecipeNewMenu.js';
+import LibrarySignIn from './LibrarySignIn.js';
 import RecipeTypeTabs from './RecipeTypeTabs.js';
 import { useKept } from './useRecipesViewState.js';
 import ReadyMadeForm from './ReadyMadeForm.js';
@@ -24,6 +25,7 @@ import { NUTRITION_FILTERS, nutritionBadge } from '../../lib/recipeNutrition.js'
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { showSavedRecipe } from '../../lib/recipesViewState.js';
 import { pageOf } from '../../lib/route.js';
 import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -77,6 +79,7 @@ export default function Recipes() {
   const [selId, setSelId] = useKept('selId'); // the recipe in the detail pane (wide screens)
   const [paneChoice] = useSortChoice('recipes-detail', PANE_CHOICES, 'auto');
   const pane = useDetailPaneWidth() && paneChoice === 'auto';
+  const libSignedOut = src === 'library' && !syncing; // the Library needs the account: a prompt replaces the search box, tabs and filters
   const [cat, setCat] = useKept('cat');
   const [canMake, setCanMake] = useKept('canMake');
   const [tagSel, setTagSel] = useKept('tagSel');
@@ -141,7 +144,10 @@ export default function Recipes() {
   const backFromSauce = () => goUp('daily/recipes/mine'); // the address change shows the recipe it was opened from (effect above)
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
   if (view.kind === 'form') {
-    const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => { if (id) setView({ kind: 'mine', id }); else if (editing) setView({ kind: 'mine', id: editing.id }); else back(); }; // Cancel from Edit returns to the recipe, from New to the list
+    const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => {
+      if (pane) { if (id) showSavedRecipe(id); else if (editing) setSelId(editing.id); back(); return; } // beside the list: back to the list with the recipe open in the pane
+      if (id) setView({ kind: 'mine', id }); else if (editing) setView({ kind: 'mine', id: editing.id }); else back(); // a phone: the recipe's page; Cancel from Edit returns to the recipe, from New to the list
+    };
     return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} {...(view.scan ? { scanFirst: true } : {})} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
   }
   if (view.kind === 'types') return <FoodTypeReview onDone={undo => { setTypesUndo(() => undo); back(); }} onBack={back} />;
@@ -185,13 +191,13 @@ export default function Recipes() {
         </div>
         {src === 'mine' && <RecipeNewMenu onChoose={choose} />}
       </div>
-      <div className="rc-top">
+      {!libSignedOut && <div className="rc-top">
         <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
         <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
-      </div>
+      </div>}
       {src === 'mine' && <RecipeTypeTabs value={recentOn ? null : tab} counts={counts} onChange={t => { setRecent(false); setTab(t); }} {...(picks.length ? { recent: { on: recentOn, onToggle: () => setRecent(!recentOn) } } : {})} />}
-      {src === 'library' && <RecipeTypeTabs value={libTab} onChange={t => setLibTab(t as LibraryTab)} tabs={LIBRARY_TABS} />}
-      <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
+      {src === 'library' && !libSignedOut && <RecipeTypeTabs value={libTab} onChange={t => setLibTab(t as LibraryTab)} tabs={LIBRARY_TABS} />}
+      {!libSignedOut && <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
         <FilterSelect label="Category" value={cat ?? ''} onChange={v => setCat(v === '' ? null : v as RecipeCategory)}>
           <option value="">All categories</option>
           {chips.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
@@ -220,7 +226,7 @@ export default function Recipes() {
           {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
           {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
         </div>
-      </div>
+      </div>}
       <RemovedNotice scope="recipes" />
       {typesUndo && (
         <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setTypesUndo(null) }} actions={[{ label: 'Undo', onClick: () => { typesUndo(); setTypesUndo(null); } }, { label: 'Dismiss', onClick: () => setTypesUndo(null), ghost: true }]}>
@@ -261,7 +267,7 @@ export default function Recipes() {
 
       {src === 'library' && (
         <>
-          {!syncing && <p className="note">Sign in to browse the recipe library.</p>}
+          {libSignedOut && <LibrarySignIn />}
           {syncing && lib.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
           {syncing && lib.status === 'failed' && <p className="note gerr" role="alert">{lib.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
           {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
