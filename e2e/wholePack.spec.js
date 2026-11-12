@@ -28,9 +28,9 @@ test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More s
   await expect(portions).toHaveText('11.5 portions');
   await page.getByRole('button', { name: 'Whole pack (12)' }).click();
   await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText('Logged 12 portions to today.')).toBeVisible();
+  await expect(page.getByText(/Logged .+: 12 portions to today\./)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByText('Logged 12 portions')).toHaveCount(0);
+  await expect(page.getByText(/Logged .+: 12 portions/)).toHaveCount(0);
 });
 
 test('the box saves, comes back on edit, and a wrong number is refused', async ({ page }) => {
