@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
+import './RecipeDesktop.css';
 import './RecipeFormSections.css';
 import { liveRows, microOfRows, rowsFromMicro } from '../../lib/foodAmountRows.js';
 import type { AmountRow } from '../../lib/foodAmountRows.js';
@@ -98,6 +99,8 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
           {scanNote && <p className="note" role="status">{scanNote}</p>}
         </div>
       )}
+      <div className="rcf-cols">{/* from 1024 px two columns: the name and numbers beside the amounts and the optional fields (RecipeDesktop.css) */}
+      <div className="rcf-col">
       <label>Name
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
@@ -109,6 +112,8 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
         <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => { setCarbs(e.target.value); setErr(''); }} /></label>
         <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => { setFat(e.target.value); setErr(''); }} /></label>
       </div>
+      </div>
+      <div className="rcf-col">
       <FoodAmountRows idp="rc" perServing rows={live.rows} onChange={setRows} cleared={live.cleared} />
       <label>Servings per pack, optional
         <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
@@ -129,6 +134,8 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>
+      </div>
+      </div>
       <div className="rcf-foot">
         {err && <p className="note gerr" role="alert">{err}</p>}
         <div className="rc-actions rc-bar">
