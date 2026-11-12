@@ -492,37 +492,61 @@ describe('dayDate: the date a board was worked', () => {
   const card = (id, ex) => ({ id, day: 1, type: 'single', items: [{ ex }] });
   const a = card('a', 'hack'), b = card('b', 'legext');
   const WK = '2026-09-27';
+  const none = { done: {} };
   const entry = (slot, d, extra = {}) => ({ d, slot, wk: WK, w: 100, s: 3, r: 5, ...extra });
 
   it('is null when nothing is logged', () => {
-    expect(dayDate([a, b], {}, WK)).toBeNull();
-    expect(dayDate([], { hack: [entry('a', '2026-09-29')] }, WK)).toBeNull();
+    expect(dayDate([a, b], {}, WK, none)).toBeNull();
+    expect(dayDate([], { hack: [entry('a', '2026-09-29')] }, WK, none)).toBeNull();
   });
   it('is the date most of the cards were logged on, so one moved-in card cannot take it over', () => {
     const c = card('c', 'curl');
     const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-30')], curl: [entry('c', '2026-09-29')] };
-    expect(dayDate([a, b, c], logs, WK)).toBe('2026-09-30');
+    expect(dayDate([a, b, c], logs, WK, none)).toBe('2026-09-30');
   });
   it('goes to the later date on a tie (a session past midnight)', () => {
     const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-29')] };
-    expect(dayDate([a, b], logs, WK)).toBe('2026-09-30');
+    expect(dayDate([a, b], logs, WK, none)).toBe('2026-09-30');
   });
   it('counts a card once, by its earliest entry', () => {
     const logs = { hack: [entry('a', '2026-09-29'), entry('a', '2026-09-30')], legext: [entry('b', '2026-09-30')] };
-    expect(dayDate([a, b], logs, WK)).toBe('2026-09-30');
+    expect(dayDate([a, b], logs, WK, none)).toBe('2026-09-30');
   });
   it('ignores other weeks and cards that are not in the column', () => {
     const logs = { hack: [entry('a', '2026-09-22', { wk: '2026-09-20' }), entry('a', '2026-09-30')], legext: [entry('b', '2026-09-28')] };
-    expect(dayDate([a], logs, WK)).toBe('2026-09-30');
+    expect(dayDate([a], logs, WK, none)).toBe('2026-09-30');
   });
   it('works out the week from the date when an entry has no week field', () => {
     const e = { d: '2026-09-29', slot: 'a', w: 100, s: 3, r: 5 };
-    expect(dayDate([a], { hack: [e] }, WK)).toBe('2026-09-29');
-    expect(dayDate([a], { hack: [e] }, '2026-09-20')).toBeNull();
+    expect(dayDate([a], { hack: [e] }, WK, none)).toBe('2026-09-29');
+    expect(dayDate([a], { hack: [e] }, '2026-09-20', none)).toBeNull();
+  });
+  it('with the week, a day nothing is ticked on is not stamped, even when moved-in cards carry dated entries', () => {
+    const logs = { hack: [entry('a', '2026-09-30', { auto: true })], legext: [entry('b', '2026-09-30', { auto: true })] };
+    expect(dayDate([a, b], logs, WK, { done: {} })).toBeNull();
+    expect(dayDate([a, b], logs, WK, { done: { a: true } })).toBe('2026-09-30');
+  });
+  it('with the week, only ticked cards vote: a moved-in majority that is not done cannot outvote the worked card', () => {
+    const c = card('c', 'curl');
+    const logs = { hack: [entry('a', '2026-09-30', { auto: true })], legext: [entry('b', '2026-09-29', { auto: true })], curl: [entry('c', '2026-09-29', { auto: true })] };
+    expect(dayDate([a, b, c], logs, WK, none)).toBeNull();
+    expect(dayDate([a, b, c], logs, WK, { done: { a: true } })).toBe('2026-09-30');
+  });
+  it('a card logged by hand counts even when it is not ticked; a check-off entry of a card that is not done does not', () => {
+    expect(dayDate([a], { hack: [entry('a', '2026-09-30')] }, WK, none)).toBe('2026-09-30');
+    expect(dayDate([a], { hack: [entry('a', '2026-09-30', { auto: true })] }, WK, none)).toBeNull();
+  });
+  it('a skipped superset keeps the date of an exercise that was ticked; a skipped single card never votes', () => {
+    const pair = { id: 'p', day: 1, type: 'superset', items: [{ ex: 'hack' }, { ex: 'legext' }] };
+    const c = card('c', 'curl');
+    const week = { done: { 'p#0': true }, skipped: { p: true, c: true } };
+    const logs = { hack: [entry('p', '2026-09-30', { auto: true })], curl: [entry('c', '2026-09-29', { auto: true })] };
+    expect(dayDate([pair, c], logs, WK, week)).toBe('2026-09-30');
+    expect(dayDate([c], logs, WK, week)).toBeNull();
   });
   it('counts hand-logged sessions and every exercise of a pair', () => {
     const pair = { id: 'p', day: 1, type: 'superset', items: [{ ex: 'hack' }, { ex: 'legext' }] };
-    expect(dayDate([pair], { legext: [entry('p', '2026-10-01', { auto: undefined })] }, WK)).toBe('2026-10-01');
+    expect(dayDate([pair], { legext: [entry('p', '2026-10-01', { auto: undefined })] }, WK, none)).toBe('2026-10-01');
   });
 });
 
