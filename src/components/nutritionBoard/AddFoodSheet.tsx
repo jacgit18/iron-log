@@ -101,7 +101,8 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const st = () => useAppStore.getState();
   const plan = (kind: 'r' | 'm', id: string, name: string) => { const e = st().addPlanItem(day, kind, id, meal); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[meal]}.`); };
   const addFood = (f: Food) => {
-    onMsg(runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n }).text);
+    const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
+    onMsg(run.error ?? run.text); // a refusal shows the store's words alone, never 'Added 0 from ...'
   };
   if (flow === 'quick') {
     const items = quickItems(diet, recipes);
