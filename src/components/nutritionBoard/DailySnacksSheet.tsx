@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { addSnack, removeSnack, setSnackPortion, snackPortion } from '../../lib/dailySnacks.js';
 import { servingNumbers } from '../../lib/dietLog.js';
 import { findMatches, MAX_FIND_MATCHES } from '../../lib/dietPlan.js';
+import { macroLine } from '../../lib/macroLine.js';
 import { MAX_DAILY_SNACKS } from '../../shared/diet.js';
 import type { DailySnack } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -34,7 +35,7 @@ export default function DailySnacksSheet() {
           </label>
           {choices.length > 0
             ? <ul className="nb-snacklist" aria-label="Recipes and foods">
-              {choices.map(r => <li key={r.id} className="nb-snackrow"><span className="nb-snackname"><b>{r.n}</b><small>{Math.round(servingNumbers(r, 1)?.kcal ?? 0)} kcal · {r.p} g protein</small></span><button type="button" className="btn sm" aria-label={`Add ${r.n} to daily snacks`} onClick={() => pick(r.id)}>Add</button></li>)}
+              {choices.map(r => <li key={r.id} className="nb-snackrow"><span className="nb-snackname"><b>{r.n}</b><small>{macroLine({ kcal: servingNumbers(r, 1)?.kcal ?? 0, p: r.p ?? 0 })}</small></span><button type="button" className="btn sm" aria-label={`Add ${r.n} to daily snacks`} onClick={() => pick(r.id)}>Add</button></li>)}
             </ul>
             : <p className="note">{q.trim() ? 'No recipe or food with numbers matches that.' : 'Every recipe and food with numbers is already a daily snack.'}</p>}
           {choices.length >= MAX_FIND_MATCHES && <p className="note">Showing the first {MAX_FIND_MATCHES}. Type to narrow the list.</p>}
