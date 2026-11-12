@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, expectScheduledAt, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, expectScheduledAt, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief supplement-label-scan: Scan the bottle's label on the add sheet (a miss, or Add as new) and Scan label on a supplement you typed. The validator, the route, the allowance and the messages are
 // node tests (supplementScan.test.ts, scan.test.ts, supplementAllowance.test.ts, scanPhoto.test.ts); what a node test cannot catch is the wiring: the camera input, the preview before Add, the amounts
@@ -54,7 +54,7 @@ test('a miss offers Scan the bottle’s label, shows what was read before Add, a
   await closeSupplementEditor(page);
   const col = todayCol(page);
   await col.getByLabel('Zzyzx drops', { exact: false }).first().check();
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   await expect(page.getByRole('dialog').locator('#stt-vitaminD')).toContainText('50 mcg');
 });
 

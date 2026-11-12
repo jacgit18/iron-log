@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief supplement-nutrient-totals, PR 2: what is in a supplement (typed on its sheet), the Totals sheet, and the warning line under a day's ticks. The sums, limits and words are node tests
 // (supplementNutrients.test.ts, supplementTotalsView.test.ts); this covers the wiring a node test cannot: the form rows, the sheet, the link, the warning, phone width and axe. The fixed clock is Thursday 2026-09-24.
@@ -39,7 +39,7 @@ test('a day with no nutrient data has a Totals sheet that says what to do and no
   await closeSupplementEditor(page);
   const col = todayCol(page);
   await expect(col.locator('.nb-suppwarn')).toHaveCount(0);
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   await expect(dialog(page)).toContainText('Add what is in a supplement, or log a food with a barcode scan or Find food, to see totals.');
   await dialog(page).getByRole('button', { name: 'Add to Plain' }).click();
   await expect(page.locator('#supp-add-nutrient')).toBeVisible(); // the item's own sheet, with the nutrient rows
@@ -51,7 +51,7 @@ test('ticking supplements adds up what is in them, warns past the limit and the 
   const col = todayCol(page);
   await col.getByLabel('Mag A', { exact: false }).first().check();
   await expect(col.locator('.nb-suppwarn')).toHaveCount(0); // 200 mg of 350
-  await col.getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(col);
   const s = dialog(page);
   await expect(s.locator('#stt-magnesium')).toContainText('200 mg');
   await expect(s.locator('#stt-magnesium')).toContainText('57% of the limit');
@@ -72,7 +72,7 @@ test('Totals sheet has no axe violations (light and dark) and does not scroll si
   await page.setViewportSize({ width: 375, height: 800 });
   await setUp(page);
   await todayCol(page).getByLabel('Mag B', { exact: false }).first().check();
-  await todayCol(page).getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(todayCol(page));
   await dialog(page).getByRole('button', { name: 'Everything scheduled' }).click(); // 400 mg of magnesium: the over-the-limit row is the one with the strongest colour
   await expect(dialog(page).locator('#stt-magnesium')).toContainText('Over the limit by 50 mg');
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
@@ -91,7 +91,7 @@ test('removing every nutrient row clears what the item lists', async ({ page }) 
   await page.getByRole('button', { name: 'Save' }).click();
   await closeSupplementEditor(page);
   await todayCol(page).getByLabel('Mag A', { exact: false }).first().check();
-  await todayCol(page).getByRole('button', { name: 'Totals' }).click();
+  await openDayTotals(todayCol(page));
   await expect(dialog(page).locator('#stt-magnesium')).toHaveCount(0);
 });
 
@@ -102,7 +102,7 @@ test('a person who is not an admin sees the nutrient rows, the Totals button and
   await col.getByLabel('Mag A', { exact: false }).first().check();
   await col.getByLabel('Mag B', { exact: false }).first().check(); // 400 mg of magnesium: over the limit
   await expect(col.locator('.nb-suppwarn')).toContainText('Over an upper limit today: Magnesium');
-  await expect(col.getByRole('button', { name: /^Totals/ })).toBeVisible();
+  await expect(col.locator('.nb-vit-tog, [id^="nb-supp-totals-"]').first()).toBeVisible(); // Totals is reached from the meter or the section button
   await openSupplementEditor(page);
   await page.getByRole('button', { name: /^Edit Mag A/ }).click();
   await expect(page.locator('#supp-add-nutrient')).toBeVisible();
