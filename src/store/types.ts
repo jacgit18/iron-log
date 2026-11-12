@@ -309,6 +309,7 @@ export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
   addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  copyDietEntry(id: string, toDay: string, move?: boolean): { id: string | null; error: string | null }; // the same food on another day (numbers, micronutrients and hour kept); a move also removes the original and offers Undo (brief nutrition-move-copy-eaten)
   updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null; micro?: Micro | null }): string | null; // an error text, or null when saved
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
