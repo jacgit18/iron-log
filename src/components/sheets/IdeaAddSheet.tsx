@@ -6,6 +6,7 @@ import { ideaDayChoices } from '../../lib/ideaDays.js';
 import { todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import Sheet from '../Sheet.jsx';
+import '../Pill.css';
 import './MoveSheet.css';
 import '../program/RowMenuSheet.css';
 import './IdeaAddSheet.css';
@@ -31,8 +32,8 @@ export default function IdeaAddSheet({ id }: { id: string }) {
     <Sheet>
       <h2 className="cond">Add {name}</h2>
       <div className="iaseg" role="group" aria-label="When to add it">
-        <button type="button" className="btn" aria-pressed={mode === 'week'} onClick={() => setMode('week')}>This week only</button>
-        <button type="button" className="btn" aria-pressed={mode === 'program'} onClick={() => setMode('program')}>Every week (program)</button>
+        <button type="button" className="pillbtn" aria-pressed={mode === 'week'} onClick={() => setMode('week')}>This week only</button>
+        <button type="button" className="pillbtn" aria-pressed={mode === 'program'} onClick={() => setMode('program')}>Every week (program)</button>
       </div>
       <p className="note iahelp">{mode === 'week' ? 'Adds a card to the week you are viewing. Next week it is gone.' : 'Adds it to your program, so it comes back every week.'}</p>
       <div className="mvs-label" id="ia-day">Day</div>
