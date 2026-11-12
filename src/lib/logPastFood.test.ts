@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import { shiftDay } from './dietLog.js';
 import type { Food } from './foodMacros.js';
-import { logPastFood, pastFoodAsRecipe } from './logPastFood.js';
+import { logPastFood, pastFoodAsRecipe, pastFoodOf } from './logPastFood.js';
 
 const TODAY = '2026-11-11';
 const chili: Food = { n: 'Chili', kcal: 400, p: 30, c: 40, f: 12 };
@@ -24,41 +24,45 @@ describe('a past food as a log control recipe', () => {
   });
 });
 
+describe('pastFoodOf', () => {
+  it('accepts a food and keeps only what it knows', () => {
+    expect(pastFoodOf({ n: 'Chili', kcal: 400, p: 30, c: 40, junk: 1 })).toEqual({ n: 'Chili', kcal: 400, p: 30, c: 40 });
+  });
+  it('refuses anything else', () => {
+    for (const bad of [null, undefined, 'Chili', 5, {}, { n: '', kcal: 1, p: 1 }, { n: 'X', kcal: -1, p: 1 }, { n: 'X', kcal: 1, p: NaN }, { n: 'X', kcal: '1', p: 1 }]) expect(pastFoodOf(bad)).toBeNull();
+  });
+});
+
 describe('logPastFood', () => {
   it('logs scaled numbers without a recipe link and words it', () => {
     const { s, ports } = fake();
-    const made = logPastFood(ports, chili, 1.5, TODAY, TODAY);
+    const made = logPastFood(ports, pastFoodAsRecipe(chili), 1.5, TODAY, TODAY);
     expect(made.ok).toBe(true);
     expect(s.entries).toHaveLength(1);
     expect(s.entries[0]).toMatchObject({ d: TODAY, n: 'Chili', kcal: 600, p: 45, c: 60, f: 18 });
     expect(s.entries[0]).not.toHaveProperty('from');
     if (made.ok) expect(made.text).toMatch(/^Logged Chili: .* to today\.$/);
   });
-  it('keeps the recipe link a past food already had', () => {
-    const { s, ports } = fake();
-    logPastFood(ports, { ...chili, from: 'r9' }, 1, TODAY, TODAY);
-    expect(s.entries[0]?.from).toBe('r9');
-  });
   it('Undo removes only that entry', () => {
     const { s, ports } = fake();
-    logPastFood(ports, { n: 'Tea', kcal: 5, p: 0 }, 1, TODAY, TODAY);
-    const made = logPastFood(ports, chili, 1, TODAY, TODAY);
+    logPastFood(ports, pastFoodAsRecipe({ n: 'Tea', kcal: 5, p: 0 }), 1, TODAY, TODAY);
+    const made = logPastFood(ports, pastFoodAsRecipe(chili), 1, TODAY, TODAY);
     if (made.ok) made.undo();
     expect(s.entries.map(e => e.n)).toEqual(['Tea']);
   });
   it('refuses a day ahead (there is no recipe to plan) and logs nothing', () => {
     const { s, ports } = fake();
-    const made = logPastFood(ports, chili, 1, shiftDay(TODAY, 1), TODAY);
+    const made = logPastFood(ports, pastFoodAsRecipe(chili), 1, shiftDay(TODAY, 1), TODAY);
     expect(made.ok).toBe(false);
     expect(s.entries).toHaveLength(0);
   });
   it('refuses numbers out of range', () => {
     const { s, ports } = fake();
-    expect(logPastFood(ports, { n: 'Huge', kcal: 99999999, p: 1 }, 1, TODAY, TODAY).ok).toBe(false);
+    expect(logPastFood(ports, pastFoodAsRecipe({ n: 'Huge', kcal: 99999999, p: 1 }), 1, TODAY, TODAY).ok).toBe(false);
     expect(s.entries).toHaveLength(0);
   });
   it('passes the store error on', () => {
-    const made = logPastFood({ addDietEntry: () => ({ id: null, error: 'Up to 20 entries a day.' }), removeDietEntry: () => {} }, chili, 1, TODAY, TODAY);
+    const made = logPastFood({ addDietEntry: () => ({ id: null, error: 'Up to 20 entries a day.' }), removeDietEntry: () => {} }, pastFoodAsRecipe(chili), 1, TODAY, TODAY);
     expect(made).toEqual({ ok: false, error: 'Up to 20 entries a day.' });
   });
 });

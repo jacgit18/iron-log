@@ -3,6 +3,7 @@ import { ateMax, packServings, servingNumbers } from '../../lib/dietLog.js';
 import { macroLine, macroWords, type MacroParts } from '../../lib/macroLine.js';
 import { amountText, unitWord } from '../../lib/foodUnit.js';
 import { actionWord, dayRange, isAhead, logOrPlan, startAmount, type Ports } from '../../lib/logOrPlan.js';
+import { logPastFood } from '../../lib/logPastFood.js';
 import { startMeal } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
@@ -29,10 +30,11 @@ const ports = (): Ports => {
 };
 
 /** `day` (the day the screen shows) when it is one the control offers, else today. */
-export default function LogControl({ recipe, day: from, onChange }: { recipe: Recipe; day?: string; onChange?: (done: boolean) => void }) {
+export default function LogControl({ recipe, day: from, onChange, bare = false }: { recipe: Recipe; day?: string; onChange?: (done: boolean) => void; /** A food you logged before with no recipe behind it (`pastFoodAsRecipe`): log only, no plan days, no pair suggestion. */ bare?: boolean }) {
   const uid = useId();
   const today = ymd(useToday(s => s.today)); // the shared "today" (it moves at midnight), not a Date read during render
-  const { min, max } = dayRange(today);
+  const { min, max: planMax } = dayRange(today);
+  const max = bare ? today : planMax;
   const [day, setDay] = useState(typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from) && from >= min && from <= max ? from : today);
   const [servings, setServings] = useState(() => startAmount(recipe));
   const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); });
@@ -47,7 +49,7 @@ export default function LogControl({ recipe, day: from, onChange }: { recipe: Re
   const set = (d: boolean) => onChange?.(d);
   const go = () => {
     if (done) return; // a second tap never logs twice; Undo then Log again is a new log
-    const made = logOrPlan(ports(), recipe, shown, day, today, ahead ? meal : null);
+    const made = bare ? logPastFood(ports(), recipe, shown, day, today) : logOrPlan(ports(), recipe, shown, day, today, ahead ? meal : null);
     if (!made.ok) { setErr(made.error); return; }
     setErr(''); setDone({ text: made.text, undo: made.undo, key: Date.now() }); set(true);
   };
@@ -80,7 +82,7 @@ export default function LogControl({ recipe, day: from, onChange }: { recipe: Re
       ) : (
         <div className="lc-go"><button type="button" className="btn primary" onClick={go}>{word}</button></div>
       )}
-      {done && !ahead && <PairSuggestion key={done.key} recipe={recipe} day={day} today={today} />}
+      {done && !ahead && !bare && <PairSuggestion key={done.key} recipe={recipe} day={day} today={today} />}
     </div>
   );
 }
