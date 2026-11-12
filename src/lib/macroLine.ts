@@ -19,6 +19,7 @@ export function macroLine(m: MacroParts): string {
 
 /** The same numbers in words for a screen reader: "410 calories, 22 grams protein, 58 grams carbs, 9 grams fat" (the short line would be read as the letters P, C and F). Same rules as `macroLine`: only the parts it has, "" when none. */
 export function macroWords(m: MacroParts): string {
-  const g = (v: number | undefined, name: string): string => (has(v) ? `${fmtNum(tenth(v))} grams ${name}` : '');
-  return [has(m.kcal) ? `${fmtNum(Math.round(m.kcal))} calories` : '', g(m.p, 'protein'), g(m.c, 'carbs'), g(m.f, 'fat')].filter(Boolean).join(', ');
+  const g = (v: number | undefined, name: string): string => (has(v) ? `${fmtNum(tenth(v))} ${tenth(v) === 1 ? 'gram' : 'grams'} ${name}` : '');
+  const kcal = has(m.kcal) ? `${fmtNum(Math.round(m.kcal))} ${Math.round(m.kcal) === 1 ? 'calorie' : 'calories'}` : '';
+  return [kcal, g(m.p, 'protein'), g(m.c, 'carbs'), g(m.f, 'fat')].filter(Boolean).join(', ');
 }

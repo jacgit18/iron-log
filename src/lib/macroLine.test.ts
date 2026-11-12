@@ -39,6 +39,7 @@ describe('macroWords', () => {
     expect(macroWords({ kcal: 1520, p: 42 })).toBe('1,520 calories, 42 grams protein');
     expect(macroWords({ kcal: 419.6, p: 31.04, c: 47.75 })).toBe('420 calories, 31 grams protein, 47.8 grams carbs');
     expect(macroWords({ kcal: 90, p: 0 })).toBe('90 calories, 0 grams protein');
+    expect(macroWords({ kcal: 1, p: 1, f: 1.04 })).toBe('1 calorie, 1 gram protein, 1 gram fat');
     expect(macroWords({ kcal: NaN })).toBe('');
     expect(macroWords({})).toBe('');
   });
