@@ -218,7 +218,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   };
   const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id), sauces), [activeText, items, recipes, recipe?.id, sauces]);
-  const typed = (s: string): number | undefined => (s.trim() && Number.isFinite(Number(s)) ? Number(s) : undefined);
+  const typed = (s: string): number | undefined => { const n = Number(s.trim().replace(',', '.')); return s.trim() && Number.isFinite(n) ? n : undefined; }; // a comma decimal counts
   const typedLine = macroLine({ kcal: typed(kcal), p: typed(protein), c: typed(carbs), f: typed(fat) }) || 'Not set';
   const nutLine = fromParts ? rollText || typedLine : typedLine;
   const sv = whole(servings);
