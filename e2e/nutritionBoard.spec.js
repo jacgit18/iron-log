@@ -54,7 +54,7 @@ test('Weeks run Sunday to Saturday: This week holds today and the days before it
 test('the toolbar names its day, starts on today and follows the day you tap; an earlier day logs like today', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('.nb-target')).toHaveText('Adding to Thu 24 · today');
-  for (const f of ['Scan barcode', 'Quick add', 'One-off food']) await expect(page.locator('.nb-toolbar').getByRole('button', { name: f, exact: true })).toBeVisible(); // today logs eaten food
+  for (const f of ['Scan and log', 'Quick add', 'One-off food']) await expect(page.locator('.nb-toolbar').getByRole('button', { name: f, exact: true })).toBeVisible(); // today logs eaten food
   await expect(page.locator('.nb-toolbar').getByRole('button', { name: 'Recipes', exact: true })).toHaveCount(0);
   await col(page, '2026-09-26').getByRole('button', { name: /^Sat 26/ }).click();
   await expect(page.locator('.nb-target')).toHaveText('Adding to Sat 26');
@@ -62,7 +62,7 @@ test('the toolbar names its day, starts on today and follows the day you tap; an
   await expect(bar.getByRole('button', { name: 'Recipes', exact: true })).toBeVisible(); // a day ahead plans: its own shortcuts, so the toolbar keeps its shape
   await expect(bar.getByRole('button', { name: 'Saved meals', exact: true })).toBeVisible();
   await expect(bar.getByRole('button', { name: 'Quick add' })).toHaveCount(0);
-  await expect(bar.getByRole('button', { name: 'Scan barcode', exact: true })).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Scan and log', exact: true })).toHaveCount(0);
   const edge = sel => page.locator(sel).evaluate(e => { const c = getComputedStyle(e); return { border: c.borderColor, ring: c.boxShadow }; });
   const picked = await edge('.nb-col[data-day="2026-09-26"]'), todayEdge = await edge('.nb-col.today');
   expect(picked.ring).not.toBe('none'); expect(todayEdge.ring).toBe('none'); // the accent ring marks only the picked day
@@ -138,7 +138,7 @@ test('a day ahead plans recipes into the picked meal, and its meters count the p
   await openNutrition(page);
   await col(page, '2026-09-25').getByRole('button', { name: /^Fri 25/ }).click();
   const sheet = await openAdd(page);
-  await expect(sheet.getByRole('button', { name: /^(Quick add|One-off food|Scan barcode)/ })).toHaveCount(0); // food is eaten on the day; ahead only plans
+  await expect(sheet.getByRole('button', { name: /^(Quick add|One-off food|Scan and log)/ })).toHaveCount(0); // food is eaten on the day; ahead only plans
   await sheet.getByRole('button', { name: 'Lunch' }).click();
   await sheet.getByRole('button', { name: /^Recipes/ }).click();
   await sheet.getByRole('button', { name: 'Plan Chili for Lunch' }).click();
@@ -329,7 +329,7 @@ test.describe('on a phone', () => {
       const add = await box('#nb-add');
       const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
       expect(three).toHaveLength(3);
-      expect(await page.locator('.nb-tbtns .btn').allInnerTexts()).toEqual(['Scan barcode', 'Quick add', 'One-off food', 'Add food']); // Add food is last, so it is the rightmost
+      expect(await page.locator('.nb-tbtns .btn').allInnerTexts()).toEqual(['Scan and log', 'Quick add', 'One-off food', 'Add food']); // Add food is last, so it is the rightmost
       expect(three.every(t => Math.abs(t.y - add.y) < 1 && t.h >= 43.5 && Math.abs(t.w - add.w) < 1)).toBe(true); // one row, four equal buttons
       expect(add.x).toBeGreaterThan(await page.locator('.nb-tbtns .btn').nth(2).evaluate(e => e.getBoundingClientRect().x));
       await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; }); // enlarged text: still one row, Add food still rightmost, nothing scrolls sideways
@@ -349,7 +349,7 @@ test.describe('on a phone', () => {
     await expect(page.locator('#nb-add')).toBeVisible();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Recipes', 'Saved meals', 'Add food']);
     await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
-    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan barcode', 'Quick add', 'One-off food', 'Add food']);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan and log', 'Quick add', 'One-off food', 'Add food']);
     await expect(page.getByText('Last week\'s food cannot be changed')).toHaveCount(0);
   });
 });

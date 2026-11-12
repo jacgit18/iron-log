@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { RECIPE_CATEGORY_LABEL } from '../shared/recipes.js';
+import { ADD_FLOWS } from './nutritionBoard.js';
 import { RECIPE_TABS } from './recipeList.js';
 import { bannedLabel, WORDING } from './wording.js';
 
@@ -101,5 +102,11 @@ describe('one spelling for the same button', () => {
     const files = [...walk('src/components'), 'src/lib/nutritionBoard.ts'];
     const hits = files.flatMap(f => { const t = readFileSync(f, 'utf8'); return DRIFT.filter(d => d.bad.test(t)).map(d => `${f}: say "${d.use}"`); });
     expect(hits).toEqual([]);
+  });
+});
+
+describe('Scan and log wording', () => {
+  it('names the scan that saves and logs, in the table and on the Nutrition add way', () => {
+    expect(WORDING.find(r => r.say === ADD_FLOWS.barcode.label)?.notThis).toContain('Scan barcode'); // the row is found by the label the toolbar renders, so a rename of either side fails here
   });
 });
