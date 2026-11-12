@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementIngredient, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { Micro } from '../shared/foodMicro.ts';
@@ -318,9 +318,13 @@ export interface DietSlice {
   addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
-  removePlanItem(day: string, index: number): void;
+  removePlanItem(day: string, index: number): void; // a listed daily snack removed from a day is skipped on that day only
+  saveDailySnacks(list: DailySnack[]): void; // the daily snack list (cfg.diet.snacks, at most 6; brief daily-snacks); an empty list clears it
+  skipDailySnack(day: string, id: string): void; // a listed snack is not shown on that day (it returns on the others)
+  realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (outside the plan window; a day already holding 8 planned things still takes it, snacks never count toward the 8)
+  unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
-  planToShopping(days: string[], month?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `ids` are the items it created, for Undo
+  planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo
   uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark
   setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }

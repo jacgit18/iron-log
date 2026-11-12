@@ -1,5 +1,5 @@
-import { MAX_PLAN_ITEMS, PLAN_SLOTS, samePlanItem } from '../shared/diet.js';
-import type { PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
+import { MAX_DAY_ITEMS, MAX_PLAN_ITEMS, PLAN_SLOTS, isDailySnackItem, plannedCount, samePlanItem } from '../shared/diet.js';
+import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { servingNumbers } from './dietLog.js';
 import { SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
@@ -11,7 +11,8 @@ import { sortByName } from './sort.js';
 export const SLOT_LABEL: Record<PlanSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
 export const MARK_LABEL: Record<PlateMark, string> = { protein: 'Protein', carb: 'Carb', veg: 'Veg' };
 
-export interface BoardItem { index: number; r: Resolved; fat: number | undefined }
+/** `virtual` is a listed daily snack shown on this day but not stored (brief daily-snacks): ticking, changing or moving it stores a real item first. */
+export interface BoardItem { index: number; r: Resolved; fat: number | undefined; virtual?: true }
 /** One meal of a day. `slot` null is the group of items with no meal set. `fixes` are the one-tap additions for what the meal lacks. */
 export interface BoardSlot { slot: PlanSlot | null; items: BoardItem[]; kcal: number; share: number | null; need: readonly PlateMark[]; have: PlateMark[]; fixes: { mark: PlateMark; recipe: Recipe; why: string | null }[] }
 export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[] }
@@ -40,7 +41,7 @@ export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: read
 /** One day of the plan as meals: each item with its numbers, each meal with its calories against its share of the target, its plate check and fixes, and the day's three totals. */
 export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}): BoardDay {
   const items = plan[day] ?? [];
-  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r) }; });
+  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r), ...(it.v ? { virtual: true as const } : {}) }; });
   const live = rows.filter(x => !x.r.gone);
   const sum = (pick: (x: BoardItem) => number | undefined) => round1(live.reduce((a, x) => a + (pick(x) ?? 0), 0));
   const foods = live.map(x => ({ r: { ...(x.r.kcal !== undefined ? { kcal: x.r.kcal } : {}), ...(x.fat !== undefined ? { f: x.fat } : {}) }, x: 1 }));
@@ -63,7 +64,7 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
 type Moved = { plan: Plan; error: null } | { plan: null; error: string };
 
 /** `plan` with the item at `index` of `fromDay` moved to meal `slot` of `toDay` (the same day changes only its meal). An error text when the day is outside the window or full, or the food is already in that meal. */
-export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string): Moved {
+export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string, snacks?: readonly DailySnack[]): Moved {
   const it = plan[fromDay]?.[index];
   if (!it) return { plan: null, error: 'That is gone.' };
   if (!inWindow(toDay, today)) return { plan: null, error: 'You can plan today and the next two weeks.' };
@@ -72,7 +73,8 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
   if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
-  if (toDay !== fromDay && target.length >= MAX_PLAN_ITEMS) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };
+  const counts = !isDailySnackItem(moved, snacks), counted = !isDailySnackItem(it, snacks); // a listed daily snack in Snack never counts toward MAX_PLAN_ITEMS (brief snacks-day-cap); moving one into another meal makes it a planned thing
+  if ((toDay !== fromDay || (counts && !counted)) && (counts ? plannedCount(target, snacks) >= MAX_PLAN_ITEMS : target.length >= MAX_DAY_ITEMS)) return { plan: null, error: `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` };
   const from = (plan[fromDay] ?? []).filter((_, i) => i !== index);
   const next: Plan = { ...plan };
   if (toDay === fromDay) next[toDay] = (plan[toDay] ?? []).map((x, i) => (i === index ? moved : x));

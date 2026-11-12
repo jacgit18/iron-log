@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { bwSorted, goalStatus } from '../../lib/body.js';
+import { effectivePlan } from '../../lib/dailySnacks.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { runInstantLog } from '../../lib/instantLog.js';
-import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
+import { recommendInputs } from '../../lib/manageTargets.js';
+import { planLog, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
@@ -22,7 +23,6 @@ import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
-const NO_PLAN: Plan = {};
 
 // Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day, with a stepper under seven.
 // Each day holds six meters (calories, protein, carbs when there is a target or data, fat, supplements, water), its meals with the food eaten in them, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
@@ -31,7 +31,6 @@ export default function NutritionBoard() {
   const today = ymd(now);
   const shown = useDaysShown();
   const phone = usePhoneHeader();
-  const [legendOpen, setLegendOpen] = useState(false);
   const cfg = useAppStore(s => s.cfg);
   const body = useAppStore(s => s.body);
   const supp = useAppStore(s => s.supp);
@@ -46,17 +45,13 @@ export default function NutritionBoard() {
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
   const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
-  const plan = cfg.diet?.plan ?? NO_PLAN;
+  const plan = useMemo(() => effectivePlan(cfg.diet, days, today), [cfg.diet, days, today]); // the stored plan plus the saved daily snacks shown on each day (brief daily-snacks)
   const legacy = useLegacyMeals();
   const targets = useMemo(() => {
-    const weights = bwSorted(body);
-    const latest = weights.length ? Number(weights[weights.length - 1]!.w) : null;
-    const goalLb = cfg.bwGoal ? Number(cfg.bwGoal.w) : null;
-    const g = goalStatus(cfg.bwGoal, body, now);
-    const weeksLeft = g && 'weeksLeft' in g && typeof g.weeksLeft === 'number' ? g.weeksLeft : null;
+    const { latest, goalLb, weeksLeft } = recommendInputs(cfg.bwGoal, body, now);
     const t = targetsFor(cfg.diet, recommend(goalLb, latest, weeksLeft, cfg.diet));
     return { kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs };
-  }, [cfg, body, now]);
+  }, [cfg.bwGoal, cfg.diet, body, now]);
   const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets })), [days, today, plan, recipes, legacy, diet, supp, body, targets]);
   const moveTargets = days.map(d => ({ id: d, label: longDay(d) }));
   const st = () => useAppStore.getState();
@@ -70,7 +65,6 @@ export default function NutritionBoard() {
   };
   const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
   const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
-  const legend = <div className="wb-legend" id="nb-legend" aria-hidden={phone ? undefined : true} hidden={phone && !legendOpen}><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span>{views.some(v => v.meters.some(m => m.key === 'carbs' && !m.hidden)) && <span><i className="nbc" />Carbs</span>}<span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>;
   const target = addingTo(day, today);
   return (
     <section className="wb nb" aria-labelledby="nb-h">
@@ -84,7 +78,6 @@ export default function NutritionBoard() {
         </div>
         {!phone && (
           <div className="nb-headbtns">
-            <button type="button" className="btn sm" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}><span className="nb-short">Targets</span><span className="nb-long">Targets and goal</span></button>
             <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
           </div>
         )}
@@ -101,7 +94,6 @@ export default function NutritionBoard() {
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}</p>
-      {!phone && legend}
       {shown === 7 ? (
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
@@ -109,13 +101,9 @@ export default function NutritionBoard() {
           <DayStepper today={today} day={day} onPick={d => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); }} />
           {phone && (
             <div className="nb-links" role="group" aria-label="Nutrition settings">
-              <button type="button" className="nb-link" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}>Targets</button>
-              <span className="nb-linksep" aria-hidden="true">·</span>
               <button type="button" className="nb-link" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
-              <button type="button" className="nb-link nb-legendbtn" aria-expanded={legendOpen} aria-controls="nb-legend" onClick={() => setLegendOpen(o => !o)}>What the colours mean</button>
             </div>
           )}
-          {phone && legend}
           <div className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}

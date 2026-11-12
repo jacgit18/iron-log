@@ -1,4 +1,5 @@
-import type { DietEntry, Grocery, GroceryMonth, Recipe } from '../types.ts';
+import type { DietCfg, DietEntry, Grocery, GroceryMonth, Recipe } from '../types.ts';
+import { effectivePlan } from './dailySnacks.js';
 import { entriesOn } from './dietLog.js';
 import { isEaten, type Plan } from './dietPlan.js';
 import { missingParts, pantryStatus } from './recipePantry.js';
@@ -17,6 +18,10 @@ export function shoppingRecipeIds(plan: Plan, days: readonly string[], recipes: 
   }
   return [...seen];
 }
+
+/** The recipe ids Week to Shopping buys for: the plan as the board shows it, so the listed daily snacks count on the days they show (today to today + 13, not skipped that day, not already a real item there), each recipe once. The button's count and the store action both read this, so they cannot disagree. */
+export const plannedShoppingIds = (diet: DietCfg | undefined, days: readonly string[], today: string, recipes: readonly Pick<Recipe, 'id'>[], entries: DietEntry[]): string[] =>
+  shoppingRecipeIds(effectivePlan(diet, days, today), days, recipes, entries);
 
 /** The ids in `after` that were not in `before`: the Shopping items one tap created, so Undo removes those and nothing else. */
 export const idsAdded = (before: readonly { id: string }[], after: readonly { id: string }[]): string[] => {

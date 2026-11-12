@@ -161,9 +161,9 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-03', feature: 'Goal calories and pace', title: 'Missing goal weight, then a recommended target', persona: 'diet-fresh', brief: 'diet-pace',
     steps: [
-      'Open Daily, Nutrition, press Targets and goal and read Daily target: no targets are saved and no goal weight is set.',
-      'In the same sheet, under Goal weight, type a goal 15 lb below the latest body weight (about 180 lb is seeded) and press Save goal. (The "Set a goal weight" button there opens Progress instead; either way works.)',
-      'Read Daily target again.',
+      'Open Daily, Nutrition, press Manage and read Daily targets: no targets are saved and no goal weight is set.',
+      'Manage shows "No goal set" under Weight and goal. Press Edit in Progress (or the "Set a goal weight" button under Daily targets), set a goal 15 lb below the latest body weight (about 180 lb is seeded) in Progress > Trends, then open Nutrition and Manage again.',
+      'Read Daily targets again.',
       'Pick each pace chip in turn: Slow, Steady, Fast.',
     ],
     expected: [
@@ -175,7 +175,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-04', feature: 'Goal calories and pace', title: 'Fast pace is held at the limit; a typed number wins', persona: 'diet-fresh', brief: 'diet-macros-and-goal-calories', edge: true,
     steps: [
-      'In Targets and goal, with a goal weight set below the latest weight (see S-03), pick Fast.',
+      'In Manage, with a goal weight set below the latest weight (see S-03), pick Fast.',
       'Type 3,000 into Calories.',
       'Reload the page.',
       'Press Use recommended.',
@@ -2430,7 +2430,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Look down the page for panels named Diet, Supplements, Water, Food eaten and Last 7 days.',
     ],
     expected: [
-      'The week switcher is a pair of arrows with a This week button; a line under them names the week (for example "This week · Sep 24 to 30"); the buttons at the right read Targets and goal and Manage.',
+      'The week switcher is a pair of arrows with a This week button; a line under them names the week (for example "This week · Sep 24 to 30"); the button at the right reads Manage.',
       'Seven day columns sit side by side; today\'s is named with "· today". Each holds five meters (Calories, Protein, Fat, Supplements, Water), its meals or an Also eaten list (only for food that was not planned), Supplements and Hydration.',
       'None of the old panels is there; food, supplements, water and targets are all reachable from the board (S-199 to S-218).',
     ],
@@ -2479,7 +2479,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On Nutrition read today\'s meters. This account has no targets saved.',
       'Press + Add food, One-off food, add "Rice" 300 kcal and 20 g protein, then Done.',
-      'Press Targets and goal, type 2,200 into Calories (set a goal weight first if the field is not offered) and press Done.',
+      'Press Manage, type 2,200 into Calories (set a goal weight first if the field is not offered) and press Done.',
     ],
     expected: [
       'Before and after Rice, Calories reads "300 kcal" with no "/ target" and the bar is not red; a screen reader adds "no target set".',
@@ -2598,22 +2598,22 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press + Add food and Quick add.',
     ],
     expected: [
-      'Breakfast, Lunch and Dinner each say "Nothing planned" with no button; there is no Snack heading. Eaten says "Nothing logged"; Supplements says "Nothing scheduled"; Hydration shows how many oz are to go and a + Drink button.',
+      'Breakfast, Lunch and Dinner each say "Nothing planned" with no button; Snack sits between Lunch and Dinner and says "No daily snacks yet" with a Set up daily snacks button. Eaten says "Nothing logged"; Supplements says "Nothing scheduled"; Hydration shows how many oz are to go and a + Drink button.',
       'Quick add says "Nothing here yet. Log a few foods and the ones you use most appear."',
     ],
   },
   {
     id: 'S-207', feature: 'Nutrition board', title: 'A day ahead plans recipes and saved meals; it never logs', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Press Next week and pick a day whose Breakfast, Lunch and Dinner all say "Nothing planned" (the seed plans seven days from today, so days later than that are empty). Note whether it has a Snack.',
+      'Press Next week and pick a day whose Breakfast, Lunch and Dinner all say "Nothing planned" (the seed plans seven days from today, so days later than that are empty). Note that Snack is listed between Lunch and Dinner.',
       'Tap that day\'s name, press + Add food, pick Snack, press Recipes. Read the buttons beside each recipe.',
       'Press Plan on Overnight oats. Press Done.',
       'Press This week and tap today\'s name; press + Add food and Recipes.',
     ],
     expected: [
-      'Breakfast, Lunch and Dinner say "Nothing planned" and have no button; there is no Snack.',
+      'Breakfast, Lunch and Dinner say "Nothing planned" and have no button; Snack says "No daily snacks yet" (no daily snacks are saved).',
       'The note reads "Recipes and saved meals you add go into Snack."; each recipe has only Plan (no Log). The notice reads "Planned Overnight oats for Snack."',
-      'A Snack section now holds an Overnight oats card, and that day\'s Calories meter reads its planned calories. Today\'s recipes list has only Log (no Plan), and today\'s add sheet shows no Which meal? question.',
+      'The Snack section now holds an Overnight oats card, and that day\'s Calories meter reads its planned calories. Today\'s recipes list has only Log (no Plan), and today\'s add sheet shows no Which meal? question.',
     ],
   },
   {
@@ -2680,7 +2680,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The goal rises by 16 oz and the Goal breakdown gains a "Hot day" line; training adds 12 oz per 30 minutes, so 60 minutes adds a "Training 60 min" line of 24 oz; the Goal line is the sum.',
       '700 is refused with "Enter training minutes, up to 600" and the field returns to 60.',
-      'Hydration shows tags "Hot day +16" and "Training 60 min +24" and the Water meter uses the new goal. Change base goal opens Targets and goal (S-216).',
+      'Hydration shows tags "Hot day +16" and "Training 60 min +24" and the Water meter uses the new goal. Change base goal opens Manage (S-216).',
     ],
   },
   {
@@ -2712,7 +2712,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-215', feature: 'Nutrition board', title: 'Back closes a sheet and the page keeps its address', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
       'Open Nutrition and note the address (it ends "daily/nutrition").',
-      'Open + Add food and press the browser\'s Back (on a phone the back-swipe). Do the same for + Drink, Targets and goal and Manage.',
+      'Open + Add food and press the browser\'s Back (on a phone the back-swipe). Do the same for + Drink and Manage.',
       'Open Manage, Supplements and library, then press Back.',
     ],
     expected: [
@@ -2721,44 +2721,41 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-216', feature: 'Nutrition board', title: 'Targets and goal: targets, body weight, goal weight and the base water goal in one sheet', persona: 'diet-fresh', brief: 'nutrition-board',
+    id: 'S-216', feature: 'Nutrition board', title: 'Manage: daily targets, read-only weight and goal, and the base water goal in one sheet', persona: 'diet-fresh', brief: 'targets-into-manage',
     steps: [
-      'Press Targets and goal and read the headings: Daily target, Body weight, Goal weight, Water.',
-      'Type your weight in "Weight this week (lb)" and press Save weight. Set a Goal weight and press Save goal.',
-      'Type 2,000 into Calories under Daily target. Then press Change base goal, type 80 and press Use this amount.',
+      'Press Manage and read the headings: Daily targets, Weight and goal, Water, Library.',
+      'Read the two lines under Weight and goal. Press Edit in Progress, then come back to Nutrition and press Manage again.',
+      'Type 2,000 into Calories under Daily targets. Then press Change base goal, type 80 and press Use this amount.',
       'Press Done and read the board\'s Calories and Water meters.',
     ],
     expected: [
-      'The sheet holds all four; Weight this week shows the last weight beside its label and clears after Save weight.',
-      'Saving the goal turns on the recommended targets and pace (Slow, Steady, Fast, S-03); the typed calories replace only calories. The base goal shows "Base goal 80 oz fixed" with a "Use my weight (0.5 oz per lb)" button.',
+      'The sheet holds all four sections; the weight line reads "Current weight: N lb" from the latest weigh-in (or "No weigh-in yet") and the goal line reads "Goal: N lb by date" (or "No goal set"); neither has an input. There is no Targets and goal button on the board and no colour legend.',
+      'Edit in Progress closes the sheet and opens Progress > Trends, where the goal is edited; weight is typed on the board\'s weigh-in row. With a goal, the recommended targets and pace appear (Slow, Steady, Fast, S-03); the typed calories replace only calories. The base goal shows "Base goal 80 oz fixed" with a "Use my weight (0.5 oz per lb)" button.',
       'The board shows Calories against 2,000 and Water against 80 oz plus any hot day or training; a day with a hot day shows 96.',
     ],
   },
   {
-    id: 'S-217', feature: 'Nutrition board', title: 'Targets and goal refuses bad numbers, and Clear goal removes the goal', persona: 'diet-on-target', brief: 'nutrition-board', edge: true,
+    id: 'S-217', feature: 'Nutrition board', title: 'Manage refuses a bad water goal, and Use my weight puts the base goal back', persona: 'diet-on-target', brief: 'targets-into-manage', edge: true,
     steps: [
-      'In Targets and goal type 0 in "Weight this week (lb)" and press Save weight.',
-      'Type 0 in Goal weight (lb) and press Save goal, then enter a real goal and a By date and press Save goal.',
-      'Press Change base goal, type 5 and press Use this amount; then type 80, press Use this amount, press Change base goal and Use my weight.',
-      'Press Clear goal.',
+      'In Manage press Change base goal, type 5 and press Use this amount.',
+      'Type 80, press Use this amount, press Change base goal and Use my weight.',
     ],
     expected: [
-      'The messages read "Enter your weight in lb", "Enter a target weight in lb" and "Enter a daily goal between 8 and 500 oz"; nothing is saved by a refused entry. Save weight and Save goal stay disabled while their field is empty.',
-      'A real goal with a date saves ("Goal saved"). Use my weight puts the base goal back to half the body weight.',
-      'Clear goal empties Goal weight and By and removes the Clear goal button.',
+      'The message reads "Enter a daily goal between 8 and 500 oz"; nothing is saved by a refused entry.',
+      'Use my weight puts the base goal back to half the body weight.',
     ],
   },
   {
-    id: 'S-218', feature: 'Nutrition board', title: 'Manage: supplements and library, Meals and foods (opens Recipes); Targets and goal: Water reminder', persona: 'meal-planner', brief: 'nutrition-board',
+    id: 'S-218', feature: 'Nutrition board', title: 'Manage: supplements and library, Meals and foods (opens Recipes), Water reminder', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Press Manage and read its two rows.',
+      'Press Manage and read its rows.',
       'Press Supplements and library, add a supplement under Noon, press Back to Manage and then Done.',
-      'Press Manage, Meals and foods (opens Recipes); then press Back, press Targets and press Water reminder (below the water goal).',
+      'Press Manage, Meals and foods (opens Recipes); then press Back, press Manage and press Water reminder (under the water goal).',
     ],
     expected: [
-      'The rows read Supplements and library and Meals and foods (opens Recipes), each with a one-line note; there is no Water reminder row.',
+      'The rows read Water reminder, Supplements and library and Meals and foods (opens Recipes), each with a one-line note.',
       'The editor shows the Morning, Noon and Night editor and the whole library; the new supplement appears on every day\'s Supplements.',
-      'Meals and foods (opens Recipes) closes the sheet and opens Recipes; Water reminder in Targets and goal opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
+      'Meals and foods (opens Recipes) closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
     ],
   },
   // ---- Supplement portions (brief supplement-portions, ADR 114). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----
