@@ -60,12 +60,15 @@ export const shortDay = (day: string): string => { const d = parseDate(day); ret
 /** "Sun, Nov 8": the name in a dropdown and in the toolbar's target. */
 export const longDay = (day: string): string => parseDate(day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-/** "Last week · Nov 1 to 7" (a week that crosses a month says both months). */
-export function weekLabel(today: string, offset: WeekOffset): string {
+/** The dates of a week on their own ("Sep 20 to 26"); the phone shows them in the week switcher row after the week name. */
+export function weekDates(today: string, offset: WeekOffset): string {
   const d = weekDays(today, offset), a = parseDate(d[0]!), b = parseDate(d[6]!);
   const m = (x: Date) => x.toLocaleDateString('en-US', { month: 'short' });
-  return `${WEEK_NAME[offset]} · ${m(a)} ${a.getDate()} to ${a.getMonth() === b.getMonth() ? '' : `${m(b)} `}${b.getDate()}`;
+  return `${m(a)} ${a.getDate()} to ${a.getMonth() === b.getMonth() ? '' : `${m(b)} `}${b.getDate()}`;
 }
+
+/** "Last week · Nov 1 to 7" (a week that crosses a month says both months). */
+export const weekLabel = (today: string, offset: WeekOffset): string => `${WEEK_NAME[offset]} · ${weekDates(today, offset)}`;
 
 /** The day dropdown on a phone: three groups of seven, each day named, today marked. */
 export function dayGroups(today: string): { offset: WeekOffset; label: string; days: { id: string; label: string }[] }[] {

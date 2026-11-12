@@ -159,6 +159,9 @@
 .wb-meter.nb-supps-meter i {
   background: var(--m-supp);
 }
+.wb-legend[hidden] {
+  display: none;
+}
 .wb-legend .nbw {
   background: var(--wb-water);
 }
@@ -314,7 +317,7 @@
   border-color: var(--m-supp);
 }
 @media (max-width: 699px) {
-  /* The week switcher is the only thing on the week row (Targets and Manage are links under the day stepper, .nb-links). */
+  /* The week switcher is the only thing on the week row (Targets, Manage and the colour key's link are in .nb-links under the day stepper). */
   .nb-head {
     gap: var(--sp-8);
   }
@@ -356,6 +359,32 @@
   }
   .nb-linksep {
     color: var(--muted);
+  }
+  .nb-legendbtn {
+    margin-left: auto;
+    padding-right: 0;
+    font-weight: 400;
+  }
+  /* Option B (owner 2026-11-12): the week's dates sit in the switcher row, and the status line and the "Adding to" line stay for screen readers only. The date range stays in .nb-weeklab (role=status). */
+  .nb-weekname {
+    font-size: var(--fs-lg);
+  }
+  .nb-weekname::after {
+    content: " · " attr(data-dates);
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .nb-weeklab,
+  .nb-target-quiet {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .nb-tbtns {
     display: grid;
