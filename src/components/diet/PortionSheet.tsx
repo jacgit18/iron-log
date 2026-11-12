@@ -8,6 +8,7 @@ import { useToday } from '../../store/useToday.js';
 import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
 import LogControl from './LogControl.js';
+import UsualLogControl from './UsualLogControl.js';
 import './Diet.css';
 
 // The portion sheet (brief nutrition-quick-log): a food's name and the shared LogControl (brief log-or-plan-control), which holds the portion, the day, Log or Plan and Undo.
@@ -42,7 +43,7 @@ export default function PortionSheet() {
   return (
     <Sheet className="portionsheet">
       <h2 className="cond">{recipe.n}</h2>
-      <LogControl recipe={recipe} day={day} onChange={setDone} />
+      <UsualLogControl recipe={recipe} day={day} onChange={setDone} />
       <div className="actions">
         <button type="button" className="btn" onClick={closeModal}>{done ? 'Done' : 'Cancel'}</button>
       </div>

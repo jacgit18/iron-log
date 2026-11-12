@@ -16,7 +16,7 @@ import { scaleAmount } from '../../lib/recipeScale.js';
 import { linkedRecipe } from '../../lib/recipeSuggest.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import LogControl from '../diet/LogControl.js';
+import UsualLogControl from '../diet/UsualLogControl.js';
 import GoesWith from './GoesWith.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
@@ -119,7 +119,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
 const LogArea = ({ recipe, mine, onEdit }: { recipe: Recipe; mine: boolean; onEdit: () => void }) => {
   if (!mine) return <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>;
   if (!hasMacros(recipe)) return <div className="rc-actions"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
-  return <LogBar><LogControl recipe={recipe} /></LogBar>; // fixed above the tab bar on a phone, under the title from 700 px (RecipeDetail.css)
+  return <LogBar><UsualLogControl recipe={recipe} /></LogBar>; // fixed above the tab bar on a phone, under the title from 700 px (RecipeDetail.css)
 };
 
 // The bar's own height goes to the page as `--rc-bar-h`, so the page keeps exactly that much room under its last line while the bar is fixed.
