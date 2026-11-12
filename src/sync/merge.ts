@@ -56,6 +56,7 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
       done: mergeMap(base.done, ours.done, theirs.done),
       skipped: mergeMap(base.skipped, ours.skipped, theirs.skipped),
       moved: mergeMap(base.moved, ours.moved, theirs.moved),
+      movedOn: mergeMap(base.movedOn || {}, ours.movedOn || {}, theirs.movedOn || {}),
       ph: mergeMap(base.ph, ours.ph, theirs.ph),
       warm: {},
     };

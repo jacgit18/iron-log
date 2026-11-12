@@ -16,6 +16,14 @@ describe('mergeWeek3', () => {
     expect(m.tookTheirs).toBe(true);
   });
 
+  it('a card move and its date from either side both survive, and an undone move takes its date with it', () => {
+    const m = mergeWeek3(week({}), week({ moved: { a: 3 }, movedOn: { a: '2026-10-01' } }), week({ moved: { b: 4 }, movedOn: { b: '2026-10-02' } }));
+    expect(m.week.moved).toEqual({ a: 3, b: 4 });
+    expect(m.week.movedOn).toEqual({ a: '2026-10-01', b: '2026-10-02' });
+    const base = week({ moved: { a: 3 }, movedOn: { a: '2026-10-01' } });
+    expect(mergeWeek3(base, week({}), base).week.movedOn).toBeUndefined();
+  });
+
   it('an untick on either side sticks', () => {
     const base = week({ done: { a: true, b: true } });
     expect(mergeWeek3(base, week({ done: { b: true, c: true } }), base).week.done).toEqual({ b: true, c: true }); // unticked here

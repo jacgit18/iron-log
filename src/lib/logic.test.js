@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, lastSession, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
+  programWeights, bestByPhase, autoLogs, stampMoves, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
   dayClash, clashCount, dailyExercises, planOrder, countsForClash, countsForFinish, isFinished, planCard, planFix,
 } from './logic.js';
 
@@ -483,6 +483,11 @@ describe('stray moved values', () => {
     expect(at.length).toBe(1);
     expect(+at[0]).toBeGreaterThanOrEqual(1); expect(+at[0]).toBeLessThanOrEqual(7);
   });
+  it('normWeek keeps movedOn only for cards that are still moved, with a real date', () => {
+    const w = normWeek({ moved: { a: 3, b: 4 }, movedOn: { a: '2026-09-30', b: 'soon', gone: '2026-09-30' } });
+    expect(w.movedOn).toEqual({ a: '2026-09-30' });
+    expect(normWeek({ moved: {} , movedOn: { a: '2026-09-30' } }).movedOn).toBeUndefined();
+  });
   it('normWeek keeps only moved days 1..7', () => {
     expect(normWeek({ moved: { a: 3, b: 9, c: '4', d: 'x' } }).moved).toEqual({ a: 3, c: 4 });
   });
@@ -543,6 +548,13 @@ describe('dayDate: the date a board was worked', () => {
     const logs = { hack: [entry('p', '2026-09-30', { auto: true })], curl: [entry('c', '2026-09-29', { auto: true })] };
     expect(dayDate([pair, c], logs, WK, week)).toBe('2026-09-30');
     expect(dayDate([c], logs, WK, week)).toBeNull();
+  });
+  it('a card moved here after it was ticked elsewhere does not date this day; entries written once it is here do', () => {
+    const logs = { hack: [entry('a', '2026-09-29')] };
+    const wk = { done: { a: true }, moved: { a: 5 }, movedOn: { a: '2026-09-30' } };
+    expect(dayDate([a], logs, WK, wk)).toBeNull(); // ticked on the 29th on its old day, moved here on the 30th
+    expect(dayDate([a], { hack: [entry('a', '2026-09-29'), entry('a', '2026-10-01')] }, WK, wk)).toBe('2026-10-01');
+    expect(dayDate([a], logs, WK, { done: { a: true }, moved: {} })).toBe('2026-09-29'); // moved back: counts again
   });
   it('counts hand-logged sessions and every exercise of a pair', () => {
     const pair = { id: 'p', day: 1, type: 'superset', items: [{ ex: 'hack' }, { ex: 'legext' }] };
@@ -917,5 +929,18 @@ describe('planCard and planFix: moving one card when a day is finished', () => {
   });
   it('planFix: null when nothing helps', () => {
     expect(planFix(c, fin2({ done: done('a', 'a2', 'b', 'b2', 'c') }), two, 2)).toBeNull(); // Day 3 is started
+  });
+});
+
+describe('stampMoves: week.movedOn follows week.moved', () => {
+  const D = '2026-09-30';
+  it('dates a new or changed move, keeps an unchanged one, and drops an undone one', () => {
+    const before = { moved: { a: 3, b: 4 }, movedOn: { a: '2026-09-28', b: '2026-09-28' } };
+    const after = { moved: { a: 3, b: 6, c: 2 }, movedOn: { a: '2026-09-28', b: '2026-09-28' } };
+    stampMoves(before, after, D);
+    expect(after.movedOn).toEqual({ a: '2026-09-28', b: D, c: D });
+    const undone = { moved: {}, movedOn: after.movedOn };
+    stampMoves({ moved: after.moved }, undone, D);
+    expect(undone.movedOn).toBeUndefined();
   });
 });

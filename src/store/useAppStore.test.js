@@ -538,6 +538,21 @@ describe('day dates', () => {
       expect(dayDate(col5, st().logs, st().weekKey(), st().week)).toBeNull();
     } finally { vi.useRealTimers(); useAppStore.setState({ weekStart: was }); }
   });
+  it('a card ticked on Day 2 and moved to a day with nothing else done does not date that day, and moving it back dates Day 2 again', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const was = st().weekStart; useAppStore.setState({ weekStart: new Date(2026, 10, 8) });
+    try {
+      vi.setSystemTime(new Date('2026-11-10T20:00:00')); st().checkCard('A-d2s1', true);
+      vi.setSystemTime(new Date('2026-11-12T09:00:00')); st().moveSlot('A-d2s1', 7);
+      const cols = () => currentLayout(st().week, st().activeSlots());
+      expect(cols()[7].some(c => c.id === 'A-d2s1')).toBe(true);
+      expect(dayDate(cols()[7], st().logs, st().weekKey(), st().week)).toBeNull();
+      expect(st().week.movedOn).toEqual({ 'A-d2s1': '2026-11-12' });
+      st().moveSlot('A-d2s1', 2);
+      expect(st().week.movedOn).toBeUndefined();
+      expect(dayDate(cols()[2], st().logs, st().weekKey(), st().week)).toBe('2026-11-10');
+    } finally { vi.useRealTimers(); useAppStore.setState({ weekStart: was }); }
+  });
   it('the date stays with the workout when days are swapped', () => {
     st().checkCard('A-d6s1', true);
     st().swapDays(6, 1);

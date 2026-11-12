@@ -5,7 +5,7 @@ import { BUILTIN, BLANK, resolveProgram, padLibrary, exInfo, listBuiltinExercise
 import { weekStartOf, ymd, addDays } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, weekProgKey, weekProgram, ranFor, isFrozen,
-  weekSlots,
+  weekSlots, stampMoves, defaultLogDate,
   normExperiments,
 } from '../lib/logic.js';
 import { makeBatchWriter } from '../lib/saveBatch.js';
@@ -353,7 +353,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   mutateWeek(fn) {
     if (get().blocked()) return false;
-    const week = structuredClone(get().week); fn(week);
+    const before = get().week; const week = structuredClone(before); fn(week); stampMoves(before, week, defaultLogDate(get().weekStart)); // dates each card move (week.movedOn)
     // Write down what the week runs (ADR 022), from the program it shows: so once it is over, later program changes leave it alone.
     week.ran = ranFor(weekProgram(get().cfg, get().programs, week, get().weekKey()), weekProgKey(get().cfg, week, get().weekKey()), week, get().weekKey());
     set({ week }); get().saveWeek(); return true;

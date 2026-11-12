@@ -198,6 +198,8 @@ export interface Week {
   done: Record<string, true>;
   skipped: Record<string, true>;
   moved: Record<string, number>;
+  /** The date each entry of `moved` was made (YYYY-MM-DD), so a card ticked on its old day before it moved does not date the day it landed on. Dropped when the move is undone. */
+  movedOn?: Record<string, string>;
   ph: Record<string, PhaseKey>;
   warm: Record<string, Record<string, boolean>>;
   rest?: number[];
