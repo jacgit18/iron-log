@@ -202,7 +202,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-06', feature: 'Saved meals', title: 'Save today\'s foods as a meal; a name a recipe has is refused', persona: 'diet-on-target', brief: 'diet-saved-meals', edge: true,
     steps: [
-      'Open Nutrition, press + Add food, then Save as a meal. Press Save as meal, tick Oatmeal with berries and Greek yogurt and save them as "Breakfast".',
+      'Open Nutrition, press + Add food, then Save as a meal. Press Save as a meal, tick Oatmeal with berries and Greek yogurt and save them as "Breakfast".',
       'Tick the same two foods again and save as "breakfast" (small b).',
       'Try saving with a blank name.',
     ],
@@ -266,9 +266,9 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-11', feature: 'Suggest and copy', title: 'Copy from yesterday with one food unticked', persona: 'diet-on-target', brief: 'diet-suggest-and-copy',
+    id: 'S-11', feature: 'Suggest and copy', title: 'Copy yesterday with one food unticked', persona: 'diet-on-target', brief: 'diet-suggest-and-copy',
     steps: [
-      'On Nutrition press + Add food, then Copy yesterday, then Copy from yesterday: yesterday\'s foods are all ticked.',
+      'On Nutrition press + Add food, then Copy yesterday, then Copy yesterday again: yesterday\'s foods are all ticked.',
       'Untick one and press Add selected.',
     ],
     expected: [
@@ -2328,7 +2328,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-185', feature: 'Saved meals move', title: 'Save as meal makes a Recipes meal, and a name a recipe has is refused', persona: 'diet-on-target', brief: 'saved-meals-into-recipes', edge: true,
     steps: [
-      'Open Nutrition, press + Add food, then Save as a meal. Press Save as meal, tick Oatmeal with berries and Greek yogurt, name it "Breakfast" and save.',
+      'Open Nutrition, press + Add food, then Save as a meal. Press Save as a meal, tick Oatmeal with berries and Greek yogurt, name it "Breakfast" and save.',
       'Open Recipes, press Meals and find it. Then save another meal named "breakfast".',
     ],
     expected: [
@@ -2520,9 +2520,9 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Done. Tap tomorrow\'s name and press + Add food again.',
     ],
     expected: [
-      'Today lists eight ways: Quick add, Scan barcode, One-off food, Find food, Saved meals, Recipes, Copy yesterday and Save as a meal, each with a one-line hint.',
+      'Today lists eight ways in three groups, each with an icon and a one-line hint: Fastest (Quick add, Scan barcode, One-off food), From what you have (Find food, Recipes) and Whole days and meals (Saved meals, Copy yesterday, Save as a meal in Recipes); every row starts at the same left edge.',
       'The sheet\'s title changes to the way you opened; Back to ways of adding returns to the list; Done closes the sheet.',
-      'A day ahead lists only Saved meals and Recipes (food is eaten on the day; ahead it only plans).',
+      'A day ahead lists only Recipes and Saved meals, under From what you have and Whole days and meals (food is eaten on the day; ahead it only plans).',
     ],
   },
   {
@@ -2554,8 +2554,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-203', feature: 'Nutrition board', title: 'Copy yesterday and Save as a meal', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'Press + Add food, Copy yesterday, then Copy from yesterday. Untick one food and press Add selected.',
-      'Press Back to ways of adding, then Save as a meal. Press Save as meal, tick two foods from today, name it "Lunch two" and save.',
+      'Press + Add food, Copy yesterday, then Copy yesterday again. Untick one food and press Add selected.',
+      'Press Back to ways of adding, then Save as a meal. Press Save as a meal, tick two foods from today, name it "Lunch two" and save.',
       'Delete every food in today\'s Also eaten list, then press + Add food and Save as a meal.',
     ],
     expected: [
@@ -2748,16 +2748,16 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-218', feature: 'Nutrition board', title: 'Manage: supplements and library, Saved meals and foods, Water reminder', persona: 'meal-planner', brief: 'nutrition-board',
+    id: 'S-218', feature: 'Nutrition board', title: 'Manage: supplements and library, Meals and foods (opens Recipes), Water reminder', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
       'Press Manage and read its three rows.',
       'Press Supplements and library, add a supplement under Noon, press Back to Manage and then Done.',
-      'Press Manage, Saved meals and foods; then press Back and press Manage, Water reminder.',
+      'Press Manage, Meals and foods (opens Recipes); then press Back and press Manage, Water reminder.',
     ],
     expected: [
-      'The rows read Supplements and library, Saved meals and foods and Water reminder, each with a one-line note.',
+      'The rows read Supplements and library, Meals and foods (opens Recipes) and Water reminder, each with a one-line note.',
       'The editor shows the Morning, Noon and Night editor and the whole library; the new supplement appears on every day\'s Supplements.',
-      'Saved meals and foods closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
+      'Meals and foods (opens Recipes) closes the sheet and opens Recipes; Water reminder opens Settings (the reminder is under Alerts). Back from either should return to Nutrition (expected from the code; not yet walked by hand, so record what you see).',
     ],
   },
   // ---- Supplement portions (brief supplement-portions, ADR 114). Written from the brief and the code's own labels; nothing here has been walked by the owner. ----

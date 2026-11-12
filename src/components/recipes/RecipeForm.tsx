@@ -26,7 +26,7 @@ import IngredientRows, { type Row } from './IngredientRows.js';
 import ServingSize from './ServingSize.js';
 import './RecipeFormSections.css';
 import Icon from '../Icon.js';
-import { FORM_SECTIONS, initialOpen, sectionOf, sectionSummary, toggled, unfoldFor } from '../../lib/recipeFormSections.js';
+import { FORM_SECTIONS, fieldForSaveError, initialOpen, sectionOf, sectionSummary, toggled, unfoldFor } from '../../lib/recipeFormSections.js';
 import type { FormField, FormSection, SectionFacts } from '../../lib/recipeFormSections.js';
 
 const TOO_FEW = 'Type at least one ingredient first.';
@@ -65,7 +65,6 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [microKcal, setMicroKcal] = useState<number | undefined>(recipe?.kcal);
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [tagText, setTagText] = useState('');
-  const [nutOpen, setNutOpen] = useState(false);
   const [own, setOwn] = useState(recipe?.own === true); // Use my own numbers: the typed numbers stay and the roll-up from the linked parts is only a hint
   const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...refreshLink(i, recipes, recipe.id), amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
   const [lastServings, setLastServings] = useState<number | null>(recipe ? recipe.servings ?? null : 1); // the servings the amounts are for
@@ -149,10 +148,10 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     if (servingG.trim() && !(whole(servingG) && whole(servingG)! <= MAX_SERVING_G)) { fail('servingG', `Grams per serving must be a whole number from 1 to ${MAX_SERVING_G}.`); return; }
     const rolled = parts && !own && roll && roll.counted > 0 ? roll.per : null; // the meal's numbers come from its parts: they are saved into the same four fields everything else reads
     const k = rolled ? cleanKcal(rolled.kcal) : kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = rolled ? cleanProtein(rolled.p) : protein.trim() ? cleanProtein(Number(protein)) : undefined;
-    if (k === null) { setNutOpen(true); fail('kcal', 'Calories per serving must be a number from 1 to 9,999.'); return; }
-    if (pr === null) { setNutOpen(true); fail('protein', 'Protein per serving must be a number from 0 to 999 g.'); return; }
+    if (k === null) { fail('kcal', 'Calories per serving must be a number from 1 to 9,999.'); return; }
+    if (pr === null) { fail('protein', 'Protein per serving must be a number from 0 to 999 g.'); return; }
     const cb = rolled ? (rolled.c !== undefined ? cleanGrams(rolled.c) : undefined) : carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = rolled ? (rolled.f !== undefined ? cleanGrams(rolled.f) : undefined) : fat.trim() ? cleanGrams(Number(fat)) : undefined;
-    if (cb === null || ft === null) { setNutOpen(true); fail(cb === null ? 'carbs' : 'fat', 'Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
+    if (cb === null || ft === null) { fail(cb === null ? 'carbs' : 'fat', 'Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
     if (!isVideoUrl(url) || /\s/.test(url.trim())) { fail('url', VIDEO_ERR); return; }
     const pending = pendingTag(), allTags = pending ? [...tags, pending] : tags;
     if (allTags.length > MAX_TAGS_PER_RECIPE) { fail('tags', `A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
@@ -162,7 +161,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
     const microOut = rolled ? rolled.micro : parts ? undefined : microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, k ?? -1); // a meal on its own numbers keeps none
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}) });
-    if (e) { setErr(e); return; }
+    if (e) { fail(fieldForSaveError(e), e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
   };
@@ -282,7 +281,6 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
         <div className="rc-nut">
           <div className="rc-nuthead">
             <strong>Nutrition per serving</strong>
-            <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} hidden={fromParts} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
           </div>
           <p className="note">{nutLine}</p>
           {parts && roll && (
@@ -297,7 +295,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
             {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
           </div>
           {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={adoptNumbers} />}
-          {nutOpen && !fromParts && (
+          {!fromParts && (
             <div className="rc-nutfields">
               <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
               <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>

@@ -40,6 +40,17 @@ export function stepDay(today: string, day: string, delta: number): string {
   return next < lo ? lo : next > hi ? hi : next;
 }
 
+/** How many day columns the board shows at a screen width (brief nutrition-header-sheet-wording): seven from 1440 px, three from 1000, two from 768, else one. */
+export type DaysShown = 1 | 2 | 3 | 7;
+export const daysShown = (width: number): DaysShown => (width >= 1440 ? 7 : width >= 1000 ? 3 : width >= 768 ? 2 : 1);
+
+/** The `n` days of `week` to draw when `day` is the picked one: the picked day first and the days after it, held inside the week (a Saturday on a three-day board shows Thu, Fri, Sat). */
+export function windowDays(week: readonly string[], day: string, n: number): string[] {
+  const at = Math.max(0, week.indexOf(day));
+  const start = Math.min(at, Math.max(0, week.length - n));
+  return week.slice(start, start + n);
+}
+
 export type DayKind = 'past' | 'today' | 'future';
 export const dayKind = (day: string, today: string): DayKind => (day < today ? 'past' : day === today ? 'today' : 'future');
 
@@ -79,19 +90,30 @@ export const startMeal = (last: PlanSlot | null | undefined, minutes: number): P
 export type AddFlow = 'quick' | 'barcode' | 'oneoff' | 'find' | 'meals' | 'recipes' | 'copy' | 'savemeal';
 export const ADD_FLOWS: Record<AddFlow, { label: string; hint: string }> = {
   quick: { label: 'Quick add', hint: 'Foods you log most, and suggestions for now' },
-  barcode: { label: 'Scan barcode', hint: 'Camera, then save the food and log it' },
+  barcode: { label: 'Scan barcode', hint: 'Camera, then save the food to Recipes and log it' },
   oneoff: { label: 'One-off food', hint: 'Type a name, calories and protein' },
   find: { label: 'Find food', hint: 'Your past meals, your recipes and the food database; a label photo if a scan misses' },
   meals: { label: 'Saved meals', hint: 'Add a meal you saved' },
   recipes: { label: 'Recipes', hint: 'Add a recipe by portion' },
   copy: { label: 'Copy yesterday', hint: 'Tick what to copy from the day before' },
-  savemeal: { label: 'Save as a meal', hint: 'Turn what you ate into a saved meal' },
+  savemeal: { label: 'Save as a meal in Recipes', hint: 'Turn what you ate into a meal in Recipes' },
 };
 const EAT_FLOWS: readonly AddFlow[] = ['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes', 'copy', 'savemeal'];
 const PLAN_FLOWS: readonly AddFlow[] = ['meals', 'recipes'];
 /** The shortcut buttons beside + Add food, so the toolbar keeps its shape on every editable day: today logs (scan, quick add, one-off), a day ahead plans (recipes, saved meals), last week has none. */
 export const toolbarFlows = (day: string, today: string): readonly AddFlow[] => (day === today ? ['barcode', 'quick', 'oneoff'] : day > today ? ['recipes', 'meals'] : []);
 export const addFlows = (day: string, today: string): readonly AddFlow[] => (day === today ? EAT_FLOWS : day > today ? PLAN_FLOWS : []);
+
+/** The add sheet's menu in three labelled groups (brief nutrition-header-sheet-wording); a group with no way on that day is left out (a day ahead has no Fastest group). */
+export const ADD_GROUPS: readonly { label: string; flows: readonly AddFlow[] }[] = [
+  { label: 'Fastest', flows: ['quick', 'barcode', 'oneoff'] },
+  { label: 'From what you have', flows: ['find', 'recipes'] },
+  { label: 'Whole days and meals', flows: ['meals', 'copy', 'savemeal'] },
+];
+export const addGroups = (day: string, today: string): { label: string; flows: AddFlow[] }[] => {
+  const on = addFlows(day, today);
+  return ADD_GROUPS.map(g => ({ label: g.label, flows: g.flows.filter(f => on.includes(f)) })).filter(g => g.flows.length > 0);
+};
 
 /** Which way a day's numbers are counted: eaten food for last week and today, the plan for days ahead. */
 export type MeterBasis = 'eaten' | 'planned';

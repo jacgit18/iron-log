@@ -81,6 +81,7 @@ test('Type a list keeps the rows of lines you did not change, and the pin and Sk
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await page.getByRole('button', { name: /^Sauce/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await page.getByRole('button', { name: 'Type a list' }).click();
@@ -102,14 +103,14 @@ test('an empty list says so instead of clearing the rows', async ({ page }) => {
   await expect(page.getByText('Type at least one ingredient first.')).toBeVisible();
 });
 
-test('Nutrition per serving is folded away, shows its summary, and opens with Edit', async ({ page }) => {
+test('Nutrition fields are there once the section is open (no second Edit button), and folding it shows the summary', async ({ page }) => {
   await open(page);
-  await expect(page.getByLabel('Calories per serving')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
+  await expect(page.getByRole('button', { name: 'Edit nutrition per serving' })).toHaveCount(0);
   await page.getByLabel('Calories per serving').fill('420');
   await page.getByLabel('Protein per serving (g)').fill('32');
-  await page.getByRole('button', { name: 'Done with nutrition per serving' }).click();
-  await expect(page.getByText('420 kcal · 32 g protein')).toBeVisible();
+  await page.getByRole('button', { name: /^Nutrition per serving/ }).click();
+  await expect(page.getByLabel('Calories per serving')).toBeHidden();
+  await expect(page.locator('.rcf-sum', { hasText: '420 kcal · 32 g protein' })).toBeVisible();
 });
 
 test.describe('on a phone', () => {
@@ -138,6 +139,7 @@ test.describe('on a phone, a recipe with an Alternative', () => {
     await page.reload();
     await page.click('#tab-daily'); await page.click('#daily-recipes');
     await page.locator('.rc-row', { hasText: /Oats/ }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await unfoldAll(page);
     const alt = page.getByLabel('Alternative for ingredient 1');

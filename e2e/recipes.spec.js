@@ -84,6 +84,7 @@ test('with nothing in Groceries yet, every ingredient is missing and Add missing
 test('a recipe can be deleted with Undo', async ({ page }) => {
   await recipes(page);
   await write(page, 'Short lived', ['salt']);
+  await page.getByRole('button', { name: 'More actions' }).click();
   const del = page.getByRole('button', { name: /Delete the recipe Short lived|Tap again to delete/ });
   await del.click(); await del.click();
   await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();

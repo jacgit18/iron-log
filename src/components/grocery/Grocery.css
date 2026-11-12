@@ -9,38 +9,9 @@
   flex-wrap: wrap;
   gap: var(--sp-8);
 }
-/* The view switch (To get, At home, Spending) is the second level under the Daily tabs, which are the filled pill: an underline for the selected
-   view, no fill, so the two levels do not look like one control. Sizes and targets are unchanged. */
-.groc .gtop .seg {
-  margin-left: 0;
-  background: none;
-  padding: 0;
-  gap: var(--sp-4);
-  border-radius: 0;
-  /* At a large text size the three views wrap to a second row instead of running past the page edge. */
-  flex-wrap: wrap;
-  max-width: 100%;
-  /* On its own row under the heading, centred. */
+/* The view switch (Shopping, Bought, Inventory) is the SubNav pill row (SubNav.tsx), on its own row under the heading. */
+.groc .gtop .subnav {
   flex: 1 1 100%;
-  justify-content: center;
-}
-.groc .gtop .seg button {
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: var(--fs-md);
-  border-radius: 0;
-  border-bottom: 3px solid transparent;
-}
-.groc .gtop .seg button.on {
-  background: none;
-  color: var(--ink);
-  border-bottom-color: var(--accent);
-}
-/* Three short words with their counts fit one row down to a 320px phone (brief groceries-spending-buttons-quick-add); at the largest text sizes the row still wraps rather than scroll sideways. */
-@media (max-width:400px) {
-  .groc .gtop .seg button {
-    padding: 0 var(--sp-10);
-  }
 }
 .gmonth {
   display: flex;

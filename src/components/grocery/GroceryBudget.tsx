@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import ArmedButton from '../ArmedButton.jsx';
 import { budgetListNote, budgetStatus } from '../../lib/groceryBudget.js';
 import { centsText, money, parseDollars } from '../../lib/grocery.js';
 import './GroceryBudget.css';
@@ -24,7 +25,7 @@ export default function GroceryBudget({ spent, planned }: { spent: number; plann
           onChange={e => { setValue(e.target.value); setBad(false); }} /></span>
         <button type="submit" className="btn sm primary">Save</button>
         <button type="button" className="btn sm ghost" onClick={() => setEditing(false)}>Cancel</button>
-        {budget && <button type="button" className="btn sm ghost" onClick={() => { if (setBudget(null)) setEditing(false); }}>Remove</button>}
+        {budget && <ArmedButton className="btn sm ghost" id="groc-budget-rm" aria-label="Remove the monthly budget" label="Remove" armedLabel="Tap again to remove" onConfirm={() => { if (setBudget(null)) setEditing(false); }} />}
         {bad && <p className="note gbwarn" id="groc-budget-err" role="alert">Enter an amount in dollars, like 400 or 425.50.</p>}
       </form>
     );

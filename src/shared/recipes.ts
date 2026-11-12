@@ -76,7 +76,7 @@ const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c =
 export const MAX_UNIT = 20;
 export const UNIT_RE = /^\p{L}[\p{L} '-]*$/u;
 export const isUnit = (s: string): boolean => s.length >= 1 && s.length <= MAX_UNIT && UNIT_RE.test(s);
-/** A usual amount of a ready-made food: 0.5 to 99 in half steps, and not 1 (that is what Ate this opens at anyway). */
+/** A usual amount of a ready-made food: 0.5 to 99 in half steps, and not 1 (that is what the log control opens at anyway). */
 export const cleanUsual = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0.5 && v <= 99 && v !== 1 && Math.round(v * 2) === v * 2 ? v : null);
 
 const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max ? v : null);

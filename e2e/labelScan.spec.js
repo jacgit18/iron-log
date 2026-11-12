@@ -68,6 +68,7 @@ test.describe('as an admin', () => {
     await page.getByLabel('Calories per serving').fill('420');
     await page.getByLabel('Protein per serving (g)').fill('22');
     await page.getByRole('button', { name: 'Save food' }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: /Edit/ }).first().click();
     await expect(page.getByRole('button', { name: 'Scan label' })).toHaveCount(0);
   });

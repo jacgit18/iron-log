@@ -22,7 +22,6 @@ const setAmount = async (page, i, text) => {
   await page.getByRole('button', { name: 'Done', exact: true }).click();
 };
 // The nutrition card is folded away: Edit shows its four fields, and its summary line shows what is set.
-const editNutrition = page => page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
 const start = async (page, servings = '2') => {
   await open(page);
   await startRecipe(page);
@@ -58,7 +57,6 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await panel(page).getByRole('button', { name: 'Use these numbers' }).click();
   await expect(panel(page)).toHaveCount(0);
   await expect(page.getByText('370 kcal · 47.7 g protein · 28 g carbs · 5.5 g fat')).toBeVisible();
-  await editNutrition(page);
   await expect(page.getByLabel('Calories per serving')).toHaveValue('370');
   await expect(page.getByLabel('Fat per serving (g), optional')).toHaveValue('5.5');
   await page.getByLabel('Calories per serving').fill('365'); // still editable
@@ -66,9 +64,9 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await page.reload();
   await open(page);
   await page.locator('.rc-row', { hasText: /Chicken and rice/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
-  await editNutrition(page);
   await expect(page.getByLabel('Calories per serving')).toHaveValue('365');
   await expect(page.getByLabel('Protein per serving (g)')).toHaveValue('47.7');
 });
@@ -77,7 +75,6 @@ test('changing Servings keeps the per-serving numbers for gram amounts, and Clos
   await stub(page);
   await start(page, '4');
   await setAmount(page, 1, '100 g');
-  await editNutrition(page);
   await page.getByLabel('Carbs per serving (g), optional').fill('9');
   await page.getByRole('button', { name: 'Calculate from ingredients' }).click();
   await pickFood(page, 'chicken breast', 'Chicken breast, raw · 120 kcal per 100 g');
@@ -99,7 +96,6 @@ test('a food with no carbs or fat leaves those two as typed, and says so', async
   await page.getByLabel('Servings', { exact: true }).fill(''); // servings start at 1; emptied, the totals say they assumed 1
   await page.getByLabel('Ingredient 1', { exact: true }).fill('seasoning');
   await setAmount(page, 0, '10 g');
-  await editNutrition(page);
   await page.getByLabel('Carbs per serving (g), optional').fill('9');
   await page.getByRole('button', { name: 'Calculate from ingredients' }).click();
   await pickFood(page, 'seasoning', 'Seasoning mix · 50 kcal per 100 g');
