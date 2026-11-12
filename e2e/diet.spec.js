@@ -5,7 +5,7 @@ import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Diet inside Nutrition (ADR 086): the daily calorie, protein, carbs and fat targets (the Diet box under the week board), and the food log, now a day column of the Nutrition week board with food added from the add sheet.
 // The rules (the target numbers, totals, caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, adding food, the log control on
-// a recipe, Undo, the board's days (last week read-only, a day ahead has no eaten list), and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
+// a recipe, Undo, the board's days (last week logs and edits eaten food, a day ahead has no eaten list), and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
 const seedBody = (page, goal, weight) => page.addInitScript(([g, w]) => {
   if (localStorage.getItem('ironlog:config/main')) return; // seed once: the script runs again on every reload and would wipe what the test saved
   localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: g } }));
@@ -154,7 +154,7 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   await expect(eaten(page)).toHaveCount(1);
 });
 
-test('the food log follows the board: today is a separate day from yesterday (read-only, last week) and from a day ahead (no eaten list)', async ({ page }) => {
+test('the food log follows the board: today is a separate day from yesterday (last week) and from a day ahead (no eaten list)', async ({ page }) => {
   await nutrition(page);
   const sheet = await oneOff(page);
   await addFood(sheet, 'Toast', 90, 3);

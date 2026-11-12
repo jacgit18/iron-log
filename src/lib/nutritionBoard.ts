@@ -78,7 +78,7 @@ export function dayGroups(today: string): { offset: WeekOffset; label: string; d
 /** The toolbar's target: "Adding to Sun 8 · today". */
 export const addingTo = (day: string, today: string): string => `Adding to ${shortDay(day)}${day === today ? ' · today' : ''}`;
 
-/** Whether the day's planned or eaten rows can be edited in place: today and the planned days. Adding food works on every day (`addMode`); an earlier day's existing rows stay as they are. */
+/** Whether the day's planned meals can be ticked and moved: today and the days ahead (an earlier day has no plan). Adding food works on every day (`addMode`), and an earlier day's eaten rows open the row sheet to edit or delete (`EatenRows`); this does not gate them. */
 export const foodEditable = (day: string, today: string): boolean => day >= today;
 
 /** The meal the add sheet starts on, from the clock: before 10:30 Breakfast, to 14:30 Lunch, to 16:30 Snack, to 21:30 Dinner, else Snack. `minutes` is the minutes since midnight. */

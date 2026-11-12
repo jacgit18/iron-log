@@ -107,7 +107,7 @@ describe('the toolbar and what can be added', () => {
     expect(addMode(TODAY, TODAY)).toBe('log');
     expect(addMode('2026-11-09', TODAY)).toBe('plan');
     expect(addFlows('2026-11-07', TODAY)).toEqual(addFlows(TODAY, TODAY));
-    expect(foodEditable('2026-11-07', TODAY)).toBe(false); // rows of an earlier day are not edited in place
+    expect(foodEditable('2026-11-07', TODAY)).toBe(false); // an earlier day has no planned meals to tick (its eaten rows still open the row sheet)
     expect(foodEditable(TODAY, TODAY)).toBe(true);
     expect(addFlows('2026-11-10', TODAY)).toEqual(['meals', 'recipes']);
     expect(addFlows(TODAY, TODAY)).toEqual(expect.arrayContaining(['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes']));
