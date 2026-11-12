@@ -22,6 +22,7 @@ p{margin:28px 0 0;font:500 44px/1.25 B,Arial,sans-serif;color:#E6EAE7;max-width:
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 await page.setContent(card);
+// oxlint-disable-next-line no-undef -- runs in the browser page, where document exists
 await page.evaluate(() => document.fonts.ready);
 await writeFile(new URL('../public/og-image.png', import.meta.url), await page.screenshot());
 console.log('wrote public/og-image.png');
