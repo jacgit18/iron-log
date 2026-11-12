@@ -2883,7 +2883,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-229', feature: 'Food vitamins and minerals', title: 'A scanned barcode logs the food with its vitamins and minerals', persona: 'diet-fresh', brief: 'food-vitamins-minerals', device: true,
     steps: [
-      'On a phone, press Add food, then Find food, press the scan button there and scan a packaged food with a nutrition panel (a cereal box works).',
+      'On a phone, press Add food, then Find food, press Scan to fill form and scan a packaged food with a nutrition panel (a cereal box works).',
       'Check the amounts in the form against the box (Sodium and Fiber are the ones Open Food Facts lists most often), then press Add.',
     ],
     expected: [
