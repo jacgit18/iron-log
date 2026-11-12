@@ -3525,7 +3525,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Recipes holds 300 recipes, so the four saved meals could not move into it.',
       'The old list is still offered with a note: "Some saved meals are waiting because Recipes is full (300 recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens." One tap logs the meal as before.',
-      'After a delete and a reload at least one saved meal has moved into Recipes and the list reads from Recipes; the meals that still do not fit stay listed with the note.',
+      'After one delete and a reload exactly one saved meal (Usual breakfast, the first) has moved into Recipes, which is full again; Chicken bowl, Post-workout and Quick dinner stay listed with the note.',
     ],
   },
 ];
