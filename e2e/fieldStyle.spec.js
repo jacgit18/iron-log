@@ -82,3 +82,22 @@ test('Settings: every text field, number field and select is styled, on each Tra
   await page.locator('.sdrill[id^="max-"]').first().click(); // an exercise's screen has the "I tested this" field
   expect(await unstyled(page, 1)).toEqual([]);
 });
+
+// R6 (design-language slice 6): the Recipes form's fields look the same as the app's `.field` fields (the Nutrition one-off food sheet is the reference).
+// Compared on computed border width, colour, radius and background, in light and dark.
+const LOOK = el => { const s = getComputedStyle(el); return { border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`, radius: s.borderTopLeftRadius, background: s.backgroundColor }; };
+for (const scheme of ['light', 'dark']) {
+  test(`Recipes form fields match the app's fields (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.click('#tab-daily'); await page.click('#daily-supplements');
+    await page.click('#nb-add');
+    await page.getByRole('dialog').getByRole('button', { name: /^One-off food/ }).click();
+    const ref = await page.locator('.field input').locator('visible=true').first().evaluate(LOOK);
+    await page.reload();
+    await page.click('#tab-daily'); await page.click('#daily-recipes');
+    await page.locator('#recipes-new').click();
+    await page.locator('#recipes-new-list').getByRole('button', { name: 'Recipe or meal' }).click();
+    const name = await page.getByLabel('Name', { exact: true }).evaluate(LOOK);
+    expect(name).toEqual(ref);
+  });
+}
