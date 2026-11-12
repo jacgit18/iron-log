@@ -149,7 +149,7 @@ export default function SupplementAddSheet({ backToManage, found, listing, start
           <input id="suppadd-q" type="search" autoComplete="off" maxLength={100} value={q} placeholder="e.g. creatine, Nature Made" autoFocus={!isTouchScreen()}
             onChange={e => { setQ(e.target.value); setScan(null); setPick(null); setExact(false); setErr(''); setAll(false); setMore(null); }} />
         </label>
-        {syncing && !pick && <button type="button" className="btn sm" id="suppadd-scan" onClick={scanCamera}>Scan barcode</button>}
+        {syncing && !pick && <button type="button" className="btn sm" id="suppadd-scan" onClick={scanCamera}>Scan to fill form</button>}
         {!pick && upcNote && <p className={`note${upcState === 'looking' ? '' : ' err'}`} role="status">{upcNote}</p>}
         {!pick && !upcNote && scan && <p className="note" role="status">{fromBarcodeText(scan.product)}</p>}
         {!pick && !upc && (
