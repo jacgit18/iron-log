@@ -4,7 +4,7 @@ import { entryFromFood } from '../../lib/dietLog.js';
 import { runInstantLog } from '../../lib/instantLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
-import { ADD_FLOWS, addingTo, dayView, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -16,6 +16,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
 import DayStepper from './DayStepper.js';
+import ShoppingButton from './ShoppingButton.js';
 import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
@@ -92,8 +93,9 @@ export default function NutritionBoard() {
       <div className="nb-toolbar" role="group" aria-label="Add food">
         <span className="nb-target nb-target-quiet">{target}</span>
         <div className="nb-tbtns">
-          <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
+          {!phone && foodEditable(day, today) && <ShoppingButton week={days} today={today} onMsg={setMsg} />}
           {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
+          <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
         </div>
       </div>
       <RemovedNotice scope="diet" expires />

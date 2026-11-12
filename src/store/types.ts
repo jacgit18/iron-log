@@ -319,6 +319,7 @@ export interface DietSlice {
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
   removePlanItem(day: string, index: number): void;
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
+  planToShopping(days: string[], month?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `ids` are the items it created, for Undo
   uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark
   setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
@@ -328,6 +329,7 @@ export interface RecipesSlice {
   recipes: Recipe[];
   recipesLoaded: boolean; // the recipes list has been read (from this browser, or pulled from the account): a write built on it before then could replace the account's list
   saveRecipes(): void;
+  setRecipeUsual(id: string, usual: number | undefined): string | null; // the usual portion alone (undefined clears it); an error text when the recipe is gone, else null
   toggleRecipeFav(id: string): void; // the star on a recipe (brief recipes-find-type-tabs); saved with the recipes
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
