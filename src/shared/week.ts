@@ -1,6 +1,6 @@
 import { PH_KEYS, DAY_COUNT } from '../lib/data.js';
 import { normItem, normProgram } from './validate.js';
-import type { ExtraCard, SplitCard, Week, WeekLayout } from '../types.ts';
+import type { ExtraCard, MoveLeg, SplitCard, Week, WeekLayout } from '../types.ts';
 
 /* ---------- Week shape: the week's check-offs, moves, phase picks and extra cards ----------
    normWeek takes anything (a stored doc, a file, a database snapshot) and returns the clean week. Framework-free, so the
@@ -42,6 +42,14 @@ const cleanMap = <T>(o: unknown, f: (v: any) => T | undefined): Record<string, T
   if (o && typeof o === 'object' && !Array.isArray(o)) Object.entries(o as object).forEach(([k, v]) => { if (KEY_RE.test(k) && !UNSAFE.has(k)) { const x = f(v); if (x !== undefined) out[k] = x; } });
   return out;
 };
+export const MAX_LEGS = 12;
+// A card's move trail: legs with a real date and a day 0..DAY_COUNT, in date order (a tie keeps the order written), the newest MAX_LEGS.
+const trailIn = (v: unknown): MoveLeg[] | undefined => {
+  if (!Array.isArray(v)) return undefined;
+  const legs = v.filter((l): l is MoveLeg => !!l && typeof l.on === 'string' && DATE_RE.test(l.on) && Number.isInteger(l.day) && l.day >= 0 && l.day <= DAY_COUNT).map(l => ({ on: l.on, day: l.day }));
+  legs.sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0)); // sort-ok: ISO date strings
+  return legs.length ? legs.slice(-MAX_LEGS) : undefined;
+};
 const flagOf = (v: unknown) => (v ? true : undefined);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // The rest dates of a stored week: a map from rest column to date, or the one string older files kept (the first rest day's date).
@@ -76,6 +84,9 @@ export const normWeek = (w?: any): Week => {
   const out: Week = { prog: w && (w.prog === 'A' || w.prog === 'B') ? w.prog : null, done: cleanMap(w && w.done, flagOf), skipped: cleanMap(w && w.skipped, flagOf), moved: cleanMap(w && w.moved, v => v), ph: cleanMap(w && w.ph, v => (PH_KEYS.includes(v) ? v : undefined)), warm: {} };
   Object.entries(cleanMap(w && w.warm, v => v)).forEach(([day, items]) => { const m = cleanMap(items, v => (typeof v === 'boolean' ? v : undefined)); if (Object.keys(m).length) out.warm[day] = m; });
   out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)] as [string, number]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
+  const trail = cleanMap(w && w.moveTrail, trailIn); // a trail whose last leg is not where the card sits now is dropped
+  Object.keys(trail).forEach(k => { if (trail[k][trail[k].length - 1].day !== (out.moved[k] ?? 0)) delete trail[k]; });
+  if (Object.keys(trail).length) out.moveTrail = trail;
   Object.assign(out, layoutOf(w));
   const stash: NonNullable<Week['stash']> = {};
   for (const k of ['A', 'B'] as const) { const l = layoutOf(w && w.stash && w.stash[k]); if (Object.keys(l).length) stash[k] = l; }
