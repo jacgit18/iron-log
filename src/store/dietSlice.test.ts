@@ -399,6 +399,16 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
     expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }]);
   });
+  it('a shown snack changed in portion or moved is stored first, at the index realizeDailySnack returns, and the other listed snack is untouched', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
+    const i = st().realizeDailySnack(today, 'bar') as number;
+    st().setPlanPortion(today, i, 1.5);
+    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'bar', x: 1.5, s: 'snack' }]);
+    const j = st().realizeDailySnack(tomorrow, 'yog') as number;
+    expect(st().movePlanItem(tomorrow, j, tomorrow, 'dinner')).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'dinner' }]);
+    expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }, { id: 'bar' }]);
+  });
   it('removing a snack from the list forgets its skips, so adding it back shows it again', () => {
     st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
     st().skipDailySnack(today, 'yog'); st().skipDailySnack(today, 'bar');
