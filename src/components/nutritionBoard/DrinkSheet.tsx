@@ -60,7 +60,7 @@ export default function DrinkSheet() {
         {h.lines.map(l => <div key={l.label}><span>{l.label}</span><b>{l.label.startsWith('Base') ? '' : '+'}{fmtOz(l.oz)} oz</b></div>)}
         <div><span><b>Goal</b></span><b>{fmtOz(h.goal)} oz</b></div>
       </div>
-      <button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => st().openModal({ type: 'nbtargets' })}>Change base goal</button>
+      <button type="button" className="btn sm ghost" id="water-goal-targets" onClick={() => st().openModal({ type: 'nbtargets' })}>Change base goal</button>
       {!h.future && (
         <>
           <div className="sect">Logged</div>

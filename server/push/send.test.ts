@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const sendNotification = vi.fn();
-vi.mock('web-push', () => ({ default: { sendNotification } }));
+vi.mock('web-push', () => ({ sendNotification }));
 
 const { webPushSender } = await import('./send.ts');
 const config = { subject: 'mailto:owner@example.com', publicKey: 'p'.repeat(87), privateKey: 'k'.repeat(43) };

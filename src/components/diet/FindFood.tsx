@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { entryFromFood, entryText } from '../../lib/dietLog.js';
-import { findFoods, scaleFood, type Food } from '../../lib/foodMacros.js';
+import { entryText } from '../../lib/dietLog.js';
+import { findFoods } from '../../lib/foodMacros.js';
 import { foodTypeOf } from '../../lib/foodType.js';
 import { FOOD_TYPE_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -9,25 +9,15 @@ import './Diet.css';
 
 // "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one. A recipe opens the shared LogControl (brief log-or-plan-control: portion, day, Log or Plan); a food you logged before has no recipe to plan, so it keeps the small inline Less / More / Add. Nothing is stored for this; it reads the log and the recipes.
 // The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
-export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
+export default function FindFood({ day, onFood, reopen, resume }: { day: string; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [q, setQ] = useState('');
-  const [picked, setPicked] = useState<Food | null>(null);
-  const [portion, setPortion] = useState(1);
-  const [err, setErr] = useState('');
-  const found = picked ? [] : findFoods(diet, recipes, q);
-  const nums = picked ? scaleFood(picked, portion) : null;
-  const add = () => {
-    if (!nums) { setErr('Those numbers are out of range.'); return; }
-    const r = useAppStore.getState().addDietEntry(entryFromFood(day, nums));
-    if (r.error) { setErr(r.error); return; }
-    setErr(''); onAdded(`Added ${portion === 1 ? '1 portion' : `${portion} portions`} of ${nums.n}.`); setPicked(null); setQ(''); setPortion(1);
-  };
+  const found = findFoods(diet, recipes, q);
   return (
     <div className="dt-find">
       <label className="field" htmlFor="dt-find-q">Search your past meals and recipes
-        <input id="dt-find-q" type="search" value={q} maxLength={80} autoComplete="off" onChange={e => { setQ(e.target.value); setPicked(null); setErr(''); }} />
+        <input id="dt-find-q" type="search" value={q} maxLength={80} autoComplete="off" onChange={e => setQ(e.target.value)} />
       </label>
       {found.length > 0 && (
         <ul className="dt-recents" aria-label="Matches">
@@ -36,27 +26,14 @@ export default function FindFood({ day, onAdded, onFood, reopen, resume }: { day
             const type = rec ? foodTypeOf(rec) : null;
             return (
               <li key={f.n}>
-                <button type="button" className="btn sm" id={`dt-find-${f.from ?? f.n}`} onClick={() => (rec ? useAppStore.getState().openModal({ type: 'portion', id: rec.id, day }) : (setPicked(f), setPortion(1)))}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
+                <button type="button" className="btn sm" id={`dt-find-${f.from ?? f.n}`} onClick={() => useAppStore.getState().openModal(rec ? { type: 'portion', id: rec.id, day } : { type: 'portion', food: f, day })}>{f.n}{rec ? ` (${type ? FOOD_TYPE_LABEL[type] : 'recipe'})` : ''} · {entryText(f)}</button>
               </li>
             );
           })}
         </ul>
       )}
-      {q.trim() !== '' && !picked && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}
-      {picked && (
-        <div>
-          <p className="note">{picked.n}: {nums ? entryText(nums) : 'out of range'}</p>
-          <div className="dt-ate">
-            <button type="button" className="btn sm" disabled={portion <= 0.5} onClick={() => setPortion(s => Math.max(0.5, s - 0.5))}>Less</button>
-            <span role="status">{portion} {portion === 1 ? 'portion' : 'portions'}</span>
-            <button type="button" className="btn sm" disabled={portion >= 10} onClick={() => setPortion(s => Math.min(10, s + 0.5))}>More</button>
-            <button type="button" className="btn primary" onClick={add}>Add</button>
-            <button type="button" className="btn sm" onClick={() => setPicked(null)}>Cancel</button>
-          </div>
-        </div>
-      )}
-      {!picked && <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />}
-      {err && <p className="note" role="alert">{err}</p>}
+      {q.trim() !== '' && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}
+      <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />
     </div>
   );
 }

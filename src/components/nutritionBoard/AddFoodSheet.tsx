@@ -119,7 +119,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
       amounts={{ ...(fill.food?.micro ? { micro: fill.food.micro } : {}), ...(fill.food ? { kcal: fill.food.kcal } : {}) }}
       onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(v.micro ?? undefined) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
   }
-  if (flow === 'find') return <FindFood day={day} onAdded={onMsg} onFood={onFill} reopen={reopen} {...(resume ? { resume } : {})} />;
+  if (flow === 'find') return <FindFood day={day} onFood={onFill} reopen={reopen} {...(resume ? { resume } : {})} />;
   if (flow === 'copy') return <CopyDay key={day} day={day} onAdded={onMsg} />;
   if (flow === 'savemeal') return entriesOn(diet, day).length === 0 ? <p className="note">Nothing eaten yet to save.</p> : <SaveMeal key={day} day={day} onSaved={onMsg} />;
   if (flow === 'meals') {

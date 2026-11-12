@@ -39,7 +39,8 @@ test('the drink sheet sends the base goal to Targets and goal, and the new goal 
   await openNutrition(page);
   await openDrink(page, '2026-09-24');
   await expect(sheet(page).getByLabel('Fixed daily goal (oz)')).toHaveCount(0); // the editor moved
-  await sheet(page).locator('#water-goal-edit').click();
+  await expect(page.locator('#water-goal-edit')).toHaveCount(0); // the inline editor's id is not reused by this button
+  await sheet(page).locator('#water-goal-targets').click();
   await expect(sheet(page).getByRole('heading', { name: 'Targets and goal' })).toBeVisible();
 });
 

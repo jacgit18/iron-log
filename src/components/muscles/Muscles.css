@@ -6,7 +6,7 @@
   gap: 20px;
   align-items: start;
 }
-@media (max-width:900px) {
+@media (max-width:1000px) {
   .bodywrap {
     grid-template-columns: minmax(0,1fr);
   }
@@ -32,7 +32,7 @@
   user-select: none;
 }
 /* Phone: both figures fit in about half the screen, so a tapped muscle's detail is a short scroll away */
-@media (max-width:900px) {
+@media (max-width:1000px) {
   .fig svg {
     max-height: min(50svh,380px);
   }
@@ -148,7 +148,7 @@
   overflow-wrap: anywhere;
 }
 /* Phone: the days go on a second line under the name, so a row never runs wider than the screen */
-@media (max-width:600px) {
+@media (max-width:700px) {
   .mrow {
     grid-template-columns: auto minmax(0,1fr) auto;
     row-gap: var(--sp-2);

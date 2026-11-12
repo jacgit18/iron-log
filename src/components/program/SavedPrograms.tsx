@@ -10,6 +10,7 @@ import { filterSavedPrograms } from '../../lib/savedProgramFilter.js';
 import { MON } from '../../shared/dates.js';
 import { boardNote, onBoardKeys } from '../../lib/programDay.js';
 import ArmedButton from '../ArmedButton.jsx';
+import EmptyState from '../EmptyState.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
@@ -88,7 +89,7 @@ export default function SavedPrograms({ k, custom, tab = false }: { k: string; c
           />
         ))}
         {tab && q.trim() && items.length > 0 && !shown.length && <p className="note" role="status">No saved program matches “{q.trim()}”.</p>}
-        {!items.length && <p className="note">{archived.length ? `No active programs. ${archived.length} archived.` : `No saved programs yet. Save a copy of a program ${tab ? 'above' : 'below'}, or use Create a program to build your own.`}</p>}
+        {!items.length && <EmptyState>{archived.length ? `No active programs. ${archived.length} archived.` : `No saved programs yet. Save a copy of a program ${tab ? 'above' : 'below'}, or use Create a program to build your own.`}</EmptyState>}
       </div>
       {archived.length > 0 && (
         <details className="libarchive">

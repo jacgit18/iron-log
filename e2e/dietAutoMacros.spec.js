@@ -25,7 +25,7 @@ test('calories follow protein, carbs and fat until you type calories yourself', 
   await expect(eaten(page)).toContainText('500 kcal · P 40 · C 51 · F 12 g');
 });
 
-test('Search brings back what you logged with a half-portion stepper', async ({ page }) => {
+test('Search brings back what you logged and logs it through the portion sheet (log only)', async ({ page }) => {
   await nutrition(page);
   const sheet = await openAdd(page, 'One-off food');
   await sheet.getByLabel('Food', { exact: true }).fill('Rice');
@@ -36,10 +36,19 @@ test('Search brings back what you logged with a half-portion stepper', async ({ 
   await sheet.getByRole('button', { name: /^Find food/ }).click();
   await sheet.getByLabel("Search your past meals and recipes").fill('ric');
   await sheet.getByRole('list', { name: 'Matches' }).getByRole('button', { name: /Rice/ }).click();
-  await sheet.getByRole('button', { name: 'More', exact: true }).click();
-  await expect(sheet.getByText('Rice: 300 kcal · P 6 g')).toBeVisible();
-  await sheet.getByRole('button', { name: 'Add', exact: true }).first().click();
-  await expect(sheet.getByRole('status').last()).toContainText('Added 1.5 portions of Rice.');
-  await closeSheet(page);
+  // 4c: a food with no recipe opens the same portion sheet and log control a recipe does, log only: no plan days, no meal choice.
+  const portion = page.locator('.portionsheet');
+  await expect(portion.getByRole('heading', { name: 'Rice' })).toBeVisible();
+  await expect(portion.getByLabel('Day')).toHaveAttribute('max', /^\d{4}-\d{2}-\d{2}$/);
+  const today = await portion.getByLabel('Day').inputValue();
+  await expect(portion.getByLabel('Day')).toHaveAttribute('max', today);
+  await expect(portion.getByText('Which meal?')).toHaveCount(0);
+  await portion.getByRole('button', { name: 'More', exact: true }).click();
+  await expect(portion.getByText('300 kcal · P 6 g', { exact: false }).first()).toBeVisible();
+  await portion.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(portion.getByRole('status').last()).toContainText('Logged Rice: 1.5');
+  await portion.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0); // the portion sheet took the add sheet's place
   await expect(eaten(page)).toHaveCount(2);
+  await expect(eaten(page).filter({ hasText: '300 kcal' })).toHaveCount(1);
 });

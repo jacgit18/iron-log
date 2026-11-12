@@ -24,7 +24,7 @@
   overflow-wrap: anywhere;
 }
 .ph-eyebrow {
-  font-size: var(--fs-2xs);
+  font-size: var(--h-label);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .08em;
