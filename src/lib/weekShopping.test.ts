@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { DietEntry } from '../types.ts';
+import type { DietCfg, DietEntry } from '../types.ts';
 import type { Plan } from './dietPlan.js';
 import type { Grocery, GroceryItem, Recipe } from '../types.ts';
-import { idsAdded, shoppingDays, shoppingNeed, shoppingRecipeIds } from './weekShopping.js';
+import { idsAdded, plannedShoppingIds, shoppingDays, shoppingNeed, shoppingRecipeIds } from './weekShopping.js';
 
 const recipes = [{ id: 'r1' }, { id: 'r2' }];
 const entry = (id: string, d: string): DietEntry => ({ id, d, n: 'x', kcal: 100, p: 1 } as DietEntry);
@@ -56,5 +56,35 @@ describe('shoppingNeed', () => {
     expect(shoppingNeed(['a'], rs, list(item('g', 'Garlic')), month)).toBe(0); // on the list already, so nothing new to add
     expect(shoppingNeed([], rs, list(), month)).toBe(0);
     expect(shoppingNeed(['gone'], rs, list(), month)).toBe(0);
+  });
+});
+
+describe('plannedShoppingIds (daily snacks into Shopping)', () => {
+  const today = '2026-11-09', days = ['2026-11-09', '2026-11-10', '2026-11-11'];
+  const all = [{ id: 'r1' }, { id: 'r2' }, { id: 's1' }, { id: 's2' }];
+  const diet = (d: DietCfg): DietCfg => d;
+  it('adds a listed snack that shows on the covered days, each once', () => {
+    expect(plannedShoppingIds(diet({ snacks: [{ id: 's1' }, { id: 's2', x: 2 }] }), days, today, all, [])).toEqual(['s1', 's2']); // portion changes nothing
+  });
+  it('lists a recipe both planned and listed once, in day order', () => {
+    const d = diet({ plan: { '2026-11-10': [{ k: 'r', id: 'r1' }, { k: 'r', id: 's1', s: 'dinner' }] }, snacks: [{ id: 's1' }, { id: 's2' }] });
+    expect(plannedShoppingIds(d, days, today, all, [])).toEqual(['s1', 's2', 'r1']); // each day's own items first, then its snacks
+  });
+  it('leaves out a snack skipped on every covered day, and counts one skipped on only some days', () => {
+    const skips = { '2026-11-09': ['s1', 's2'], '2026-11-10': ['s1'], '2026-11-11': ['s1'] };
+    expect(plannedShoppingIds(diet({ snacks: [{ id: 's1' }, { id: 's2' }], snackSkips: skips }), days, today, all, [])).toEqual(['s2']);
+  });
+  it('does not count a snack already ticked eaten that day, but still counts it from a later day', () => {
+    const plan = { '2026-11-09': [{ k: 'r' as const, id: 's1', s: 'snack' as const, e: ['e1'] }] };
+    const e = [entry('e1', '2026-11-09')];
+    expect(plannedShoppingIds(diet({ plan, snacks: [{ id: 's1' }] }), ['2026-11-09'], today, all, e)).toEqual([]);
+    expect(plannedShoppingIds(diet({ plan, snacks: [{ id: 's1' }] }), days, today, all, e)).toEqual(['s1']);
+  });
+  it('shows no snack outside today to today + 13, past days, or for a removed recipe or empty list', () => {
+    const d = diet({ snacks: [{ id: 's1' }, { id: 'gone' }] });
+    expect(plannedShoppingIds(d, ['2026-11-23'], today, all, [])).toEqual([]); // today + 14
+    expect(plannedShoppingIds(d, ['2026-11-22'], today, all, [])).toEqual(['s1']); // today + 13
+    expect(plannedShoppingIds(d, ['2026-11-08'], today, all, [])).toEqual([]);
+    expect(plannedShoppingIds(undefined, days, today, all, [])).toEqual([]);
   });
 });
