@@ -33,14 +33,14 @@ test('a bowl built from two foods rolls up in the form, on save and on its page,
   await page.getByRole('button', { name: '+ Food or meal' }).click();
   await page.getByRole('group', { name: 'Foods and meals' }).getByRole('button', { name: /Whole milk/ }).click();
   const roll = page.locator('.rc-roll');
-  await expect(roll).toContainText('Per serving, from the parts: 375 kcal · 15.5 g protein · 52.5 g carbs · 12.5 g fat');
+  await expect(roll).toContainText('Per serving, from the parts: 375 kcal · P 15.5 · C 52.5 · F 12.5 g');
   await expect(roll).toContainText('2 of 2 ingredients counted');
   await page.getByRole('button', { name: '+ Food or meal' }).click();
   await page.getByRole('group', { name: 'Foods and meals' }).getByRole('button', { name: /Mystery food/ }).click();
   await expect(roll).toContainText('2 of 3 ingredients counted, needs numbers: Mystery food');
   await page.getByRole('button', { name: 'Remove ingredient 3' }).click();
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByText('Per serving, from the parts: 375 kcal · 15.5 g protein')).toBeVisible();
+  await expect(page.getByText('Per serving, from the parts: 375 kcal · P 15.5 · C 52.5 · F 12.5 g')).toBeVisible();
   await expect(page.locator('.rc-ing', { hasText: '1.5 portions Oat cereal' })).toBeVisible();
   await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();

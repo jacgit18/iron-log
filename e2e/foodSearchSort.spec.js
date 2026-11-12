@@ -34,7 +34,7 @@ test('each order reorders the shown results without a new request, says it sorts
   // A pick on the re-ordered list is the right food.
   await diet(page).getByRole('button', { name: 'Almonds · 580 kcal per 100 g' }).click();
   await expect(diet(page).getByLabel('Grams')).toHaveValue('100');
-  await expect(diet(page).getByText('580 kcal · 21 g protein')).toBeVisible();
+  await expect(diet(page).getByText('580 kcal · P 21 g')).toBeVisible();
 
   await page.reload();
   await search(page);

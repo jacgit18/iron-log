@@ -99,10 +99,10 @@ test('a recipe has a portion stepper', async ({ page }) => {
   await nutrition(page);
   await planRecipe(page, 'Chili', TOMORROW);
   const next = col(page, TOMORROW);
-  await expect(next.getByText('600 kcal · 40 g protein')).toBeVisible();
+  await expect(next.getByText('600 kcal · P 40 g')).toBeVisible();
   await next.getByText('Chili', { exact: true }).click();
   await next.getByRole('button', { name: 'More Chili' }).click();
-  await expect(next.getByText('900 kcal · 60 g protein')).toBeVisible();
+  await expect(next.getByText('900 kcal · P 60 g')).toBeVisible();
   await expect(page.getByRole('button', { name: /Add missing ingredients to Shopping/ })).toHaveCount(0); // removed from Nutrition (brief nutrition-mobile-layout); the recipe keeps its own button
 });
 

@@ -65,7 +65,7 @@ test('Photo the label from the food search box opens the camera at once, and the
   await (await chooser).setFiles(photo);
   await expect(diet(page).getByText('AI', { exact: true })).toBeVisible();
   await expect(diet(page).getByText('Read from the photo. Check these numbers against the label.')).toBeVisible();
-  await expect(diet(page).getByText('210 kcal · 6 g protein per serving')).toBeVisible();
+  await expect(diet(page).getByText('210 kcal · P 6 · C 40 · F 1 g per serving')).toBeVisible();
   await diet(page).getByRole('button', { name: 'Use', exact: true }).click();
   await expect(diet(page).getByLabel('Food', { exact: true })).toHaveValue('Gnocchi');
   await expect(diet(page).getByLabel('Calories', { exact: true })).toHaveValue('210');
