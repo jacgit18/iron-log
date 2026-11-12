@@ -33,7 +33,7 @@ export default function IngredientRows({ rows, onChange }: { rows: IngredientDra
         </div>
       ))}
       {duplicateIngredientNotes(rows).map(n => <p key={n} className="note">{n}</p>)}
-      <button type="button" className="btn sm" id="supp-add-ingredient" onClick={add}>+ Add an ingredient</button>
+      <button type="button" className="btn sm" id="supp-add-ingredient" onClick={add}>Add an ingredient</button>
       <p className="note" id="supp-ingredient-note">{INGREDIENT_NOTE}</p>
     </fieldset>
   );

@@ -21,6 +21,7 @@ const soupWithoutServings = async page => {
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
   await setAmount(page, 0, '2 cups');
   await page.getByRole('button', { name: 'Save recipe' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
 };
@@ -87,6 +88,8 @@ test('Scale for tonight changes the amounts shown and saves nothing', async ({ p
   await make(page);
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'More servings' })).toHaveCount(0); // the stepper stays hidden behind the link
+  await page.getByRole('button', { name: 'Scale the amounts' }).click();
   await page.getByRole('button', { name: 'More servings' }).click();
   await expect(page.getByText('5 servings', { exact: true })).toBeVisible();
   await expect(page.getByText('2½ cups flour')).toBeVisible();
@@ -96,6 +99,7 @@ test('Scale for tonight changes the amounts shown and saves nothing', async ({ p
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);
   await expectAmount(page, 0, '2 cups');

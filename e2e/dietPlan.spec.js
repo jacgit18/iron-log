@@ -42,7 +42,6 @@ const newRecipe = async (page, name, kcal, p, ing) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill(name);
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill(String(kcal));
   await page.getByLabel('Protein per serving (g)').fill(String(p));
   for (const [i, n] of ing.entries()) {
@@ -59,7 +58,7 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await logFood(page, 'Oats', 350, 12);
   await expect(todayCol(page).locator('.nb-eat', { hasText: 'Oats' })).toBeVisible();
   let sheet = await openAdd(page, 'Save as a meal');
-  await sheet.getByRole('button', { name: 'Save as meal' }).click();
+  await sheet.getByRole('button', { name: 'Save as a meal', exact: true }).click();
   await sheet.getByRole('checkbox', { name: /Oats/ }).check();
   await sheet.getByLabel('Meal name').fill('Breakfast');
   await sheet.getByRole('button', { name: 'Save meal' }).click();

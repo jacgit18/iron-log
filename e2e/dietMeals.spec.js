@@ -21,7 +21,7 @@ const log = async (sheet, name, kcal, p) => {
 };
 const save = async (sheet, name, foods) => {
   await way(sheet, 'Save as a meal');
-  await sheet.getByRole('button', { name: 'Save as meal' }).click();
+  await sheet.getByRole('button', { name: 'Save as a meal', exact: true }).click();
   for (const f of foods) await sheet.getByRole('checkbox', { name: new RegExp(f) }).check();
   await sheet.getByLabel('Meal name').fill(name);
   await sheet.getByRole('button', { name: 'Save meal' }).click();
@@ -35,7 +35,7 @@ test('save two logged foods as a meal, tap it to log it again, and it survives a
   await log(sheet, 'Banana', 100, 1);
   await log(sheet, 'Coffee', 5, 0);
   await save(sheet, 'Breakfast', ['Oats', 'Banana']);
-  await expect(sheet.getByRole('status').last()).toContainText('Saved Breakfast.');
+  await expect(sheet.getByRole('status').last()).toContainText('Saved Breakfast as a meal in Recipes.');
   await way(sheet, 'Saved meals');
   const meal = sheet.getByRole('list', { name: 'Saved meals' }).getByRole('button', { name: 'Breakfast · 1 food · 450 kcal' }); // hand-typed foods have no recipe to link, so the meal logs as one entry with its total
   await expect(meal).toBeVisible();
@@ -55,7 +55,7 @@ test('a blank name, nothing ticked and a name a recipe already has are refused',
   await log(sheet, 'Oats', 350, 12);
   await log(sheet, 'Toast', 90, 3);
   await way(sheet, 'Save as a meal');
-  await sheet.getByRole('button', { name: 'Save as meal' }).click();
+  await sheet.getByRole('button', { name: 'Save as a meal', exact: true }).click();
   await sheet.getByRole('button', { name: 'Save meal' }).click();
   await expect(sheet.getByRole('alert')).toContainText('Give the meal a name.');
   await sheet.getByLabel('Meal name').fill('Snack');
@@ -63,7 +63,7 @@ test('a blank name, nothing ticked and a name a recipe already has are refused',
   await expect(sheet.getByRole('alert')).toContainText('Tick at least one food.');
   await sheet.getByRole('button', { name: 'Cancel' }).click();
   await save(sheet, 'Snack', ['Oats']);
-  await sheet.getByRole('button', { name: 'Save as meal' }).click();
+  await sheet.getByRole('button', { name: 'Save as a meal', exact: true }).click();
   await sheet.getByRole('checkbox', { name: /Toast/ }).check();
   await sheet.getByLabel('Meal name').fill('snack');
   await sheet.getByRole('button', { name: 'Save meal' }).click();

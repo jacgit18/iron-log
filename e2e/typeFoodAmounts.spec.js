@@ -91,8 +91,7 @@ test.describe('admin session', () => {
     await page.getByRole('button', { name: 'Save' }).click();
     expect((await stored(page))[0].micro).toEqual({ calcium: 150, iron: 2 });
     await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
-    await page.getByRole('button', { name: 'Remove Calcium row' }).click();
-    await page.getByRole('button', { name: 'Remove Iron row' }).click();
+    for (const n of ['Calcium', 'Iron']) { const rm = page.getByRole('button', { name: `Remove ${n} row` }); await rm.click(); await rm.click(); } // two taps: arm, then confirm
     await page.getByRole('button', { name: 'Save' }).click();
     expect('micro' in (await stored(page))[0]).toBe(false);
     expect(e.id).toBe((await stored(page))[0].id);

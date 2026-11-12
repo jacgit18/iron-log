@@ -3,41 +3,43 @@ import { bwSorted, goalStatus } from '../../lib/body.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
-import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, onBoard, toolbarFlows, weekDays, weekLabel, weekOf, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, onBoard, toolbarFlows, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
-import type { SavedMeal } from '../../types.ts';
+import type { PlanSlot, SavedMeal } from '../../types.ts';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
 import DayStepper from './DayStepper.js';
-import { useWideBoard } from './useWideBoard.js';
+import { useDaysShown } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
 const NO_PLAN: Plan = {};
 const NO_MEALS: SavedMeal[] = [];
 
-// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and seven day columns (one day with a stepper under 1440 px).
+// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day, with a stepper under seven.
 // Each day holds five meters (calories, protein, fat, supplements, water), its meals or eaten food, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
   const today = ymd(now);
-  const wide = useWideBoard();
+  const shown = useDaysShown();
   const cfg = useAppStore(s => s.cfg);
   const body = useAppStore(s => s.body);
   const supp = useAppStore(s => s.supp);
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [picked, setPicked] = useState(today);
+  const [anchor, setAnchor] = useState(today); // the first day of the 1 to 3 day window; tapping a column inside it keeps the window still, only the stepper moves it
   const [msg, setMsg] = useState('');
   const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
   const day = onBoard(today, picked) ? picked : today;
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
+  const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
   const plan = cfg.diet?.plan ?? NO_PLAN;
   const meals = cfg.diet?.meals ?? NO_MEALS;
   const targets = useMemo(() => {
@@ -70,7 +72,7 @@ export default function NutritionBoard() {
     setMsg(`Logged ${done} from ${r.name}.${stopped ? ` ${stopped}` : left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
   };
   const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
-  const open = (flow?: string) => st().openModal({ type: 'nbadd', day, ...(flow ? { flow } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day }), onMsg: setMsg });
+  const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
   const editable = foodEditable(day, today);
   const target = addingTo(day, today);
   return (
@@ -102,12 +104,12 @@ export default function NutritionBoard() {
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}</p>
       <div className="wb-legend" aria-hidden="true"><span><i className="kcal" />Calories</span><span><i className="prot" />Protein</span><span><i className="fat" />Fat</span><span><i className="nbs" />Supplements</span><span><i className="nbw" />Water</span><span><i className="over" />Over the target</span></div>
-      {wide ? (
-        <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} />)}</div>
+      {shown === 7 ? (
+        <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
         <>
-          <DayStepper today={today} day={day} onPick={d => { setPicked(d); setMsg(''); }} />
-          <DayColumn v={views[days.indexOf(day)]!} today={today} selected days={moveTargets} onPick={() => undefined} onLog={log} onMsg={setMsg} />
+          <DayStepper today={today} day={day} onPick={d => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); }} />
+          <div className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}
     </section>

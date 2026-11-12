@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 import { startFood } from './recipesNav.js';
 
 // Usual amount and unit name on a ready-made food (brief usual-amount-and-unit). The words (egg, eggs, boxes), the validation and the opening amount are node tests
-// (foodUnit.test.ts, readyMade.test.ts, dietLog.test.ts, recipes.test.ts); this covers the wiring: the three boxes saving and coming back, Ate this opening at the usual
+// (foodUnit.test.ts, readyMade.test.ts, dietLog.test.ts, recipes.test.ts); this covers the wiring: the three boxes saving and coming back, the log control opening at the usual
 // amount in the person's word, and the Logged line.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const make = async (page, name, extra = {}) => {
@@ -18,12 +18,12 @@ const make = async (page, name, extra = {}) => {
 };
 const amount = page => page.getByRole('status').filter({ hasText: /^[0-9.]+ [a-z ]+$/ });
 
-test('Ate this opens at the usual amount in the unit name, and logs it in those words', async ({ page }) => {
+test('The log control opens at the usual amount in the unit name, and logs it in those words', async ({ page }) => {
   await make(page, 'Egg (large)', { usual: '4', unit: 'egg' });
   await expect(page.getByText('Usual: 4 eggs')).toBeVisible();
   await expect(page.getByText('Per egg: 72 kcal · P 6 g')).toBeVisible();
   await expect(amount(page)).toHaveText('4 eggs');
-  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await expect(amount(page)).toHaveText('4.5 eggs');
   await page.getByRole('button', { name: 'Less' }).click();
   await page.getByRole('button', { name: 'Log', exact: true }).click();
@@ -44,6 +44,7 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await page.getByRole('button', { name: 'Less' }).click();
   await page.getByRole('button', { name: 'Less' }).click();
   await expect(amount(page)).toHaveText('1 loaf');
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: /Edit/ }).first().click();
   await expect(page.getByLabel('Usual amount, optional')).toHaveValue('2');
   await expect(page.getByLabel('One serving is called, optional')).toHaveValue('loaf');
