@@ -76,7 +76,7 @@ html:has(.prail) {
 }
 .pone-h {
   margin: 0 0 var(--sp-12);
-  font-size: var(--fs-3xl);
+  font-size: var(--h-section);
   font-weight: 700;
   text-transform: uppercase;
 }
