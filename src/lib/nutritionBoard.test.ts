@@ -106,17 +106,18 @@ describe('the toolbar and what can be added', () => {
     expect(addMode('2026-11-07', TODAY)).toBe('log');
     expect(addMode(TODAY, TODAY)).toBe('log');
     expect(addMode('2026-11-09', TODAY)).toBe('plan');
-    expect(addFlows('2026-11-07', TODAY)).toEqual(addFlows(TODAY, TODAY));
+    expect(addFlows('2026-11-07', TODAY, 2)).toEqual(addFlows(TODAY, TODAY, 2));
     expect(foodEditable('2026-11-07', TODAY)).toBe(false); // an earlier day has no planned meals to tick (its eaten rows still open the row sheet)
     expect(foodEditable(TODAY, TODAY)).toBe(true);
-    expect(addFlows('2026-11-10', TODAY)).toEqual(['meals', 'recipes']);
-    expect(addFlows(TODAY, TODAY)).toEqual(expect.arrayContaining(['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes']));
+    expect(addFlows('2026-11-10', TODAY, 0)).toEqual(['meals', 'recipes']);
+    expect(addFlows('2026-11-10', TODAY, 3)).toEqual(['meals', 'recipes']); // a day ahead never had the save row
+    expect(addFlows(TODAY, TODAY, 1)).toEqual(expect.arrayContaining(['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes']));
   });
   it('the toolbar shortcuts follow the day: today logs, a day ahead plans, last week has none, and each is a way the add sheet offers', () => {
     expect(toolbarFlows(TODAY, TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
     expect(toolbarFlows('2026-11-12', TODAY)).toEqual(['recipes', 'meals']);
     expect(toolbarFlows('2026-11-07', TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
-    for (const d of ['2026-11-07', TODAY, '2026-11-12']) for (const f of toolbarFlows(d, TODAY)) expect(addFlows(d, TODAY)).toContain(f);
+    for (const d of ['2026-11-07', TODAY, '2026-11-12']) for (const f of toolbarFlows(d, TODAY)) expect(addFlows(d, TODAY, 0)).toContain(f);
   });
 });
 
@@ -254,17 +255,30 @@ describe('windowDays', () => {
 
 describe('addGroups', () => {
   it('today lists every way in three labelled groups, each way once', () => {
-    const g = addGroups(TODAY, TODAY);
+    const g = addGroups(TODAY, TODAY, 2);
     expect(g.map(x => x.label)).toEqual(['Fastest', 'From what you have', 'Whole days and meals']);
-    expect(g.flatMap(x => x.flows).sort()).toEqual([...addFlows(TODAY, TODAY)].sort());
+    expect(g.flatMap(x => x.flows).sort()).toEqual([...addFlows(TODAY, TODAY, 2)].sort());
+  });
+  it('a day with nothing eaten has no Save as a meal row and keeps every other row', () => {
+    for (const d of [TODAY, '2026-11-01']) {
+      const g = addGroups(d, TODAY, 0);
+      expect(g.flatMap(x => x.flows)).not.toContain('savemeal');
+      expect(g.flatMap(x => x.flows).sort()).toEqual(['barcode', 'copy', 'find', 'meals', 'oneoff', 'quick', 'recipes']);
+      expect(g.find(x => x.label === 'Whole days and meals')?.flows).toEqual(['meals', 'copy']);
+    }
+    expect(addFlows(TODAY, TODAY, 0)).not.toContain('savemeal');
+    expect(addFlows(TODAY, TODAY, 1)).toContain('savemeal');
+  });
+  it('one eaten food brings the row back, in the same group', () => {
+    expect(addGroups(TODAY, TODAY, 1).find(x => x.label === 'Whole days and meals')?.flows).toEqual(['meals', 'copy', 'savemeal']);
   });
   it('a day ahead keeps only the groups that hold a way to plan', () => {
-    const g = addGroups('2026-11-10', TODAY);
+    const g = addGroups('2026-11-10', TODAY, 0);
     expect(g.map(x => x.label)).toEqual(['From what you have', 'Whole days and meals']);
     expect(g.flatMap(x => x.flows)).toEqual(['recipes', 'meals']);
   });
   it('an earlier day lists the same ways as today', () => {
-    expect(addGroups('2026-11-01', TODAY)).toEqual(addGroups(TODAY, TODAY));
+    expect(addGroups('2026-11-01', TODAY, 2)).toEqual(addGroups(TODAY, TODAY, 2));
   });
 });
 
