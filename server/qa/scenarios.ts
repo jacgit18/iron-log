@@ -139,27 +139,27 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-01', feature: 'Diet targets and log', title: 'Read today and add a one-off food', persona: 'diet-on-target', brief: 'diet-targets-and-log',
     steps: [
-      'Open Daily, Nutrition and find today\'s column (its name ends "· today"). Read its Calories and Protein meters and its Also eaten list.',
-      'Press + Add food, then One-off food, enter "Rice", 200 kcal and 4 g protein, and press Add. Press Done.',
-      'In today\'s Also eaten list press Edit on Rice, change the calories to 250 and press Save, then press Delete on Rice.',
+      'Open Daily, Nutrition and find today\'s column (its name ends "· today"). Read its Calories and Protein meters and its eaten rows.',
+      'Press Add food, then One-off food, enter "Rice", 200 kcal and 4 g protein, and press Add. Press Done.',
+      'In today\'s eaten rows tap the Rice row, press Edit in its sheet, change the calories to 250 and press Save, then tap the row again, press Delete and press Tap again to delete.',
       'Read yesterday\'s column, the one just before today\'s (on a phone press Previous day; if today is a Sunday, press the previous-week arrow first).',
     ],
     expected: [
-      'Before adding: the Also eaten list holds three foods and the meters read "1,440 / 2,400 kcal" and "58 / 160 g".',
+      'Before adding: the eaten rows holds three foods and the meters read "1,440 / 2,400 kcal" and "58 / 160 g".',
       'Adding Rice moves the totals by 200 kcal and 4 g; editing and deleting move them again; the total returns to where it began.',
-      'Yesterday shows its own full day of five foods in an Eaten list, not today\'s, with no Edit or Delete buttons (only today\'s food can be changed; last week: S-209).',
+      'Yesterday shows its own full day of five foods under Not in a meal, not today\'s; its rows open the same row sheet as today\'s (an earlier day can be corrected: S-209).',
     ],
   },
   {
     id: 'S-02', feature: 'Diet targets and log', title: 'Over target, and the 20 entries a day limit', persona: 'diet-over-target', brief: 'diet-targets-and-log', edge: true,
     steps: [
       'Open Daily, Nutrition and read today\'s Calories and Protein meters.',
-      'Press + Add food, One-off food, and add small foods (for example "Tea", 5 kcal, 0 g) until the day holds 20 entries.',
+      'Press Add food, One-off food, and add small foods (for example "Tea", 5 kcal, 0 g) until the day holds 20 entries.',
       'Try to add a 21st from One-off food, then open Quick add from the sheet\'s list of ways.',
     ],
     expected: [
       'Today is about 120% of the calories (about "2,880 / 2,400 kcal"); the bar stays full and turns red, and protein reads short (about "106 / 160 g").',
-      'A 21st one-off food is refused with "You can log 20 things a day."; Quick add shows "That’s 20 things for the day. Delete one to add another." instead of its choices. Deleting one entry from the Also eaten list brings both back.',
+      'A 21st one-off food is refused with "You can log 20 things a day."; Quick add shows "That’s 20 things for the day. Delete one to add another." instead of its choices. Deleting one entry from the eaten rows brings both back.',
     ],
   },
 
@@ -198,8 +198,8 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-05', feature: 'Saved meals', title: 'Plan a saved meal for a day ahead', persona: 'meal-planner', brief: 'diet-saved-meals',
     steps: [
       'Open Daily, Nutrition and tap the name of a day after today (for example "Fri 25") so the toolbar reads "Adding to Fri 25".',
-      'Press + Add food, pick Lunch under Which meal?, press Saved meals and tap "Usual breakfast".',
-      'Open Recipes, press Meals, open the meal and rename it "Weekday breakfast" from Edit. Open Nutrition again, press + Add food on that day and press Saved meals.',
+      'Press Add food, pick Lunch under Which meal?, press Saved meals and tap "Usual breakfast".',
+      'Open Recipes, press Meals, open the meal and rename it "Weekday breakfast" from Edit. Open Nutrition again, press Add food on that day and press Saved meals.',
     ],
     expected: [
       'A day ahead plans, it does not log: the notice reads "Planned Usual breakfast for Lunch." and the meal appears under Lunch on that day. On today the same list logs the meal\'s foods as entries instead (S-202).',
@@ -209,7 +209,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-06', feature: 'Saved meals', title: 'Save today\'s foods as a meal; a name a recipe has is refused', persona: 'diet-on-target', brief: 'diet-saved-meals', edge: true,
     steps: [
-      'Open Nutrition, press + Add food, then Save as a meal. Press Save as a meal, tick Oatmeal with berries and Greek yogurt and save them as "Breakfast".',
+      'Open Nutrition, press Add food, then Save as a meal. Press Save as a meal, tick Oatmeal with berries and Greek yogurt and save them as "Breakfast".',
       'Tick the same two foods again and save as "breakfast" (small b).',
       'Try saving with a blank name.',
     ],
@@ -226,7 +226,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Daily, Nutrition and read the seven days of This week (on a phone step through them with the day stepper). Look at the meals of a day after today that has a recipe and a meal planned.',
       'Tap the recipe\'s card, press More and raise the portions.',
-      'Tap the card again and press Remove.',
+      'Tap the card again, press Remove and press Tap again to remove (the first tap only arms it).',
     ],
     expected: [
       'Each day lists its planned items under Breakfast, Lunch, Dinner and Snack, and a day ahead reads its planned calories and protein against the 2,400 / 160 targets in its meters.',
@@ -241,7 +241,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Look at the cards of a day after today.',
     ],
     expected: [
-      'The recipe logs one entry with its numbers at the planned portion, shown as checked in its meal (the notice reads "Added 1 from <name>."), not listed again under Also eaten, and today\'s meters move. Unticking removes what it logged. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
+      'The recipe logs one entry with its numbers at the planned portion, shown as checked in its meal (the notice reads "Added 1 from <name>."), not listed again as a separate eaten row, and today\'s meters move. Unticking removes what it logged. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
       'Days after today have no check box.',
     ],
   },
@@ -275,11 +275,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-11', feature: 'Suggest and copy', title: 'Copy yesterday with one food unticked', persona: 'diet-on-target', brief: 'diet-suggest-and-copy',
     steps: [
-      'On Nutrition press + Add food, then Copy yesterday, then Copy yesterday again: yesterday\'s foods are all ticked.',
+      'On Nutrition press Add food, then Copy yesterday, then Copy yesterday again: yesterday\'s foods are all ticked.',
       'Untick one and press Add selected.',
     ],
     expected: [
-      'Only the ticked foods are added to today, with their numbers unchanged, and they show in the Eaten list.',
+      'Only the ticked foods are added to today, with their numbers unchanged, and they show in the eaten rows.',
       'If the day would pass 20 entries it adds what fits and says how many were left out.',
     ],
   },
@@ -288,7 +288,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-12', feature: 'Auto macros', title: 'Calories follow typed macros', persona: 'diet-on-target', brief: 'diet-auto-macros',
     steps: [
-      'Press + Add food, then One-off food. Type protein 30, carbs 50 and fat 10 without touching Calories.',
+      'Press Add food, then One-off food. Type protein 30, carbs 50 and fat 10 without touching Calories.',
       'Change Calories by hand to 500, then change protein to 40.',
     ],
     expected: [
@@ -299,7 +299,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-13', feature: 'Auto macros', title: 'Calories typed first are not overwritten', persona: 'diet-fresh', brief: 'diet-auto-macros', edge: true,
     steps: [
-      'Press + Add food, then One-off food, and type Calories 300 first.',
+      'Press Add food, then One-off food, and type Calories 300 first.',
       'Then type protein 20, carbs 20 and fat 5.',
     ],
     expected: [
@@ -309,7 +309,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-14', feature: 'Auto macros', title: 'Search past meals and recipes, with a portion stepper', persona: 'meal-planner', brief: 'diet-auto-macros',
     steps: [
-      'Press + Add food, then Find food. In the "Search your past meals and recipes" box type "oat".',
+      'Press Add food, then Find food. In the "Search your past meals and recipes" box type "oat".',
       'Pick Overnight oats, set the portion to 1.5, and press Add.',
     ],
     expected: [
@@ -346,7 +346,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-17', feature: 'Food lookup', title: 'Look up a food and scale it by grams', persona: 'diet-on-target', brief: 'diet-food-lookup',
     steps: [
-      'Press + Add food, then Find food. In the "Search your past meals and recipes" box type "banana".',
+      'Press Add food, then Find food. In the "Search your past meals and recipes" box type "banana".',
       'Pick a result and enter 150 g.',
       'Change Protein by hand and press Add.',
     ],
@@ -360,7 +360,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-18', feature: 'Food lookup', title: 'Food search offline', persona: 'diet-on-target', brief: 'diet-food-lookup', edge: true,
     steps: [
       'Turn the browser offline (DevTools Network, Offline).',
-      'Press + Add food, then Find food. In the "Search your past meals and recipes" box type "banana", then type the numbers by hand and press Add.',
+      'Press Add food, then Find food. In the "Search your past meals and recipes" box type "banana", then type the numbers by hand and press Add.',
     ],
     expected: [
       'The search says "You are offline. You can still type the numbers." ("Food search is not available right now." is the message when the service is down, not when you are offline) and the rest of the form keeps working; Add still logs the entry.',
@@ -644,7 +644,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Open Daily, Nutrition at 1920 px and at 1279 px.',
     ],
     expected: [
-      'From 1280 px the week is seven day columns side by side, each with its meters, Eaten list or meals, Supplements and Hydration; below it one day shows with the day stepper (Previous day, Day to show, Next day). The old Diet, Supplements, Water and Last 7 days panels are gone.',
+      'From 1280 px the week is seven day columns side by side, each with its meters, meals with their eaten food, Supplements and Hydration; below it one day shows with the day stepper (Previous day, Day to show, Next day). The old Diet, Supplements, Water and Last 7 days panels are gone.',
     ],
   },
   // ---- Admin accounts (run as the owner's own admin account; the persona is the test account acted on) ----
@@ -821,7 +821,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On Recipes press + New, then Add a food by hand, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
       'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
-      'Press Ate this, look at today\'s Eaten list on Nutrition, then press Undo.',
+      'Press Ate this, look at today\'s eaten rows on Nutrition, then press Undo.',
     ],
     expected: [
       'The page says "Usual: 4 eggs", "Per egg: 72 kcal · 6 g protein" and the stepper opens at "4 eggs"; More shows "4.5 eggs".',
@@ -1045,7 +1045,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan to fill form and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
       'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
-      'Repeat on the diet day: open Nutrition, press + Add food, Find food and Scan to fill form, and scan a second product.',
+      'Repeat on the diet day: open Nutrition, press Add food, Find food and Scan to fill form, and scan a second product.',
     ],
     expected: [
       'The sheet reads the code within a few seconds, closes, and shows the product name (with brand) and its calories per 100 g; the grams start at the product\'s serving.',
@@ -1284,7 +1284,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-93', feature: 'Barcode scan', title: 'A missed scan makes typing the name the main choice and offers the AI label photo second', persona: 'diet-fresh', brief: 'barcode-miss-ladder', device: true,
     steps: [
-      'On a phone, open Daily, Nutrition, press + Add food, Find food and Scan to fill form; scan a code neither source knows. Watch the line while it looks.',
+      'On a phone, open Daily, Nutrition, press Add food, Find food and Scan to fill form; scan a code neither source knows. Watch the line while it looks.',
       'Read the sheet: the steps tried, the main button, the button under it and the small note under that.',
       'Press Type the name and see where the cursor is. Scan the code again and press Photo the label.',
       'Photograph a nutrition label and read the result before pressing Use; then press Use.',
@@ -2014,7 +2014,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'On the Nutrition tab press Scan and log in the toolbar, scan a packaged product (or use the photo of a barcode), press Drink, set the grams and press Save and log it. Then open Recipes.',
     ],
     expected: [
-      'The food shows once in the day\'s Eaten list and once in Recipes as a Drink, and one entry is logged however many times Save and log it was tapped. Scanning on a phone needs a camera: try it on a real phone.',
+      'The food shows once in the day\'s eaten rows and once in Recipes as a Drink, and one entry is logged however many times Save and log it was tapped. Scanning on a phone needs a camera: try it on a real phone.',
     ],
   },
   {
@@ -2098,7 +2098,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-164', feature: 'Grocery budget', title: 'Edit the budget, then remove it', persona: 'grocery-shopper', brief: 'grocery-budget',
     steps: [
       'Press Edit, change the amount to 600 and press Save.',
-      'Press Edit again, press Remove, then reload the page.',
+      'Press Edit again, press Remove and then Tap again to remove (the first tap only arms it and the budget stays), then reload the page.',
     ],
     expected: [
       'The card shows "of $600.00" and the bar shrinks to match.',
@@ -2268,11 +2268,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'In Recipes press + New, Write a recipe: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
       'Open Chili. In Goes with press "Add a recipe it goes with…" and pick Rice.',
-      'Open Rice and read its Goes with. Press Remove on Chili, then open Chili again.',
+      'Open Rice and read its Goes with. Press Remove on Chili, then Tap again to remove, then open Chili again.',
     ],
     expected: [
-      'Chili lists Rice with Make a meal and Remove. Rice lists Chili without being set separately.',
-      'After Remove, neither recipe lists the other.',
+      'Chili lists Rice with Make a meal (an underlined link) and Remove. Rice lists Chili without being set separately.',
+      'The first Remove tap only changes the button to "Tap again to remove" and pairs stay; after the second, neither recipe lists the other.',
     ],
   },
   {
@@ -2303,7 +2303,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-182', feature: 'Goes with', title: 'A recipe goes with at most three, and a sauce is not offered', persona: 'recipe-collector', brief: 'recipes-goes-with', edge: true,
     steps: [
       'Open a recipe and add three recipes in Goes with. Look for a fourth. (This account already has Chicken and rice bowl and Baked salmon each going with Tuna salad: open Tuna salad and read its Goes with first.)',
-      'Press Remove on one and add a different one. Make a recipe in + New with the category Sauces (this account has none), then open another recipe and look at its Goes with choices.',
+      'Press Remove on one (then Tap again to remove) and add a different one. Make a recipe in + New with the category Sauces (this account has none), then open another recipe and look at its Goes with choices.',
     ],
     expected: [
       'After three, the drop-down is gone and the note says "It goes with 3 recipes. Remove one to add another."',
@@ -2324,7 +2324,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-184', feature: 'Saved meals move', title: 'Saved meals lists the Recipes meals and one tap logs one', persona: 'meal-planner', brief: 'saved-meals-into-recipes',
     steps: [
-      'Open Nutrition, press + Add food, then Saved meals and read the list. Tap "Usual breakfast".',
+      'Open Nutrition, press Add food, then Saved meals and read the list. Tap "Usual breakfast".',
       'Look for a Manage button, then open Recipes and rename the meal there.',
     ],
     expected: [
@@ -2335,7 +2335,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-185', feature: 'Saved meals move', title: 'Save as meal makes a Recipes meal, and a name a recipe has is refused', persona: 'diet-on-target', brief: 'saved-meals-into-recipes', edge: true,
     steps: [
-      'Open Nutrition, press + Add food, then Save as a meal. Press Save as a meal, tick Oatmeal with berries and Greek yogurt, name it "Breakfast" and save.',
+      'Open Nutrition, press Add food, then Save as a meal. Press Save as a meal, tick Oatmeal with berries and Greek yogurt, name it "Breakfast" and save.',
       'Open Recipes, press Meals and find it. Then save another meal named "breakfast".',
     ],
     expected: [
@@ -2372,7 +2372,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-188', feature: 'Week board', title: 'A day as four meals with Calories, Protein and Fat bars', persona: 'meal-planner', brief: 'week-board',
     steps: [
       'On Nutrition look at a day after today that has planned items (a phone: use the day stepper). Read the meters at the top and the meals under them.',
-      'Tap that day\'s name, press + Add food, pick Dinner, press Recipes and press Plan on a recipe. Tap its card and press More.',
+      'Tap that day\'s name, press Add food, pick Dinner, press Recipes and press Plan on a recipe. Tap its card and press More.',
     ],
     expected: [
       'A day ahead shows Calories, Protein and Fat as "amount / target" of its planned items against 2,400 kcal and 160 g, and each meal (Breakfast, Lunch, Dinner, Snack) shows its calories against its share of the day. Planned items from before meals existed sit under Not set.',
@@ -2382,7 +2382,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-189', feature: 'Week board', title: 'The plate check and its one-tap fix', persona: 'meal-planner', brief: 'week-board',
     steps: [
-      'With Chili and Rice paired (S-179), tap the name of a day after today (for example "Fri 25"), press + Add food, pick Dinner, press Recipes and press Plan Chili for Dinner. Read the marks under Dinner on that day\'s column.',
+      'With Chili and Rice paired (S-179), tap the name of a day after today (for example "Fri 25"), press Add food, pick Dinner, press Recipes and press Plan Chili for Dinner. Read the marks under Dinner on that day\'s column.',
       'Press the dashed "+ Add a carb" button.',
     ],
     expected: [
@@ -2406,7 +2406,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-191', feature: 'Week board', title: 'The Fat bar says when some foods have no fat figure', persona: 'meal-planner', brief: 'week-board', edge: true,
     steps: [
-      'On a day after today plan a recipe that has a fat figure and one that has none (+ Add food, Recipes, Plan). Read the Fat meter.',
+      'On a day after today plan a recipe that has a fat figure and one that has none (Add food, Recipes, Plan). Read the Fat meter.',
       'Add more portions of the food with no fat until it makes up most of the day\'s calories.',
     ],
     expected: [
@@ -2437,7 +2437,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The week switcher is a pair of arrows with a This week button; a line under them names the week (for example "This week · Sep 24 to 30"); the button at the right reads Manage.',
-      'Seven day columns sit side by side; today\'s is named with "· today". Each holds five meters (Calories, Protein, Fat, Supplements, Water), its meals or an Also eaten list (only for food that was not planned), Supplements and Hydration.',
+      'Seven day columns sit side by side; today\'s is named with "· today". Each holds five meters (Calories, Protein, Fat, Supplements, Water), its meals (food nobody planned sits in the meal for the hour it was logged), Supplements and Hydration.',
       'None of the old panels is there; food, supplements, water and targets are all reachable from the board (S-199 to S-218).',
     ],
   },
@@ -2458,12 +2458,12 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-195', feature: 'Nutrition board', title: 'Today\'s meters count what was eaten and drunk', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
       'On Nutrition read today\'s meters: Calories, Protein, Fat, Supplements and Water.',
-      'Press + Add food, One-off food, add "Rice" 300 kcal, 20 g protein, 40 g carbs, 5 g fat, then Done.',
+      'Press Add food, One-off food, add "Rice" 300 kcal, 20 g protein, 40 g carbs, 5 g fat, then Done.',
       'Press + Drink under Hydration, press the 16.9 oz size, then Done.',
     ],
     expected: [
       'Before: Calories reads "1,440 / 2,400 kcal" and Protein "58 / 160 g"; Fat is a number against 70 g; Supplements reads "n of m taken" (or "None scheduled"); Water is "0 / <goal> oz". A screen reader says "Calories eaten so far: …", and Water "drunk".',
-      'After Rice: Calories reads "1,740 / 2,400 kcal", Protein "78 / 160 g", Fat 5 g higher, and Rice is in the Also eaten list.',
+      'After Rice: Calories reads "1,740 / 2,400 kcal", Protein "78 / 160 g", Fat 5 g higher, and Rice shows as an eaten row.',
       'After the drink: Water reads "16.9 / <goal> oz", and Hydration says how many oz are to go.',
     ],
   },
@@ -2475,8 +2475,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Look at a day after today that has planned items: add up the calories of its cards and compare with its Calories meter.',
     ],
     expected: [
-      'Before logging, today\'s Calories meter counts only the Also eaten list (about 35% of 2,400 kcal), not the planned items.',
-      'After the check, the item shows its check in its meal (it is not listed again under Also eaten) and the meter rises by that item\'s calories.',
+      'Before logging, today\'s Calories meter counts only the eaten rows of food nobody planned (about 35% of 2,400 kcal), not the planned items.',
+      'After the check, the item shows its check in its meal (it is not listed again as a separate eaten row) and the meter rises by that item\'s calories.',
       'A day ahead reads the sum of its planned items against 2,400 kcal; a screen reader says "planned" there, not "eaten" (ADR 105).',
     ],
   },
@@ -2484,7 +2484,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-197', feature: 'Nutrition board', title: 'With no target a meter shows the amount and never turns red', persona: 'diet-fresh', brief: 'nutrition-board', edge: true,
     steps: [
       'On Nutrition read today\'s meters. This account has no targets saved.',
-      'Press + Add food, One-off food, add "Rice" 300 kcal and 20 g protein, then Done.',
+      'Press Add food, One-off food, add "Rice" 300 kcal and 20 g protein, then Done.',
       'Press Manage, type 2,200 into Calories (set a goal weight first if the field is not offered) and press Done.',
     ],
     expected: [
@@ -2496,22 +2496,22 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-198', feature: 'Nutrition board', title: 'The toolbar names the day it adds to, and follows the day you tap', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'On Nutrition read the line beside + Add food and the buttons next to it.',
+      'On Nutrition read the line beside Add food and the buttons next to it.',
       'Tap the name of a day after today (for example "Sat 26") in its column.',
-      'Press Last week and read the toolbar again.',
+      'Press the previous-week arrow, tap a day name there and read the toolbar again.',
     ],
     expected: [
-      'It reads "Adding to <today> · today", and beside + Add food are Scan and log, Quick add and One-off food.',
-      'It reads "Adding to Sat 26"; only + Add food is left (a day ahead plans, see S-207).',
-      'Last week: "<day> · food is read-only", no + Add food, and "Last week\'s food cannot be changed. Supplements and water can." (S-209).',
+      'It reads "Adding to <today> · today", and Scan and log, Quick add and One-off food sit beside Add food, which is the last button of the row.',
+      'It reads "Adding to Sat 26"; only Add food is left (a day ahead plans, see S-207).',
+      'Last week\'s day reads "Adding to <day>" and offers Add food, Scan and log, Quick add and One-off food like today; they log eaten food on that date (S-209). There is no "food is read-only" line.',
     ],
   },
   {
     id: 'S-199', feature: 'Nutrition board', title: 'The add sheet picks the meal from the time, and remembers your pick', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Use a private window (or a browser that has never opened the add sheet), sign in as this account, open Nutrition and press + Add food on today. Press Done.',
-      'Tap the name of a day after today (for example "Fri 25") and press + Add food. Read which button under Which meal? is pressed. Press a different one and press Done.',
-      'Tap the day name again and press + Add food again.',
+      'Use a private window (or a browser that has never opened the add sheet), sign in as this account, open Nutrition and press Add food on today. Press Done.',
+      'Tap the name of a day after today (for example "Fri 25") and press Add food. Read which button under Which meal? is pressed. Press a different one and press Done.',
+      'Tap the day name again and press Add food again.',
     ],
     expected: [
       'On today the sheet shows no Which meal? question (eaten food has no meal); the title is "Add food" and under it reads "Adding to <today> · today".',
@@ -2522,9 +2522,9 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-200', feature: 'Nutrition board', title: 'The ways of adding, and Back to ways of adding', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'On Nutrition press + Add food and read the list of ways to add food.',
+      'On Nutrition press Add food and read the list of ways to add food.',
       'Press One-off food, then Back to ways of adding, then Quick add.',
-      'Press Done. Tap tomorrow\'s name and press + Add food again.',
+      'Press Done. Tap tomorrow\'s name and press Add food again.',
     ],
     expected: [
       'Today lists seven ways in three groups, each with an icon and a one-line hint: Fastest (Quick add, Scan and log, One-off food), From what you have (Find food, Recipes) and Whole days and meals (Saved meals, Copy yesterday); once something is eaten that day, Save as a meal in Recipes joins the last group (S-203); every row starts at the same left edge.',
@@ -2540,17 +2540,17 @@ export const SCENARIOS: readonly Scenario[] = [
       'Tap one suggestion under Suggested now.',
     ],
     expected: [
-      '"Added Rice." shows under the toolbar and in the sheet; Rice is in today\'s Also eaten list and the Calories and Protein meters rise.',
+      '"Added Rice." shows under the toolbar and in the sheet; Rice is in today\'s eaten rows and the Calories and Protein meters rise.',
       'The portion sheet opens at the usual amount; Log it adds an entry and Undo removes only that entry.',
-      'A suggestion adds one portion and says "Added <food>." (there is no Undo here: delete it from the Also eaten list).',
+      'A suggestion adds one portion and says "Added <food>." (there is no Undo here: delete it from its eaten row).',
     ],
   },
   {
     id: 'S-202', feature: 'Nutrition board', title: 'Log with Find food, Saved meals and Recipes', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
-      'Press + Add food, Find food, type "oat" in "Search your past meals and recipes", pick a result and press Add.',
+      'Press Add food, Find food, type "oat" in "Search your past meals and recipes", pick a result and press Add.',
       'Press Back to ways of adding, then Saved meals, and tap "Usual breakfast".',
-      'Press Back to ways of adding, then Recipes. Type a few letters in Find a recipe and press Log on one recipe. Then tap the name of a day after today, press + Add food, Recipes, and press Plan on a recipe.',
+      'Press Back to ways of adding, then Recipes. Type a few letters in Find a recipe and press Log on one recipe. Then tap the name of a day after today, press Add food, Recipes, and press Plan on a recipe.',
     ],
     expected: [
       'The food is added ("Added 1 portion of <food>.") and listed under Eaten.',
@@ -2561,12 +2561,12 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-203', feature: 'Nutrition board', title: 'Copy yesterday and Save as a meal', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'Press + Add food, Copy yesterday, then Copy yesterday again. Untick one food and press Add selected.',
+      'Press Add food, Copy yesterday, then Copy yesterday again. Untick one food and press Add selected.',
       'Press Back to ways of adding, then Save as a meal. Press Save as a meal, tick two foods from today, name it "Lunch two" and save.',
-      'Delete every food in today\'s Also eaten list, then press + Add food and read the list of ways.',
+      'Delete every eaten food on today, then press Add food and read the list of ways.',
     ],
     expected: [
-      'Only the ticked foods are added to today and appear in the Also eaten list; the notice reads "Added <n>.".',
+      'Only the ticked foods are added to today and appear in the eaten rows; the notice reads "Added <n>.".',
       'The meal "Lunch two" is in Recipes under Meals and in Saved meals (S-185).',
       'With nothing eaten yet the list of ways has no "Save as a meal in Recipes" row; log one food and it comes back.',
     ],
@@ -2574,14 +2574,14 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-204', feature: 'Nutrition board', title: 'Scan from Find food and come back to the same sheet', persona: 'diet-on-target', brief: 'nutrition-board', device: true,
     steps: [
-      'On a phone open Nutrition, press + Add food, Find food and Scan to fill form, and allow the camera.',
+      'On a phone open Nutrition, press Add food, Find food and Scan to fill form, and allow the camera.',
       'Scan a packaged US food until the camera sheet closes.',
       'Read the sheet that comes back, press Use, check the One-off food form and press Add.',
       'Scan a code neither source knows and read the buttons after the miss.',
     ],
     expected: [
       'The camera sheet closes and the Add food sheet should come back on Find food with the product picked (name, calories per 100 g, grams at its serving); you should not have to open the add sheet again. (Expected from the code; not yet walked on a phone, so record what you see.)',
-      'Use fills the One-off food form; Add says "Added <name>." and the food is in today\'s Also eaten list and meters.',
+      'Use fills the One-off food form; Add says "Added <name>." and the food is in today\'s eaten rows and meters.',
       'After a miss, Type the name and Photo the label are offered, as in S-93.',
     ],
   },
@@ -2594,17 +2594,17 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The camera opens straight away, without the add sheet. A panel for the found product appears under the toolbar.',
-      'The food is in today\'s Also eaten list once and in Recipes once, and the meters moved once (S-155).',
+      'The food is in today\'s eaten rows once and in Recipes once, and the meters moved once (S-155).',
     ],
   },
   {
     id: 'S-206', feature: 'Nutrition board', title: 'A day with nothing says so in every section', persona: 'diet-fresh', brief: 'nutrition-board', edge: true,
     steps: [
       'On Nutrition read today\'s column from top to bottom. This account has never logged a food or set a supplement.',
-      'Press + Add food and Quick add.',
+      'Press Add food and Quick add.',
     ],
     expected: [
-      'Breakfast, Lunch and Dinner each say "Nothing planned" with no button; Snack sits between Lunch and Dinner and says "No daily snacks yet" with a Set up daily snacks button. Eaten says "Nothing logged"; Supplements says "Nothing scheduled"; Hydration shows how many oz are to go and a + Drink button.',
+      'Breakfast, Lunch and Dinner each say "Nothing planned" with no button; Snack sits between Lunch and Dinner and says "No daily snacks yet" with a Set up daily snacks button. a day with nothing logged shows no Not in a meal group; Supplements says "Nothing scheduled"; Hydration shows how many oz are to go and a + Drink button.',
       'Quick add says "Nothing here yet. Log a few foods and the ones you use most appear."',
     ],
   },
@@ -2612,9 +2612,9 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-207', feature: 'Nutrition board', title: 'A day ahead plans recipes and saved meals; it never logs', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
       'Press Next week and pick a day whose Breakfast, Lunch and Dinner all say "Nothing planned" (the seed plans seven days from today, so days later than that are empty). Note that Snack is listed between Lunch and Dinner.',
-      'Tap that day\'s name, press + Add food, pick Snack, press Recipes. Read the buttons beside each recipe.',
+      'Tap that day\'s name, press Add food, pick Snack, press Recipes. Read the buttons beside each recipe.',
       'Press Plan on Overnight oats. Press Done.',
-      'Press This week and tap today\'s name; press + Add food and Recipes.',
+      'Press This week and tap today\'s name; press Add food and Recipes.',
     ],
     expected: [
       'Breakfast, Lunch and Dinner say "Nothing planned" and have no button; Snack says "No daily snacks yet" (no daily snacks are saved).',
@@ -2623,29 +2623,29 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-208', feature: 'Nutrition board', title: 'Edit and delete today\'s eaten food; carbs and fat survive an edit', persona: 'diet-on-target', brief: 'nutrition-board',
+    id: 'S-208', feature: 'Nutrition board', title: 'Edit and delete an eaten food from its row sheet; carbs and fat survive an edit', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
-      'In today\'s Also eaten list press Edit on Greek yogurt, change only the name to "Plain yogurt" and press Save.',
+      'In today\'s eaten rows tap the Greek yogurt row, press Edit in its sheet, change only the name to "Plain yogurt" and press Save.',
       'Read the Fat meter before and after.',
-      'Press Delete on Plain yogurt.',
-      'Add a one-off food with only a name, calories and protein, and read the line under the Also eaten list.',
+      'Tap the Plain yogurt row, press Delete and then Tap again to delete. Then tap an earlier day\'s eaten row and read its sheet.',
+      'Add a one-off food with only a name, calories and protein, and read the line under the eaten rows.',
     ],
     expected: [
       'The row shows "Plain yogurt"; Calories, Protein and Fat meters do not change, because the edit kept its carbs and fat.',
-      'Delete removes the row and lowers the meters by that food\'s numbers.',
+      'The first Delete tap only changes the button to "Tap again to delete"; the second removes the row and lowers the meters by that food\'s numbers. An earlier day\'s row opens the same sheet with Edit, Delete, Move to… and Copy to….',
       'A line says "Carbs and fat count only what you enter." once a food has no carbs or fat.',
     ],
   },
   {
-    id: 'S-209', feature: 'Nutrition board', title: 'Last week is read-only for food; supplements and water can still change', persona: 'diet-on-target', brief: 'nutrition-board', edge: true,
+    id: 'S-209', feature: 'Nutrition board', title: 'Last week logs food on its date; supplements and water change too', persona: 'diet-on-target', brief: 'nutrition-any-day-add', edge: true,
     steps: [
-      'Press the previous-week arrow and read a day: its meters, its Eaten or Also eaten list and its other sections.',
-      'Look for Edit, Delete and + Add food. Read the toolbar.',
+      'Press the previous-week arrow and read a day: its meters, its eaten food (Not in a meal) and its other sections.',
+      'Tap a day name there, read the toolbar, press Add food and add a one-off food. Tap its row and read the sheet.',
       'Tick a supplement on that day (add one first in Manage, S-210) and press + Drink, then press a size.',
     ],
     expected: [
-      'The day shows an Eaten list (no meal sections, because eaten food has no meal) and its meters count that day\'s food.',
-      'No Edit, Delete or + Add food; the toolbar says "· food is read-only" and "Last week\'s food cannot be changed. Supplements and water can."',
+      'The day shows its eaten food under Not in a meal (an earlier day\'s food has no meal) and its meters count that day\'s food.',
+      'The toolbar offers Add food, Scan and log, Quick add and One-off food; the food is logged on that date (in "Not in a meal"), counted in that day\'s meters, and its row sheet offers Edit, Delete, Move to… and Copy to…. There is no "food is read-only" line.',
       'The tick and the drink both save, and that day\'s count and Water meter move.',
     ],
   },
@@ -2718,7 +2718,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-215', feature: 'Nutrition board', title: 'Back closes a sheet and the page keeps its address', persona: 'diet-on-target', brief: 'nutrition-board',
     steps: [
       'Open Nutrition and note the address (it ends "daily/nutrition").',
-      'Open + Add food and press the browser\'s Back (on a phone the back-swipe). Do the same for + Drink and Manage.',
+      'Open Add food and press the browser\'s Back (on a phone the back-swipe). Do the same for + Drink and Manage.',
       'Open Manage, Supplements and library, then press Back.',
     ],
     expected: [
@@ -2935,7 +2935,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-233', feature: 'Label scan', title: 'A label photo fills the vitamin and mineral rows, to check against the label', persona: 'diet-fresh', brief: 'food-vitamins-minerals', device: true,
     steps: [
       'On a phone, press Add food, Find food, then the label photo option after a miss (or scan from the New food form), and photograph the Nutrition Facts of a fortified cereal or a packaged food that lists sodium and fiber.',
-      'Compare every vitamin and mineral row with the label, remove one row, then change the calories.',
+      'Compare every vitamin and mineral row with the label, remove one row (press Remove, then Tap again to remove), then change the calories.',
     ],
     expected: [
       'The form shows each vitamin and mineral the label lists as its own row (including Sodium and Fiber when listed) so each can be checked against the label.',
@@ -3122,21 +3122,21 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-249', feature: 'Nutrition week', title: 'A planned food on today has a check box that logs it as eaten', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
       'Press Reset on Meal planner first (switch to another account to do it), then switch back.',
-      'On Nutrition, today, tick the check box on a planned food, read the meters and the Also eaten section, then untick it.',
+      'On Nutrition, today, tick the check box on a planned food, read the meters and the eaten rows, then untick it.',
     ],
     expected: [
       'Ticking logs the food as eaten and the meters move; unticking removes that log.',
-      'Also eaten appears only for food that was not planned.',
+      'A separate eaten row appears only for food that was not planned.',
     ],
   },
   {
     id: 'S-250', feature: 'Nutrition week', title: 'The toolbar offers what the selected day can do', persona: 'meal-planner', brief: 'nutrition-board',
     steps: [
       'Press Reset on Meal planner first (switch to another account to do it), then switch back.',
-      'Read the toolbar on today, then tap a day ahead and read it again. On a window 1440 px or wider count the day columns.',
+      'Read the toolbar on today, then tap an earlier day and a day ahead and read it each time. On a window 1440 px or wider count the day columns.',
     ],
     expected: [
-      'Today offers Scan and log, Quick add and One-off food (they log eaten food); a day ahead offers Recipes and Saved meals (it plans, never logs).',
+      'Today and an earlier day offer Scan and log, Quick add and One-off food (they log eaten food), with Add food as the last button; a day ahead offers Recipes and Saved meals (it plans, never logs).',
       'Seven columns show from 1440 px wide, and the selected day is clearly marked.',
     ],
   },
@@ -3217,9 +3217,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
       'Tick a card on one day, move it into another day\'s column, and read both columns\' date stamps.',
+      'Move a ticked card into a day that has nothing else done, read its stamp, then move the card back home.',
     ],
     expected: [
-      'The receiving day shows the date most of its own cards were logged on, not the moved card\'s earlier date, and the old column does not go blank.',
+      'The receiving day shows the date most of its own cards were logged on, not the moved card\'s earlier date. A day that holds only moved-in work shows no date, and a day with nothing done shows none.',
+      'Back home the card keeps what it was ticked for at home and drops what it was ticked for while away, so the home day\'s stamp returns and the other day\'s goes.',
     ],
   },
   {
