@@ -37,7 +37,7 @@ test('copy from yesterday starts disabled, then adds only the ticked entries', a
   await expect(sheet.getByRole('button', { name: 'Copy yesterday', exact: true })).toBeDisabled();
   await expect(sheet.getByText('Nothing logged yesterday.')).toBeVisible();
   await closeSheet(page);
-  // Logging a past day is gone (last week is read-only on the board), so yesterday's food is written to the saved food log and the app reloaded.
+  // Yesterday's food is written to the saved food log and the app reloaded.
   await page.evaluate(() => localStorage.setItem('ironlog:diet/main', JSON.stringify({ items: [
     { id: 'y-rice', d: '2026-09-23', n: 'Rice', kcal: 200, p: 4 },
     { id: 'y-eggs', d: '2026-09-23', n: 'Eggs', kcal: 150, p: 12 },

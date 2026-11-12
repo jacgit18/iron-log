@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 import { openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief nutrition-items-row-sheet-and-more: eaten food sits in its meal with an eaten mark (or in "Not in a meal"), and a row opens a sheet with Edit and a two-tap Delete. The rules (the hour that picks the meal, the meal totals) are node tests
-// (src/lib/nutritionBoard.test.ts); this covers the wiring: where a row shows, the sheet, the two taps, the read-only past day, the kept day. The fixed clock is Thursday 2026-09-24, 18:30.
+// (src/lib/nutritionBoard.test.ts); this covers the wiring: where a row shows, the sheet, the two taps, an earlier day's rows, the kept day. The fixed clock is Thursday 2026-09-24, 18:30.
 const TODAY = '2026-09-24';
 const YESTERDAY = '2026-09-23';
 const seedDiet = async (page, items) => { await page.evaluate(l => localStorage.setItem('ironlog:diet/main', JSON.stringify({ items: l })), items); await page.reload(); };
@@ -51,14 +51,27 @@ test('tapping an eaten row opens a sheet: Edit saves a change, Delete needs two 
   await expect(meal(page, 'Breakfast').locator('.nb-eat')).toHaveCount(0);
 });
 
-test('an earlier day lists its food in "Not in a meal", read-only: a tap opens nothing', async ({ page }) => {
+test('an earlier day lists its food in "Not in a meal"; a tap opens the same sheet, so Edit and Delete work there too', async ({ page }) => {
   await seedDiet(page, ENTRIES);
   await openNutrition(page);
   const past = page.locator(`.nb-col[data-day="${YESTERDAY}"]`);
   await expect(past.locator('.nb-eat')).toContainText('Pasta');
   await expect(past.locator('.wb-slothd b', { hasText: 'Not in a meal' })).toBeVisible();
   await past.locator('.nb-eatrow').click();
+  const sheet = page.getByRole('dialog', { name: 'Pasta' });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('dialog').locator('input[id$="-n"]').fill('Penne');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Penne' })).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(past.locator('.nb-eat')).toContainText('Penne');
+  await past.getByRole('button', { name: /^Penne/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete Penne' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /Tap again to delete/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(past.locator('.nb-eat')).toHaveCount(0);
+  expect((await stored(page)).map(e => e.id).sort()).toEqual(['soup', 'tea', 'toast']); // only that entry went
 });
 
 test('on a phone the row opens the same sheet', async ({ page }) => {
