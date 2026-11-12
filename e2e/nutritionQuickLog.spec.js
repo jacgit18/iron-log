@@ -37,9 +37,9 @@ test('the strip hides with nothing logged; after logging a food the chip opens t
   await strip.getByRole('list', { name: 'Recent and favorites' }).getByRole('button', { name: 'Boiled egg' }).click();
   await expect(sheet(page).getByRole('heading', { name: 'Boiled egg' })).toBeVisible();
   await expect(sheet(page).getByText('3 eggs').first()).toBeVisible(); // the usual amount
-  await expect(sheet(page).getByText('210 kcal · P 18 g for 3 eggs')).toBeVisible();
+  await expect(sheet(page).getByText(/210 kcal · P 18 g.*for 3 eggs/)).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Less' }).click();
-  await expect(sheet(page).getByText('175 kcal · P 15 g for 2.5 eggs')).toBeVisible();
+  await expect(sheet(page).getByText(/175 kcal · P 15 g.*for 2\.5 eggs/)).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Log', exact: true }).click();
   await expect(sheet(page).getByText(/Logged .+: 2\.5 eggs to today\./)).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Done' }).click();

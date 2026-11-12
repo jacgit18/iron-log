@@ -18,7 +18,7 @@ const make = async (page, name, pack) => {
 test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More stops there, and the log control logs the pack', async ({ page }) => {
   await make(page, 'Gnocchi', '12');
   await expect(page.getByText('12 servings per pack')).toBeVisible();
-  const portions = page.getByRole('status').filter({ hasText: /portions?$/ });
+  const portions = page.getByRole('status').filter({ hasText: /^[\d.]+ portions?$/ });
   await expect(portions).toHaveText('1 portion');
   await page.getByRole('button', { name: 'Whole pack (12)' }).click();
   await expect(portions).toHaveText('12 portions');
@@ -53,6 +53,6 @@ test('a food with no pack size has no Whole pack button and the stepper stops at
   await expect(page.getByRole('button', { name: /Whole pack/ })).toHaveCount(0);
   const more = page.getByRole('button', { name: 'More', exact: true });
   for (let i = 0; i < 18; i++) await more.click();
-  await expect(page.getByRole('status').filter({ hasText: /portions$/ })).toHaveText('10 portions');
+  await expect(page.getByRole('status').filter({ hasText: /^[\d.]+ portions$/ })).toHaveText('10 portions');
   await expect(more).toBeDisabled();
 });
