@@ -26,7 +26,7 @@ test('a logged food comes back as a one-tap suggestion', async ({ page }) => {
   const sugg = sheet.getByRole('list', { name: 'Suggested now' });
   await expect(sugg.getByRole('button', { name: 'Oats · 350 kcal' })).toBeVisible();
   await sugg.getByRole('button', { name: 'Oats · 350 kcal' }).click();
-  await expect(sheet.getByRole('status').last()).toContainText('Added Oats.');
+  await expect(sheet.getByRole('status').last()).toContainText('Added 1 from Oats.');
   await closeSheet(page);
   await expect(eaten(page)).toHaveCount(2);
 });

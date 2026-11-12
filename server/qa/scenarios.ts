@@ -234,7 +234,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Look at the cards of a day after today.',
     ],
     expected: [
-      'The recipe logs one entry with its numbers at the planned portion, shown as checked in its meal (the notice reads "Logged 1 from <name>."), not listed again under Also eaten, and today\'s meters move. Unticking removes what it logged. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
+      'The recipe logs one entry with its numbers at the planned portion, shown as checked in its meal (the notice reads "Added 1 from <name>."), not listed again under Also eaten, and today\'s meters move. Unticking removes what it logged. A planned meal (it is a recipe in the plan now that saved meals live in Recipes) also logs one entry with its total; Quick add logs the same meal\'s linked foods one by one.',
       'Days after today have no check box.',
     ],
   },

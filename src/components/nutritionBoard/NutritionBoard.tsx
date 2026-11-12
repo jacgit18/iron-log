@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { bwSorted, goalStatus } from '../../lib/body.js';
 import { entryFromFood } from '../../lib/dietLog.js';
+import { runInstantLog } from '../../lib/instantLog.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
@@ -60,18 +61,9 @@ export default function NutritionBoard() {
   const log = (r: Resolved, index: number) => {
     const out = planLog(r, st().diet, today);
     if ('error' in out) { setMsg(out.error); return; }
-    let done = 0, stopped: string | null = null;
-    const ids: string[] = [];
-    for (const f of out.add) {
-      const added = st().addDietEntry(entryFromFood(today, f));
-      stopped = added.error;
-      if (stopped) break;
-      if (added.id) ids.push(added.id);
-      done++;
-    }
-    if (ids.length) st().setPlanEaten(today, index, ids); // the planned item shows a check
-    const left = out.left + (out.add.length - done - (stopped ? 1 : 0));
-    setMsg(`Logged ${done} from ${r.name}.${stopped ? ` ${stopped}` : left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
+    const run = runInstantLog(st().addDietEntry, out.add.map(f => entryFromFood(today, f)), { from: r.name, left: out.left });
+    if (run.ids.length) st().setPlanEaten(today, index, run.ids); // the planned item shows a check
+    setMsg(run.text);
   };
   const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
   const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
