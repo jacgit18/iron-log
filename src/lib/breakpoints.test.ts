@@ -42,6 +42,8 @@ describe('breakpoints', () => {
     expect(widthsIn('@media (min-width: 20em) and (max-width: 40rem) {')).toEqual([320, 640]);
     expect(widthsIn("window.matchMedia('(min-width:1000px)').matches")).toEqual([1000]);
     expect(widthsIn('const rail = useMinWidth(1100);')).toEqual([1100]);
+    expect(widthsIn('@media (width >= 700px) and (width < 40rem) {')).toEqual([700, 640]);
+    expect(widthsIn('@media (650px <= width <= 1000px) {')).toEqual([650, 1000]);
     expect(widthsIn('@container (max-width: 15rem) { a { b: c } }')).toEqual([]);
     expect(widthsIn("matchMedia('(prefers-reduced-motion: reduce)')")).toEqual([]);
   });

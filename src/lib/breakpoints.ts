@@ -19,6 +19,11 @@ export function widthsIn(text: string): number[] {
     for (const m of q.matchAll(/\(\s*(?:min|max)-width\s*:\s*([\d.]+)\s*(px|em|rem)?\s*\)/g)) {
       out.push(Math.round(Number(m[1]) * (m[2] === 'em' || m[2] === 'rem' ? EM_PX : 1)));
     }
+    // Range syntax: (width >= 700px), (width < 1000px), (700px <= width <= 1000px).
+    for (const m of q.matchAll(/\(([^()]*\bwidth\b[^()]*)\)/g)) {
+      if (/(?:min|max)-width/.test(m[1] ?? '')) continue;
+      for (const n of (m[1] ?? '').matchAll(/([\d.]+)\s*(px|em|rem)?/g)) out.push(Math.round(Number(n[1]) * (n[2] === 'em' || n[2] === 'rem' ? EM_PX : 1)));
+    }
   }
   for (const m of text.matchAll(/useMinWidth\(\s*(\d+)\s*\)/g)) out.push(Number(m[1]));
   return out;
