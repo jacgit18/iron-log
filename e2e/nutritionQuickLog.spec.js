@@ -84,7 +84,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Almond milk', brand: 'Silk', kcal: 30, p: 1, c: 1, f: 2.5, serving: 240 } }) }));
   await page.reload();
   await openDiet(page);
-  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   const scanned = page.getByRole('group', { name: 'Scanned food' });
   await expect(scanned.getByText('Almond milk (Silk) · 30 kcal per 100 g')).toBeVisible();
@@ -97,7 +97,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await openRecipes(page);
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
   await openDiet(page); // the same product scanned again is logged under the saved food, not saved twice
-  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   await page.getByRole('group', { name: 'Scanned food' }).getByRole('button', { name: 'Save and log it' }).click();
   await expect(page.getByText('Logged Almond milk (Silk), a food you already had in Recipes.')).toBeVisible();
@@ -115,7 +115,7 @@ test('a scanned food is logged to the day the scan began on, even if another day
   await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Almond milk', brand: 'Silk', kcal: 30, p: 1, c: 1, f: 2.5, serving: 240 } }) }));
   await page.reload();
   await openDiet(page);
-  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click();
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click();
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   const scanned = page.getByRole('group', { name: 'Scanned food' });
   await expect(scanned).toBeVisible();

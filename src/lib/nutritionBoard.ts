@@ -97,7 +97,7 @@ export const addMode = (day: string, today: string): AddMode => (day > today ? '
 export type AddFlow = 'quick' | 'barcode' | 'oneoff' | 'find' | 'meals' | 'recipes' | 'copy' | 'savemeal';
 export const ADD_FLOWS: Record<AddFlow, { label: string; hint: string }> = {
   quick: { label: 'Quick add', hint: 'Foods you log most, and suggestions for now' },
-  barcode: { label: 'Scan barcode', hint: 'Camera, then save the food to Recipes and log it' },
+  barcode: { label: 'Scan and log', hint: 'Camera, then save the food to Recipes and log it' },
   oneoff: { label: 'One-off food', hint: 'Type a name, calories and protein' },
   find: { label: 'Find food', hint: 'Your past meals, your recipes and the food database; a label photo if a scan misses' },
   meals: { label: 'Saved meals', hint: 'Add a meal you saved' },

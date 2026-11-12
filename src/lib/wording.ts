@@ -11,6 +11,7 @@ export const WORDING: readonly WordRule[] = [
   { say: 'Close', when: 'a sheet that only shows something', notThis: ['Done'] },
   { say: 'Food', when: 'a packaged food in Recipes: the tab is "Foods", one is a "Food" (its pill and category), the forms are "New food" and "Edit food"; the + New entry stays "Add a food by hand"', notThis: ['Ready-made', 'ready-made food'] },
   { say: 'Save and Cancel', when: 'a form', notThis: ['Done'] },
+  { say: 'Scan and log', when: 'a scan that saves the food to Recipes and logs it on the day: the Nutrition toolbar button and the Add food row (owner, 2026-11-12)', notThis: ['Scan barcode'] },
 ];
 
 /** Create is only for an account or a program. */

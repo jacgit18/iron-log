@@ -11,7 +11,7 @@ test('on a 375 x 812 phone the day card starts under 400px (486px on main, 522px
   const [week, targets] = await page.evaluate(() => ['.nb-weeksw', '#nb-targets'].map(q => Math.round(document.querySelector(q).getBoundingClientRect().y)));
   expect(targets).toBeGreaterThan(week); // Targets and Manage are links below the day stepper (spec nutritionHeaderLinks)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-  for (const n of ['Add food', 'Scan barcode', 'Quick add', 'One-off food']) await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
+  for (const n of ['Add food', 'Scan and log', 'Quick add', 'One-off food']) await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
 });
 
 test('the Add food sheet shows three labelled groups and every way starts at the same left edge, with its icon', async ({ page }) => {
@@ -20,7 +20,7 @@ test('the Add food sheet shows three labelled groups and every way starts at the
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('heading', { level: 3 })).toHaveText(['Fastest', 'From what you have', 'Whole days and meals']);
   const rows = await sheet.locator('.nb-menu .btn').evaluateAll(bs => bs.map(b => ({ x: Math.round(b.getBoundingClientRect().x), icon: !!b.querySelector('svg'), name: b.querySelector('b').textContent })));
-  expect(rows.map(r => r.name)).toEqual(['Quick add', 'Scan barcode', 'One-off food', 'Find food', 'Recipes', 'Saved meals', 'Copy yesterday']); // no Save as a meal row until something is eaten (spec mealDoors)
+  expect(rows.map(r => r.name)).toEqual(['Quick add', 'Scan and log', 'One-off food', 'Find food', 'Recipes', 'Saved meals', 'Copy yesterday']); // no Save as a meal row until something is eaten (spec mealDoors)
   expect(new Set(rows.map(r => r.x)).size).toBe(1);
   expect(rows.every(r => r.icon)).toBe(true);
   const text = await sheet.locator('.nb-menu .btn').evaluateAll(bs => bs.map(b => getComputedStyle(b).textAlign));

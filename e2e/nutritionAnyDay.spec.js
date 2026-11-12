@@ -35,7 +35,7 @@ test('a past day offers the log ways, and Copy yesterday there says one sentence
   await openNutrition(page);
   await col(page, TUE).getByRole('button', { name: /^Tue 22/ }).click();
   const bar = page.locator('.nb-toolbar');
-  for (const f of ['Scan barcode', 'Quick add', 'One-off food']) await expect(bar.getByRole('button', { name: f, exact: true })).toBeVisible();
+  for (const f of ['Scan and log', 'Quick add', 'One-off food']) await expect(bar.getByRole('button', { name: f, exact: true })).toBeVisible();
   await expect(bar.getByRole('button', { name: 'Recipes', exact: true })).toHaveCount(0);
   const sheet = await openAdd(page, 'Copy yesterday');
   await sheet.getByRole('button', { name: /^Copy / }).click();
@@ -50,7 +50,7 @@ test('a day ahead still offers only Saved meals and Recipes (plan items)', async
   await openNutrition(page);
   await col(page, '2026-09-26').getByRole('button', { name: /^Sat 26/ }).click();
   const sheet = await openAdd(page);
-  await expect(sheet.getByRole('button', { name: /^(Quick add|One-off food|Scan barcode|Find food|Copy)/ })).toHaveCount(0);
+  await expect(sheet.getByRole('button', { name: /^(Quick add|One-off food|Scan and log|Find food|Copy)/ })).toHaveCount(0);
   await expect(sheet.getByRole('button', { name: /^Recipes/ })).toBeVisible();
   await expect(sheet.getByRole('button', { name: /^Saved meals/ })).toBeVisible();
 });
