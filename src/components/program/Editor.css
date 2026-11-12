@@ -69,7 +69,7 @@
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
-/* The dots icon is the whole label: no side padding, so the button stays the 44 px target the old text glyph made it. */
+/* The dots icon is the whole label: no side padding. The 44 px box comes from the shared .btn.sm min-width; e2e/programRowMenu.spec.js checks this button is 44 px wide and tall. */
 .edbtns .edmore {
   padding-inline: 0;
 }
