@@ -7,6 +7,8 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows } from '../../lib/quickMeals.js';
+import { afterSheetClose } from '../../lib/backNav.js';
+import { requestRecipesJump } from '../../lib/recipesJump.js';
 import { ADD_FLOWS, addFlows, addGroups, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
@@ -22,6 +24,7 @@ import SaveMeal from '../diet/SaveMeal.js';
 import SavedMeals from '../diet/SavedMeals.js';
 import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
 import Icon, { type IconName } from '../Icon.jsx';
+import { navigate } from '../useRoute.js';
 import Sheet from '../Sheet.js';
 
 const FLOW_ICON: Record<AddFlow, IconName> = { quick: 'spark', barcode: 'scan', oneoff: 'edit', find: 'search', meals: 'star', recipes: 'book', copy: 'undo', savemeal: 'plus' };
@@ -53,7 +56,7 @@ export default function AddFoodSheet() {
   const reopen = (r: ScanResume) => useAppStore.getState().openModal({ ...(modal ?? { type: 'nbadd' }), type: 'nbadd', day, flow: 'find', resume: r });
   const body = flow && <FlowBody flow={flow} day={day} today={today} meal={meal} fill={fill} reopen={reopen} {...(resume ? { resume } : {})} onFill={f => { setFill(o => ({ key: o.key + 1, food: f })); setFlow('oneoff'); }} onMsg={said} />;
   return (
-    <Sheet className="nbsheet" aria-label={`Add food, ${addingTo(day, today)}`}>
+    <Sheet className="nbsheet sheet-wide" aria-label={`Add food, ${addingTo(day, today)}`}>
       <h2 className="cond">{flow ? ADD_FLOWS[flow].label : 'Add food'}</h2>
       <p className="note">{addingTo(day, today)}</p>
       {flows.length === 0 ? <p className="note">Last week&apos;s food cannot be changed.</p> : day > today && (
@@ -93,6 +96,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const saved = useAppStore(s => s.cfg.diet?.meals) ?? [];
   const moved = useAppStore(s => s.cfg.diet?.mealsMoved) ?? {};
   const [q, setQ] = useState('');
+  const newRecipe = () => { requestRecipesJump({ kind: 'new' }); afterSheetClose(window.history, window, () => { useAppStore.getState().setTab('daily'); navigate('daily/recipes/form', 'push'); }); useAppStore.getState().closeModal(); }; // the blank form in Recipes, after the sheet's own Back step (lib/backNav.ts)
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
   const eat = day === today;
   const st = () => useAppStore.getState();
@@ -145,7 +149,8 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
             </li>
           ))}
         </ul>
-        {list.length === 0 && <p className="note">{recipes.length === 0 ? 'Add a recipe in Recipes first.' : 'No match.'}</p>}
+        {list.length === 0 && recipes.length > 0 && <p className="note">No match.</p>}
+        {recipes.length === 0 && <><p className="note">No recipes yet.</p><button type="button" className="btn" id="nb-new-recipe" onClick={newRecipe}>+ New recipe</button></>}
       </div>
     );
   }
