@@ -4,6 +4,7 @@ import { PLAN_SLOTS } from '../../../shared/diet.js';
 import { SLOT_LABEL, type BoardItem } from '../../../lib/weekBoard.js';
 import type { PlanSlot } from '../../../types.ts';
 import { useAppStore } from '../../../store/useAppStore.js';
+import ArmedButton from '../../ArmedButton.jsx';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Move to (a day or a meal) and Remove.
 export default function BoardCard({ item, day, today, days, open, moving, onOpen, onMoveOpen, onLog, onMsg }: {
@@ -31,7 +32,7 @@ export default function BoardCard({ item, day, today, days, open, moving, onOpen
           {r.item.k === 'r' && !r.gone && <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={r.portion <= 0.5} onClick={() => st().setPlanPortion(day, index, r.portion - 0.5)}>Less</button>}
           {r.item.k === 'r' && !r.gone && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={r.portion >= 10} onClick={() => st().setPlanPortion(day, index, r.portion + 0.5)}>More</button>}
           <button type="button" className="btn sm" aria-label={`Move ${r.name}`} aria-expanded={moving} onClick={onMoveOpen}>Move to…</button>
-          <button type="button" className="btn sm" aria-label={`Remove ${r.name}`} onClick={() => { st().removePlanItem(day, index); onOpen(); }}>Remove</button>
+          <ArmedButton className="btn sm" aria-label={`Remove ${r.name}`} label="Remove" armedLabel="Tap again to remove" onConfirm={() => { st().removePlanItem(day, index); onOpen(); }} />
         </div>
       )}
       {open && moving && (
