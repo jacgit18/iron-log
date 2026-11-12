@@ -109,7 +109,8 @@ const EAT_FLOWS: readonly AddFlow[] = ['quick', 'barcode', 'oneoff', 'find', 'me
 const PLAN_FLOWS: readonly AddFlow[] = ['meals', 'recipes'];
 /** The shortcut buttons beside + Add food, so the toolbar keeps its shape on every day: today and an earlier day log (scan, quick add, one-off), a day ahead plans (recipes, saved meals). */
 export const toolbarFlows = (day: string, today: string): readonly AddFlow[] => (addMode(day, today) === 'plan' ? ['recipes', 'meals'] : ['barcode', 'quick', 'oneoff']);
-export const addFlows = (day: string, today: string): readonly AddFlow[] => (addMode(day, today) === 'plan' ? PLAN_FLOWS : EAT_FLOWS);
+/** The ways to add on a day. `eaten` is how many foods that day has eaten: with none, "Save as a meal" has nothing to save, so it is not offered (owner, 2026-11-12). */
+export const addFlows = (day: string, today: string, eaten: number): readonly AddFlow[] => (addMode(day, today) === 'plan' ? PLAN_FLOWS : eaten > 0 ? EAT_FLOWS : EAT_FLOWS.filter(f => f !== 'savemeal'));
 
 /** The add sheet's menu in three labelled groups (brief nutrition-header-sheet-wording); a group with no way on that day is left out (a day ahead has no Fastest group). */
 export const ADD_GROUPS: readonly { label: string; flows: readonly AddFlow[] }[] = [
@@ -117,8 +118,8 @@ export const ADD_GROUPS: readonly { label: string; flows: readonly AddFlow[] }[]
   { label: 'From what you have', flows: ['find', 'recipes'] },
   { label: 'Whole days and meals', flows: ['meals', 'copy', 'savemeal'] },
 ];
-export const addGroups = (day: string, today: string): { label: string; flows: AddFlow[] }[] => {
-  const on = addFlows(day, today);
+export const addGroups = (day: string, today: string, eaten: number): { label: string; flows: AddFlow[] }[] => {
+  const on = addFlows(day, today, eaten);
   return ADD_GROUPS.map(g => ({ label: g.label, flows: g.flows.filter(f => on.includes(f)) })).filter(g => g.flows.length > 0);
 };
 
