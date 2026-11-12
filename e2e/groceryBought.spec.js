@@ -20,7 +20,7 @@ const open = async (page) => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const view = (page, name) => page.locator('.seg[aria-label="Grocery view"]').getByRole('button', { name });
+const view = (page, name) => page.locator('.subnav[aria-label="Grocery view"]').getByRole('button', { name });
 
 test('three views, no counts: a tick moves a row from Shopping to Bought, and the address follows each view', async ({ page }) => {
   await open(page);
@@ -71,13 +71,14 @@ test('the old Groceries addresses open the renamed screens', async ({ page }) =>
   await expect(view(page, 'Shopping')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('three segments fit at 320 px with large text and nothing scrolls sideways', async ({ page }) => {
+test('three views reach the screen at 320 px with large text and the page never scrolls sideways', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await open(page);
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(wide).toBe(false);
   for (const name of ['Shopping', 'Bought', 'Inventory']) {
+    await view(page, name).scrollIntoViewIfNeeded(); // the pill row scrolls inside its own box on a phone
     const box = await view(page, name).boundingBox();
     expect(box.width).toBeGreaterThan(0);
     expect(box.x + box.width).toBeLessThanOrEqual(320);

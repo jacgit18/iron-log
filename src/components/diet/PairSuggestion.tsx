@@ -5,7 +5,7 @@ import { suggestedPartners } from '../../lib/pairSuggestions.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe } from '../../types.ts';
 
-// After a food is logged (the Log sheet and Ate this): what goes with it, one tap each at its usual amount on the same day, with Undo (brief recipes-goes-with, part 3).
+// After a food is logged (the Log sheet and the log control): what goes with it, one tap each at its usual amount on the same day, with Undo (brief recipes-goes-with, part 3).
 export default function PairSuggestion({ recipe, day, today }: { recipe: Recipe; day: string; today: string }) {
   const recipes = useAppStore(s => s.recipes);
   const [added, setAdded] = useState<Record<string, string>>({}); // partner id -> the entry it made

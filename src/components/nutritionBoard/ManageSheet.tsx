@@ -7,7 +7,7 @@ import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
 import '../supplements/Supplements.css';
 
 // The Manage sheet (brief nutrition-board, PR 2): the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
-// Saved meals and foods and Water reminder open the existing Recipes and Settings screens (the sheet closes first).
+// Meals and foods (opens Recipes) and Water reminder open the existing Recipes and Settings screens (the sheet closes first).
 export default function ManageSheet() {
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
@@ -30,7 +30,7 @@ export default function ManageSheet() {
       <h2 className="cond">Manage</h2>
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>
-        <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Saved meals and foods</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>
+        <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Meals and foods (opens Recipes)</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>
         <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => useAppStore.getState().setTab('settings'))}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
       </ul>
       <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>

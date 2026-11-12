@@ -4,7 +4,7 @@ import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Ready-made foods and the recipe-first day screen (brief recipe-first-diet-log). The cleaner, the day limits and the logging rules are node tests
 // (recipes.test.ts, recipeDraft.test.ts, dietLog.test.ts); this covers the wiring a unit test cannot: the real form and list, the address and Back, the
-// detail without ingredients, Ate this on a chosen day, the lookup filling the form (route stubbed), and the folded One-off food form.
+// detail without ingredients, the log control on a chosen day, the lookup filling the form (route stubbed), and the folded One-off food form.
 const diet = page => page.getByRole('dialog'); // the add sheet of the Nutrition board (brief nutrition-board)
 const eaten = page => page.locator('.nb-col.today .nb-eat');
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
@@ -50,7 +50,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toBeVisible();
 });
 
-test('Ate this logs a ready-made food as a snapshot, to today or to a chosen day, and offers a future day as a plan', async ({ page }) => {
+test('The log control logs a ready-made food as a snapshot, to today or to a chosen day, and offers a future day as a plan', async ({ page }) => {
   await make(page);
   await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged 1 portion to today.')).toBeVisible();
