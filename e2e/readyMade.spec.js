@@ -110,7 +110,8 @@ test('Enter in the lookup box does not save the form, and the Ready-made filter 
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Ready-made' });
   await page.getByRole('button', { name: 'Library', exact: true }).click();
-  await expect(page.getByLabel('Category', { exact: true }).locator('option', { hasText: 'Ready-made' })).toHaveCount(0);
+  await expect(page.locator('#recipes-library-signin')).toBeVisible(); // signed out: the Library has no filters, so the dropped filter is checked back on Mine
+  await page.getByRole('button', { name: 'Mine', exact: true }).click();
   await expect(page.getByLabel('Category', { exact: true })).toHaveValue('');
 });
 
