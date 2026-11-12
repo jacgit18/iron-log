@@ -42,7 +42,8 @@ export default function AddFoodSheet() {
   const eaten = useAppStore(st => entriesOn(st.diet, day).length);
   const flows = addFlows(day, today, eaten);
   const first = typeof modal?.flow === 'string' && (flows as readonly string[]).includes(modal.flow) ? (modal.flow as AddFlow) : null;
-  const [flow, setFlow] = useState<AddFlow | null>(first);
+  const [picked, setFlow] = useState<AddFlow | null>(first);
+  const flow = picked && (flows as readonly string[]).includes(picked) ? picked : null; // a way that stops being offered (the day's last food went) falls back to the list
   const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return PLAN_SLOTS.find(s => s === modal?.meal) ?? startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); }); // `modal.meal`: the empty meal's Add control picked it
   const [msg, setMsg] = useState('');
   const [fill, setFill] = useState<{ key: number; food?: FoodFill }>({ key: 0 });
