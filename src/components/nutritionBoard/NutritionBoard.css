@@ -334,16 +334,14 @@
     min-height: 44px;
     min-width: 44px;
   }
-  /* Targets and Manage are small text links in one row under the day stepper (option C, owner 2026-11-12); the visible text is small, the 44px tap area is padding. */
+  /* Targets and Manage are small text links in one row under the day stepper (option B, owner 2026-11-12); the visible text is small, the 44px tap area is padding. */
   .nb-links {
     display: flex;
     align-items: center;
-    margin-bottom: var(--sp-8);
+    margin-bottom: 0;
   }
   .nb-link {
-    min-height: 44px;
-    margin-block: calc(-1 * var(--sp-8));
-    /* the 44px tap area reaches into the empty gaps above and below, so the row takes 28px of layout, not 44 */
+    min-height: 44px; /* a real 44px row: the tap area overlaps nothing */
     padding: 0 var(--sp-8);
     border: 0;
     background: none;

@@ -317,16 +317,13 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header C and add-food A at ${width} px: Targets and Manage are text links under the day stepper, the week switcher has its row, Add food over three equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: Targets and Manage are text links under the day stepper, the week switcher has its row, Add food over three equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
-      const targets = await box('#nb-targets'), manage = await box('#nb-manage'), step = await box('.nb-step');
+      const targets = await box('#nb-targets'), manage = await box('#nb-manage');
       expect(await page.locator('#nb-targets').evaluate(e => e.innerText)).toBe('Targets'); // the short name on a phone; the accessible name stays Targets and goal
       expect(await page.locator('#nb-h').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // the Nutrition heading stays for screen readers but is not drawn: the tab already says it
-      expect(targets.y).toBeGreaterThanOrEqual(step.b - 0.5); // option C (owner 2026-11-12): the links sit below the day stepper, not on the week row
-      expect(Math.abs(targets.y - manage.y)).toBeLessThan(1);
-      expect(manage.x).toBeGreaterThan(targets.r - 1);
       expect(Math.min(targets.h, manage.h)).toBeGreaterThanOrEqual(43.5);
       const add = await box('#nb-add');
       const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));

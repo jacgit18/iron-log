@@ -30,6 +30,7 @@ for (const width of [375, 390]) {
     await key.click();
     await expect(key).toHaveAttribute('aria-expanded', 'true');
     await expect(legend).toBeVisible();
+    await expect(legend).not.toHaveAttribute('aria-hidden', 'true'); // opened on request, so a screen reader reaches it
     expect((await legend.boundingBox()).y).toBeGreaterThan(m.b - 1); // inline under the last row
     await key.click();
     await expect(legend).toBeHidden();
