@@ -1,9 +1,9 @@
 import { normGroceryMonth } from '../shared/grocery.js';
-import { normSplit, normWeek } from '../shared/week.js';
+import { MAX_LEGS, normSplit, normWeek } from '../shared/week.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { mergeWeek } from '../lib/entryMerge.js';
 import { stable } from './canon.js';
-import type { GroceryLine, GroceryMonth, StretchWeek, Week } from '../types.ts';
+import type { GroceryLine, GroceryMonth, MoveLeg, StretchWeek, Week } from '../types.ts';
 
 /* ---------- Merge rules for a stale week save (ADR 031) ----------
    A week or stretch week refused as stale is merged three-way: base (the row this device's save was based on), ours (what it is
@@ -34,6 +34,18 @@ function mergeMap<V>(base: Record<string, V>, ours: Record<string, V>, theirs: R
   return out;
 }
 
+/** Each moved card's trail: the side that changed it, and when both sides added legs to the same card, the legs of both in date order (this device's first on a tie, a leg both have once), the newest MAX_LEGS. A trail that does not end where the merged `moved` puts the card is left out (normWeek would drop it anyway). */
+function mergeTrail(base: Record<string, MoveLeg[]>, ours: Record<string, MoveLeg[]>, theirs: Record<string, MoveLeg[]>, moved: Record<string, number>): Record<string, MoveLeg[]> {
+  const out: Record<string, MoveLeg[]> = {};
+  for (const k of new Set([...Object.keys(ours), ...Object.keys(theirs), ...Object.keys(base)])) {
+    const o = ours[k] || [], t = theirs[k] || [];
+    let legs = same(o, base[k] || []) ? t : same(t, base[k] || []) ? o : [...o, ...t.filter(l => !o.some(x => x.on === l.on && x.day === l.day))].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0)); // sort-ok: ISO date strings, stable
+    legs = legs.slice(-MAX_LEGS);
+    if (legs.length && legs[legs.length - 1]!.day === (moved[k] ?? 0)) out[k] = legs;
+  }
+  return out;
+}
+
 /** Cards by id, in this device's order with the other side's new cards after. */
 function mergeById<X extends { id: string }>(base: X[], ours: X[], theirs: X[]): X[] {
   const byId = (xs: X[]) => Object.fromEntries(xs.map(x => [x.id, x]));
@@ -56,10 +68,11 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
       done: mergeMap(base.done, ours.done, theirs.done),
       skipped: mergeMap(base.skipped, ours.skipped, theirs.skipped),
       moved: mergeMap(base.moved, ours.moved, theirs.moved),
-      moveTrail: mergeMap(base.moveTrail || {}, ours.moveTrail || {}, theirs.moveTrail || {}),
       ph: mergeMap(base.ph, ours.ph, theirs.ph),
       warm: {},
     };
+    const trail = mergeTrail(base.moveTrail || {}, ours.moveTrail || {}, theirs.moveTrail || {}, week.moved);
+    if (Object.keys(trail).length) week.moveTrail = trail; else delete week.moveTrail;
     for (const d of new Set([...Object.keys(base.warm), ...Object.keys(ours.warm), ...Object.keys(theirs.warm)])) {
       const m = mergeMap(base.warm[d] || {}, ours.warm[d] || {}, theirs.warm[d] || {});
       if (Object.keys(m).length) week.warm[d] = m;

@@ -22,6 +22,23 @@ describe('mergeWeek3', () => {
     expect(m.week.moveTrail).toEqual({ a: [{ on: '2026-10-01', day: 3 }], b: [{ on: '2026-10-02', day: 4 }] });
   });
 
+  it('legs added to the same card on both devices are both kept, in date order, when the merged place matches the last one', () => {
+    const base = week({ moved: { a: 3 }, moveTrail: { a: [{ on: '2026-10-01', day: 3 }] } });
+    const ours = week({ moved: { a: 5 }, moveTrail: { a: [{ on: '2026-10-01', day: 3 }, { on: '2026-10-03', day: 5 }] } });
+    const theirs = week({ moved: { a: 3 }, moveTrail: { a: [{ on: '2026-10-01', day: 3 }, { on: '2026-10-02', day: 3 }] } });
+    const m = mergeWeek3(base, ours, theirs);
+    expect(m.week.moved).toEqual({ a: 5 }); // this device wins the place
+    expect(m.week.moveTrail).toEqual({ a: [{ on: '2026-10-01', day: 3 }, { on: '2026-10-02', day: 3 }, { on: '2026-10-03', day: 5 }] });
+  });
+  it('a trail that does not end where the merged place is left out', () => {
+    const base = week({});
+    const ours = week({ moved: { a: 4 }, moveTrail: { a: [{ on: '2026-10-01', day: 4 }] } });
+    const theirs = week({ moved: { a: 6 }, moveTrail: { a: [{ on: '2026-10-02', day: 6 }] } });
+    const m = mergeWeek3(base, ours, theirs);
+    expect(m.week.moved).toEqual({ a: 4 });
+    expect(m.week.moveTrail).toBeUndefined(); // both legs together end on Day 6, but this device's Day 4 won
+  });
+
   it('an untick on either side sticks', () => {
     const base = week({ done: { a: true, b: true } });
     expect(mergeWeek3(base, week({ done: { b: true, c: true } }), base).week.done).toEqual({ b: true, c: true }); // unticked here
