@@ -64,3 +64,10 @@ describe('one sentence from Copy day and Saved meals on a full day', () => {
     expect(b.text).toBe(a.text);
   });
 });
+
+describe('instantLogText verb', () => {
+  it('says Moved when asked, and keeps the store error', () => {
+    expect(instantLogText(1, { from: 'Rice', verb: 'Moved' })).toBe('Moved 1 from Rice.');
+    expect(instantLogText(0, { from: 'Rice', verb: 'Moved', error: 'You can log 20 things a day.' })).toBe('Moved 0 from Rice. You can log 20 things a day.');
+  });
+});

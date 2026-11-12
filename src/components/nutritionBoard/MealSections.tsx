@@ -48,7 +48,7 @@ export default function MealSections({ view, placed, today, days, editable, onLo
             const ck = `${view.day}:${planItemKey(x.r.item)}`;
             return <BoardCard key={ck} item={x} day={view.day} today={today} days={days} open={open === ck} moving={moving === ck} onOpen={() => { setOpen(open === ck ? null : ck); setMoving(null); }} onMoveOpen={() => setMoving(moving === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
           })}
-          <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} editable={editable} />
+          <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} onMsg={onMsg} />
           {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => onMsg(st().addPlanItem(view.day, 'r', f.recipe.id, s.slot!) ?? '')}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}
         </div>
         );

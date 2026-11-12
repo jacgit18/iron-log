@@ -325,3 +325,47 @@ describe('planToShopping (week to Shopping)', () => {
     expect(st().planToShopping([today]).added).toBe(1); // a second tap adds it again
   });
 });
+
+describe('copyDietEntry (brief nutrition-move-copy-eaten)', () => {
+  const today = ymd(new Date()), past = '2026-10-29';
+  const eaten = () => st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4, micro: { calcium: 120 } }).id!;
+  it('copies to an earlier day with the hour and micronutrients; the original stays', () => {
+    const id = eaten(), t = st().diet[0]!.t;
+    expect(typeof t).toBe('number');
+    const r = st().copyDietEntry(id, past);
+    expect(r.error).toBeNull();
+    const c = st().diet.find(e => e.id === r.id)!;
+    expect(c).toMatchObject({ d: past, n: 'Rice', kcal: 200, p: 4, t, micro: { calcium: 120 } });
+    expect(st().diet.filter(e => e.d === today)).toHaveLength(1);
+    expect(st().removed).toBeNull();
+  });
+  it('a move removes the original and Undo puts it back without leaving the copy', () => {
+    const id = eaten();
+    const r = st().copyDietEntry(id, past, true);
+    expect(st().diet.map(e => e.id)).toEqual([r.id]);
+    expect(st().removed?.verb).toBe('Moved');
+    st().undoRemoved();
+    expect(st().diet.map(e => e.id)).toEqual([id]);
+  });
+  it('a full target day or the same day refuses and changes nothing', () => {
+    const id = eaten();
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ ...rice, d: past });
+    const before = st().diet.length;
+    expect(st().copyDietEntry(id, past, true).error).toBe('You can log 20 things a day.');
+    expect(st().copyDietEntry(id, today).error).toBe('Pick another day.');
+    expect(st().diet).toHaveLength(before);
+    expect(st().removed).toBeNull();
+  });
+});
+
+describe('Undo of a move respects the 20 a day limit (brief nutrition-move-copy-eaten)', () => {
+  it('refuses to put the original back onto a day that filled up', () => {
+    const today = ymd(new Date());
+    const id = st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4 }).id!;
+    st().copyDietEntry(id, '2026-10-29', true);
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ d: today, n: `F${i}`, kcal: 100, p: 1 });
+    st().undoRemoved();
+    expect(st().diet.filter(e => e.d === today)).toHaveLength(MAX_DIET_PER_DAY);
+    expect(st().diet.some(e => e.n === 'Rice' && e.d === '2026-10-29')).toBe(true);
+  });
+});
