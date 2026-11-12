@@ -27,7 +27,7 @@ test('every door writes the same entry for the same recipe, portion and day', as
   await seed(page);
   await openChili(page); // 1: the recipe page
   await logBtn(page).click();
-  await expect(page.getByText('Logged 1 portion to today.')).toBeVisible();
+  await expect(page.getByText(/Logged .+: 1 portion to today\./)).toBeVisible();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click(); // 2: a Recipes row
   await page.getByRole('dialog').getByRole('button', { name: 'Log', exact: true }).click();
@@ -57,7 +57,7 @@ test('tomorrow asks Which meal?, the button reads Plan, and the recipe lands und
   await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 portions
   await page.getByRole('button', { name: 'Dinner', exact: true }).click();
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  await expect(page.getByText(`Planned 1.5 portions for Dinner on ${TOMORROW}.`)).toBeVisible();
+  await expect(page.getByText(new RegExp(`Planned .+: 1\\.5 portions for Dinner on ${TOMORROW}\\.`))).toBeVisible();
   await openNutrition(page);
   await col(page, TOMORROW).getByRole('button', { name: /^Fri 25/ }).click();
   await expect(col(page, TOMORROW).locator('.wb-slot', { hasText: 'Dinner' }).locator('.wb-card')).toContainText('Chili');
@@ -82,9 +82,9 @@ test('Find food opens a recipe at its usual amount, and Undo removes only the en
   const portion = page.getByRole('dialog').last();
   await expect(portion.getByText('3 eggs').first()).toBeVisible();
   await portion.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(portion.getByText('Logged 3 eggs to today.')).toBeVisible();
+  await expect(portion.getByText(/Logged .+: 3 eggs to today\./)).toBeVisible();
   await portion.getByRole('button', { name: 'Undo' }).click();
-  await expect(portion.getByText('Logged 3 eggs')).toHaveCount(0);
+  await expect(portion.getByText(/Logged .+: 3 eggs/)).toHaveCount(0);
   await portion.getByRole('button', { name: 'Cancel' }).click();
   await expect(eaten(page)).toHaveCount(0);
 });
