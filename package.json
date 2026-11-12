@@ -52,7 +52,7 @@
     "@better-auth/kysely-adapter": "1.7.18",
     "@fontsource/barlow": "^5.3.0",
     "@fontsource/barlow-condensed": "^5.3.0",
-    "@neon/env": "^1.6.8",
+    "@neon/env": "^2.1.0",
     "better-auth": "1.7.18",
     "compression": "^1.8.2",
     "express": "^5.3.0",
