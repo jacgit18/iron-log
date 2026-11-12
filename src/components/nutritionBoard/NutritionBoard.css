@@ -314,10 +314,7 @@
   border-color: var(--m-supp);
 }
 @media (max-width: 699px) {
-  /* One row: the week switcher takes the room the two buttons leave and drops under them only when text is enlarged so far that all three do not fit. */
-  .nb-headbtns {
-    order: 2;
-  }
+  /* The week switcher is the only thing on the week row (Targets and Manage are links under the day stepper, .nb-links). */
   .nb-head {
     gap: var(--sp-8);
   }
@@ -334,11 +331,31 @@
     min-height: 44px;
     min-width: 44px;
   }
-  .nb-long {
-    display: none;
+  /* Targets and Manage are small text links in one row under the day stepper (option C, owner 2026-11-12); the visible text is small, the 44px tap area is padding. */
+  .nb-links {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--sp-8);
   }
-  .nb-short {
-    display: inline;
+  .nb-link {
+    min-height: 44px;
+    margin-block: calc(-1 * var(--sp-8));
+    /* the 44px tap area reaches into the empty gaps above and below, so the row takes 28px of layout, not 44 */
+    padding: 0 var(--sp-8);
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .nb-link:first-child {
+    padding-left: 0;
+  }
+  .nb-linksep {
+    color: var(--muted);
   }
   .nb-tbtns {
     display: grid;

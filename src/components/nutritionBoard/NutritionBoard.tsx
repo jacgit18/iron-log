@@ -16,7 +16,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
 import DayStepper from './DayStepper.js';
-import { useDaysShown } from './useWideBoard.js';
+import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
@@ -29,6 +29,7 @@ export default function NutritionBoard() {
   const now = useToday(s => s.today);
   const today = ymd(now);
   const shown = useDaysShown();
+  const phone = usePhoneHeader();
   const cfg = useAppStore(s => s.cfg);
   const body = useAppStore(s => s.body);
   const supp = useAppStore(s => s.supp);
@@ -79,10 +80,12 @@ export default function NutritionBoard() {
           <button type="button" className="btn sm" aria-label="Next week" aria-disabled={offset === WEEK_OFFSETS[WEEK_OFFSETS.length - 1]} onClick={() => { if (offset < WEEK_OFFSETS[WEEK_OFFSETS.length - 1]!) goWeek((offset + 1) as WeekOffset); }}><Icon name="chevron-right" /></button>
           {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
         </div>
-        <div className="nb-headbtns">
-          <button type="button" className="btn sm" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}><span className="nb-short">Targets</span><span className="nb-long">Targets and goal</span></button>
-          <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
-        </div>
+        {!phone && (
+          <div className="nb-headbtns">
+            <button type="button" className="btn sm" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}><span className="nb-short">Targets</span><span className="nb-long">Targets and goal</span></button>
+            <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
+          </div>
+        )}
       </div>
       <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
       <div className="nb-toolbar" role="group" aria-label="Add food">
@@ -103,6 +106,13 @@ export default function NutritionBoard() {
       ) : (
         <>
           <DayStepper today={today} day={day} onPick={d => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); }} />
+          {phone && (
+            <div className="nb-links" role="group" aria-label="Nutrition settings">
+              <button type="button" className="nb-link" id="nb-targets" aria-label="Targets and goal" onClick={() => st().openModal({ type: 'nbtargets' })}>Targets</button>
+              <span className="nb-linksep" aria-hidden="true">·</span>
+              <button type="button" className="nb-link" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
+            </div>
+          )}
           <div className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}
