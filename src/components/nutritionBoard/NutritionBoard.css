@@ -392,13 +392,9 @@
   }
   .nb-tbtns {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr));
-    /* three across at normal text, fewer as text grows (the rem scales with it), so large text wraps instead of scrolling sideways */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
+    /* four across at normal text, fewer as text grows (the rem scales with it), so large text wraps instead of scrolling sideways; Add food is last, so it sits at the right end */
     flex: 1 0 100%;
-  }
-  .nb-tbtns #nb-add {
-    grid-column: 1 / -1;
-    min-height: 44px;
   }
   .nb-tbtns .btn {
     min-height: 44px;
