@@ -62,7 +62,7 @@ export default function NutritionBoard() {
   const st = () => useAppStore.getState();
   const goWeek = (o: WeekOffset) => { setPicked(o === 0 ? today : weekDays(today, o)[0]!); setMsg(''); };
   const log = (r: Resolved, index: number) => {
-    const out = planLog(r, st().diet, today);
+    const out = planLog(r, st().diet, today, recipes);
     if ('error' in out) { setMsg(out.error); return; }
     const run = runInstantLog(st().addDietEntry, out.add.map(f => entryFromFood(today, f)), { from: r.name, left: out.left });
     if (run.ids.length) st().setPlanEaten(today, index, run.ids); // the planned item shows a check

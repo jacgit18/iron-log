@@ -20,6 +20,12 @@ describe('a saved-meal item resolves through mealsMoved to its recipe (brief sav
     expect(resolve(m('m1'), recipes, [], { m1: 'r1' })).toMatchObject({ name: 'Chili', kcal: 600, p: 40, gone: false, portion: 1 });
     expect(resolve(m('m1'), recipes, [], { m1: 'r1' }).recipe?.id).toBe('r1');
   });
+  it('logging a moved meal gives one entry per food, as the saved meal did', () => {
+    const linked: Recipe = { id: 'bf', n: 'Breakfast', cat: 'other', ing: [{ n: 'Rice', rid: 'r3', q: 1 }, { n: 'Chili', rid: 'r1', q: 1 }], steps: [] };
+    const all = [...recipes, linked];
+    const out = planLog(resolve(m('m1'), all, [], { m1: 'bf' }), [], today, all);
+    expect(out).toMatchObject({ left: 0, add: [{ n: 'Rice', from: 'r3' }, { n: 'Chili', from: 'r1' }] });
+  });
   it('prefers the recipe over a held old meal with the same id', () => {
     expect(resolve(m('m1'), recipes, meals, { m1: 'r3' })).toMatchObject({ name: 'Rice', gone: false });
   });

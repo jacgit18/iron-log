@@ -3,6 +3,7 @@ import { withMicro } from '../shared/foodMicro.js';
 import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, samePlanItem } from '../shared/diet.js';
 import { fmtNum, hasMacros, servingNumbers, shiftDay } from './dietLog.js';
 import { planMeal } from './dietMeals.js';
+import { mealItems } from './quickMeals.js';
 import type { Food } from './foodMacros.js';
 import { sortByName } from './sort.js';
 
@@ -95,9 +96,11 @@ export function totalsText(t: { kcal: number; protein: number; without: number }
 }
 
 /** What logging a planned item on `day` adds: the entries that fit under the per-day limit and how many did not; or why it cannot be logged. */
-export function planLog(r: Resolved, entries: DietEntry[], day: string): { add: Food[]; left: number } | { error: string } {
+export function planLog(r: Resolved, entries: DietEntry[], day: string, recipes: readonly Recipe[] = []): { add: Food[]; left: number } | { error: string } {
   if (r.gone) return { error: 'That was removed. Remove it from the plan.' };
   if (r.meal) return planMeal(entries, day, r.meal);
+  const parts = r.item.k === 'm' && r.recipe ? mealItems(r.recipe, recipes) : []; // a saved meal that moved logs one entry per food, as before
+  if (parts.length) return planMeal(entries, day, { id: r.item.id, n: r.name, items: parts });
   const nums = r.recipe && hasMacros(r.recipe) ? servingNumbers(r.recipe, r.portion) : null;
   if (!r.recipe || !nums) return { error: 'Add calories and protein to this recipe to log it.' };
   const room = entries.filter(e => e.d === day).length < MAX_DIET_PER_DAY;
