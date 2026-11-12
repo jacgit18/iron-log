@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addGroups, addingTo, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -134,7 +134,7 @@ describe('day meters', () => {
   });
   it('an empty day is zero against the targets, with a water goal from body weight', () => {
     const v = view('2026-11-10');
-    expect(v.meters.map(m => [m.key, m.value])).toEqual([['kcal', 0], ['protein', 0], ['fat', 0], ['water', 0]]);
+    expect(v.meters.map(m => [m.key, m.value])).toEqual([['kcal', 0], ['protein', 0], ['carbs', 0], ['fat', 0], ['water', 0]]);
     expect(v.meters.find(m => m.key === 'water')!.target).toBe(80);
   });
   it('water counts drinks against that day\'s goal, and a hot day raises it', () => {
@@ -152,7 +152,7 @@ describe('day meters', () => {
     const v = dayView(TODAY, TODAY, { plan: {}, recipes: [], meals: [], diet: [entry(TODAY, 300, 20)], supp: supp(), body: [], targets: { kcal: null, protein: null, fat: null } });
     expect(v.meters[0]!.over).toBe(false);
     expect(v.meters[0]!.text).toBe('300 kcal');
-    expect(v.meters[3]!.target).toBe(64); // no body weight: the 64 oz fallback
+    expect(v.meters.find(m => m.key === 'water')!.target).toBe(64); // no body weight: the 64 oz fallback
   });
   it('says carbs and fat count only what is entered when an entry lacks them', () => {
     expect(view(TODAY, { diet: [entry(TODAY, 300, 20)] }).fatNote).toMatch(/only what you enter/);
@@ -219,10 +219,10 @@ describe('the Supplements meter', () => {
     expect(suppMeter(supp(), TODAY)).toMatchObject({ total: 0, pct: 0, text: 'None scheduled' });
     expect(suppMeter(supp({ items: [{ id: 'x', n: 'Spare', dose: '', slot: '' }] as Supplements['items'] }), TODAY).total).toBe(0);
   });
-  it('rides on the day view, and the four food and water meters stay four', () => {
+  it('rides on the day view next to the five food and water meters', () => {
     const v = view(TODAY, { supp: supp({ items, taken: { [TODAY]: { a: true } } }) });
     expect(v.supps.text).toBe('1 of 4 taken');
-    expect(v.meters).toHaveLength(4);
+    expect(v.meters).toHaveLength(5);
   });
 });
 
@@ -260,5 +260,90 @@ describe('addGroups', () => {
   });
   it('last week has none', () => {
     expect(addGroups('2026-11-01', TODAY)).toEqual([]);
+  });
+});
+
+describe('eaten food in meals (brief nutrition-items-row-sheet-and-more)', () => {
+  const at = (id: string, t: number | undefined, kcal = 100): DietEntry => ({ id, d: TODAY, n: id, kcal, p: 1, ...(t !== undefined ? { t } : {}) });
+  const emptyPlan = view(TODAY).plan;
+  it('the hour picks the meal: Breakfast before 11, Lunch before 16, Dinner before 22, else Snack', () => {
+    expect([0, 8, 10].map(mealForHour)).toEqual(['breakfast', 'breakfast', 'breakfast']);
+    expect([11, 13, 15].map(mealForHour)).toEqual(['lunch', 'lunch', 'lunch']);
+    expect([16, 18, 21].map(mealForHour)).toEqual(['dinner', 'dinner', 'dinner']);
+    expect([22, 23].map(mealForHour)).toEqual(['snack', 'snack']);
+  });
+  it('an unplanned food logged at 8:00 lands in Breakfast, one with no hour in "Not in a meal"', () => {
+    const p = placeEaten(TODAY, TODAY, [at('a', 8), at('b', undefined), at('c', 12)], emptyPlan);
+    expect(p.meals.breakfast.map(e => e.id)).toEqual(['a']);
+    expect(p.meals.lunch.map(e => e.id)).toEqual(['c']);
+    expect(p.none.map(e => e.id)).toEqual(['b']);
+  });
+  it('every entry on a past day goes to "Not in a meal", hour or not', () => {
+    const past = '2026-11-05';
+    const p = placeEaten(past, TODAY, [{ ...at('a', 8), d: past }, { ...at('b', undefined), d: past }], emptyPlan);
+    expect(p.none.map(e => e.id)).toEqual(['a', 'b']);
+    expect(Object.values(p.meals).flat()).toEqual([]);
+  });
+  it('food a planned item\'s check added is not placed twice: no entry lost, none duplicated', () => {
+    const plan = { ...emptyPlan, slots: [{ slot: 'lunch' as const, items: [{ index: 0, fat: undefined, r: { item: { k: 'r' as const, id: 'x', e: ['a'] }, name: 'Soup', gone: false, portion: 1 } }], kcal: 0, share: null, need: [], have: [], fixes: [] }] };
+    const p = placeEaten(TODAY, TODAY, [at('a', 12), at('b', 12)], plan);
+    expect(p.meals.lunch.map(e => e.id)).toEqual(['b']);
+    expect(p.none).toEqual([]);
+  });
+  it('dayView carries the placement and keeps the day totals', () => {
+    const diet = [at('a', 8, 300), at('b', undefined, 200)];
+    const v = view(TODAY, { diet });
+    expect(v.placed.meals.breakfast).toHaveLength(1);
+    expect(v.placed.none).toHaveLength(1);
+    expect(v.meters.find(m => m.key === 'kcal')!.value).toBe(500);
+  });
+  it('a meal line counts planned and eaten food together', () => {
+    expect(mealKcalText({ kcal: 620, share: 700, items: 2 }, 0, [])).toBe('620 / 700 kcal');
+    expect(mealKcalText({ kcal: 620, share: null, items: 2 }, 300, [])).toBe('300 of 620 kcal eaten');
+    expect(mealKcalText({ kcal: 620, share: 700, items: 2 }, 300, [at('a', 8, 150)])).toBe('450 of 770 kcal eaten');
+    expect(mealKcalText({ kcal: 0, share: null, items: 0 }, 0, [at('a', 8, 150)])).toBe('150 kcal');
+    expect(mealKcalText({ kcal: 0, share: null, items: 0 }, 0, [])).toBe('');
+  });
+});
+
+describe('carbs meter', () => {
+  it('shows with a target only, with data only, and with both', () => {
+    const t = carbsMeter(false, 0, 250);
+    expect([t.hidden, t.text, t.over]).toEqual([undefined, '0 / 250 g', false]);
+    const d = carbsMeter(false, 40, null);
+    expect([d.hidden, d.text]).toEqual([undefined, '40 g']);
+    expect(carbsMeter(false, 40, 250).text).toBe('40 / 250 g');
+  });
+  it('is hidden, with a note like fat\'s, with neither a target nor carbs', () => {
+    const n = carbsMeter(false, 0, null);
+    expect(n.hidden).toBe(true);
+    expect(n.note).toMatch(/carbs/i);
+  });
+  it('turns over its target', () => {
+    expect(carbsMeter(false, 300, 250).over).toBe(true);
+    expect(carbsMeter(false, 250, 250).over).toBe(false);
+  });
+  it('a day ahead has no carbs to count: hidden with a note', () => {
+    expect(carbsMeter(true, 0, 250).hidden).toBe(true);
+  });
+  it('sits after protein and before fat in a day', () => {
+    const v = dayView(TODAY, TODAY, { plan: {}, recipes: [], meals: [], diet: [{ ...entry(TODAY, 300, 20), c: 40 }], supp: supp(), body: [], targets: { ...targets, carbs: 250 } });
+    expect(v.meters.map(m => m.key)).toEqual(['kcal', 'protein', 'carbs', 'fat', 'water']);
+    expect(v.meters[2]!.value).toBe(40);
+  });
+});
+
+describe('supplements taken through the Add button', () => {
+  const lib = supp({ items: [{ id: 'mag', n: 'Magnesium', slot: '', dose: '200 mg' }, { id: 'd3', n: 'D3', slot: 'morning' }, { id: 'zn', n: 'Zinc', slot: '' }] });
+  it('the picker offers library-only supplements not yet taken that day', () => {
+    expect(suppPickList(lib, TODAY).map(i => i.id)).toEqual(['mag', 'zn']);
+    expect(suppPickList({ ...lib, taken: { [TODAY]: { mag: true } } }, TODAY).map(i => i.id)).toEqual(['zn']);
+    expect(suppPickList({ ...lib, taken: { [TODAY]: { mag: true } } }, '2026-11-09').map(i => i.id)).toEqual(['mag', 'zn']);
+  });
+  it('a ticked library-only supplement is listed under the ticks and counted', () => {
+    const d = supplementDay({ ...lib, taken: { [TODAY]: { mag: true } } }, TODAY);
+    expect(d.extra.map(e => e.id)).toEqual(['mag']);
+    expect(d.text).toBe('1 of 2 taken'); // D3 is scheduled and not ticked; Magnesium is the extra one
+    expect(supplementDay(lib, TODAY).extra).toEqual([]);
   });
 });

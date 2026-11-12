@@ -119,16 +119,52 @@ export const addGroups = (day: string, today: string): { label: string; flows: A
 export type MeterBasis = 'eaten' | 'planned';
 export const basisOf = (day: string, today: string): MeterBasis => (day <= today ? 'eaten' : 'planned');
 
-export interface Meter { key: 'kcal' | 'protein' | 'fat' | 'water'; label: string; unit: string; value: number; target: number | null; over: boolean; text: string; note?: string; hidden?: boolean }
+export interface Meter { key: 'kcal' | 'protein' | 'carbs' | 'fat' | 'water'; label: string; unit: string; value: number; target: number | null; over: boolean; text: string; note?: string; hidden?: boolean }
 /** The Supplements meter of a day: the share ticked, no target and never over. `pct` is 0 to 100; a day with nothing scheduled is an empty bar that says so. */
 export interface SuppMeter { done: number; total: number; pct: number; text: string; label: string }
-export interface DayView { day: string; kind: DayKind; basis: MeterBasis; meters: Meter[]; supps: SuppMeter; plan: BoardDay; eaten: DietEntry[]; fatNote: string | null }
+export interface DayView { day: string; kind: DayKind; basis: MeterBasis; meters: Meter[]; supps: SuppMeter; plan: BoardDay; eaten: DietEntry[]; fatNote: string | null; /** The day's eaten food that no planned item's check added, placed in its meal (today) or in the "Not in a meal" group. */ placed: EatenPlacement }
 
 const meterText = (value: number, target: number | null, unit: string): string => `${fmtNum(value)}${target ? ` / ${fmtNum(target)}` : ''} ${unit}`;
 const meter = (key: Meter['key'], label: string, unit: string, value: number, target: number | null): Meter => ({ key, label, unit, value, target, over: !!target && value > target, text: meterText(value, target, unit) });
 
+/** The carbs meter (after protein): shown only with a carbs target or logged carbs, the rule fat uses. A day ahead has no carbs to count (the plan holds calories, protein and fat), so it is hidden there with a note. */
+export function carbsMeter(planned: boolean, eaten: number, target: number | null): Meter {
+  const m = meter('carbs', 'Carbs', 'g', planned ? 0 : eaten, target);
+  if (planned) return { ...m, hidden: true, note: 'Carbs show once the food is eaten.' };
+  if (!target && eaten <= 0) return { ...m, hidden: true, note: 'Add a carbs target or log carbs to see carbs here.' };
+  return m;
+}
+
+/** Where today's food that nobody planned goes: the meal for the hour it was logged (`DietEntry.t`). Breakfast before 11, Lunch before 16, Dinner before 22, Snack otherwise: one default, edit it here. */
+export const MEAL_CUTOFFS: readonly { slot: PlanSlot; before: number }[] = [{ slot: 'breakfast', before: 11 }, { slot: 'lunch', before: 16 }, { slot: 'dinner', before: 22 }];
+export function mealForHour(hour: number): PlanSlot {
+  for (const c of MEAL_CUTOFFS) if (hour < c.before) return c.slot;
+  return 'snack';
+}
+
+export interface EatenPlacement { meals: Record<PlanSlot, DietEntry[]>; none: DietEntry[] }
+/** The day's eaten food, minus what a planned item's check added (the planned card shows that one itself), placed: today's entries with an hour go to their meal; an entry with no hour, and every entry on another day, goes to the "Not in a meal" group. */
+export function placeEaten(day: string, today: string, eaten: readonly DietEntry[], plan: BoardDay): EatenPlacement {
+  const checked = new Set(plan.slots.flatMap(s => s.items.flatMap(x => x.r.item.e ?? [])));
+  const out: EatenPlacement = { meals: { breakfast: [], lunch: [], dinner: [], snack: [] }, none: [] };
+  for (const e of eaten) {
+    if (checked.has(e.id)) continue;
+    if (day === today && typeof e.t === 'number') out.meals[mealForHour(e.t)].push(e); else out.none.push(e);
+  }
+  return out;
+}
+
+/** A meal's calories line on today: planned and eaten food counted together. Nothing eaten: the plan's own line ("620 / 700 kcal"). Something eaten: "n of m kcal eaten" (m is the plan plus the food nobody planned), or just "n kcal" for a meal with no plan. */
+export function mealKcalText(plan: { kcal: number; share: number | null; items: number }, eatenPlanKcal: number, extra: readonly DietEntry[]): string {
+  const extraKcal = extra.reduce((a, e) => a + e.kcal, 0);
+  const fmt = (n: number) => n.toLocaleString('en-US');
+  if (plan.items === 0) return extra.length ? `${fmt(extraKcal)} kcal` : '';
+  if (extra.length === 0 && eatenPlanKcal === 0) return `${fmt(plan.kcal)}${plan.share ? ` / ${fmt(plan.share)}` : ''} kcal`;
+  return `${fmt(eatenPlanKcal + extraKcal)} of ${fmt(plan.kcal + extraKcal)} kcal eaten`;
+}
+
 /** What a day's targets are. */
-export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null }
+export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null; carbs?: number | null }
 
 /** A day as the board draws it: four meters (calories, protein, fat from the diet log for last week and today, from the plan for days ahead; water from the water log against that day's goal), the plan's meals, and the eaten food. */
 export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets }): DayView {
@@ -142,14 +178,15 @@ export function dayView(day: string, today: string, a: { plan: Plan; recipes: Re
   const meters: Meter[] = [
     meter('kcal', 'Calories', 'kcal', planned ? plan.kcal : tot.kcal, a.targets.kcal),
     meter('protein', 'Protein', 'g', planned ? plan.protein : tot.protein, a.targets.protein),
+    carbsMeter(planned, tot.carbs, a.targets.carbs ?? null),
     meter('fat', 'Fat', 'g', planned ? plan.fat : tot.fat, a.targets.fat),
     meter('water', 'Water', 'oz', sumOz(a.supp.water[day]), water.oz),
   ];
-  const fatMeter = meters[2]!;
+  const fatMeter = meters.find(m => m.key === 'fat')!;
   if (planned && plan.fatState === 'partial') fatMeter.note = `Fat: ${plan.fatFoods.known} of ${plan.fatFoods.all} foods have it.`;
   if (fatHidden) { fatMeter.note = 'Add fat to your foods to see fat here.'; fatMeter.hidden = true; }
   const fatNote = !planned && eaten.length > 0 && missingCarbsFat(a.diet, day) ? 'Carbs and fat count only what you enter.' : null;
-  return { day, kind: dayKind(day, today), basis, meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote };
+  return { day, kind: dayKind(day, today), basis, meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote, placed: placeEaten(day, today, eaten, plan) };
 }
 
 /** The Supplements meter (drawn before Water): "2 of 4 taken" fills 50%; nothing scheduled says "None scheduled" with an empty bar. Counts ticks on any day. */
@@ -181,13 +218,18 @@ export function hydrationView(day: string, today: string, supp: Supplements, bod
 
 export { HOT_OZ, TRAIN_OZ_PER_30 };
 
-export interface SupplementDay { done: number; total: number; text: string; slots: { slot: string; label: string; items: { id: string; n: string; dose: string; taken: boolean; /** "1 capsule" when taken at other than one serving (brief supplement-portions); empty otherwise. */ tag: string }[] }[] }
+export interface SupplementDay { done: number; total: number; text: string; /** Library-only supplements taken that day through the Add button (they have no time of day): listed under the ticks and counted in "x of n". */ extra: { id: string; n: string; dose: string; taken: true }[]; slots: { slot: string; label: string; items: { id: string; n: string; dose: string; taken: boolean; /** "1 capsule" when taken at other than one serving (brief supplement-portions); empty otherwise. */ tag: string }[] }[] }
 
 /** A day's supplements as Morning, Noon and Night with each tick, and "x of n taken". Ticking works on any day. */
 export function supplementDay(supp: Supplements, day: string): SupplementDay {
   const by = scheduleOf(supp.items);
   const slots = SLOTS.map(([slot, label]) => ({ slot, label, items: (by[slot] ?? []).map(i => ({ id: i.id, n: i.n, dose: i.dose ?? '', taken: !!supp.taken[day]?.[i.id], tag: portionTag(i) })) }));
-  const total = slots.reduce((a, s) => a + s.items.length, 0);
-  const done = slots.reduce((a, s) => a + slotTally(supp.items, supp.taken, day, s.slot).done, 0);
-  return { done, total, text: total ? `${done} of ${total} taken` : 'Nothing scheduled', slots };
+  const extra = supp.items.filter(i => !i.slot && supp.taken[day]?.[i.id]).map(i => ({ id: i.id, n: i.n, dose: i.dose ?? '', taken: true as const }));
+  const total = slots.reduce((a, s) => a + s.items.length, 0) + extra.length;
+  const done = slots.reduce((a, s) => a + slotTally(supp.items, supp.taken, day, s.slot).done, 0) + extra.length;
+  return { done, total, text: total ? `${done} of ${total} taken` : 'Nothing scheduled', extra, slots };
 }
+
+/** What the Add supplement picker offers on a day: the supplements in your library with no time of day that you have not already taken that day. Choosing one ticks it for the day. */
+export const suppPickList = (supp: Supplements, day: string): { id: string; n: string; dose: string }[] =>
+  supp.items.filter(i => !i.slot && !supp.taken[day]?.[i.id]).map(i => ({ id: i.id, n: i.n, dose: i.dose ?? '' }));
