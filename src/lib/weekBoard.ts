@@ -38,9 +38,9 @@ export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: read
 }
 
 /** One day of the plan as meals: each item with its numbers, each meal with its calories against its share of the target, its plate check and fixes, and the day's three totals. */
-export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null): BoardDay {
+export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}): BoardDay {
   const items = plan[day] ?? [];
-  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals); return { index, r, fat: fatOf(r) }; });
+  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r) }; });
   const live = rows.filter(x => !x.r.gone);
   const sum = (pick: (x: BoardItem) => number | undefined) => round1(live.reduce((a, x) => a + (pick(x) ?? 0), 0));
   const foods = live.map(x => ({ r: { ...(x.r.kcal !== undefined ? { kcal: x.r.kcal } : {}), ...(x.fat !== undefined ? { f: x.fat } : {}) }, x: 1 }));

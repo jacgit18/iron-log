@@ -7,13 +7,14 @@ import { findMatches } from '../../lib/dietPlan.js';
 import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
-import { quickRows } from '../../lib/quickMeals.js';
+import { quickRows, savedMealsNote } from '../../lib/quickMeals.js';
 import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
 import { ymd } from '../../shared/dates.js';
 import type { FoodHit } from '../../shared/foods.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useLegacyMeals } from '../../store/useLegacyMeals.js';
 import { useToday } from '../../store/useToday.js';
 import type { PlanSlot } from '../../types.ts';
 import CopyDay from '../diet/CopyDay.js';
@@ -92,8 +93,7 @@ export default function AddFoodSheet() {
 function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; meal: PlanSlot; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: (t: string) => void; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
-  const saved = useAppStore(s => s.cfg.diet?.meals) ?? [];
-  const moved = useAppStore(s => s.cfg.diet?.mealsMoved) ?? {};
+  const { held } = useLegacyMeals();
   const [q, setQ] = useState('');
   const newRecipe = () => openRecipesForm({ kind: 'new' });
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
@@ -125,11 +125,14 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   if (flow === 'savemeal') return entriesOn(diet, day).length === 0 ? <p className="note">Nothing eaten yet to save.</p> : <SaveMeal key={day} day={day} onSaved={onMsg} />;
   if (flow === 'meals') {
     if (eat) return <SavedMeals day={day} full={!roomOn(diet, day)} onAdded={onMsg} />;
-    const rows = quickRows(recipes, saved, moved);
+    const rows = quickRows(recipes, held);
     return rows.length === 0 ? <p className="note">No saved meals yet.</p> : (
-      <ul className="dt-recents" aria-label="Saved meals to plan">
-        {rows.map(m => <li key={m.id}><button type="button" className="btn sm" onClick={() => plan(m.id.startsWith('s:') ? 'm' : 'r', m.id.slice(2), m.n)}>{mealLine(m)}</button></li>)}
-      </ul>
+      <div>
+        <ul className="dt-recents" aria-label="Saved meals to plan">
+          {rows.map(m => <li key={m.id}><button type="button" className="btn sm" onClick={() => plan(m.id.startsWith('s:') ? 'm' : 'r', m.id.slice(2), m.n)}>{mealLine(m)}</button></li>)}
+        </ul>
+        {held.length > 0 && <p className="note">{savedMealsNote(held, recipes.length)}</p>}
+      </div>
     );
   }
   if (flow === 'recipes') {

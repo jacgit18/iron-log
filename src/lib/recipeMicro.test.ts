@@ -38,7 +38,7 @@ describe('logging a recipe carries them, scaled by the servings', () => {
     expect('entry' in e && 'micro' in e.entry).toBe(false);
   });
   it('a planned recipe logs them for its portion', () => {
-    const resolved = { recipe: r, portion: 1.5 } as Resolved;
+    const resolved = { item: { k: 'r', id: r.id }, name: r.n, gone: false, recipe: r, portion: 1.5 } as Resolved; // a planned item always carries its plan item
     const out = planLog(resolved, [] as DietEntry[], '2026-09-24');
     expect('add' in out && out.add[0]!.micro).toEqual({ calcium: 150, iron: 3 });
   });
