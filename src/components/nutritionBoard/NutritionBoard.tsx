@@ -16,6 +16,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
 import DayStepper from './DayStepper.js';
+import ShoppingButton from './ShoppingButton.js';
 import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
@@ -95,6 +96,7 @@ export default function NutritionBoard() {
         {editable ? (
           <div className="nb-tbtns">
             <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
+            {!phone && <ShoppingButton week={days} today={today} onMsg={setMsg} />}
             {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
           </div>
         ) : <span className="note">Last week&apos;s food cannot be changed. Supplements and water can.</span>}
