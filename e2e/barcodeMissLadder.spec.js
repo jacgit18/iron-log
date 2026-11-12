@@ -7,7 +7,7 @@ import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
 // button off while typing still works. The reader, the camera and both routes are stubbed; a real label and a real phone are the owner's check.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const photo = { name: 'barcode.png', mimeType: 'image/png', buffer: PNG };
-// The label photo is offered by the add sheet's Find food way (its own Scan barcode button), so every scan here starts there (brief nutrition-board); `diet` is that sheet.
+// The label photo is offered by the add sheet's Find food way (its own Scan to fill form button), so every scan here starts there (brief nutrition-board); `diet` is that sheet.
 const diet = page => page.getByRole('dialog');
 // The add sheet is reopened on Find food after a scan, so a second scan starts from whichever state the sheet is in.
 const openScan = async page => {

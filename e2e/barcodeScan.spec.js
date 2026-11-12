@@ -27,7 +27,7 @@ test.describe('as an admin', () => {
     await page.route('**/api/foods/barcode/*', route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CHEERIOS) }); });
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: 'The camera is not available' })).toBeVisible();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
@@ -46,7 +46,7 @@ test.describe('as an admin', () => {
     await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();
@@ -63,7 +63,7 @@ test.describe('as an admin', () => {
     await answer(page, 200, { ok: true, hit: { id: 4099100063851, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 429, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' } });
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByText('Data from Open Food Facts. Crowd-sourced: check the numbers against the label.')).toBeVisible();
     await page.getByRole('button', { name: 'Use', exact: true }).click();
@@ -71,7 +71,7 @@ test.describe('as an admin', () => {
     await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
 
     await answer(page, 200, CHEERIOS);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByText('Cheerios Cereal (General Mills)')).toBeVisible();
     await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
@@ -82,7 +82,7 @@ test.describe('as an admin', () => {
     await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible();
     const chooser = page.waitForEvent('filechooser');
@@ -96,7 +96,7 @@ test.describe('as an admin', () => {
     await asAdmin(page); await withReader(page, []); await noCamera(page);
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'Could not read a barcode' })).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();
@@ -105,7 +105,7 @@ test.describe('as an admin', () => {
     await page.addInitScript(() => { delete window.BarcodeDetector; });
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'cannot read barcodes' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Photo instead' })).toHaveCount(0);
   });
@@ -114,7 +114,7 @@ test.describe('as an admin', () => {
     await asAdmin(page); await withReader(page, []); await noCamera(page);
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible();
     await page.goBack();
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0);
@@ -138,7 +138,7 @@ test.describe('as an admin', () => {
     await answer(page, 200, CHEERIOS);
     await page.reload();
     await openForm(page);
-    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Point the camera at the barcode' })).toBeVisible();
     await page.evaluate(() => { window.__codes = [{ rawValue: '016000275287', format: 'upc_a' }]; }); // the reader now "sees" a barcode
     await expect(page.getByText('Cheerios Cereal (General Mills)')).toBeVisible();
@@ -152,7 +152,7 @@ test('a signed-in account that is not an admin can scan a barcode, and its miss 
   await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
   await page.reload();
   await openForm(page);
-  await page.getByRole('button', { name: 'Scan barcode' }).click();
+  await page.getByRole('button', { name: 'Scan to fill form' }).click();
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   await expect(page.getByRole('status').filter({ hasText: 'not in USDA or Open Food Facts' })).toBeVisible(); // the lookup went through for a non-admin
   await expect(page.locator('#bc-label')).toHaveCount(1); // Photo the label is the AI scan, open to everyone

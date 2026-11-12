@@ -32,6 +32,26 @@ describe('Food naming (Recipes)', () => {
   });
 });
 
+describe('Scan wording', () => {
+  it('has a row that bans the old "Scan barcode" and "Scan a food" for a scan that fills a form', () => {
+    const row = WORDING.find(r => r.say.startsWith('Scan to fill'));
+    expect(row?.notThis).toEqual(expect.arrayContaining(['Scan barcode', 'Scan a food']));
+  });
+  // The buttons the row covers, read from their source (a label in a lib string or a constant is outside the component-text test): each says "Scan to fill", none the old words.
+  const read = (f: string) => readFileSync(join(__dirname, '..', f), 'utf8');
+  it('the scans that fill a form say Scan to fill form (Find food, the supplement add sheet, the Recipes + New menu) and never the old words', () => {
+    for (const f of ['components/diet/FoodSearch.tsx', 'components/supplements/SupplementAddSheet.tsx', 'components/recipes/RecipeNewMenu.tsx']) {
+      const t = read(f);
+      expect(t, f).toMatch(/Scan to fill/);
+      expect(t, f).not.toMatch(/>Scan barcode</);
+      expect(t, f).not.toMatch(/label: 'Scan a food'/);
+    }
+  });
+  it('the empty-tab notes name the + New entry by its current name', () => {
+    expect(read('lib/recipeList.ts')).not.toMatch(/Scan a food|scan a drink/);
+  });
+});
+
 describe('WORDING table', () => {
   it('has one row per word and every row says when', () => {
     expect(new Set(WORDING.map(r => r.say)).size).toBe(WORDING.length);

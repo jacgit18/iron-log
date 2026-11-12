@@ -1036,10 +1036,10 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
     steps: [
-      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan barcode and allow the camera.',
+      'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan to fill form and allow the camera.',
       'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
       'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
-      'Repeat on the diet day: open Nutrition, press + Add food, Find food and Scan barcode, and scan a second product.',
+      'Repeat on the diet day: open Nutrition, press + Add food, Find food and Scan to fill form, and scan a second product.',
     ],
     expected: [
       'The sheet reads the code within a few seconds, closes, and shows the product name (with brand) and its calories per 100 g; the grams start at the product\'s serving.',
@@ -1050,8 +1050,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
     steps: [
-      'Open + New, then Add a food by hand, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
-      'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
+      'Open + New, then Add a food by hand, press Scan to fill form and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Close the sheet. In your browser settings block the camera for the site, press Scan to fill form again, and press Photo instead with a saved photo of a barcode (or of a table).',
     ],
     expected: [
       'The sheet says "That barcode is not in USDA or Open Food Facts." with a Tried list (USDA: not found, Open Food Facts: not found), makes Type the name the main choice and offers Photo the label; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
@@ -1214,7 +1214,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
     steps: [
-      'On a phone. On Recipes press + New, then Add a food by hand, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'On a phone. On Recipes press + New, then Add a food by hand, then Scan to fill form and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
       'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
       'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
       'Scan a product USDA does know (oatmeal) and read the same place.',
@@ -1228,7 +1228,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
     steps: [
-      'On a phone, open + New, then Add a food by hand, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'On a phone, open + New, then Add a food by hand, press Scan to fill form and scan something neither source knows (a book, a local product with no entry).',
       'Read the sheet, then press Photo the label.',
       'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
     ],
@@ -1278,7 +1278,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-93', feature: 'Barcode scan', title: 'A missed scan makes typing the name the main choice and offers the AI label photo second', persona: 'diet-fresh', brief: 'barcode-miss-ladder', device: true,
     steps: [
-      'On a phone, open Daily, Nutrition, press + Add food, Find food and Scan barcode; scan a code neither source knows. Watch the line while it looks.',
+      'On a phone, open Daily, Nutrition, press + Add food, Find food and Scan to fill form; scan a code neither source knows. Watch the line while it looks.',
       'Read the sheet: the steps tried, the main button, the button under it and the small note under that.',
       'Press Type the name and see where the cursor is. Scan the code again and press Photo the label.',
       'Photograph a nutrition label and read the result before pressing Use; then press Use.',
@@ -1983,11 +1983,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
-      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan a food.',
+      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan to fill a food form.',
       'After starring two recipes (S-173 walks the star), reload the page and press a starred chip above the list.',
     ],
     expected: [
-      'The menu lists Scan a food, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan a food opens the New food form with the barcode sheet on top.',
+      'The menu lists Scan to fill a food form, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan to fill a food form opens the New food form with the barcode sheet on top.',
       'The chips above the list show the starred recipes first and open the one pressed.',
       'After a reload with no stars and nothing logged or opened since, the row is not shown (a recipe opened in the same visit still counts as recent).',
     ],
@@ -2568,7 +2568,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-204', feature: 'Nutrition board', title: 'Scan from Find food and come back to the same sheet', persona: 'diet-on-target', brief: 'nutrition-board', device: true,
     steps: [
-      'On a phone open Nutrition, press + Add food, Find food and Scan barcode, and allow the camera.',
+      'On a phone open Nutrition, press + Add food, Find food and Scan to fill form, and allow the camera.',
       'Scan a packaged US food until the camera sheet closes.',
       'Read the sheet that comes back, press Use, check the One-off food form and press Add.',
       'Scan a code neither source knows and read the buttons after the miss.',
