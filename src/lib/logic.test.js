@@ -483,10 +483,14 @@ describe('stray moved values', () => {
     expect(at.length).toBe(1);
     expect(+at[0]).toBeGreaterThanOrEqual(1); expect(+at[0]).toBeLessThanOrEqual(7);
   });
-  it('normWeek keeps movedOn only for cards that are still moved, with a real date', () => {
-    const w = normWeek({ moved: { a: 3, b: 4 }, movedOn: { a: '2026-09-30', b: 'soon', gone: '2026-09-30' } });
-    expect(w.movedOn).toEqual({ a: '2026-09-30' });
-    expect(normWeek({ moved: {} , movedOn: { a: '2026-09-30' } }).movedOn).toBeUndefined();
+  it('normWeek keeps a move trail only when its last leg is where the card sits now, cleaned and in date order', () => {
+    const w = normWeek({ moved: { a: 3, b: 4, c: 5 }, moveTrail: {
+      a: [{ on: '2026-09-30', day: 3 }, { on: '2026-09-28', day: 4 }, { on: 'soon', day: 2 }, { on: '2026-09-29', day: 9 }],
+      b: [{ on: '2026-09-30', day: 6 }], // last leg says Day 6 but the card sits on Day 4: dropped
+      c: 'nope' } });
+    expect(w.moveTrail).toEqual({ a: [{ on: '2026-09-28', day: 4 }, { on: '2026-09-30', day: 3 }] });
+    expect(normWeek({ moved: {}, moveTrail: { a: [{ on: '2026-09-28', day: 5 }, { on: '2026-09-30', day: 0 }] } }).moveTrail).toEqual({ a: [{ on: '2026-09-28', day: 5 }, { on: '2026-09-30', day: 0 }] });
+    expect(normWeek({ moved: {}, moveTrail: { a: [{ on: '2026-09-30', day: 5 }] } }).moveTrail).toBeUndefined();
   });
   it('normWeek keeps only moved days 1..7', () => {
     expect(normWeek({ moved: { a: 3, b: 9, c: '4', d: 'x' } }).moved).toEqual({ a: 3, c: 4 });
@@ -551,10 +555,25 @@ describe('dayDate: the date a board was worked', () => {
   });
   it('a card moved here after it was ticked elsewhere does not date this day; entries written once it is here do', () => {
     const logs = { hack: [entry('a', '2026-09-29')] };
-    const wk = { done: { a: true }, moved: { a: 5 }, movedOn: { a: '2026-09-30' } };
-    expect(dayDate([a], logs, WK, wk)).toBeNull(); // ticked on the 29th on its old day, moved here on the 30th
+    const wk = { done: { a: true }, moved: { a: 5 }, moveTrail: { a: [{ on: '2026-09-30', day: 5 }] } };
+    expect(dayDate([a], logs, WK, wk)).toBeNull(); // ticked on the 29th at home, moved here on the 30th
     expect(dayDate([a], { hack: [entry('a', '2026-09-29'), entry('a', '2026-10-01')] }, WK, wk)).toBe('2026-10-01');
-    expect(dayDate([a], logs, WK, { done: { a: true }, moved: {} })).toBe('2026-09-29'); // moved back: counts again
+    expect(dayDate([a], logs, WK, { done: { a: true }, moved: {} })).toBe('2026-09-29'); // never moved: counts
+  });
+  it('a card moved back home counts what it was ticked for at home, not what it was ticked for while away', () => {
+    const wk = { done: { a: true }, moved: {}, moveTrail: { a: [{ on: '2026-09-28', day: 5 }, { on: '2026-09-30', day: 0 }] } };
+    expect(dayDate([a], { hack: [entry('a', '2026-09-29')] }, WK, wk)).toBeNull(); // ticked on the 29th while on Day 5
+    expect(dayDate([a], { hack: [entry('a', '2026-09-27')] }, WK, wk)).toBe('2026-09-27'); // ticked at home before it left
+    expect(dayDate([a], { hack: [entry('a', '2026-10-01')] }, WK, wk)).toBe('2026-10-01'); // ticked at home after it came back
+  });
+  it('a card moved to another day and back to the first one counts the first stay again', () => {
+    const wk = { done: { a: true }, moved: { a: 5 }, moveTrail: { a: [{ on: '2026-09-28', day: 5 }, { on: '2026-09-29', day: 7 }, { on: '2026-09-30', day: 5 }] } };
+    expect(dayDate([a], { hack: [entry('a', '2026-09-28')] }, WK, wk)).toBe('2026-09-28'); // first stay on Day 5
+    expect(dayDate([a], { hack: [entry('a', '2026-09-29')] }, WK, wk)).toBeNull(); // the stay on Day 7
+  });
+  it('a trail that no longer matches where the card sits (a merge left it behind) is ignored', () => {
+    const wk = { done: { a: true }, moved: {}, moveTrail: { a: [{ on: '2026-09-30', day: 5 }] } };
+    expect(dayDate([a], { hack: [entry('a', '2026-10-01')] }, WK, wk)).toBe('2026-10-01');
   });
   it('counts hand-logged sessions and every exercise of a pair', () => {
     const pair = { id: 'p', day: 1, type: 'superset', items: [{ ex: 'hack' }, { ex: 'legext' }] };
@@ -932,15 +951,30 @@ describe('planCard and planFix: moving one card when a day is finished', () => {
   });
 });
 
-describe('stampMoves: week.movedOn follows week.moved', () => {
+describe('stampMoves: week.moveTrail follows week.moved', () => {
   const D = '2026-09-30';
-  it('dates a new or changed move, keeps an unchanged one, and drops an undone one', () => {
-    const before = { moved: { a: 3, b: 4 }, movedOn: { a: '2026-09-28', b: '2026-09-28' } };
-    const after = { moved: { a: 3, b: 6, c: 2 }, movedOn: { a: '2026-09-28', b: '2026-09-28' } };
+  it('adds a leg for each card whose place changed, replaces a same-date leg, keeps the history, and records a return home as day 0', () => {
+    const before = { moved: { a: 3, b: 4 }, moveTrail: { a: [{ on: '2026-09-28', day: 3 }], b: [{ on: '2026-09-28', day: 4 }] } };
+    const after = { moved: { a: 3, b: 6, c: 2 }, moveTrail: before.moveTrail };
     stampMoves(before, after, D);
-    expect(after.movedOn).toEqual({ a: '2026-09-28', b: D, c: D });
-    const undone = { moved: {}, movedOn: after.movedOn };
-    stampMoves({ moved: after.moved }, undone, D);
-    expect(undone.movedOn).toBeUndefined();
+    expect(after.moveTrail).toEqual({ a: [{ on: '2026-09-28', day: 3 }], b: [{ on: '2026-09-28', day: 4 }, { on: D, day: 6 }], c: [{ on: D, day: 2 }] });
+    const home = { moved: { a: 3 }, moveTrail: after.moveTrail };
+    const back = { moved: {}, moveTrail: after.moveTrail };
+    stampMoves(home, back, '2026-10-02');
+    expect(back.moveTrail.a).toEqual([{ on: '2026-09-28', day: 3 }, { on: '2026-10-02', day: 0 }]);
+    const again = { moved: { a: 5 }, moveTrail: back.moveTrail };
+    stampMoves({ moved: {}, moveTrail: back.moveTrail }, again, '2026-10-02'); // moved away again on the same date: that leg is replaced
+    expect(again.moveTrail.a).toEqual([{ on: '2026-09-28', day: 3 }, { on: '2026-10-02', day: 5 }]);
+  });
+  it('a move and its undo on one date leave no trail', () => {
+    const away = { moved: { a: 5 } }; stampMoves({ moved: {} }, away, D);
+    expect(away.moveTrail).toEqual({ a: [{ on: D, day: 5 }] });
+    const back = { moved: {}, moveTrail: away.moveTrail }; stampMoves({ moved: { a: 5 } }, back, D);
+    expect(back.moveTrail).toBeUndefined();
+  });
+  it('writes nothing when no card moved', () => {
+    const w = { moved: { a: 3 } };
+    stampMoves({ moved: { a: 3 } }, w, D);
+    expect(w.moveTrail).toBeUndefined();
   });
 });

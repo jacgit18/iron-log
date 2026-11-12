@@ -538,7 +538,7 @@ describe('day dates', () => {
       expect(dayDate(col5, st().logs, st().weekKey(), st().week)).toBeNull();
     } finally { vi.useRealTimers(); useAppStore.setState({ weekStart: was }); }
   });
-  it('a card ticked on Day 2 and moved to a day with nothing else done does not date that day, and moving it back dates Day 2 again', () => {
+  it('a card ticked on Day 2 and moved to a day with nothing else done does not date that day, and moving it back dates Day 2 again, from what was ticked at home', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const was = st().weekStart; useAppStore.setState({ weekStart: new Date(2026, 10, 8) });
     try {
@@ -547,10 +547,10 @@ describe('day dates', () => {
       const cols = () => currentLayout(st().week, st().activeSlots());
       expect(cols()[7].some(c => c.id === 'A-d2s1')).toBe(true);
       expect(dayDate(cols()[7], st().logs, st().weekKey(), st().week)).toBeNull();
-      expect(st().week.movedOn).toEqual({ 'A-d2s1': '2026-11-12' });
-      st().moveSlot('A-d2s1', 2);
-      expect(st().week.movedOn).toBeUndefined();
-      expect(dayDate(cols()[2], st().logs, st().weekKey(), st().week)).toBe('2026-11-10');
+      expect(st().week.moveTrail).toEqual({ 'A-d2s1': [{ on: '2026-11-12', day: 7 }] });
+      vi.setSystemTime(new Date('2026-11-13T09:00:00')); st().moveSlot('A-d2s1', 2);
+      expect(st().week.moveTrail).toEqual({ 'A-d2s1': [{ on: '2026-11-12', day: 7 }, { on: '2026-11-13', day: 0 }] });
+      expect(dayDate(cols()[2], st().logs, st().weekKey(), st().week)).toBe('2026-11-10'); // ticked at home on the 10th, before it left
     } finally { vi.useRealTimers(); useAppStore.setState({ weekStart: was }); }
   });
   it('the date stays with the workout when days are swapped', () => {

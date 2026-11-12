@@ -353,7 +353,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   mutateWeek(fn) {
     if (get().blocked()) return false;
-    const before = get().week; const week = structuredClone(before); fn(week); stampMoves(before, week, defaultLogDate(get().weekStart)); // dates each card move (week.movedOn)
+    const before = get().week; const week = structuredClone(before); fn(week); stampMoves(before, week, defaultLogDate(get().weekStart)); // dates each card move (week.moveTrail)
     // Write down what the week runs (ADR 022), from the program it shows: so once it is over, later program changes leave it alone.
     week.ran = ranFor(weekProgram(get().cfg, get().programs, week, get().weekKey()), weekProgKey(get().cfg, week, get().weekKey()), week, get().weekKey());
     set({ week }); get().saveWeek(); return true;
