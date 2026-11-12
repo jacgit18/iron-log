@@ -9,7 +9,7 @@ import './Diet.css';
 
 // "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one. A recipe opens the shared LogControl (brief log-or-plan-control: portion, day, Log or Plan); a food you logged before has no recipe to plan, so it keeps the small inline Less / More / Add. Nothing is stored for this; it reads the log and the recipes.
 // The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
-export default function FindFood({ day, onFood, reopen, resume }: { day: string; /** Unused since 4c (the portion sheet reports for itself); kept optional so the add sheet's call stays as it is. */ onAdded?: (text: string) => void; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
+export default function FindFood({ day, onFood, reopen, resume }: { day: string; onFood: (fill: FoodFill) => void; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [q, setQ] = useState('');

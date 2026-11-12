@@ -25,6 +25,7 @@ export default function PortionSheet() {
     return (
       <Sheet className="portionsheet">
         <h2 className="cond">{past.n}</h2>
+        {typeof modal?.day === 'string' && modal.day > today && <p className="note" role="status">A food you logged before can be logged for today or earlier, not planned. The day is set to today.</p>}
         <LogControl bare recipe={pastFoodAsRecipe(past)} day={pastDay} onChange={setDone} />
         <div className="actions">
           <button type="button" className="btn" onClick={closeModal}>{done ? 'Done' : 'Cancel'}</button>
