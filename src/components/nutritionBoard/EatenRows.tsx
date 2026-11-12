@@ -6,7 +6,7 @@ import Icon from '../Icon.jsx';
 import './EatenRows.css';
 
 // Eaten food that no planned item's check added (brief nutrition-items-row-sheet-and-more). Today it sits in its meal (MealSections) or in "Not in a meal"; each row is one button that opens the row sheet (EatenRowSheet), so a row carries no inline Edit or Delete.
-// An earlier day's rows are plain text: only today's food can be changed.
+// An earlier day's rows open the row sheet too: food added to a past day (brief nutrition-any-day-add) can be corrected or deleted there.
 export function EatenRow({ e, editable }: { e: DietEntry; editable: boolean }) {
   const body = (
     <>

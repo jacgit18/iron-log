@@ -167,8 +167,8 @@ test('the food log follows the board: today is a separate day from yesterday (re
   await page.getByRole('button', { name: 'Previous week' }).click();
   const yesterday = page.locator('.nb-col[data-day="2026-09-23"]');
   await expect(yesterday.locator('.nb-eat')).toHaveCount(0);
-  await expect(page.locator('.nb-target')).toContainText('food is read-only'); // and nothing can be added to it
-  await expect(page.locator('#nb-add')).toHaveCount(0);
+  await expect(page.locator('.nb-target')).not.toContainText('food is read-only'); // an earlier day logs eaten food (brief nutrition-any-day-add)
+  await expect(page.locator('#nb-add')).toBeVisible();
   await page.getByRole('button', { name: 'This week' }).click();
   await expect(eaten(page)).toHaveCount(1);
   await expect(page.locator('.nb-target')).toContainText('Adding to Thu 24 · today');
