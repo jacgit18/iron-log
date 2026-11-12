@@ -7,8 +7,8 @@ import { useAppStore } from '../../store/useAppStore.js';
 const NO_MONTH = { lines: {}, pulled: [] };
 
 // Week to Shopping (brief week-shopping): one tap puts the missing ingredients of the shown week's planned, uneaten recipes on Shopping. What it added
-// comes back with the board's Undo notice (RemovedNotice scope "diet"); a tap that adds nothing says why in the board's message line.
-export default function ShoppingButton({ week, today, onMsg }: { week: readonly string[]; today: string; onMsg: (text: string) => void }) {
+// comes back with the board's Undo notice (RemovedNotice scope "diet"); a tap that adds nothing says why in the message line of whoever holds it. On a phone it lives in the Manage sheet (owner, 2026-11-12), elsewhere in the toolbar.
+export default function ShoppingButton({ week, today, onMsg, onAdded }: { week: readonly string[]; today: string; onMsg: (text: string) => void; onAdded?: () => void }) {
   const cfg = useAppStore(s => s.cfg);
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
@@ -29,6 +29,7 @@ export default function ShoppingButton({ week, today, onMsg }: { week: readonly 
       return true;
     }, { verb: 'Added', undone: 'Removed from Shopping' });
     if (r.refused) onMsg(r.refused);
+    onAdded?.(); // the Manage sheet closes so the board's Undo notice is the thing on screen
   };
   return <button type="button" className="btn" id="nb-shopping" disabled={need === 0} onClick={tap}>Add missing to Shopping</button>;
 }

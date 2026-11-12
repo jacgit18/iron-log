@@ -97,7 +97,7 @@ export default function NutritionBoard() {
           <div className="nb-tbtns">
             <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
             {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
-            <ShoppingButton week={days} today={today} onMsg={setMsg} />
+            {!phone && <ShoppingButton week={days} today={today} onMsg={setMsg} />}
           </div>
         ) : <span className="note">Last week&apos;s food cannot be changed. Supplements and water can.</span>}
       </div>
