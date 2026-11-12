@@ -33,7 +33,7 @@ const lastMeal = (): PlanSlot | null => { try { const v = localStorage.getItem(K
 const remember = (s: PlanSlot) => { try { localStorage.setItem(KEY, s); } catch { /* private window: the pick just is not remembered */ } };
 
 // The add sheet (brief nutrition-board): the ways of adding that exist today. A day ahead asks which meal (pre-picked from the time of day, remembering the last pick) and plans recipes and saved meals into it; today logs what was eaten, which has no meal, so it asks nothing (owner, 2026-11-10: no Plan on today).
-// `modal.day` is the day it adds to, `modal.meal` the meal to start on (an empty meal's Add control), `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan barcode opens the camera itself).
+// `modal.day` is the day it adds to, `modal.meal` the meal to start on (an empty meal's Add control), `modal.flow` opens one way straight away, `modal.onScan` and `modal.onMsg` hand a scanned product and a status line back to the board (this sheet closes when the camera opens; the toolbar's Scan and log opens the camera itself).
 export default function AddFoodSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);

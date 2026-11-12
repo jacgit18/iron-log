@@ -1327,7 +1327,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-97', feature: 'Security headers', title: 'The barcode scanner\'s live camera opens on a phone', persona: 'diet-fresh', brief: 'camera-and-headers', device: true,
     steps: [
-      'On a phone, open Daily, Nutrition and press Scan barcode in the toolbar.',
+      'On a phone, open Daily, Nutrition and press Scan and log in the toolbar.',
       'When the browser asks to use the camera, allow it. Read the line under the camera view.',
       'Scan any product barcode, then close the sheet and reopen it.',
     ],
@@ -2005,7 +2005,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-155', feature: 'Nutrition quick log', title: 'Scan a food from Quick add: pick its Type and it is saved and logged once', persona: 'diet-fresh', brief: 'nutrition-quick-log',
     steps: [
-      'On the Nutrition tab press Scan barcode in the toolbar, scan a packaged product (or use the photo of a barcode), press Drink, set the grams and press Save and log it. Then open Recipes.',
+      'On the Nutrition tab press Scan and log in the toolbar, scan a packaged product (or use the photo of a barcode), press Drink, set the grams and press Save and log it. Then open Recipes.',
     ],
     expected: [
       'The food shows once in the day\'s Eaten list and once in Recipes as a Drink, and one entry is logged however many times Save and log it was tapped. Scanning on a phone needs a camera: try it on a real phone.',
@@ -2495,7 +2495,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Last week and read the toolbar again.',
     ],
     expected: [
-      'It reads "Adding to <today> · today", and beside + Add food are Scan barcode, Quick add and One-off food.',
+      'It reads "Adding to <today> · today", and beside + Add food are Scan and log, Quick add and One-off food.',
       'It reads "Adding to Sat 26"; only + Add food is left (a day ahead plans, see S-207).',
       'Last week: "<day> · food is read-only", no + Add food, and "Last week\'s food cannot be changed. Supplements and water can." (S-209).',
     ],
@@ -2521,7 +2521,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Done. Tap tomorrow\'s name and press + Add food again.',
     ],
     expected: [
-      'Today lists seven ways in three groups, each with an icon and a one-line hint: Fastest (Quick add, Scan barcode, One-off food), From what you have (Find food, Recipes) and Whole days and meals (Saved meals, Copy yesterday); once something is eaten that day, Save as a meal in Recipes joins the last group (S-203); every row starts at the same left edge.',
+      'Today lists seven ways in three groups, each with an icon and a one-line hint: Fastest (Quick add, Scan and log, One-off food), From what you have (Find food, Recipes) and Whole days and meals (Saved meals, Copy yesterday); once something is eaten that day, Save as a meal in Recipes joins the last group (S-203); every row starts at the same left edge.',
       'The sheet\'s title changes to the way you opened; Back to ways of adding returns to the list; Done closes the sheet.',
       'A day ahead lists only Recipes and Saved meals, under From what you have and Whole days and meals (food is eaten on the day; ahead it only plans).',
     ],
@@ -2580,9 +2580,9 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-205', feature: 'Nutrition board', title: 'Scan barcode in the toolbar, save the food and log it once', persona: 'diet-fresh', brief: 'nutrition-board', device: true,
+    id: 'S-205', feature: 'Nutrition board', title: 'Scan and log in the toolbar, save the food and log it once', persona: 'diet-fresh', brief: 'nutrition-board', device: true,
     steps: [
-      'On a phone open Nutrition and press Scan barcode in the toolbar (it is shown for today only).',
+      'On a phone open Nutrition and press Scan and log in the toolbar (it is shown for today only).',
       'Scan a packaged product, pick its Type, set the grams and press Save and log it.',
       'Press Save and log it again if the button is still there, then open Recipes.',
     ],
@@ -2883,7 +2883,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-229', feature: 'Food vitamins and minerals', title: 'A scanned barcode logs the food with its vitamins and minerals', persona: 'diet-fresh', brief: 'food-vitamins-minerals', device: true,
     steps: [
-      'On a phone, press Add food, then Scan barcode, and scan a packaged food with a nutrition panel (a cereal box works).',
+      'On a phone, press Add food, then Find food, press the scan button there and scan a packaged food with a nutrition panel (a cereal box works).',
       'Check the amounts in the form against the box (Sodium and Fiber are the ones Open Food Facts lists most often), then press Add.',
     ],
     expected: [
@@ -3133,7 +3133,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Read the toolbar on today, then tap a day ahead and read it again. On a window 1440 px or wider count the day columns.',
     ],
     expected: [
-      'Today offers Scan barcode, Quick add and One-off food (they log eaten food); a day ahead offers Recipes and Saved meals (it plans, never logs).',
+      'Today offers Scan and log, Quick add and One-off food (they log eaten food); a day ahead offers Recipes and Saved meals (it plans, never logs).',
       'Seven columns show from 1440 px wide, and the selected day is clearly marked.',
     ],
   },
