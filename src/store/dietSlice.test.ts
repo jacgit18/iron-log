@@ -212,6 +212,16 @@ describe('moveSavedMeals', () => {
     expect(st().moveSavedMeals()).toBe(0);
     expect(st().recipes).toHaveLength(2);
   });
+  it('a second device with the recipes but no moved record adds no copy and writes the record back', () => {
+    oldMeal('One', [log('Oats')]);
+    st().moveSavedMeals();
+    const recipes = st().recipes;
+    st().mutateCfg(c => { delete c.diet!.mealsMoved; });
+    expect(st().cfg.diet!.mealsMoved).toBeUndefined();
+    expect(st().moveSavedMeals()).toBe(0);
+    expect(st().recipes).toEqual(recipes);
+    expect(st().cfg.diet!.mealsMoved).toEqual({ m1: recipes[0]!.id });
+  });
   it('does nothing before the recipes list has been read', () => {
     oldMeal('One', [log('Oats')]);
     useAppStore.setState({ recipesLoaded: false });

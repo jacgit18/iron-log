@@ -37,16 +37,18 @@ export function mealItems(meal: Recipe, recipes: readonly Recipe[]): SavedItem[]
   return [{ n: meal.n, kcal: meal.kcal, p: meal.p, ...(meal.c !== undefined ? { c: meal.c } : {}), ...(meal.f !== undefined ? { f: meal.f } : {}) }];
 }
 
-/** The saved meals not yet moved become Recipes meals, once each. Stops at the recipe limit (the rest wait). `moved` gains one entry per meal made. */
+/** The saved meals not yet moved become Recipes meals, once each, each marked with `fromMeal`. A meal whose recipe already carries its mark (a repeat, or a second device whose recipes synced before its settings) is not made again: `moved` is rebuilt from the mark. Stops at the recipe limit (the rest wait). `moved` gains one entry per meal made or found. */
 export function moveMeals(meals: readonly SavedMeal[], moved: Readonly<Record<string, string>>, recipes: Recipe[]): { recipes: Recipe[]; moved: Record<string, string>; added: number; limited: boolean } {
   let list = recipes, added = 0, limited = false;
   const next = { ...moved };
   for (const m of meals) {
     if (next[m.id]) continue;
+    const have = list.find(r => r.fromMeal === m.id);
+    if (have) { next[m.id] = have.id; continue; }
     if (list.length >= MAX_RECIPES) { limited = true; break; }
     let draft = savedMealToRecipe(m, list);
     if (draft.ing.some(i => i.rid && linkError(list, undefined, i.rid))) draft = savedMealToRecipe(m, list, false); // a part would nest meals too deep: keep the saved totals instead of links
-    const made = normRecipe({ ...draft, id: newRecipeId(list.map(r => r.id), draft.n) });
+    const made = normRecipe({ ...draft, fromMeal: m.id, id: newRecipeId(list.map(r => r.id), draft.n) });
     if (!made) continue;
     list = settleMeals([...list, made]);
     next[m.id] = made.id;

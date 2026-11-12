@@ -45,6 +45,24 @@ describe('moveMeals', () => {
     const b = moveMeals(meals, a.moved, a.recipes.filter(r => r.id !== a.moved.m2));
     expect(b.added).toBe(0);
   });
+  it('marks each recipe it makes with the saved meal it came from', () => {
+    const a = moveMeals(meals, {}, [rice, chili]);
+    expect(a.recipes.find(r => r.id === a.moved.m1)?.fromMeal).toBe('m1');
+    expect(a.recipes.find(r => r.id === a.moved.m2)?.fromMeal).toBe('m2');
+  });
+  it('a repeat move with the moved record lost adds nothing and rebuilds the record from the marks', () => {
+    const a = moveMeals(meals, {}, [rice, chili]);
+    const b = moveMeals(meals, {}, a.recipes);
+    expect(b.added).toBe(0);
+    expect(b.recipes).toBe(a.recipes);
+    expect(b.moved).toEqual(a.moved);
+  });
+  it('a second device that synced the recipes before its settings makes no duplicate', () => {
+    const a = moveMeals(meals, {}, [rice, chili]);
+    const b = moveMeals(meals, { m1: a.moved.m1 }, a.recipes);
+    expect(b.added).toBe(0);
+    expect(b.moved).toEqual(a.moved);
+  });
   it('stops at the recipe limit and says so', () => {
     const full = Array.from({ length: 300 }, (_, i) => rec(`r${i}`, `R${i}`));
     const r = moveMeals(meals, {}, full);

@@ -103,6 +103,13 @@ describe('swap, skip and Edited', () => {
     expect(normRecipe({ ...base, edited: true })).not.toHaveProperty('edited');
     expect(normRecipe({ ...base, from: 'c:wbc:chili', edited: 'yes' })).not.toHaveProperty('edited');
   });
+  it('keeps fromMeal as a short string and drops anything else', () => {
+    expect(normRecipe({ ...base, fromMeal: ' m1 ' })).toHaveProperty('fromMeal', 'm1');
+    expect(normRecipe({ ...base, fromMeal: 5 })).not.toHaveProperty('fromMeal');
+    expect(normRecipe({ ...base, fromMeal: '' })).not.toHaveProperty('fromMeal');
+    expect(normRecipe({ ...base, fromMeal: 'x'.repeat(200) })).not.toHaveProperty('fromMeal');
+    expect(validRecipe({ ...base, fromMeal: 'm1' })).toBe(true);
+  });
   it('accepts the new fields as clean and still reads a recipe saved before them', () => {
     expect(validRecipe({ ...base, ing: [{ n: 'Beans', sub: 'pinto beans', skip: true }], from: 'c:wbc:chili', edited: true })).toBe(true);
     expect(validRecipe(base)).toBe(true);
