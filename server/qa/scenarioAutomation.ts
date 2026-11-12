@@ -219,10 +219,10 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-192': { auto: 'unit', specs: ['src/lib/weekBoard.test.ts', 'src/lib/quickMeals.test.ts'], partial: 'no spec walks the Not set group or Move to out of it in the browser' },
   'S-193': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'the Targets and goal and Manage buttons and the five meters per column are not asserted in this walk' },
   'S-196': { auto: 'e2e', specs: ['e2e/weekBoard.spec.js', 'e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'the meter rising by the checked item\'s calories is unit tested only' },
-  'S-200': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'e2e/dietMeals.spec.js', 'e2e/dietAutoMacros.spec.js'], partial: 'the list of eight ways with hints and the sheet title changing per way are not asserted' },
+  'S-200': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'e2e/dietMeals.spec.js', 'e2e/dietAutoMacros.spec.js'], partial: 'the list of seven ways with hints and the sheet title changing per way are not asserted' },
   'S-201': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'e2e/nutritionQuickLog.spec.js'], partial: 'tapping a Suggested now food is not walked' },
   'S-202': { auto: 'e2e', specs: ['e2e/dietAutoMacros.spec.js', 'e2e/savedMealsMove.spec.js', 'e2e/nutritionBoard.spec.js'], partial: 'logging Usual breakfast as two entries and Log it from the Recipes way are not walked' },
-  'S-203': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js', 'e2e/dietMeals.spec.js'], partial: 'deleting every seeded food and then opening Save as a meal is not walked' },
+  'S-203': { auto: 'e2e', specs: ['e2e/dietSuggest.spec.js', 'e2e/dietMeals.spec.js', 'e2e/mealDoors.spec.js'], partial: 'deleting every seeded food and then reading the list of ways is not walked (an empty day is)' },
   'S-204': { auto: 'manual' }, // needs a real phone; e2e/barcodeMissLadder.spec.js stubs it. Not covered: the real phone camera and permission prompt are not walked; only the miss branch is asserted, not a found product coming back picked on Find food, then Use and Add
   'S-205': { auto: 'manual' }, // needs a real phone; e2e/nutritionQuickLog.spec.js stubs it. Not covered: the real camera is replaced by a photo file and a stubbed lookup
   'S-206': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js', 'src/lib/nutritionBoard.test.ts'], partial: 'the Supplements and Hydration lines and the Quick add empty note are not asserted in the browser' },

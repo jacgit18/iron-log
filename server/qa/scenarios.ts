@@ -2521,7 +2521,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Done. Tap tomorrow\'s name and press + Add food again.',
     ],
     expected: [
-      'Today lists eight ways in three groups, each with an icon and a one-line hint: Fastest (Quick add, Scan barcode, One-off food), From what you have (Find food, Recipes) and Whole days and meals (Saved meals, Copy yesterday, Save as a meal in Recipes); every row starts at the same left edge.',
+      'Today lists seven ways in three groups, each with an icon and a one-line hint: Fastest (Quick add, Scan barcode, One-off food), From what you have (Find food, Recipes) and Whole days and meals (Saved meals, Copy yesterday); once something is eaten that day, Save as a meal in Recipes joins the last group (S-203); every row starts at the same left edge.',
       'The sheet\'s title changes to the way you opened; Back to ways of adding returns to the list; Done closes the sheet.',
       'A day ahead lists only Recipes and Saved meals, under From what you have and Whole days and meals (food is eaten on the day; ahead it only plans).',
     ],
@@ -2557,12 +2557,12 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Press + Add food, Copy yesterday, then Copy yesterday again. Untick one food and press Add selected.',
       'Press Back to ways of adding, then Save as a meal. Press Save as a meal, tick two foods from today, name it "Lunch two" and save.',
-      'Delete every food in today\'s Also eaten list, then press + Add food and Save as a meal.',
+      'Delete every food in today\'s Also eaten list, then press + Add food and read the list of ways.',
     ],
     expected: [
       'Only the ticked foods are added to today and appear in the Also eaten list; the notice reads "Added <n>.".',
       'The meal "Lunch two" is in Recipes under Meals and in Saved meals (S-185).',
-      'With nothing eaten yet the sheet says "Nothing eaten yet to save."',
+      'With nothing eaten yet the list of ways has no "Save as a meal in Recipes" row; log one food and it comes back.',
     ],
   },
   {
