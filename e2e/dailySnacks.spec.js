@@ -67,7 +67,9 @@ test('the Daily snacks sheet and its picker have no accessibility violations', a
   await openNutrition(page);
   await todayCol(page).getByRole('button', { name: 'Set up daily snacks' }).click();
   const sheet = page.getByRole('dialog', { name: 'Daily snacks' });
+  await expect(sheet.getByRole('button', { name: 'Add snack', exact: true })).toBeVisible(); // the sheet is on screen before axe looks for it
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
   await sheet.getByRole('button', { name: 'Add snack', exact: true }).click();
+  await expect(sheet.getByLabel('Search your recipes and foods')).toBeVisible(); // and the picker is drawn before the second look
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
 });
