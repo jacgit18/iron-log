@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures.js';
-import { openDayTotals, openManage, openNutrition, openTargets, todayCol } from './nutritionBoardHelpers.js';
+import { openDayTotals, openManage, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief nutrition-manage-cleanup: the Add supplement picker loses its Manage button, the day's Add supplement button reads "Also took", the Supplements section's Totals button hides while the vitamin meter draws its rows
-// (the rule is a node test: lib/dayNutrientMeter.test.ts), and the Water reminder moved from Manage to Targets and goal. The fixed clock is Thursday 2026-09-24.
+// (the rule is a node test: lib/dayNutrientMeter.test.ts), and the Water reminder lives in Manage (it was in Targets and goal, which is gone). The fixed clock is Thursday 2026-09-24.
 const day = '2026-09-24';
 const D = { id: 'd', n: 'D cap', slot: 'morning', nutrients: [{ key: 'vitaminD', amount: 112, unit: 'mcg' }] };
 const seed = async (page, items, taken = {}) => {
@@ -45,28 +45,13 @@ test('Totals stays where the meter has no way in: nothing ticked yet, and a day 
   await expect(page.getByRole('dialog')).toBeVisible();
 });
 
-test('Water reminder is in Targets and goal and opens Settings at Alerts; Manage no longer has it', async ({ page }) => {
+test('Water reminder is in Manage, under the Water section, and opens Settings at Alerts', async ({ page }) => {
   await openNutrition(page);
   const m = await openManage(page);
   await expect(m.getByRole('button', { name: 'Supplements and library' })).toBeVisible();
   await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toBeVisible();
-  await expect(m.locator('#nb-manage-water')).toHaveCount(0);
-  await m.getByRole('button', { name: 'Done' }).click();
-  const t = await openTargets(page);
-  await expect(t.locator('#water-goal-edit')).toBeVisible();
-  await t.locator('#nb-manage-water').click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');
-});
-
-test('Water reminder asks before it leaves Targets and goal with an unsaved weight', async ({ page }) => {
-  await openNutrition(page);
-  const t = await openTargets(page);
-  await t.locator('#nbt-weight').fill('181');
-  await t.locator('#nb-manage-water').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(t.locator('#nb-manage-water')).toHaveText('Leave without saving? Tap again');
-  await t.locator('#nb-manage-water').click();
+  await expect(m.locator('#water-goal-edit')).toBeVisible();
+  await m.locator('#nb-manage-water').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');
 });

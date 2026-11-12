@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openManage, openSupplementEditor, openTargets } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openManage, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // What a unit test cannot catch: the Nutrition week board's seven day columns sit side by side in the page container from 1440px (one column with a day stepper below it); only a real layout shows it.
 const boxes = page => page.evaluate(() => {
@@ -68,12 +68,13 @@ test('at 1280px the stepper picks the first of three days and the window holds i
   expect(sat).toHaveLength(3);
 });
 
-test('the header holds Targets and goal and Manage, and no Diet panel sits under the board', async ({ page }) => {
+test('the header holds Manage, and no Diet panel sits under the board', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await open(page);
   const ids = await page.evaluate(() => [...document.querySelectorAll('#nb-h, #diet-h')].map(h => h.id));
   expect(ids).toEqual(['nb-h']); // the Targets block is no longer a panel under the board
-  await expect(page.locator('#nb-targets')).toBeVisible();
+  await expect(page.locator('#nb-targets')).toHaveCount(0);
+  await expect(page.locator('.wb-legend')).toHaveCount(0);
   await expect(page.locator('#nb-manage')).toBeVisible();
 });
 
@@ -86,12 +87,9 @@ test('Manage opens the supplement editor and library in a sheet, and Done closes
   await expect(page.locator('#sched-h')).toHaveCount(0);
 });
 
-test('the Targets and goal and Manage sheets have no accessibility violations', async ({ page }) => {
+test('the Manage sheet (daily targets, weight and goal, water) has no accessibility violations', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await open(page);
-  await openTargets(page);
-  expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
-  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
   await openManage(page);
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
 });
