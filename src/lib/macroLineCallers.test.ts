@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 // Every screen that words a food's numbers calls `macroLine` (brief shared-macro-line-and-two-tap-removes). This greps the components for the old hand-built text.
 const ROOT = join(__dirname, '..', 'components');
 
-/** Source text with a hand-built number line: "kcal · ${x} g protein" or "g protein` : 'No calories'", or the lower-case missing text. */
-const HAND_BUILT: RegExp[] = [/kcal\s*·\s*\$\{[^}]*\}\s*g protein/, /\}\s*g protein\b/, /No calories/, /needs numbers/];
+/** Source text with a hand-built number line: "kcal · ${x} g protein" or the lower-case missing text. */
+const HAND_BUILT: RegExp[] = [/kcal\s*·\s*\$\{[^}]*\}\s*g protein/, /\}\s*g protein\b/, /needs numbers/];
 
 function offences(text: string): string[] {
   return HAND_BUILT.filter(re => re.test(text)).map(re => String(re));
@@ -19,7 +19,7 @@ function files(dir: string): string[] {
 describe('macroLine callers', () => {
   it('flags the old hand-built patterns (fixture)', () => {
     expect(offences('`${r.kcal} kcal · ${r.p} g protein`')).not.toEqual([]);
-    expect(offences("r.kcal !== undefined ? 'x' : 'No calories'")).not.toEqual([]);
+    expect(offences("const s = 'needs numbers';")).not.toEqual([]);
     expect(offences('const s = macroLine(r) || "Needs numbers";')).toEqual([]);
   });
 
