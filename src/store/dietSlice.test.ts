@@ -181,7 +181,7 @@ const oldMeal = (name: string, entryIds: string[]) => {
 
 describe('Save meal makes a Recipes meal', () => {
   const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
-  beforeEach(() => { useAppStore.setState({ recipes: [] }); });
+  beforeEach(async () => { const { normGrocery } = await import('../lib/grocery.js'); useAppStore.setState({ grocery: normGrocery(null), groceryMonths: {}, recipes: [] }); });
   it('saves the ticked entries as a meal recipe with their totals, and leaves the old list alone', () => {
     const a = log('Oats', 350), b = log('Banana', 100); log('Skipped');
     expect(st().saveDietMeal('Breakfast', [a, b])).toBeNull();
@@ -286,5 +286,42 @@ describe('the meal planner', () => {
     st().mutateCfg(c => { c.diet = { plan: { '2020-01-01': [{ k: 'r', id: 'r1' }] } }; });
     st().addPlanItem(today, 'r', 'r2');
     expect(Object.keys(st().cfg.diet!.plan!)).toEqual([today]);
+  });
+});
+
+describe('planToShopping (week to Shopping)', () => {
+  const today = ymd(new Date());
+  const plan = (...items: { k: 'r' | 'm'; id: string; e?: string[] }[]) => st().mutateCfg(c => { c.diet = { plan: { [today]: items } }; });
+  const itemNames = () => st().grocery.items.map(i => i.n).sort();
+  beforeEach(async () => { const { normGrocery } = await import('../lib/grocery.js'); useAppStore.setState({ grocery: normGrocery(null), groceryMonths: {}, recipes: [] }); });
+
+  it('adds each missing ingredient of the planned recipes once and reports the new items', () => {
+    st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
+    st().saveRecipe({ n: 'Bread', cat: 'carbs', ing: [{ n: 'garlic' }, { n: 'flour' }], steps: [] });
+    const [a, b] = st().recipes;
+    plan({ k: 'r', id: a!.id }, { k: 'r', id: b!.id });
+    const r = st().planToShopping([today]);
+    expect(itemNames()).toEqual(['flour', 'garlic', 'pasta']);
+    expect(r).toMatchObject({ added: 3, recipes: 2, refused: null });
+    expect(r.ids).toHaveLength(3);
+  });
+  it('leaves what is already on the list and adds nothing for an eaten item, a saved meal or no plan', () => {
+    st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
+    st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
+    const id = st().recipes[0]!.id;
+    plan({ k: 'r', id, e: ['gone-entry'] }, { k: 'm', id: 'm1' });
+    expect(st().planToShopping([today])).toMatchObject({ added: 1, already: 1 }); // the eaten mark points at a removed entry, so the item still counts
+    plan({ k: 'm', id: 'm1' });
+    expect(st().planToShopping([today])).toMatchObject({ added: 0, recipes: 0, ids: [] });
+    expect(st().planToShopping([])).toMatchObject({ added: 0, recipes: 0 });
+  });
+  it('lets Undo remove exactly the items the call created', () => {
+    st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
+    st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
+    plan({ k: 'r', id: st().recipes[0]!.id });
+    const r = st().planToShopping([today]);
+    for (const id of r.ids) st().removeGroceryItem(id, { quiet: true });
+    expect(itemNames()).toEqual(['Garlic']);
+    expect(st().planToShopping([today]).added).toBe(1); // a second tap adds it again
   });
 });
