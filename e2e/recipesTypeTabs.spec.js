@@ -158,7 +158,7 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
   await page.goBack();
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Add a food by hand' }).click();
-  await expect(page.getByRole('heading', { name: 'New ready-made food' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'New food' })).toBeVisible();
   await page.goBack();
   await page.click('#recipes-library');
   await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
@@ -166,7 +166,7 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await page.click('#recipes-mine');
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Scan a food' }).click();
   await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible(); // the barcode sheet opens over the ready-made form
-  await expect(page.getByRole('heading', { name: 'New ready-made food' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'New food' })).toBeVisible();
 });
 
 for (const [w, h] of [[1440, 900], [375, 812]]) {

@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { RECIPE_CATEGORY_LABEL } from '../shared/recipes.js';
+import { RECIPE_TABS } from './recipeList.js';
 import { bannedLabel, WORDING } from './wording.js';
 
 describe('bannedLabel', () => {
@@ -16,6 +18,16 @@ describe('bannedLabel', () => {
   });
   it('lets the table words through', () => {
     for (const l of ['Add food', 'Add to Mine', 'Add set', '+ New recipe', 'Delete', 'Remove', 'Done', 'Close', 'Save', 'Cancel']) expect(bannedLabel(l), l).toBeNull();
+  });
+});
+
+describe('Food naming (Recipes)', () => {
+  it('has a Food row that bans Ready-made, and the category and tab follow it', () => {
+    const row = WORDING.find(r => r.say === 'Food');
+    expect(row?.notThis).toContain('Ready-made');
+    expect(RECIPE_CATEGORY_LABEL.ready).toBe('Food');
+    expect(RECIPE_TABS.find(t => t.key === 'foods')?.label).toBe('Foods');
+    for (const label of Object.values(RECIPE_CATEGORY_LABEL)) expect(label).not.toMatch(/ready-made/i);
   });
 });
 
