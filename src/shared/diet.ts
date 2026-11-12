@@ -72,6 +72,8 @@ export function normMealsMoved(v: unknown): Record<string, string> {
 export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
 export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8, MAX_DAILY_SNACKS = 6;
+/** The most a day can store: MAX_PLAN_ITEMS planned things plus a listed daily snack each (brief snacks-day-cap). The cleaner keeps up to this, so a snack ticked on a full day is never dropped, even after it leaves the list. */
+export const MAX_DAY_ITEMS = MAX_PLAN_ITEMS + MAX_DAILY_SNACKS;
 
 /** A portion in half steps from 0.5 to 10, or null when it is 1 (stored as no `x`) or unusable. */
 const portionOf = (x: unknown): number | null => (fin(x) && x >= 0.5 && x <= 10 && x * 2 === Math.round(x * 2) && x !== 1 ? x : null);
@@ -121,7 +123,12 @@ export const samePlanItem = (a: PlanItem, b: PlanItem): boolean => a.k === b.k &
 /** A key for one planned item among its day's items (a day never holds two that `samePlanItem` matches). */
 export const planItemKey = (i: PlanItem): string => JSON.stringify([i.k, i.id, i.s ?? '']);
 
-/** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS a day, a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
+/** Whether a stored item is a listed daily snack: a recipe in Snack whose id is on the daily list. Such an item never counts toward MAX_PLAN_ITEMS; one left on a day after its snack leaves the list counts as planned again. */
+export const isDailySnackItem = (i: PlanItem, snacks: readonly { id: string }[] | undefined): boolean => i.k === 'r' && i.s === 'snack' && !!snacks?.some(s => s.id === i.id);
+/** How many of a day's stored items count toward MAX_PLAN_ITEMS: all but its listed daily snacks. */
+export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined): number => items.filter(i => !isDailySnackItem(i, snacks)).length;
+
+/** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS a day outside Snack and MAX_DAY_ITEMS in all (the exact planned count needs the daily list, so `addItem` and `moveItem` hold it; a ticked daily snack survives here), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {
   const out: Record<string, PlanItem[]> = {};
   if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
@@ -132,7 +139,7 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
     const items: PlanItem[] = [];
     for (const raw of Array.isArray((v as Record<string, unknown>)[d]) ? (v as Record<string, unknown[]>)[d]! : []) {
       const it = normPlanItem(raw);
-      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_PLAN_ITEMS) continue; // the same food may be in two different meals of a day
+      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_DAY_ITEMS || (it.s !== 'snack' && items.filter(x => x.s !== 'snack').length >= MAX_PLAN_ITEMS)) continue; // the cleaner does not know the daily list, so it keeps what the app can have stored: at most 8 outside Snack and MAX_DAY_ITEMS in all (a ticked snack is never dropped). The same food may be in two different meals of a day
       items.push(it);
     }
     if (items.length) out[d] = items;
