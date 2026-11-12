@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
 import { withMicro } from '../../shared/foodMicro.js';
+import { runInstantLog } from '../../lib/instantLog.js';
 import { findMatches } from '../../lib/dietPlan.js';
 import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
@@ -100,8 +101,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const st = () => useAppStore.getState();
   const plan = (kind: 'r' | 'm', id: string, name: string) => { const e = st().addPlanItem(day, kind, id, meal); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[meal]}.`); };
   const addFood = (f: Food) => {
-    const r = st().addDietEntry(entryFromFood(day, f));
-    onMsg(r.error ?? `Added ${f.n}.`);
+    onMsg(runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n }).text);
   };
   if (flow === 'quick') {
     const items = quickItems(diet, recipes);
