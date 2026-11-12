@@ -68,8 +68,8 @@ test('a muscle picked on the map filters Weight goals and Exercises on the one p
 
 test('an empty account reads well: one overview tile and a note in each section', async ({ page }) => {
   await open(page);
-  await expect(page.locator('#pg-overview .empty')).toContainText('Nothing to chart yet');
-  await expect(page.locator('#pg-lifts .empty')).toContainText('No sessions logged yet');
+  await expect(page.locator('#pg-overview .emptystate')).toContainText('Nothing to chart yet');
+  await expect(page.locator('#pg-lifts .emptystate')).toContainText('No sessions logged yet');
   await expect(page.locator('#pg-goals')).toContainText('The most weight you want to lift');
   await expect(page.locator('#pg-freq')).toContainText('How many times a week');
   await expect(page.locator('#pg-trends')).toContainText('Log a lift to see charts here');

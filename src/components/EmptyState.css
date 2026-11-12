@@ -1,0 +1,18 @@
+@layer base, components;
+@layer components {
+/* The shared empty view: same dashed line, corner, padding and muted text wherever a whole screen or list has nothing to show. Its own class name; styles.css `.empty` goes in slice 6. */
+.emptystate {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-12);
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-xl);
+}
+.emptystate p {
+  margin: 0;
+}
+}
