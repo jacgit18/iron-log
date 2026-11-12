@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import type { Plan } from './dietPlan.js';
-import { idsAdded, shoppingDays, shoppingRecipeIds } from './weekShopping.js';
+import type { Grocery, GroceryItem, Recipe } from '../types.ts';
+import { idsAdded, shoppingDays, shoppingNeed, shoppingRecipeIds } from './weekShopping.js';
 
 const recipes = [{ id: 'r1' }, { id: 'r2' }];
 const entry = (id: string, d: string): DietEntry => ({ id, d, n: 'x', kcal: 100, p: 1 } as DietEntry);
@@ -37,5 +38,23 @@ describe('idsAdded', () => {
   it('returns only the ids that are new', () => {
     expect(idsAdded([{ id: 'a' }, { id: 'b' }], [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }])).toEqual(['c', 'd']);
     expect(idsAdded([{ id: 'a' }], [{ id: 'a' }])).toEqual([]);
+  });
+});
+
+describe('shoppingNeed', () => {
+  const item = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
+  const list = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
+  const month = { lines: {}, pulled: [] };
+  const rec = (id: string, ...ing: string[]) => ({ id, n: id, cat: 'protein', ing: ing.map(n => ({ n })), steps: [] }) as Recipe;
+  it('counts each missing name once across recipes', () => {
+    const rs = [rec('a', 'garlic', 'pasta'), rec('b', 'garlic', 'flour')];
+    expect(shoppingNeed(['a', 'b'], rs, list(), month)).toBe(3);
+  });
+  it('is 0 when everything is at home or already on the list, or there are no recipes', () => {
+    const rs = [rec('a', 'garlic', 'water')];
+    expect(shoppingNeed(['a'], rs, list(item('g', 'Garlic')), { lines: { g: { have: true } }, pulled: [] })).toBe(0);
+    expect(shoppingNeed(['a'], rs, list(item('g', 'Garlic')), month)).toBe(0); // on the list already, so nothing new to add
+    expect(shoppingNeed([], rs, list(), month)).toBe(0);
+    expect(shoppingNeed(['gone'], rs, list(), month)).toBe(0);
   });
 });
