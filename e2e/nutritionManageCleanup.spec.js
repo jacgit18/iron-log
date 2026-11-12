@@ -21,7 +21,7 @@ test('the day button reads Also took, and its picker has no Manage button', asyn
   const sheet = page.getByRole('dialog', { name: /^Also took/ });
   await expect(sheet.getByRole('heading', { name: 'Also took · Thu 24' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: '+ New supplement' })).toBeVisible();
-  await expect(sheet.getByRole('button', { name: 'Done' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Close' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Manage' })).toHaveCount(0);
 });
 
@@ -54,6 +54,18 @@ test('Water reminder is in Targets and goal and opens Settings at Alerts; Manage
   await m.getByRole('button', { name: 'Done' }).click();
   const t = await openTargets(page);
   await expect(t.locator('#water-goal-edit')).toBeVisible();
+  await t.locator('#nb-manage-water').click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');
+});
+
+test('Water reminder asks before it leaves Targets and goal with an unsaved weight', async ({ page }) => {
+  await openNutrition(page);
+  const t = await openTargets(page);
+  await t.locator('#nbt-weight').fill('181');
+  await t.locator('#nb-manage-water').click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(t.locator('#nb-manage-water')).toHaveText('Leave without saving? Tap again');
   await t.locator('#nb-manage-water').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');

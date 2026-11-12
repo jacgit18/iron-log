@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { afterSheetClose } from '../../lib/backNav.js';
+import { leaveSheet } from '../../lib/backNav.js';
 import { navigate } from '../useRoute.js';
 import Sheet from '../Sheet.js';
 import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
@@ -12,7 +12,7 @@ export default function ManageSheet() {
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
   const [editing, setEditing] = useState(modal?.view === 'editor'); // reopened here after a library item was saved from its own sheet
-  const leave = (go: () => void) => { afterSheetClose(window.history, window, go); closeModal(); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
+  const leave = (go: () => void) => leaveSheet(window.history, window, go, closeModal); // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
   if (editing) {
     return (
       <Sheet className="nbsheet" aria-label="Manage supplements">

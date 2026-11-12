@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { entriesOn } from '../../lib/dietLog.js';
 import { dayNutrientMeter, sectionTotalsVisible } from '../../lib/dayNutrientMeter.js';
 import { shortDay, supplementDay } from '../../lib/nutritionBoard.js';
@@ -23,7 +23,8 @@ export default function SupplementsSection({ day, folded = false }: { day: strin
   const limits = useAppStore(s => s.cfg.ingredientLimits);
   const fold = folded && v.total > 0;
   const warn = limitWarning(supp.items, supp.taken, day, eaten, profile);
-  const showTotals = sectionTotalsVisible(v.total > 0 || hasFoodData(eaten), dayNutrientMeter(totalsView(supp.items, supp.taken, day, 'taken', eaten, profile)));
+  const meter = useMemo(() => dayNutrientMeter(totalsView(supp.items, supp.taken, day, 'taken', entriesOn(diet, day), profile)), [supp.items, supp.taken, day, diet, profile]); // once per change, not on every render of every day column
+  const showTotals = sectionTotalsVisible(v.total > 0 || hasFoodData(eaten), meter);
   const capWarn = capWarning(supp.items, supp.taken, day, limits);
   return (
     <div className="wb-slot nb-supps" role="group" aria-labelledby={`nb-supp-h-${day}`}>

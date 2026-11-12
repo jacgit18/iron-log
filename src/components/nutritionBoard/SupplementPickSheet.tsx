@@ -24,7 +24,7 @@ export default function SupplementPickSheet({ day }: { day: string }) {
       ) : <p className="note">{supp.items.length === 0 ? 'No supplements yet.' : 'Every supplement you have is already on the board with a time of day, or taken today.'} Add a new one, or set times under Manage in the header.</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={() => st().openModal({ type: 'suppadd' })}>+ New supplement</button>
-        <button type="button" className="btn primary" onClick={closeModal}>Done</button>
+        <button type="button" className="btn primary" onClick={closeModal}>Close</button>
       </div>
     </Sheet>
   );
