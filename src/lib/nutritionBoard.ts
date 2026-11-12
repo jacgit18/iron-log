@@ -130,7 +130,7 @@ const meter = (key: Meter['key'], label: string, unit: string, value: number, ta
 /** The carbs meter (after protein): shown only with a carbs target or logged carbs, the rule fat uses. A day ahead has no carbs to count (the plan holds calories, protein and fat), so it is hidden there with a note. */
 export function carbsMeter(planned: boolean, eaten: number, target: number | null): Meter {
   const m = meter('carbs', 'Carbs', 'g', planned ? 0 : eaten, target);
-  if (planned) return { ...m, hidden: true, note: 'Carbs show once the food is eaten.' };
+  if (planned) return { ...m, hidden: true }; // no note: it would repeat on every day ahead
   if (!target && eaten <= 0) return { ...m, hidden: true, note: 'Add a carbs target or log carbs to see carbs here.' };
   return m;
 }

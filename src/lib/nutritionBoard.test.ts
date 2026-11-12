@@ -325,6 +325,7 @@ describe('carbs meter', () => {
   });
   it('a day ahead has no carbs to count: hidden with a note', () => {
     expect(carbsMeter(true, 0, 250).hidden).toBe(true);
+    expect(carbsMeter(true, 0, 250).note).toBeUndefined();
   });
   it('sits after protein and before fat in a day', () => {
     const v = dayView(TODAY, TODAY, { plan: {}, recipes: [], meals: [], diet: [{ ...entry(TODAY, 300, 20), c: 40 }], supp: supp(), body: [], targets: { ...targets, carbs: 250 } });

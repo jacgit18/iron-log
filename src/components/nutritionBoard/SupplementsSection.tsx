@@ -44,6 +44,7 @@ export default function SupplementsSection({ day, folded = false }: { day: strin
           ))}
         </div>
       ))}
+      </div>
       {v.extra.length > 0 && (
         <div className="nb-suppslot">
           <span className="nb-slotlab">Also taken</span>
@@ -55,7 +56,6 @@ export default function SupplementsSection({ day, folded = false }: { day: strin
           ))}
         </div>
       )}
-      </div>
       {warn && <p className="nb-suppwarn" role="status">{warn}</p>}
       {capWarn && <p className="nb-suppwarn" id={`nb-supp-capwarn-${day}`} role="status">{capWarn}</p>}
       <div className="nb-suppact">
