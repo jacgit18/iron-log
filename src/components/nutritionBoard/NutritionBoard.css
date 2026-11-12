@@ -444,9 +444,9 @@
 .nb-grouph {
   margin: 0 0 var(--sp-6);
   color: var(--muted);
-  font-size: var(--h-label);
-  font-weight: 700;
-  letter-spacing: .06em;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 /* Every way is one row with the same left edge: its icon, its name, and its hint under the name; a long hint wraps under the name, not under the icon. */
