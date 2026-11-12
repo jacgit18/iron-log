@@ -367,6 +367,11 @@
   .nb-weekname {
     font-size: var(--fs-lg);
   }
+  /* The empty message line takes no room on a phone; it grows back when a message arrives. */
+  .nb-msg:empty {
+    min-height: 0;
+    margin: 0;
+  }
   .nb-weekname::after {
     content: " · " attr(data-dates);
     font-size: var(--fs-sm);
