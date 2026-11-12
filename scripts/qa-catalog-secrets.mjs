@@ -8,15 +8,17 @@
 //
 // `catalog` must run before `upcs` (a UPC points at a catalog row). Both are a dry run unless --apply. Extra flags go through to the import script.
 // `upcs` reuses .cache/dsld-upcs.tsv and .cache/dsld-upcs.hits.json from the main checkout (the hits file is reused for 7 days), so it makes no NIH label calls.
+// It stops before any NIH call when that cache is missing, when the hits file is older than 7 days (add --refresh-hits to download the search list again: hundreds
+// of MB, minutes) or when QA's catalog has no live dsld rows yet (run `catalog` first). --cache <file> uses your own cache file instead and skips those two cache checks.
 // The import runs the code of the checkout this is run from. Needs `gcloud auth login` as a person who may read the secret. Before anything runs, the database must
 // carry the QA mark (scripts/qa-db.mjs reset sets it) and must not be production's host, so a wrong secret cannot load another environment.
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { connect, connectHost, guardHost, readMark } from './lib/db-script.mjs';
+import { PROJECT, secret } from './lib/gcloud-secret.mjs';
 
-const PROJECT = process.env.GCP_PROJECT_ID || 'iron-log-jacgit18';
 export const URL_SECRET = 'iron-log-qa-owner-database-url';
 export const QA_MARK = 'iron-log qa';
 export const UPC_BRANDS = ['thorne', 'sports research', 'now', 'nature made'];
@@ -63,16 +65,28 @@ export async function checkTarget(url, { guard = guardHost, open = connect, mark
 
 const die = msg => { console.error(msg); process.exit(1); };
 
-// The value of a secret, never printed: only its name appears in a message.
-function secret(name) {
-  const r = spawnSync('gcloud', ['secrets', 'versions', 'access', 'latest', `--secret=${name}`, `--project=${PROJECT}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  if (r.error) die(`Could not run gcloud (${r.error.code ?? r.error.message}). Install it and run: gcloud auth login`);
-  const value = (r.stdout ?? '').trim();
-  if (r.status !== 0 || !value) {
-    const said = r.status !== 0 ? (r.stderr ?? '').split('\n').find(l => l.trim()) : '';
-    die(`Could not read the secret ${name} in project ${PROJECT}.${said ? ` gcloud said: ${said.trim().slice(0, 200)}` : ''} Run: gcloud auth login (as someone who can read it).`);
-  }
-  return value;
+const WEEK_MS = 7 * 86_400_000; // how long supplement-upc-import.mjs reuses its saved search results
+
+/** What would make `upcs` read NIH (labels, or the whole search list) instead of reusing the cache; null when it will not. `hitsMtimeMs` is undefined when the file is missing. */
+export function upcsProblem(extra, cacheDir, hitsMtimeMs, now = Date.now()) {
+  if (extra.some(a => a === '--cache' || a.startsWith('--cache='))) return null; // their own cache file, their own call
+  if (!cacheDir) return 'The UPC cache .cache/dsld-upcs.tsv was not found in the main checkout, so this would read thousands of NIH labels (about 1,000 an hour). Copy it there, or pass --cache <file>. Nothing was changed.';
+  if (!extra.includes('--refresh-hits') && (hitsMtimeMs === undefined || now - hitsMtimeMs >= WEEK_MS)) return 'The saved NIH search list (.cache/dsld-upcs.hits.json) is missing or older than 7 days, so this would download it again (hundreds of MB, minutes). Add --refresh-hits to do that. Nothing was changed.';
+  return null;
+}
+
+/** The import child's environment: QA's URL, and no production URL left over from the guard. */
+export const childEnv = (url, base = process.env) => {
+  const env = { ...base, DATABASE_URL: url };
+  delete env.PROD_DATABASE_URL;
+  delete env.DATABASE_URL_UNPOOLED;
+  return env;
+};
+
+/** True when QA's catalog has live dsld rows (the rows a UPC points at). */
+export async function hasCatalog(client) {
+  const { rows } = await client.query("select 1 from catalog_items where source = 'dsld' and retired_at is null limit 1");
+  return rows.length > 0;
 }
 
 // The main checkout's .cache (the UPC cache and hits file live there), found from git's shared directory; undefined when it has none.
@@ -90,9 +104,17 @@ async function main() {
   const url = secret(URL_SECRET);
   let host;
   try { host = await checkTarget(url); } catch (e) { die(e.message); }
+  if (sub === 'upcs') {
+    let hitsMtime;
+    try { hitsMtime = cacheDir && statSync(join(cacheDir, 'dsld-upcs.hits.json')).mtimeMs; } catch { /* missing: upcsProblem says so */ }
+    const problem = upcsProblem(extra, cacheDir, hitsMtime);
+    if (problem) die(problem);
+    const client = await connect(url, 'QA');
+    try { if (!(await hasCatalog(client))) die(`QA's catalog at ${host} has no live dsld rows. Run: npm run qa:catalog:sm -- catalog --apply (first). Nothing was changed.`); } finally { await client.end(); }
+  }
   const apply = extra.includes('--apply');
   console.error(`QA ${sub} on ${host} (secret from project ${PROJECT}), marked as QA: ${apply ? 'writing (--apply)' : 'dry run, nothing changes (add --apply to write)'}.`);
-  const run = spawnSync('npx', ['tsx', command.file, ...command.args], { stdio: 'inherit', cwd: REPO, env: { ...process.env, DATABASE_URL: url } });
+  const run = spawnSync('npx', ['tsx', command.file, ...command.args], { stdio: 'inherit', cwd: REPO, env: childEnv(url) });
   if (run.error) die(`Could not start the import script (${run.error.code ?? run.error.message}).`);
   process.exit(run.status ?? 1);
 }

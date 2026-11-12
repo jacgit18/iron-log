@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain .mjs script
-import { checkTarget, plan, QA_MARK } from './qa-catalog-secrets.mjs';
+import { checkTarget, childEnv, hasCatalog, plan, QA_MARK, upcsProblem } from './qa-catalog-secrets.mjs';
 
 // scripts/qa-catalog-secrets.mjs reads QA's URL from Secret Manager, checks it, and runs an import script with it. Pure parts are called directly; the
 // whole script is run with a stub `gcloud` first on the PATH, so no real secret is read and no database is reached.
@@ -27,6 +27,38 @@ describe('plan', () => {
   });
   it('refuses an unknown subcommand and says catalog comes first', () => {
     expect(() => plan('nope', [])).toThrow(/catalog.*FIRST/s);
+  });
+});
+
+describe('upcsProblem', () => {
+  const now = Date.parse('2026-11-12T12:00:00Z');
+  const fresh = now - 86_400_000;
+  it('is fine with a cache and a hits file under 7 days old', () => {
+    expect(upcsProblem([], '/main/.cache', fresh, now)).toBeNull();
+  });
+  it('refuses a missing cache, naming --cache as the way out', () => {
+    expect(upcsProblem([], undefined, undefined, now)).toContain('--cache <file>');
+    expect(upcsProblem(['--cache', 'x.tsv'], undefined, undefined, now)).toBeNull();
+  });
+  it('refuses a missing or week-old hits file unless --refresh-hits is given', () => {
+    for (const mtime of [undefined, now - 8 * 86_400_000]) {
+      expect(upcsProblem([], '/main/.cache', mtime, now)).toContain('--refresh-hits');
+      expect(upcsProblem(['--refresh-hits'], '/main/.cache', mtime, now)).toBeNull();
+    }
+  });
+});
+
+describe('childEnv', () => {
+  it('sets QA\'s URL and drops production\'s', () => {
+    const env = childEnv(URL_OK, { PATH: '/bin', PROD_DATABASE_URL: 'postgres://prod', DATABASE_URL_UNPOOLED: 'postgres://prod', DATABASE_URL: 'postgres://old' });
+    expect(env).toEqual({ PATH: '/bin', DATABASE_URL: URL_OK });
+  });
+});
+
+describe('hasCatalog', () => {
+  it('is true only when a live dsld row exists', async () => {
+    expect(await hasCatalog({ query: async () => ({ rows: [{ '?column?': 1 }] }) })).toBe(true);
+    expect(await hasCatalog({ query: async () => ({ rows: [] }) })).toBe(false);
   });
 });
 
@@ -93,6 +125,7 @@ describe('qa-catalog-secrets (whole script)', () => {
   }, 90_000);
   it('refuses a secret that is not a database URL', async () => {
     const r = await run(['catalog'], stub('just some text').dir, { PROD_DATABASE_URL: 'postgres://u:p@other.example.invalid/db' });
+    expect(r.status).toBe(1);
     expect(r.out).toContain('is not a database URL');
   }, 90_000);
 });
