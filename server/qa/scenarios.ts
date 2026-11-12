@@ -99,7 +99,8 @@ export type ScenarioFeature =
   | 'Add food any day'
   | 'Move and copy eaten'
   | 'Usual portion'
-  | 'Saved meals removal';
+  | 'Saved meals removal'
+  | 'Daily snacks';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -111,7 +112,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
   'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts', 'Week to Shopping',
-  'Add food any day', 'Move and copy eaten', 'Usual portion', 'Saved meals removal',
+  'Add food any day', 'Move and copy eaten', 'Usual portion', 'Saved meals removal', 'Daily snacks',
 ];
 
 export interface Scenario {
@@ -3526,6 +3527,49 @@ export const SCENARIOS: readonly Scenario[] = [
       'Recipes holds 300 recipes, so the four saved meals could not move into it.',
       'The old list is still offered with a note: "Some saved meals are waiting because Recipes is full (300 recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens." One tap logs the meal as before.',
       'After one delete and a reload exactly one saved meal (Usual breakfast, the first) has moved into Recipes, which is full again; Chicken bowl, Post-workout and Quick dinner stay listed with the note.',
+    ],
+  },
+  {
+    id: 'S-287', feature: 'Daily snacks', title: 'Save a daily snack list; it shows every day, and ticking or skipping changes one day', persona: 'meal-planner', brief: 'daily-snacks',
+    steps: [
+      'On Nutrition read today\'s Snack section, then press Set up daily snacks. Press Add snack, pick Overnight oats, press Back to the list, step its portion up once and press Done.',
+      'Read Snack on today and on a day later in the week. Reload and read Snack again.',
+      'Tick the Overnight oats snack on today. Read tomorrow\'s Snack.',
+      'On a day later in the week press Skip today on the snack and press Tap again to skip. Read that day and the day after it.',
+      'Open Daily snacks, press Remove beside the snack and press Tap again to remove.',
+    ],
+    expected: [
+      'Before setup Snack sits between Lunch and Dinner and says "No daily snacks yet". The sheet says "No daily snacks yet. Add the ones you always buy and eat." and, once saved, lists the snack with its calories and "× 1.5".',
+      'The snack shows in Snack on every day from today to two weeks ahead with nothing copied into each day, and it is still there after the reload.',
+      'Today\'s snack is ticked and the day\'s Calories meter moves; tomorrow\'s copy is unticked.',
+      'The snack is gone from that one day only; the day after still shows it and the list is unchanged.',
+      'The snack leaves the list and no day shows it any more. Anything already ticked eaten stays in the log.',
+    ],
+  },
+  {
+    id: 'S-288', feature: 'Daily snacks', title: 'A daily snack can still be ticked on a day that holds 8 planned things', persona: 'meal-planner', brief: 'snacks-day-cap', edge: true,
+    steps: [
+      'Save one daily snack (S-287 step 1). On a day later in the week plan recipes and saved meals into Breakfast, Lunch and Dinner until the day holds 8 planned things outside Snack, then try a ninth.',
+      'Tick the daily snack on today after filling today the same way, or move the snack\'s card to another day in Snack.',
+      'Move a card from Snack into Dinner on that full day.',
+    ],
+    expected: [
+      'The eighth planned thing is added and the ninth is refused with a notice; nothing extra is added. The listed snack still shows in Snack.',
+      'The snack ticks (or moves) normally and is never refused for a full day; it does not count toward the 8.',
+      'Moving it into Dinner counts it as planned there, so on a full day that move is refused and the snack stays in Snack.',
+    ],
+  },
+  {
+    id: 'S-289', feature: 'Daily snacks', title: 'Add missing to Shopping includes the listed daily snacks', persona: 'meal-planner', brief: 'snacks-into-shopping',
+    steps: [
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back. Save one daily snack whose recipe has an ingredient that is not at home and not on Shopping, and plan nothing else that needs it.',
+      'Press Add missing to Shopping (toolbar on a wide screen; on a phone open Manage and press it there). Open Shopping.',
+      'Skip the snack on every day shown, and press Add missing to Shopping again. Then tick the snack on today and press it once more.',
+    ],
+    expected: [
+      'The button is enabled although only a snack is missing something. The notice reads "Added n to Shopping" with Undo, and Shopping lists the snack\'s missing ingredient once, however many days show the snack.',
+      'Shopping shows each ingredient once and nothing already at home or already on the list.',
+      'With the snack skipped on every day the button adds nothing; a snack already ticked eaten on a day is not counted again from that day.',
     ],
   },
 ];
