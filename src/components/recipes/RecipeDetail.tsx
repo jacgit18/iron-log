@@ -68,7 +68,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
-      {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used. ${rollText ? `The parts add up to ${rollText}.` : 'The parts: Needs numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
+      {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used.${rollText ? ` The parts add up to ${rollText}.` : ' The parts need numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
       <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}
       <div className="rc-col">
       <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling || scaled} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
