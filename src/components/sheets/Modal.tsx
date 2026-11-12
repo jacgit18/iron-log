@@ -29,7 +29,6 @@ import EatenRowSheet from '../nutritionBoard/EatenRowSheet.js';
 import ManageSheet from '../nutritionBoard/ManageSheet.js';
 import SupplementPickSheet from '../nutritionBoard/SupplementPickSheet.js';
 import SupplementTotalsSheet from '../nutritionBoard/SupplementTotalsSheet.js';
-import TargetsSheet from '../nutritionBoard/TargetsSheet.js';
 import BoardFilterSheet from '../board/BoardFilterSheet.js';
 import BulkShareSheet from '../grocery/BulkShareSheet.js';
 import PriceHistorySheet from '../grocery/PriceHistorySheet.js';
@@ -73,7 +72,6 @@ export default function Modal() {
     case 'nbsuppick': return <SupplementPickSheet key={String(modal.day ?? '')} day={String(modal.day ?? '')} />;
     case 'ingredientlimit': return <IngredientLimitSheet key={String(modal.name ?? '')} name={String(modal.name ?? '')} label={modal.label ? String(modal.label) : undefined} day={String(modal.day ?? '')} unit={(modal.unit as NutrientUnit | undefined) ?? 'mg'} />;
     case 'nbsupptotals': return <SupplementTotalsSheet day={String(modal.day ?? '')} />;
-    case 'nbtargets': return <TargetsSheet />;
     case 'portion': return <PortionSheet key={String(modal.id ?? '')} />;
     case 'pricehistory': return <PriceHistorySheet key={String(modal.id ?? '')} />;
     case 'receipt': return <ReceiptSheet />;

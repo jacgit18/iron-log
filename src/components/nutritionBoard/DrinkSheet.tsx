@@ -10,7 +10,7 @@ import Sheet from '../Sheet.js';
 import '../supplements/Supplements.css';
 
 // The drink sheet (brief nutrition-board): the day's water against its goal, a button for every container size, another amount, hot day and training minutes, the goal broken down line by line, the drinks logged (Remove, with Undo). A day ahead sets the goal and logs no drinks.
-// It calls the same store actions the Water panel did: addWater, removeWater, setWaterBoost. The base goal is changed in Targets and goal. `modal.day` is the day.
+// It calls the same store actions the Water panel did: addWater, removeWater, setWaterBoost. The base goal is changed in Manage. `modal.day` is the day.
 export default function DrinkSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
@@ -60,7 +60,7 @@ export default function DrinkSheet() {
         {h.lines.map(l => <div key={l.label}><span>{l.label}</span><b>{l.label.startsWith('Base') ? '' : '+'}{fmtOz(l.oz)} oz</b></div>)}
         <div><span><b>Goal</b></span><b>{fmtOz(h.goal)} oz</b></div>
       </div>
-      <button type="button" className="btn sm ghost" id="water-goal-targets" onClick={() => st().openModal({ type: 'nbtargets' })}>Change base goal</button>
+      <button type="button" className="btn sm ghost" id="water-goal-targets" onClick={() => st().openModal({ type: 'nbmanage' })}>Change base goal</button>
       {!h.future && (
         <>
           <div className="sect">Logged</div>

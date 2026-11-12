@@ -2,21 +2,32 @@ import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { leaveSheet } from '../../lib/backNav.js';
+import { recommend } from '../../lib/dietTarget.js';
+import { goalLine, recommendInputs, weightLine } from '../../lib/manageTargets.js';
 import { weekDays, weekOf } from '../../lib/nutritionBoard.js';
 import { dayToShow, usePickedDay } from '../../lib/nutritionDayPick.js';
+import { requestSettingsJump } from '../../lib/settingsJump.js';
 import { ymd } from '../../shared/dates.js';
 import { navigate } from '../useRoute.js';
+import DietTargets from '../diet/DietTargets.js';
 import Sheet from '../Sheet.js';
 import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
 import ShoppingButton from './ShoppingButton.js';
 import { usePhoneHeader } from './useWideBoard.js';
+import WaterGoal from './WaterGoal.js';
+import '../diet/Diet.css';
 import '../supplements/Supplements.css';
 
-// The Manage sheet (brief nutrition-board, PR 2): the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
-// Meals and foods (opens Recipes) opens the existing Recipes screen (the sheet closes first). The Water reminder row moved to Targets and goal (brief nutrition-manage-cleanup).
+// The Manage sheet (brief nutrition-board, PR 2; brief targets-into-manage): daily targets, weight and goal (read-only: weight is typed on the Board, the goal is edited in Progress), the base water goal with its reminder link, and the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
+// Meals and foods (opens Recipes) opens the existing Recipes screen (the sheet closes first).
 export default function ManageSheet() {
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
+  const cfg = useAppStore(s => s.cfg);
+  const body = useAppStore(s => s.body);
+  const now = useToday(s => s.today);
+  const { latest, goalLb, weeksLeft } = recommendInputs(cfg.bwGoal, body, now);
+  const rec = recommend(goalLb, latest, weeksLeft, cfg.diet);
   const today = ymd(useToday(t => t.today)), phone = usePhoneHeader(), kept = usePickedDay();
   const [note, setNote] = useState('');
   const shownDay = dayToShow(kept, today), week = useMemo(() => weekDays(today, weekOf(today, shownDay)), [today, shownDay]); // one array per day shown, so the button's memos hold
@@ -37,6 +48,17 @@ export default function ManageSheet() {
   return (
     <Sheet className="nbsheet" aria-label="Manage">
       <h2 className="cond">Manage</h2>
+      <div className="sect nb-sect-first">Daily targets</div>
+      <div className="dt"><DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} hasDate={weeksLeft !== null && weeksLeft > 0} /></div>
+      <div className="sect">Weight and goal</div>
+      <p className="nb-ro" id="nb-manage-weight">{weightLine(body)} <span className="note">{latest !== null ? 'from your latest weigh-in on the Board' : 'type one on the Board'}</span></p>
+      <p className="nb-ro" id="nb-manage-goal">{goalLine(cfg.bwGoal)} <button type="button" className="nb-inlink" id="nb-manage-goal-edit" onClick={() => leave(() => { useAppStore.getState().setTab('progress'); navigate('progress/trends', 'push'); })}>Edit in Progress</button></p>
+      <div className="sect">Water</div>
+      <WaterGoal day={ymd(now)} />
+      <ul className="nb-manage">
+        <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => { requestSettingsJump('alerts'); useAppStore.getState().setTab('settings'); })}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
+      </ul>
+      <div className="sect">Library</div>
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>
         <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Meals and foods (opens Recipes)</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>

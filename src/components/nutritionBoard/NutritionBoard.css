@@ -34,6 +34,24 @@
   min-height: 44px;
   justify-self: start;
 }
+.nb-sect-first {
+  margin-top: 0;
+}
+.nb-ro {
+  margin: 0 0 var(--sp-8);
+}
+.nb-inlink {
+  min-height: 44px;
+  padding: 0 var(--sp-8);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .nb-weekname {
   min-width: 110px;
   text-align: center;
@@ -159,15 +177,6 @@
 .wb-meter.nb-supps-meter i {
   background: var(--m-supp);
 }
-.wb-legend[hidden] {
-  display: none;
-}
-.wb-legend .nbw {
-  background: var(--wb-water);
-}
-.wb-legend .nbc {
-  background: var(--nb-carbs);
-}
 /* Vitamins and minerals under Supplements (brief vitamin-mineral-day-meter, layout B): a closed line, then thin bars in the new teal `--m-vit`. Own classes only; the Board's rules are untouched. */
 .wb-meter.nb-vit-meter {
   height: 6px;
@@ -238,12 +247,6 @@
 }
 .nb-vit-none {
   margin: 0 0 var(--sp-8) var(--sp-8);
-}
-.wb-legend .nbs {
-  background: var(--m-supp);
-}
-.nb-short {
-  display: none;
 }
 /* One day below 768 px, two and three days side by side at 768 to 1439 px (1440 px and up keeps `.wb-board`'s seven tracks). */
 .nb-board-1 {
@@ -317,7 +320,7 @@
   border-color: var(--m-supp);
 }
 @media (max-width: 699px) {
-  /* The week switcher is the only thing on the week row (Targets, Manage and the colour key's link are in .nb-links under the day stepper). */
+  /* The week switcher is the only thing on the week row (Manage is in .nb-links under the day stepper). */
   .nb-head {
     gap: var(--sp-8);
   }
@@ -334,7 +337,7 @@
     min-height: 44px;
     min-width: 44px;
   }
-  /* Targets and Manage are small text links in one row under the day stepper (option B, owner 2026-11-12); the visible text is small, the 44px tap area is padding. */
+  /* Manage is a small text link in a row under the day stepper (option B, owner 2026-11-12); the visible text is small, the 44px tap area is padding. */
   .nb-links {
     display: flex;
     align-items: center;
@@ -355,14 +358,6 @@
   }
   .nb-link:first-child {
     padding-left: 0;
-  }
-  .nb-linksep {
-    color: var(--muted);
-  }
-  .nb-legendbtn {
-    margin-left: auto;
-    padding-right: 0;
-    font-weight: 400;
   }
   /* Option B (owner 2026-11-12): the week's dates sit in the switcher row, and the status line and the "Adding to" line stay for screen readers only. The date range stays in .nb-weeklab (role=status). */
   .nb-weekname {

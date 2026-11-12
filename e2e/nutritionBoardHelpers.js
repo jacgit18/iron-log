@@ -36,13 +36,7 @@ export const deleteEaten = async (page, name) => {
   await del.click(); await del.click(); // two taps: arm, then confirm
   await expect(page.getByRole('dialog')).toHaveCount(0);
 };
-// The Targets and goal sheet (PR 2 of brief nutrition-board) and the Manage sheet, opened from the board header. Both return the dialog.
-export const openTargets = async page => {
-  await page.locator('#nb-targets').click();
-  const sheet = page.getByRole('dialog', { name: 'Targets and goal' });
-  await expect(sheet).toBeVisible();
-  return sheet;
-};
+// The Manage sheet (daily targets, weight and goal, water, library), opened from the board header. Returns the dialog.
 export const openManage = async page => {
   await page.locator('#nb-manage').click();
   const sheet = page.getByRole('dialog', { name: 'Manage' });
