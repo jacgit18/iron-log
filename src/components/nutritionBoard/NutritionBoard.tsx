@@ -95,9 +95,9 @@ export default function NutritionBoard() {
         <span className={editable ? 'nb-target nb-target-quiet' : 'nb-target'}>{editable ? target : `${target.replace('Adding to', '')} · food is read-only`}</span>
         {editable ? (
           <div className="nb-tbtns">
-            <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
             {!phone && <ShoppingButton week={days} today={today} onMsg={setMsg} />}
             {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
+            <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
           </div>
         ) : <span className="note">Last week&apos;s food cannot be changed. Supplements and water can.</span>}
       </div>
