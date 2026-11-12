@@ -9,9 +9,18 @@
 .rcf textarea {
   border-radius: var(--r-md);
 }
+/* The app's field look for the forms' own fields; :where keeps it at zero specificity so a rule like .rc-tagadd input or .rc-pickacts input still wins. */
+:where(.rcf) :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  padding: var(--sp-8);
+  border: 1px solid var(--field-line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--fs-lg);
+  font-weight: 500;
+}
 .rcf-sec {
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   background: var(--surface);
 }
 .rcf-shd {
@@ -26,7 +35,7 @@
   min-height: 48px;
   padding: var(--sp-8) var(--sp-12);
   border: 0;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   background: none;
   color: var(--ink);
   font: inherit;

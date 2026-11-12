@@ -82,3 +82,25 @@ test('Settings: every text field, number field and select is styled, on each Tra
   await page.locator('.sdrill[id^="max-"]').first().click(); // an exercise's screen has the "I tested this" field
   expect(await unstyled(page, 1)).toEqual([]);
 });
+
+// R6 (design-language slice 6): every field of the Recipes form looks the same as the app's `.field` fields (the Nutrition one-off food sheet is the reference).
+// Compared on computed border, radius and background, in light and dark. One test, no reload: the styles are read for both schemes before leaving each screen.
+const looks = async (page, locator) => {
+  const out = {};
+  for (const scheme of ['light', 'dark']) { await page.emulateMedia({ colorScheme: scheme }); out[scheme] = await locator.evaluateAll(els => els.map(el => { const s = getComputedStyle(el); return { border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`, radius: s.borderTopLeftRadius, background: s.backgroundColor }; })); }
+  return out;
+};
+test('Recipes form fields (inputs, select, textarea) match the app\'s fields, light and dark', async ({ page }) => {
+  await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await page.click('#nb-add');
+  await page.getByRole('dialog').getByRole('button', { name: /^One-off food/ }).click();
+  const ref = await looks(page, page.locator('.field input').locator('visible=true').first());
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  await page.click('#daily-recipes');
+  await page.locator('#recipes-new').click();
+  await page.locator('#recipes-new-list').getByRole('button', { name: 'Recipe or meal' }).click();
+  const fields = page.locator('form.rcf').locator(SELECTOR).locator('visible=true');
+  expect(await fields.count()).toBeGreaterThan(3);
+  const got = await looks(page, fields);
+  for (const scheme of ['light', 'dark']) for (const l of got[scheme]) expect(l, scheme).toEqual(ref[scheme][0]);
+});
