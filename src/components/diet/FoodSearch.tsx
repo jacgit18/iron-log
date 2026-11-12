@@ -7,6 +7,7 @@ import { AI_LABEL_TEXT, OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
 import { labelFood } from '../../lib/labelFill.js';
 import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
 import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
+import { macroLine } from '../../lib/macroLine.js';
 import { useSortChoice } from '../useSortChoice.js';
 import SortControl from '../SortControl.jsx';
 import './Diet.css';
@@ -87,7 +88,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
       {ai && (
         <div className="dt-lookuppick">
           <p>{ai.name} <span className="dt-aimark">AI</span></p>
-          <p className="note">{`${ai.fill.kcal} kcal · ${ai.fill.p} g protein per serving`}</p>
+          <p className="note">{`${macroLine(ai.fill)} per serving`}</p>
           <p className="note" role="status">{AI_LABEL_TEXT}</p>
           <div className="actions">
             <button type="button" className="btn sm" onClick={() => setAi(null)}>Back</button>
@@ -114,7 +115,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
           <label className="field" htmlFor={given === undefined ? 'dt-lookup-g' : 'dt-find-g'}>Grams
             <input id={given === undefined ? 'dt-lookup-g' : 'dt-find-g'} type="number" inputMode="decimal" min="1" max="5000" step="any" value={grams} onChange={e => setGrams(e.target.value)} />
           </label>
-          <p className="note" role="status">{scaled ? `${scaled.kcal} kcal · ${scaled.p} g protein` : 'Enter grams from 1 to 5000.'}</p>
+          <p className="note" role="status">{scaled ? macroLine(scaled) : 'Enter grams from 1 to 5000.'}</p>
           <div className="actions">
             <button type="button" className="btn sm" onClick={() => setPick(null)}>Back</button>
             <button type="button" className="btn sm primary" disabled={!scaled} onClick={use}>Use</button>

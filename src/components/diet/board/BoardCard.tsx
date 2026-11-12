@@ -1,9 +1,10 @@
 import { isEaten } from '../../../lib/dietPlan.js';
-import { fmtNum } from '../../../lib/dietLog.js';
+import { macroLine } from '../../../lib/macroLine.js';
 import { PLAN_SLOTS } from '../../../shared/diet.js';
 import { SLOT_LABEL, type BoardItem } from '../../../lib/weekBoard.js';
 import type { PlanSlot } from '../../../types.ts';
 import { useAppStore } from '../../../store/useAppStore.js';
+import ArmedButton from '../../ArmedButton.jsx';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Move to (a day or a meal) and Remove.
 export default function BoardCard({ item, day, today, days, open, moving, onOpen, onMoveOpen, onLog, onMsg }: {
@@ -23,7 +24,7 @@ export default function BoardCard({ item, day, today, days, open, moving, onOpen
       <button type="button" className={`wb-card${open ? ' open' : ''}`} draggable aria-expanded={open} data-from={`${day}:${index}`} onClick={onOpen}
         onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ day, index })); e.dataTransfer.effectAllowed = 'move'; }}>
         <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}</span>
-        <span className="wb-cm">{r.gone ? 'Removed' : r.kcal !== undefined ? `${fmtNum(r.kcal)} kcal${r.p !== undefined ? ` · ${fmtNum(r.p)} g protein` : ''}` : 'No calories'}</span>
+        <span className="wb-cm">{r.gone ? 'Removed' : macroLine({ ...(r.kcal !== undefined ? { kcal: r.kcal } : {}), ...(r.p !== undefined ? { p: r.p } : {}) }) || 'Needs numbers'}</span>
       </button>
       </div>
       {open && (
@@ -31,7 +32,7 @@ export default function BoardCard({ item, day, today, days, open, moving, onOpen
           {r.item.k === 'r' && !r.gone && <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={r.portion <= 0.5} onClick={() => st().setPlanPortion(day, index, r.portion - 0.5)}>Less</button>}
           {r.item.k === 'r' && !r.gone && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={r.portion >= 10} onClick={() => st().setPlanPortion(day, index, r.portion + 0.5)}>More</button>}
           <button type="button" className="btn sm" aria-label={`Move ${r.name}`} aria-expanded={moving} onClick={onMoveOpen}>Move to…</button>
-          <button type="button" className="btn sm" aria-label={`Remove ${r.name}`} onClick={() => { st().removePlanItem(day, index); onOpen(); }}>Remove</button>
+          <ArmedButton className="btn sm" aria-label={`Remove ${r.name}`} label="Remove" armedLabel="Tap again to remove" onConfirm={() => { st().removePlanItem(day, index); onOpen(); }} />
         </div>
       )}
       {open && moving && (

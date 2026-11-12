@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // Goes with and Make a meal (brief recipes-goes-with). The pairing rules and the cleaner are node tests (recipePairs.test.ts); this covers the real
-// detail page: adding a partner, seeing it from the other side, Make a meal opening a linked meal with rolled-up numbers, Remove, and the 3 cap.
+// detail page: adding a partner, seeing it from the other side, Make a meal opening a linked meal with rolled-up numbers, Remove (two taps), and the 3 cap.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const seed = async page => {
   const mk = (id, n, cat, kcal, p) => ({ id, n, cat, ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p });
@@ -24,7 +24,8 @@ test('pairing is saved on both recipes, shown from either, and Remove takes it o
   await back(page);
   await open(page, 'Rice');
   await expect(goes(page).getByRole('button', { name: 'Chili', exact: true })).toBeVisible(); // seen from the other side
-  await goes(page).getByRole('button', { name: 'Remove Chili from Goes with' }).click();
+  const rm = goes(page).getByRole('button', { name: 'Remove Chili from Goes with' });
+  await rm.click(); await rm.click(); // two taps: arm, then remove
   await expect(goes(page)).toContainText('Nothing yet');
   await back(page);
   await open(page, 'Chili');
@@ -46,7 +47,8 @@ test('a recipe goes with at most three, then asks to remove one', async ({ page 
   for (const n of ['Rice', 'Beans', 'Salad']) await goes(page).getByLabel('Add a recipe it goes with').selectOption({ label: n });
   await expect(goes(page).getByLabel('Add a recipe it goes with')).toHaveCount(0);
   await expect(goes(page)).toContainText('goes with 3 recipes');
-  await goes(page).getByRole('button', { name: 'Remove Salad from Goes with' }).click();
+  const rm = goes(page).getByRole('button', { name: 'Remove Salad from Goes with' });
+  await rm.click(); await rm.click(); // two taps: arm, then remove
   await expect(goes(page).getByLabel('Add a recipe it goes with')).toBeVisible();
 });
 

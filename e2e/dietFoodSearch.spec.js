@@ -23,7 +23,7 @@ test('pick a food, set the grams, and the entry form is filled in and can still 
   await found.getByRole('button', { name: 'Chicken breast, raw · 120 kcal per 100 g' }).click();
   await expect(diet(page).getByLabel('Grams')).toHaveValue('100');
   await diet(page).getByLabel('Grams').fill('150');
-  await expect(diet(page).getByText('180 kcal · 33.8 g protein')).toBeVisible();
+  await expect(diet(page).getByText('180 kcal · P 33.8 · C 0 · F 3.9 g')).toBeVisible();
   await diet(page).getByRole('button', { name: 'Use', exact: true }).click();
   await expect(diet(page).getByLabel('Food', { exact: true })).toHaveValue('Chicken breast, raw');
   await expect(diet(page).getByLabel('Calories', { exact: true })).toHaveValue('180');
@@ -47,7 +47,7 @@ test('a branded food starts at its serving, and a bad grams value blocks Use', a
   await diet(page).getByLabel('Search your past meals and recipes').fill('granola');
   await diet(page).getByRole('button', { name: 'Granola bar (Acme) · 450 kcal per 100 g' }).click();
   await expect(diet(page).getByLabel('Grams')).toHaveValue('40');
-  await expect(diet(page).getByText('180 kcal · 3.2 g protein')).toBeVisible();
+  await expect(diet(page).getByText('180 kcal · P 3.2 · C 26 g')).toBeVisible();
   await diet(page).getByLabel('Grams').fill('0');
   await expect(diet(page).getByRole('button', { name: 'Use', exact: true })).toBeDisabled();
   await expect(diet(page).getByText('Enter grams from 1 to 5000.')).toBeVisible();

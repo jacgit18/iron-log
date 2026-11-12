@@ -7,6 +7,7 @@ import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { countedNote, foodCandidates, hasParts, linkError, mealRollup } from '../../lib/mealRollup.js';
 import { marksOf } from '../../lib/plate.js';
+import { macroLine } from '../../lib/macroLine.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../lib/recipeTags.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
@@ -124,7 +125,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
 
   const parts = hasParts({ ing: shownRows() }); // some line links to a food or meal with an amount
   const roll = parts ? mealRollup({ id: recipe?.id, ing: shownRows(), servings: whole(servings) }, recipes) : null;
-  const rollText = roll && roll.counted > 0 ? [`${roll.per.kcal} kcal`, `${roll.per.p} g protein`, roll.per.c !== undefined && `${roll.per.c} g carbs`, roll.per.f !== undefined && `${roll.per.f} g fat`].filter(Boolean).join(' · ') : '';
+  const rollText = roll && roll.counted > 0 ? macroLine(roll.per) : '';
   const fromParts = parts && !own; // numbers shown and saved come from the parts
 
   const inUse = useMemo(() => tagCounts(recipes).filter(c => !tags.some(t => tagKey(t) === tagKey(c.tag))), [recipes, tags]); // tags other recipes have that this one does not: offered
@@ -217,7 +218,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   };
   const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id), sauces), [activeText, items, recipes, recipe?.id, sauces]);
-  const typedLine = [kcal.trim() && `${kcal.trim()} kcal`, protein.trim() && `${protein.trim()} g protein`, carbs.trim() && `${carbs.trim()} g carbs`, fat.trim() && `${fat.trim()} g fat`].filter(Boolean).join(' · ') || 'Not set';
+  const typed = (s: string): number | undefined => { const n = Number(s.trim().replace(',', '.')); return s.trim() && Number.isFinite(n) ? n : undefined; }; // a comma decimal counts
+  const typedLine = macroLine({ kcal: typed(kcal), p: typed(protein), c: typed(carbs), f: typed(fat) }) || 'Not set';
   const nutLine = fromParts ? rollText || typedLine : typedLine;
   const sv = whole(servings);
   const servingsLine = sv && sv <= 99 ? `Amounts are for ${sv} serving${sv === 1 ? '' : 's'}.` : '';

@@ -18,7 +18,7 @@ test('typing in the past-meals search shows database results, and a pick fills t
   const found = diet(page).getByRole('list', { name: 'Food database results' });
   await found.getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' }).click();
   await diet(page).getByLabel('Grams').fill('50');
-  await expect(diet(page).getByText('190 kcal · 6.6 g protein')).toBeVisible();
+  await expect(diet(page).getByText(/190 kcal · P 6\.6 · C 3[34]\.\d · F 3\.\d g/)).toBeVisible();
   await diet(page).getByRole('button', { name: 'Use', exact: true }).click();
   await expect(diet(page).getByLabel('Food', { exact: true })).toHaveValue('Oats, rolled');
   await expect(diet(page).getByLabel('Calories', { exact: true })).toHaveValue('190');

@@ -38,7 +38,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes), [recipe, grocery, months, month, recipes]);
   const credit = attribution(recipe, mine);
   const roll = useMemo(() => (hasParts(recipe) ? mealRollup(recipe, recipes) : null), [recipe, recipes]); // a meal built from linked foods: what its parts add up to
-  const rollText = roll && roll.counted > 0 ? [`${roll.per.kcal} kcal`, `${roll.per.p} g protein`, roll.per.c !== undefined && `${roll.per.c} g carbs`, roll.per.f !== undefined && `${roll.per.f} g fat`].filter(Boolean).join(' · ') : '';
+  const rollText = roll && roll.counted > 0 ? macroLine(roll.per) : '';
   const macros = macroLine(recipe);
   const scaled = !!recipe.servings && tonight !== null && tonight !== recipe.servings; // a scaled recipe keeps its stepper in view, so the amounts never look like the written ones
   const missing = missingParts(status);

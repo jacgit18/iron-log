@@ -51,7 +51,7 @@ test('planning Dinner shows the card, the plate check and a fix that goes with t
   await seed(page);
   await plan(page, 'Chili');
   await expect(dinner(today(page)).getByText('Chili', { exact: true })).toBeVisible();
-  await expect(dinner(today(page)).getByText('400 kcal · 30 g protein')).toBeVisible();
+  await expect(dinner(today(page)).getByText('400 kcal · P 30 g')).toBeVisible();
   const check = dinner(today(page)).getByRole('group', { name: 'Dinner plate check' });
   await expect(check).toContainText('✓ Protein');
   await expect(check).toContainText('Carb');
