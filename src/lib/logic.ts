@@ -584,14 +584,14 @@ const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
 // The day a board was worked: the date most of its cards were logged on (each card counts once, by its earliest entry this week).
 // A tie goes to the later date, so a session that runs past midnight shows the day it ended. One card moved in from another day
 // therefore cannot take over the stamp.
-// With `week`, only cards with something ticked count: a day nothing was done on is never stamped, so cards moved in
-// from a day that was worked cannot hand it their date (Day 5 and 6 reading 0/9 and 0/6 under "Thursday 11/12").
-export function dayDate(cards: Slot[], logs: Logs, wk: string, week?: WeekIn): string | null {
+// A card that is not done only counts by what was logged on it by hand: the entries a check-off writes (`auto`, a skip's too) belong to a day it was ticked on, so
+// cards moved in from a day that was worked cannot hand this day their date (Day 5 and 6 reading 0/9 and 0/6 under "Thursday 11/12"). A day with nothing done and nothing logged is never stamped.
+export function dayDate(cards: Slot[], logs: Logs, wk: string, week: WeekIn): string | null {
   const count = new Map<string, number>();
   cards.forEach(s => {
-    if (week && doneUnitsOf(s, week) === 0) return;
+    const worked = doneUnitsOf(s, week) > 0;
     let first: string | null = null;
-    s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (!first || e.d < first)) first = e.d; }));
+    s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (worked || !e.auto) && (!first || e.d < first)) first = e.d; }));
     if (first) count.set(first, (count.get(first) || 0) + 1);
   });
   let best: string | null = null;
