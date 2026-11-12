@@ -95,7 +95,12 @@ export type ScenarioFeature =
   | 'Issues filter'
   | 'Scan keeps its day'
   | 'Launcher shortcuts'
-  | 'Week to Shopping';
+  | 'Week to Shopping'
+  | 'Add food any day'
+  | 'Move and copy eaten'
+  | 'Usual portion'
+  | 'Saved meals removal'
+  | 'Daily snacks';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -107,6 +112,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
   'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts', 'Week to Shopping',
+  'Add food any day', 'Move and copy eaten', 'Usual portion', 'Saved meals removal', 'Daily snacks',
 ];
 
 export interface Scenario {
@@ -1983,11 +1989,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
-      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan to fill a food form.',
+      'Open Recipes and press + New. Read the choices, then press Recipe or meal and go Back. Press the Library pill beside Mine, then press Mine again. Press + New, then Scan to fill a food form.',
       'After starring two recipes (S-173 walks the star), reload the page and press a starred chip above the list.',
     ],
     expected: [
-      'The menu lists Scan to fill a food form, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan to fill a food form opens the New food form with the barcode sheet on top.',
+      'The menu lists three rows: Recipe or meal, Scan to fill a food form and Add a food by hand (the Library is the pill beside Mine, not a menu row); each opens its own flow, and Scan to fill a food form opens the New food form with the barcode sheet on top.',
       'The chips above the list show the starred recipes first and open the one pressed.',
       'After a reload with no stars and nothing logged or opened since, the row is not shown (a recipe opened in the same visit still counts as recent).',
     ],
@@ -2023,7 +2029,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-157', feature: 'Meals from foods', title: 'Build a cereal bowl from two foods and see its numbers add up', persona: 'recipe-collector', brief: 'meals-from-foods',
     steps: [
-      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Write a recipe, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
+      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Recipe or meal, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
     ],
     expected: [
       'While you build it the form says Per serving, from the parts: 375 kcal and 15.5 g protein, with 2 of 2 ingredients counted. After Save the recipe\'s page says the same, lists 1.5 portions Oat cereal and 1 portion Whole milk, and Log offers those numbers.',
@@ -2059,7 +2065,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
     steps: [
-      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Write a recipe, name it Mystery, type one ingredient (a pinch of something) and no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes and open the bowl.',
+      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Recipe or meal, name it Mystery, type one ingredient (a pinch of something) and no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes (More actions, Delete, then Tap again to delete) and open the bowl.',
     ],
     expected: [
       'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
@@ -2201,7 +2207,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-174', feature: 'Used as', title: 'Sauces and seasonings are Ingredients, not Meals', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
     steps: [
-      'Open Recipes, press + New, Write a recipe. Name it Garlic aioli, set the category to Sauces and add one ingredient. Read the Used as chips, then Save.',
+      'Open Recipes, press + New, Recipe or meal. Name it Garlic aioli, set the category to Sauces and add one ingredient. Read the Used as chips, then Save.',
       'Go Back to recipes and press the Meals tab, then the Ingredients tab.',
     ],
     expected: [
@@ -2223,7 +2229,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-176', feature: 'Used as', title: 'The chips follow the category until pressed; one always stays on, Drink stands alone', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab', edge: true,
     steps: [
-      'Open + New, Write a recipe. Change the category to Sauces, then to Carbs, and read Used as each time.',
+      'Open + New, Recipe or meal. Change the category to Sauces, then to Carbs, and read Used as each time.',
       'Press Meal to turn it off, then change the category to Sauces again.',
       'On + New, Add a food by hand, press Ready to eat off, then press Drink, then press Ingredient.',
     ],
@@ -2260,7 +2266,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-179', feature: 'Goes with', title: 'Pair chili with rice; it shows from both and Remove clears both', persona: 'meal-planner', brief: 'recipes-goes-with',
     steps: [
-      'In Recipes press + New, Write a recipe: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
+      'In Recipes press + New, Recipe or meal: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
       'Open Chili. In Goes with press "Add a recipe it goes with…" and pick Rice.',
       'Open Rice and read its Goes with. Press Remove on Chili, then Tap again to remove, then open Chili again.',
     ],
@@ -2274,7 +2280,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'With Chili and Rice paired (S-179), open Chili and press Make a meal.',
       'Read the new page, then open Recipes, press Meals and find it.',
-      'Delete Rice, then open Chili and read Goes with. Press Undo on the notice and read it again.',
+      'Delete Rice (More actions, Delete, then Tap again to delete), then open Chili and read Goes with. Press Undo on the notice and read it again.',
     ],
     expected: [
       'A meal "Chili with Rice" opens at 1 serving with 600 kcal and 34 g protein per portion, rolled up from its two parts, and it is in the Meals tab.',
@@ -2340,7 +2346,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-186', feature: 'Counts as', title: 'Counts as on a plate: automatic until you press, then your choice', persona: 'recipe-collector', brief: 'week-board',
     steps: [
-      'Open + New, Write a recipe, set the category to Protein and read Counts as on a plate. Press Veg.',
+      'Open + New, Recipe or meal, set the category to Protein and read Counts as on a plate. Press Veg.',
       'Save, open it again with Edit, then press Back to automatic.',
       'On + New, Add a food by hand, type 30 g protein and read Counts as.',
       'Open Lentil soup (this account has it set by hand) and press Edit.',
@@ -2980,7 +2986,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-238', feature: 'Food vitamins and minerals', title: 'A recipe built from a food adds up its vitamins and minerals, logged or planned', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
     steps: [
-      'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Write a recipe, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
+      'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Recipe or meal, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
       'On the recipe\'s page press Ate this, then open Nutrition and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
       'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card, press "Move to…" and choose today under Day (the card stays under Dinner: the Day buttons keep the meal, the Meal buttons stay on the same day). On today tick "Check Cereal duo as eaten", then press Totals again.',
     ],
@@ -3443,6 +3449,129 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients.',
+    ],
+  },
+  {
+    id: 'S-281', feature: 'Add food any day', title: 'Tap an earlier day and log what you ate on it', persona: 'diet-on-target', brief: 'nutrition-any-day-add',
+    steps: [
+      'Open Daily, Nutrition. On a phone use the day stepper; on a wide screen tap the name of an earlier day this week (or in last week). Read the line beside + Add food.',
+      'Press + Add food, One-off food, enter "Toast", 120 kcal and 4 g protein, and press Add. Read the message and the day\'s column.',
+      'Tap today\'s name, then reload the page.',
+      'Tap the name of a day after today and press + Add food.',
+    ],
+    expected: [
+      'The toolbar reads "Adding to <that day>" and offers + Add food, Scan and log, Quick add and One-off food, as it does on today.',
+      'One sentence says "Added Toast." The food shows in that day\'s "Not in a meal" list and that day\'s Calories and Protein meters rise by 120 kcal and 4 g; today\'s meters do not move.',
+      'Reload opens on today (the address is unchanged by the picked day).',
+      'A day ahead lists only Recipes and Saved meals, which plan items (S-200).',
+    ],
+  },
+  {
+    id: 'S-282', feature: 'Move and copy eaten', title: 'Copy an eaten food to another day', persona: 'diet-on-target', brief: 'nutrition-move-copy-eaten',
+    steps: [
+      'In today\'s Also eaten list tap the Greek yogurt row and press Copy to…. Read the days offered.',
+      'Pick an earlier day. Read the message, then that day\'s column and today\'s list.',
+      'Tap the copy on that earlier day and read its sheet.',
+    ],
+    expected: [
+      'Today and earlier days are offered, never the food\'s own day and never a day ahead.',
+      'A sentence says "Added 1 from Greek yogurt." The original stays in today\'s list. The copy shows on the earlier day under "Not in a meal" with the same calories, protein, carbs and fat, and that day\'s meters rise by the same amount.',
+      'The copy\'s sheet offers Edit, Delete, Move to… and Copy to… like any eaten row.',
+    ],
+  },
+  {
+    id: 'S-283', feature: 'Move and copy eaten', title: 'Move an eaten food to another day, undo it, and hit the daily limit', persona: 'diet-on-target', brief: 'nutrition-move-copy-eaten', edge: true,
+    steps: [
+      'Tap the Greek yogurt row on today, press Move to… and pick an earlier day. Read the notice, then both days\' lists.',
+      'Press Undo on the notice and read both days\' lists again.',
+      'Add one-off foods to an earlier day until it holds 20, then copy a food from today to that day.',
+    ],
+    expected: [
+      'The notice reads "Moved Greek yogurt to <day>." with Undo. The food leaves today\'s list and appears on that day; both days\' meters follow.',
+      'Undo puts the original back on today and takes the moved copy away: nothing is doubled and no other entry changes.',
+      'The copy is refused with "You can log 20 things a day." and nothing is added.',
+    ],
+  },
+  {
+    id: 'S-284', feature: 'Usual portion', title: 'A changed portion becomes the food\'s usual, and Undo puts the old one back', persona: 'recipe-collector', brief: 'nutrition-usual-portion',
+    steps: [
+      'In Recipes press Log on a recipe, change the portion from the amount the sheet opened at and press Log it. Read the notice.',
+      'Press Log on the same recipe again and read the portion the sheet opens at. Log it at that portion and read the notice area.',
+      'Log a different amount, then press Undo on the notice. Open Log again.',
+    ],
+    expected: [
+      'The notice reads "Usual portion saved: <amount>." and the entry is logged.',
+      'The sheet opens on the saved portion. Logging at it shows no notice and rewrites nothing.',
+      'Undo puts the previous usual (or none) back and keeps the logged entry. If the usual was changed after that log, Undo says "The usual portion was changed since, so it was left as it is." Planning a day ahead never changes the usual.',
+    ],
+  },
+  {
+    id: 'S-285', feature: 'Saved meals removal', title: 'Saved meals come from Recipes only, and a planned meal whose recipe is gone shows as removed', persona: 'meal-planner', brief: 'saved-meals-removal',
+    steps: [
+      'Open Recipes, Meals and rename "Chicken bowl" to "Chicken bowl 2". Open Nutrition, + Add food, Saved meals and read the list.',
+      'Plan "Quick dinner" for a day ahead, then delete the Quick dinner meal in Recipes (More actions, Delete).',
+      'Open that day on the Nutrition board and the planner.',
+    ],
+    expected: [
+      'Saved meals lists the Recipes meals, with the new name; there is no separate old list or "waiting" note.',
+      'The planned item is on the day ahead until the meal is deleted.',
+      'After the delete the planned item shows the existing removed state, not a crash, and Remove clears it.',
+    ],
+  },
+  {
+    id: 'S-286', feature: 'Saved meals removal', title: 'With Recipes full, the old saved meals stay and a note says to make room', persona: 'recipes-full', brief: 'saved-meals-removal', edge: true,
+    steps: [
+      'Sign in to this account on QA, open Recipes and read the count, then open Nutrition, + Add food and Saved meals.',
+      'Read the note on the list, then tap "Chicken bowl".',
+      'Delete one recipe in Recipes, reload the app and open Saved meals again.',
+    ],
+    expected: [
+      'Recipes holds 300 recipes, so the four saved meals could not move into it.',
+      'The old list is still offered with a note: "Some saved meals are waiting because Recipes is full (300 recipes). Delete a recipe to make room in Recipes and they move in the next time the app opens." One tap logs the meal as before.',
+      'After one delete and a reload exactly one saved meal (Usual breakfast, the first) has moved into Recipes, which is full again; Chicken bowl, Post-workout and Quick dinner stay listed with the note.',
+    ],
+  },
+  {
+    id: 'S-287', feature: 'Daily snacks', title: 'Save a daily snack list; it shows every day, and ticking or skipping changes one day', persona: 'meal-planner', brief: 'daily-snacks',
+    steps: [
+      'On Nutrition read today\'s Snack section, then press Set up daily snacks. Press Add snack, pick Overnight oats, press Back to the list, step its portion up once and press Done.',
+      'Read Snack on today and on a day later in the week. Reload and read Snack again.',
+      'Tick the Overnight oats snack on today. Read tomorrow\'s Snack.',
+      'On a day later in the week press Skip today on the snack and press Tap again to skip. Read that day and the day after it.',
+      'Open Daily snacks, press Remove beside the snack and press Tap again to remove.',
+    ],
+    expected: [
+      'Before setup Snack sits between Lunch and Dinner and says "No daily snacks yet". The sheet says "No daily snacks yet. Add the ones you always buy and eat." and, once saved, lists the snack with its calories and "× 1.5".',
+      'The snack shows in Snack on every day from today to two weeks ahead with nothing copied into each day, and it is still there after the reload.',
+      'Today\'s snack is ticked and the day\'s Calories meter moves; tomorrow\'s copy is unticked.',
+      'The snack is gone from that one day only; the day after still shows it and the list is unchanged.',
+      'The snack leaves the list and no day shows it any more. Anything already ticked eaten stays in the log.',
+    ],
+  },
+  {
+    id: 'S-288', feature: 'Daily snacks', title: 'A daily snack can still be ticked on a day that holds 8 planned things', persona: 'meal-planner', brief: 'snacks-day-cap', edge: true,
+    steps: [
+      'Save one daily snack (S-287 step 1). On a day later in the week plan recipes and saved meals into Breakfast, Lunch and Dinner until the day holds 8 planned things outside Snack, then try a ninth.',
+      'Tick the daily snack on today after filling today the same way, or move the snack\'s card to another day in Snack.',
+      'Move a card from Snack into Dinner on that full day.',
+    ],
+    expected: [
+      'The eighth planned thing is added and the ninth is refused with a notice; nothing extra is added. The listed snack still shows in Snack.',
+      'The snack ticks (or moves) normally and is never refused for a full day; it does not count toward the 8.',
+      'Moving it into Dinner counts it as planned there, so on a full day that move is refused and the snack stays in Snack.',
+    ],
+  },
+  {
+    id: 'S-289', feature: 'Daily snacks', title: 'Add missing to Shopping includes the listed daily snacks', persona: 'meal-planner', brief: 'snacks-into-shopping',
+    steps: [
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back. Save one daily snack whose recipe has an ingredient that is not at home and not on Shopping, and plan nothing else that needs it.',
+      'Press Add missing to Shopping (toolbar on a wide screen; on a phone open Manage and press it there). Open Shopping.',
+      'Skip the snack on every day shown, and press Add missing to Shopping again. Then tick the snack on today and press it once more.',
+    ],
+    expected: [
+      'The button is enabled although only a snack is missing something. The notice reads "Added n to Shopping" with Undo, and Shopping lists the snack\'s missing ingredient once, however many days show the snack.',
+      'Shopping shows each ingredient once and nothing already at home or already on the list.',
+      'With the snack skipped on every day the button adds nothing; a snack already ticked eaten on a day is not counted again from that day.',
     ],
   },
 ];

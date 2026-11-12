@@ -292,6 +292,16 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-81': { auto: 'e2e', specs: ['e2e/receiptBoughtAt.spec.js'] },
   'S-84': { auto: 'e2e', specs: ['e2e/receiptMerge.spec.js'] },
   'S-155': { auto: 'e2e', specs: ['e2e/nutritionQuickLog.spec.js'], partial: 'the barcode reader and camera are stubbed; the real camera on a phone is not run (the owner recorded a result for this scenario, so it is not marked device)' },
+  // S-281 to S-289: tagged from the spec and test titles (read-only); the notes name what no test title covers.
+  'S-281': { auto: 'e2e', specs: ['e2e/nutritionAnyDay.spec.js'], partial: 'the spec sets no phone width, so the day stepper path is not run' },
+  'S-282': { auto: 'e2e', specs: ['e2e/nutritionMoveCopy.spec.js', 'src/lib/moveCopyEaten.test.ts'] },
+  'S-283': { auto: 'e2e', specs: ['e2e/nutritionMoveCopy.spec.js', 'src/lib/moveCopyEaten.test.ts'] },
+  'S-284': { auto: 'e2e', specs: ['e2e/usualPortion.spec.js', 'src/lib/usualPortion.test.ts'] },
+  'S-285': { auto: 'unit', specs: ['src/lib/savedMealsRemoval.test.ts', 'e2e/savedMealsMove.spec.js'], partial: 'no browser spec plans a meal and then deletes its recipe, so the removed state is unit tested only' },
+  'S-286': { auto: 'e2e', specs: ['e2e/savedMealsMove.spec.js'], partial: 'the spec builds its own 300 recipes, not the recipes-full account, and no test title covers one delete letting exactly one meal move' },
+  'S-287': { auto: 'e2e', specs: ['e2e/dailySnacks.spec.js', 'src/lib/dailySnacks.test.ts'], partial: 'no test title covers the portion step in the sheet' },
+  'S-288': { auto: 'unit', specs: ['src/lib/dietPlan.test.ts', 'src/store/dietSlice.test.ts'], partial: 'no browser spec ticks a snack on a full day or hits the refused ninth thing' },
+  'S-289': { auto: 'unit', specs: ['src/lib/weekShopping.test.ts', 'src/store/dietSlice.test.ts'], partial: 'the button enabling for a snack alone is not walked in a browser' },
 };
 
 /** The tag of one scenario, or undefined when it is untagged. */
