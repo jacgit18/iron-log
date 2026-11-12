@@ -16,6 +16,7 @@ const STROKE = {
   edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   filter: 'M4 6h16M7 12h10M10 18h4',
   info: 'M12 11v6M12 7.5v.01M12 3a9 9 0 100 18 9 9 0 000-18z',
+  minus: 'M5 12h14',
   moon: 'M12 3a6 6 0 009 9 9 9 0 11-9-9z',
   plus: 'M12 5v14M5 12h14',
   scan: 'M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M7 12h10',

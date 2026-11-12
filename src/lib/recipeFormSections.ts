@@ -48,7 +48,7 @@ export type SectionFacts = {
   servings: number | undefined;
   ingredients: number; // lines with a name
   steps: number; // non-empty lines
-  nutLine: string; // 'Not set' or '320 kcal · 24 g protein'
+  nutLine: string; // 'Needs numbers' or '320 kcal · 24 g protein'
   tags: number;
   hasNote: boolean;
   hasVideo: boolean;
