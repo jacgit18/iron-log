@@ -29,8 +29,8 @@ const save = async (sheet, name, foods) => {
 
 test('save two logged foods as a meal, tap it to log it again, and it survives a reload', async ({ page }) => {
   await nutrition(page);
-  let sheet = await openAdd(page, 'Save as a meal');
-  await expect(sheet.getByText('Nothing eaten yet to save.')).toBeVisible(); // nothing logged: the way to save has nothing to offer (it was a disabled button on the old panel)
+  let sheet = await openAdd(page);
+  await expect(sheet.getByRole('button', { name: /^Save as a meal/ })).toHaveCount(0); // nothing logged: the way to save is not offered (specs mealDoors)
   await log(sheet, 'Oats', 350, 12);
   await log(sheet, 'Banana', 100, 1);
   await log(sheet, 'Coffee', 5, 0);
