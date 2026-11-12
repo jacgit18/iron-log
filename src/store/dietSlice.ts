@@ -2,6 +2,8 @@ import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
+import { copyEaten } from '../lib/moveCopyEaten.js';
+import { shortDay } from '../lib/nutritionBoard.js';
 import { moveItem } from '../lib/weekBoard.js';
 import { idsAdded, shoppingRecipeIds } from '../lib/weekShopping.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
@@ -46,6 +48,26 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     set({ diet: pruned([...list, e], today) });
     get().saveDiet();
     return { id: e.id, error: null };
+  },
+
+  copyDietEntry(id, toDay, move = false) {
+    const list = get().diet, today = ymd(new Date());
+    const r = copyEaten(list, id, toDay, today, newId(list), move);
+    if (r.error || !r.id) return { id: null, error: r.error ?? 'Couldn’t log that.' };
+    const gone = list.find(e => e.id === id)!, at = list.indexOf(gone), copyId = r.id;
+    set({ diet: pruned(r.list, today) });
+    get().saveDiet();
+    if (move) {
+      // Undo puts the original back where it was and takes the copy away again, so an undone move is a no-op (nothing duplicated).
+      get().noteRemoved('diet', `${gone.n} to ${shortDay(toDay)}`, () => {
+        if (get().blocked() || get().diet.some(e => e.id === id) || !get().diet.some(e => e.id === copyId)) return false;
+        const l = get().diet.filter(e => e.id !== copyId);
+        if (!roomOn(l, gone.d)) return false; // the day filled up since: Undo must not push it past the limit
+        l.splice(Math.min(at, l.length), 0, gone);
+        set({ diet: normDietEntries(l) }); get().saveDiet(); return true;
+      }, { verb: 'Moved' });
+    }
+    return { id: copyId, error: null };
   },
 
   updateDietEntry(id, patch) {

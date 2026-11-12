@@ -17,13 +17,13 @@ export type InstantLog = {
 };
 
 /** The one sentence after an instant log. The store's own words win when an add fails (a full day, a day too far back, bad numbers); the day limit note is only for what the plan left out. */
-export function instantLogText(done: number, opts: { from?: string; error?: string | null; left?: number } = {}): string {
+export function instantLogText(done: number, opts: { from?: string; error?: string | null; left?: number; verb?: string } = {}): string {
   const tail = opts.error ? ` ${opts.error}` : (opts.left ?? 0) > 0 ? ` ${opts.left} left out: ${MAX_DIET_PER_DAY} a day is the limit.` : '';
-  return `Added ${done}${opts.from ? ` from ${opts.from}` : ''}.${tail}`;
+  return `${opts.verb ?? 'Added'} ${done}${opts.from ? ` from ${opts.from}` : ''}.${tail}`;
 }
 
 /** The loop every instant log runs (Copy yesterday, a saved meal, the Goes with chip): add the entries one by one, stop at the first one the store refuses. `left` is how many the caller's plan already dropped for the day limit. */
-export function runInstantLog(add: AddEntry, entries: readonly NewEntry[], opts: { from?: string; left?: number } = {}): InstantLog {
+export function runInstantLog(add: AddEntry, entries: readonly NewEntry[], opts: { from?: string; left?: number; verb?: string } = {}): InstantLog {
   const ids: string[] = [];
   let error: string | null = null;
   for (const e of entries) {
