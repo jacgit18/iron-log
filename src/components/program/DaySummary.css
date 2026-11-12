@@ -10,7 +10,7 @@
   }
   .daysum h3 {
     margin: var(--sp-4) 0 0;
-    font-size: var(--fs-md);
+    font-size: var(--h-sub);
     font-weight: 700;
   }
   .daysum-sub {
