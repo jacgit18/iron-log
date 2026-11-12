@@ -1983,11 +1983,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-153', feature: 'Recipes find', title: '+ New menu and the Recent and favorites row', persona: 'recipe-collector', brief: 'recipes-find-type-tabs',
     steps: [
-      'Open Recipes and press + New. Read the choices, then press Write a recipe and go Back. Press + New, then Browse the Library. Press + New, then Scan to fill a food form.',
+      'Open Recipes and press + New. Read the choices, then press Recipe or meal and go Back. Press the Library pill beside Mine, then press Mine again. Press + New, then Scan to fill a food form.',
       'After starring two recipes (S-173 walks the star), reload the page and press a starred chip above the list.',
     ],
     expected: [
-      'The menu lists Scan to fill a food form, Build a meal, Write a recipe, Browse the Library and Add a food by hand; each opens its own flow, and Scan to fill a food form opens the New food form with the barcode sheet on top.',
+      'The menu lists three rows: Recipe or meal, Scan to fill a food form and Add a food by hand (the Library is the pill beside Mine, not a menu row); each opens its own flow, and Scan to fill a food form opens the New food form with the barcode sheet on top.',
       'The chips above the list show the starred recipes first and open the one pressed.',
       'After a reload with no stars and nothing logged or opened since, the row is not shown (a recipe opened in the same visit still counts as recent).',
     ],
@@ -2023,7 +2023,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-157', feature: 'Meals from foods', title: 'Build a cereal bowl from two foods and see its numbers add up', persona: 'recipe-collector', brief: 'meals-from-foods',
     steps: [
-      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Write a recipe, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
+      'In Recipes press + New, add a food by hand called Oat cereal (150 kcal, 5 g protein) and another called Whole milk (150 kcal, 8 g protein). Then press + New, Recipe or meal, name it Cereal bowl, press + Food or meal, pick Oat cereal, press More once, press + Food or meal again and pick Whole milk. Press Save recipe.',
     ],
     expected: [
       'While you build it the form says Per serving, from the parts: 375 kcal and 15.5 g protein, with 2 of 2 ingredients counted. After Save the recipe\'s page says the same, lists 1.5 portions Oat cereal and 1 portion Whole milk, and Log offers those numbers.',
@@ -2059,7 +2059,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-161', feature: 'Meals from foods', title: 'Delete or rename a linked food; a part with no numbers is named', persona: 'recipe-collector', brief: 'meals-from-foods', edge: true,
     steps: [
-      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Write a recipe, name it Mystery, type one ingredient (a pinch of something) and no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes and open the bowl.',
+      'Rename Whole milk to Milk and open Cereal bowl. Then press + New, Recipe or meal, name it Mystery, type one ingredient (a pinch of something) and no calories, and Save. Open Cereal bowl, press Edit, press + Food or meal, pick Mystery, and look at the counted line (a food added by hand needs calories, so it cannot be the one with no numbers). Finally delete Milk from Recipes (More actions, Delete, then Tap again to delete) and open the bowl.',
     ],
     expected: [
       'The bowl lists the new name Milk. The counted line says 2 of 3 ingredients counted, needs numbers: followed by the food\'s name. After Milk is deleted the line stays as plain text, is no longer a link, and the bowl\'s numbers drop to the parts that are left.',
@@ -2201,7 +2201,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-174', feature: 'Used as', title: 'Sauces and seasonings are Ingredients, not Meals', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
     steps: [
-      'Open Recipes, press + New, Write a recipe. Name it Garlic aioli, set the category to Sauces and add one ingredient. Read the Used as chips, then Save.',
+      'Open Recipes, press + New, Recipe or meal. Name it Garlic aioli, set the category to Sauces and add one ingredient. Read the Used as chips, then Save.',
       'Go Back to recipes and press the Meals tab, then the Ingredients tab.',
     ],
     expected: [
@@ -2223,7 +2223,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-176', feature: 'Used as', title: 'The chips follow the category until pressed; one always stays on, Drink stands alone', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab', edge: true,
     steps: [
-      'Open + New, Write a recipe. Change the category to Sauces, then to Carbs, and read Used as each time.',
+      'Open + New, Recipe or meal. Change the category to Sauces, then to Carbs, and read Used as each time.',
       'Press Meal to turn it off, then change the category to Sauces again.',
       'On + New, Add a food by hand, press Ready to eat off, then press Drink, then press Ingredient.',
     ],
@@ -2260,7 +2260,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-179', feature: 'Goes with', title: 'Pair chili with rice; it shows from both and Remove clears both', persona: 'meal-planner', brief: 'recipes-goes-with',
     steps: [
-      'In Recipes press + New, Write a recipe: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
+      'In Recipes press + New, Recipe or meal: Chili, category Protein, 400 kcal and 30 g protein, one ingredient. Do the same for Rice, category Carbs, 200 kcal and 4 g protein.',
       'Open Chili. In Goes with press "Add a recipe it goes with…" and pick Rice.',
       'Open Rice and read its Goes with. Press Remove on Chili, then Tap again to remove, then open Chili again.',
     ],
@@ -2274,7 +2274,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'With Chili and Rice paired (S-179), open Chili and press Make a meal.',
       'Read the new page, then open Recipes, press Meals and find it.',
-      'Delete Rice, then open Chili and read Goes with. Press Undo on the notice and read it again.',
+      'Delete Rice (More actions, Delete, then Tap again to delete), then open Chili and read Goes with. Press Undo on the notice and read it again.',
     ],
     expected: [
       'A meal "Chili with Rice" opens at 1 serving with 600 kcal and 34 g protein per portion, rolled up from its two parts, and it is in the Meals tab.',
@@ -2340,7 +2340,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-186', feature: 'Counts as', title: 'Counts as on a plate: automatic until you press, then your choice', persona: 'recipe-collector', brief: 'week-board',
     steps: [
-      'Open + New, Write a recipe, set the category to Protein and read Counts as on a plate. Press Veg.',
+      'Open + New, Recipe or meal, set the category to Protein and read Counts as on a plate. Press Veg.',
       'Save, open it again with Edit, then press Back to automatic.',
       'On + New, Add a food by hand, type 30 g protein and read Counts as.',
       'Open Lentil soup (this account has it set by hand) and press Edit.',
@@ -2980,7 +2980,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-238', feature: 'Food vitamins and minerals', title: 'A recipe built from a food adds up its vitamins and minerals, logged or planned', persona: 'vitamin-tracker', brief: 'recipes-vitamins-minerals',
     steps: [
-      'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Write a recipe, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
+      'Press Reset on the Vitamin tracker first, so today is the seeded day. In Recipes press + New, Recipe or meal, and name it "Cereal duo". Press + Food or meal, pick "Fortified cereal", then press the + beside "1 portion" once so it reads "1.5 portions". Press Save recipe.',
       'On the recipe\'s page press Ate this, then open Nutrition and open Totals (the Vitamins and minerals line, then Open Totals; the Totals button under the ticks only when there is no such line).',
       'Close Totals. Tap tomorrow, press Add food, Recipes, choose Dinner under "Which meal?", press Plan beside "Cereal duo" and press Done. Open the planned card, press "Move to…" and choose today under Day (the card stays under Dinner: the Day buttons keep the meal, the Meal buttons stay on the same day). On today tick "Check Cereal duo as eaten", then press Totals again.',
     ],
