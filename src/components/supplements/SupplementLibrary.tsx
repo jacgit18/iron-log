@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { SupplementSlot } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
+import EmptyState from '../EmptyState.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOTS } from '../../lib/supplements.js';
@@ -21,6 +22,7 @@ export default function SupplementLibrary() {
   const rows = groupSupplements(items); const n = rowCounts(rows);
   const sources = syncing && hasBothSources(rows);
   const shown = filterRows(rows, { q, filter, source: sources ? src : '' });
+  const miss = syncing && q.trim() && src !== 'custom' ? 'None of yours match. Find it in the catalog with + Add.' : rows.length ? 'No supplement matches. Clear the search or the filters.' : null; // null: nothing saved at all, a whole-list empty
   const filtering = !!q.trim() || filter !== 'all' || (sources && !!src);
   const label = (r: ListRow) => (r.brand ? `${r.n}, ${r.brand}` : r.n); // two brands of one name are two rows: say which
   const tap = (r: ListRow, slot: SupplementSlot) => {
@@ -83,7 +85,7 @@ export default function SupplementLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">{syncing && q.trim() && src !== 'custom' ? 'None of yours match. Find it in the catalog with + Add.' : rows.length ? 'No supplement matches. Clear the search or the filters.' : 'No supplements yet. Add one with + Add.'}</p>}
+        {!shown.length && (miss ? <p className="note">{miss}</p> : <EmptyState id="suplib-empty">No supplements yet. Add one with + Add.</EmptyState>)}
       </div>
     </section>
   );

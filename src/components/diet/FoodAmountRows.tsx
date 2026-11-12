@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.js';
 import NutrientOptionGroups from '../NutrientOptionGroups.js';
 import type { NutrientKey } from '../../shared/nutrientKeys.js';
 import { AMOUNT_UNITS, microOfRows, nextFreeKey } from '../../lib/foodAmountRows.js';
@@ -20,7 +21,7 @@ export default function FoodAmountRows({ idp, rows, onChange, perServing = false
   return (
     <div className="fa">
       <button type="button" className="btn fa-disc" id={`${idp}-fa-disc`} aria-expanded={shown} aria-controls={`${idp}-fa`} aria-disabled={locked || undefined} onClick={() => { if (!locked) setOpen(!shown); }}>
-        <span>Vitamins and minerals{perServing ? ' per serving' : ''} (optional)</span><span aria-hidden="true">{locked ? '' : shown ? '▾' : '▸'}</span>
+        <span>Vitamins and minerals{perServing ? ' per serving' : ''} (optional)</span><span aria-hidden="true">{locked ? null : <Icon name={shown ? 'chevron-down' : 'chevron-right'} />}</span>
       </button>
       {shown && (
         <div id={`${idp}-fa`} className="fa-body" role="group" aria-label={`Vitamins and minerals${perServing ? ' per serving' : ''}`}>
