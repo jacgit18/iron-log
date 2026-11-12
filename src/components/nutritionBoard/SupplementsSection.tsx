@@ -9,6 +9,7 @@ import './SupplementTotals.css';
 
 // A day's Supplements (brief nutrition-board): Morning, Noon and Night with a tick each and "x of n taken". Ticking works on any day, last week and days ahead too.
 // A past day (`folded`) keeps the header's "x of n taken" as the one line and unfolds the ticks on a tap (brief nutrition-header-sheet-wording).
+// Add supplement opens a picker of library supplements with no time of day: one tap ticks one for the day (brief nutrition-items-row-sheet-and-more); they list under "Also taken". Manage keeps the library.
 // Totals opens the vitamin and mineral totals sheet (shown when something is scheduled or a food eaten that day lists vitamins or minerals); a line under the ticks appears only when a total of what was taken
 // and eaten passes its limit (briefs supplement-nutrient-totals, food-vitamins-minerals).
 export default function SupplementsSection({ day, folded = false }: { day: string; folded?: boolean }) {
@@ -44,9 +45,23 @@ export default function SupplementsSection({ day, folded = false }: { day: strin
         </div>
       ))}
       </div>
+      {v.extra.length > 0 && (
+        <div className="nb-suppslot">
+          <span className="nb-slotlab">Also taken</span>
+          {v.extra.map(i => (
+            <label key={i.id} className="nb-tick taken">
+              <input type="checkbox" className="chk" id={`nb-supp-${day}-${i.id}`} checked onChange={e => useAppStore.getState().setSupplementTaken(day, i.id, e.target.checked)} />
+              <span>{i.n}{i.dose && <small> {i.dose}</small>}</span>
+            </label>
+          ))}
+        </div>
+      )}
       {warn && <p className="nb-suppwarn" role="status">{warn}</p>}
       {capWarn && <p className="nb-suppwarn" id={`nb-supp-capwarn-${day}`} role="status">{capWarn}</p>}
-      {(v.total > 0 || hasFoodData(eaten)) && <div className="nb-suppact"><button type="button" className="btn sm" id={`nb-supp-totals-${day}`} aria-label={`Totals for ${shortDay(day)}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>Totals</button></div>}
+      <div className="nb-suppact">
+        <button type="button" className="btn sm" id={`nb-supp-add-${day}`} aria-label={`Add supplement to ${shortDay(day)}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsuppick', day })}>Add supplement</button>
+        {(v.total > 0 || hasFoodData(eaten)) && <button type="button" className="btn sm" id={`nb-supp-totals-${day}`} aria-label={`Totals for ${shortDay(day)}`} onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>Totals</button>}
+      </div>
     </div>
   );
 }

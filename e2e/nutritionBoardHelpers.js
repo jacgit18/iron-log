@@ -24,6 +24,18 @@ export const openDrink = async (page, day) => {
 };
 // Today's column on the board (the fixed clock in fixtures.js is Thursday 2026-09-24).
 export const todayCol = page => page.locator('.nb-col.today');
+// An eaten row opens a sheet (brief nutrition-items-row-sheet-and-more). `editEaten` opens it from today's row (or uses the sheet that is already open) and starts Edit; `deleteEaten` taps the sheet's two-tap Delete.
+export const editEaten = async (page, name = '') => {
+  const d = page.getByRole('dialog');
+  if (!(await d.count())) await todayCol(page).locator('.nb-eatrow', { hasText: name }).first().click();
+  await d.getByRole('button', { name: 'Edit', exact: true }).click();
+};
+export const deleteEaten = async (page, name) => {
+  await todayCol(page).locator('.nb-eatrow', { hasText: name }).first().click();
+  const del = page.getByRole('dialog').getByRole('button', { name: new RegExp(`Delete ${name}$`) });
+  await del.click(); await del.click(); // two taps: arm, then confirm
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+};
 // The Targets and goal sheet (PR 2 of brief nutrition-board) and the Manage sheet, opened from the board header. Both return the dialog.
 export const openTargets = async page => {
   await page.locator('#nb-targets').click();

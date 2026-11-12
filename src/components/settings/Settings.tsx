@@ -25,6 +25,7 @@ import CommitInput from '../CommitInput.jsx';
 import SubNav from '../SubNav.js';
 import ArmedButton from '../ArmedButton.jsx';
 import { motionOK } from '../../lib/motion.js';
+import { takeSettingsJump } from '../../lib/settingsJump.js';
 import { GROUPS, findVisible, jumpToGroup } from '../../lib/settingsGroups.js';
 import { closeSettingsScreen, maxesSummary, modeSummary, onCloseSettingsScreen, phasesSummary, type Screen } from '../../lib/settingsScreens.js';
 import Icon from '../Icon.js';
@@ -145,7 +146,7 @@ function PushPanel() {
   };
   return (
     <section className="panel" aria-labelledby="pushalerts">
-      <h3 id="pushalerts">Alerts when Loadbearer is closed</h3>
+      <h3 id="pushalerts" tabIndex={-1}>Alerts when Loadbearer is closed</h3>
       <label className="inline"><input type="checkbox" checked={on} disabled={busy} onChange={e => void toggle(e.target.checked)} /> Send alerts to this device, even when the screen is locked</label>
       {on && (
         <>
@@ -463,6 +464,10 @@ export default function Settings() {
       window.removeEventListener('popstate', onPop); off();
       if (history.state?.settingsScreen) history.back(); // another tab was chosen with a screen open: take its history entry back, so Back is not a dead press
     };
+  }, []);
+  // Opened by Nutrition's Water reminder button: land on the Alerts panel (a browser with no push has no such panel, so the App group's heading instead).
+  useEffect(() => {
+    if (takeSettingsJump() === 'alerts') void jumpToGroup('alerts', { find: () => findVisible('pushalerts') ?? findVisible('set-app-h'), raf: requestAnimationFrame, smooth: motionOK() });
   }, []);
   useEffect(() => {
     if (screen !== null || !was.current) return; // closed by Back: land where the row is, focus on it

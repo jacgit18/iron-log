@@ -11,7 +11,7 @@ test('on a 375 x 812 phone the day card starts higher than 500px (it was 538px),
   const row = await page.evaluate(() => ['.nb-weeksw', '#nb-targets', '#nb-manage'].map(q => Math.round(document.querySelector(q).getBoundingClientRect().y)));
   expect(new Set(row).size).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-  for (const n of ['+ Add food', 'Scan barcode', 'Quick add', 'One-off food']) await expect(page.getByRole('button', { name: n })).toBeVisible();
+  for (const n of ['Add food', 'Scan barcode', 'Quick add', 'One-off food']) await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
 });
 
 test('the Add food sheet shows three labelled groups and every way starts at the same left edge, with its icon', async ({ page }) => {

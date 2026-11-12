@@ -32,7 +32,6 @@ const KNOWN: Readonly<Record<string, number>> = {
   'src/components/board/Experiments.tsx': 1, 'src/components/stretches/Stretches.tsx': 1, // the Board and Stretches: hands off
   'src/components/program/Editor.tsx': 1, 'src/components/sheets/NewProgramSheet.tsx': 1, // Program, next to the hands-off day rows
   'src/components/diet/FoodAmountRows.tsx': 1, // PR 903 (two-tap deletes)
-  'src/components/nutritionBoard/NutritionBoard.tsx': 1, // build 2, PR 906
   'src/components/recipes/Recipes.tsx': 1, // PR 902 and the Recipes desktop briefs
   'src/components/supplements/SupplementLibrary.tsx': 1, // opens the add sheet; its spec names it "+ Add" (e2e/supplementAdd.spec.js): moves with a supplements change
 };

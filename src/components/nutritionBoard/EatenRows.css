@@ -1,0 +1,72 @@
+@layer base, components;
+@layer components {
+/* Eaten food inside a meal (brief nutrition-items-row-sheet-and-more): a row is one button that opens the row sheet; the mark says it was eaten. A past day's rows are plain text. */
+.nb-eatrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-6) var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-eatrow.ro {
+  border-style: dashed;
+  cursor: default;
+}
+.nb-eatrow .nb-eatn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nb-eatrow .wb-cm {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nb-eatmark {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--m-supp);
+}
+.nb-eatmark svg {
+  width: 16px;
+  height: 16px;
+}
+@media (hover: hover) {
+  .nb-eatrow:not(.ro):hover {
+    border-color: var(--accent);
+  }
+}
+.nb-eatsheet-nums {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.nb-suppick {
+  display: grid;
+  gap: var(--sp-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nb-suppick .btn {
+  width: 100%;
+  min-height: 44px;
+  justify-content: flex-start;
+  text-align: left;
+}
+}
