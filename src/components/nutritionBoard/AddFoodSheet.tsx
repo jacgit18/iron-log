@@ -131,7 +131,7 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
         <ul className="dt-recents" aria-label="Saved meals to plan">
           {rows.map(m => <li key={m.id}><button type="button" className="btn sm" onClick={() => plan(m.id.startsWith('s:') ? 'm' : 'r', m.id.slice(2), m.n)}>{mealLine(m)}</button></li>)}
         </ul>
-        {held.length > 0 && <p className="note">{savedMealsNote(held)}</p>}
+        {held.length > 0 && <p className="note">{savedMealsNote(held, recipes.length)}</p>}
       </div>
     );
   }

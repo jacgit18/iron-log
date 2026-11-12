@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_RECIPES } from '../shared/recipes.js';
 import type { Recipe, SavedMeal } from '../types.ts';
 import { legacyMeals, mealItems, moveMeals, quickMeals, quickRows, remapPlan, savedMealsNote } from './quickMeals.js';
 
@@ -116,8 +117,13 @@ describe('legacyMeals (the gate: the old list is read only while a saved meal ha
     expect(legacyMeals({}).held).toEqual([]);
   });
   it('says to make room in Recipes only while a meal is held back', () => {
-    expect(savedMealsNote([])).toBe('Rename or edit a meal in Recipes.');
-    expect(savedMealsNote([saved[0]!])).toContain('make room in Recipes');
+    expect(savedMealsNote([], 10)).toBe('Rename or edit a meal in Recipes.');
+    expect(savedMealsNote([saved[0]!], MAX_RECIPES)).toContain('make room in Recipes');
+  });
+  it('does not blame a full Recipes list when there is room', () => {
+    const note = savedMealsNote([saved[0]!], 12);
+    expect(note).not.toContain('full');
+    expect(note).toContain('could not move');
   });
   it('returns the same object for the same input so a view can keep it', () => {
     const d = { meals: saved, mealsMoved: { b: 'snack' } };

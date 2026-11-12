@@ -26,7 +26,7 @@ export default function SavedMeals({ day, full, onAdded }: { day: string; full: 
       <ul className="dt-recents" aria-labelledby="dt-meals-h">
         {meals.map(m => <li key={m.id}><button type="button" className="btn sm" disabled={full} onClick={() => log(m.id)}>{mealLine(m)}</button></li>)}
       </ul>
-      <p className="note">{savedMealsNote(held)}</p>
+      <p className="note">{savedMealsNote(held, recipes.length)}</p>
     </div>
   );
 }
