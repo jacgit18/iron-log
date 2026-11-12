@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { bwSorted, goalStatus } from '../../lib/body.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { runInstantLog } from '../../lib/instantLog.js';
+import { recommendInputs } from '../../lib/manageTargets.js';
 import { planLog, type Plan, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
@@ -48,14 +48,10 @@ export default function NutritionBoard() {
   const plan = cfg.diet?.plan ?? NO_PLAN;
   const legacy = useLegacyMeals();
   const targets = useMemo(() => {
-    const weights = bwSorted(body);
-    const latest = weights.length ? Number(weights[weights.length - 1]!.w) : null;
-    const goalLb = cfg.bwGoal ? Number(cfg.bwGoal.w) : null;
-    const g = goalStatus(cfg.bwGoal, body, now);
-    const weeksLeft = g && 'weeksLeft' in g && typeof g.weeksLeft === 'number' ? g.weeksLeft : null;
+    const { latest, goalLb, weeksLeft } = recommendInputs(cfg.bwGoal, body, now);
     const t = targetsFor(cfg.diet, recommend(goalLb, latest, weeksLeft, cfg.diet));
     return { kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs };
-  }, [cfg, body, now]);
+  }, [cfg.bwGoal, cfg.diet, body, now]);
   const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets })), [days, today, plan, recipes, legacy, diet, supp, body, targets]);
   const moveTargets = days.map(d => ({ id: d, label: longDay(d) }));
   const st = () => useAppStore.getState();

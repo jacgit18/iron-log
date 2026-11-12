@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { leaveSheet } from '../../lib/backNav.js';
@@ -28,8 +28,10 @@ export default function ManageSheet() {
   const now = useToday(s => s.today);
   const { latest, goalLb, weeksLeft } = recommendInputs(cfg.bwGoal, body, now);
   const rec = recommend(goalLb, latest, weeksLeft, cfg.diet);
-  const today = ymd(useToday(t => t.today)), phone = usePhoneHeader(), kept = usePickedDay();
+  const today = ymd(now), phone = usePhoneHeader(), kept = usePickedDay();
   const [note, setNote] = useState('');
+  const waterRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (modal?.section === 'water') waterRef.current?.scrollIntoView({ block: 'start' }); }, [modal?.section]); // the drink sheet's Change base goal lands on Water, not at the top
   const shownDay = dayToShow(kept, today), week = useMemo(() => weekDays(today, weekOf(today, shownDay)), [today, shownDay]); // one array per day shown, so the button's memos hold
   const [editing, setEditing] = useState(modal?.view === 'editor'); // reopened here after a library item was saved from its own sheet
   const leave = (go: () => void) => leaveSheet(window.history, window, go, closeModal); // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
@@ -51,10 +53,10 @@ export default function ManageSheet() {
       <div className="sect nb-sect-first">Daily targets</div>
       <div className="dt"><DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} hasDate={weeksLeft !== null && weeksLeft > 0} /></div>
       <div className="sect">Weight and goal</div>
-      <p className="nb-ro" id="nb-manage-weight">{weightLine(body)} <span className="note">{latest !== null ? 'from your latest weigh-in on the Board' : 'type one on the Board'}</span></p>
+      <p className="nb-ro" id="nb-manage-weight">{weightLine(body)} <button type="button" className="nb-inlink" id="nb-manage-weight-edit" onClick={() => leave(() => useAppStore.getState().setTab('board'))}>{latest !== null ? 'Weigh in on the Board' : 'Add one on the Board'}</button></p>
       <p className="nb-ro" id="nb-manage-goal">{goalLine(cfg.bwGoal)} <button type="button" className="nb-inlink" id="nb-manage-goal-edit" onClick={() => leave(() => { useAppStore.getState().setTab('progress'); navigate('progress/trends', 'push'); })}>Edit in Progress</button></p>
-      <div className="sect">Water</div>
-      <WaterGoal day={ymd(now)} />
+      <div className="sect" id="nb-manage-water-h" ref={waterRef}>Water</div>
+      <WaterGoal day={today} />
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => { requestSettingsJump('alerts'); useAppStore.getState().setTab('settings'); })}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
       </ul>

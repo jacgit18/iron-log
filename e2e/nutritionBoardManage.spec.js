@@ -40,6 +40,7 @@ test('Manage shows the latest weigh-in and the goal from the data, and "Edit in 
   const m = await openManage(page);
   await expect(m.locator('#nb-manage-weight')).toContainText('Current weight: 180 lb');
   await expect(m.locator('#nb-manage-goal')).toContainText('Goal: 190 lb by');
+  await expect(m.locator('#nb-manage-weight-edit')).toHaveText('Weigh in on the Board');
   await m.locator('#nb-manage-goal-edit').click();
   await expect(sheet(page)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('progress/trends');
@@ -53,6 +54,7 @@ test('the drink sheet sends the base goal to Manage, and the water base is there
   await sheet(page).locator('#water-goal-targets').click();
   await expect(sheet(page).getByRole('heading', { name: 'Manage' })).toBeVisible();
   await expect(sheet(page).locator('#water-goal-edit')).toBeVisible();
+  await expect(sheet(page).locator('#water-goal-edit')).toBeInViewport(); // Manage opens scrolled to Water, not at the top
 });
 
 test('Manage reaches the supplement editor, saved meals and foods, and the water reminder', async ({ page }) => {
