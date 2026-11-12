@@ -3406,10 +3406,10 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-277', feature: 'Week to Shopping', title: 'Add missing to Shopping puts the week\'s missing ingredients on the list once', persona: 'meal-planner', brief: 'week-shopping',
     steps: [
       'Press Reset on Meal planner first (switch to another account to do it), then switch back. On Nutrition, plan two recipes that share an ingredient on days ahead (Add food, Recipes, pick the meal).',
-      'In the toolbar press Add missing to Shopping, then open Shopping.',
+      'Press Add missing to Shopping (in the toolbar on a wide screen; on a phone open Manage and press it there), then open Shopping.',
     ],
     expected: [
-      'A notice reads "Added n to Shopping" (with "; m already there" when an ingredient was needed twice) and has an Undo button.',
+      'A notice reads "Added n to Shopping" (with "; m already there" when an ingredient was needed twice) and has an Undo button; on a phone the Manage sheet closes first so the notice shows on the board.',
       'Shopping lists each missing ingredient once; an ingredient already at home or already on the list is not added again.',
     ],
   },
@@ -3425,14 +3425,14 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-279', feature: 'Week to Shopping', title: 'The button is off when there is nothing to add, and last week has none', persona: 'meal-planner', brief: 'week-shopping', edge: true,
+    id: 'S-279', feature: 'Week to Shopping', title: 'The button is off when there is nothing to add, and last week adds nothing', persona: 'meal-planner', brief: 'week-shopping', edge: true,
     steps: [
-      'On a day with nothing planned, read the toolbar. Then plan a recipe whose ingredients are all at home or already on Shopping and read it again.',
-      'Pick a day in last week (the day dropdown on a phone, Last week on a wide screen) and read the toolbar.',
+      'On a day with nothing planned, read the button (toolbar on a wide screen, Manage on a phone). Then plan a recipe whose ingredients are all at home or already on Shopping and read it again.',
+      'Pick a day in last week (the day dropdown on a phone, Last week on a wide screen) and read the button again.',
     ],
     expected: [
       'Add missing to Shopping is dimmed with nothing to add, and turns on when a planned recipe has an ingredient that is not at home or on the list.',
-      'Last week shows no Add missing to Shopping (its food cannot be changed).',
+      'On last week the button is gone from a wide screen\'s toolbar and dimmed in a phone\'s Manage sheet (it adds nothing there).',
     ],
   },
   {
