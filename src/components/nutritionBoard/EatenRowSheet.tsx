@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
-import { runInstantLog } from '../../lib/instantLog.js';
+import { instantLogText } from '../../lib/instantLog.js';
 import { eatenTargets } from '../../lib/moveCopyEaten.js';
 import { dayGroups } from '../../lib/nutritionBoard.js';
 import { ymd } from '../../shared/dates.js';
@@ -34,9 +34,9 @@ export default function EatenRowSheet({ id }: { id: string }) {
   const targets = eatenTargets(entry, today, dayGroups(today).flatMap(g => g.days));
   const move = picking === 'move';
   const go = (toDay: string) => {
-    const { id: _id, ...draft } = entry;
-    const run = runInstantLog(() => useAppStore.getState().copyDietEntry(entry.id, toDay, move), [{ ...draft, d: toDay }], { from: entry.n, ...(move ? { verb: 'Moved' } : {}) });
-    (modal?.onMsg as ((t: string) => void) | undefined)?.(run.text);
+    const r = useAppStore.getState().copyDietEntry(entry.id, toDay, move);
+    const text = instantLogText(r.error ? 0 : 1, { from: entry.n, error: r.error, ...(move ? { verb: 'Moved' } : {}) });
+    (modal?.onMsg as ((t: string) => void) | undefined)?.(text);
     closeModal();
   };
   return (

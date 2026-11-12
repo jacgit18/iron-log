@@ -357,3 +357,15 @@ describe('copyDietEntry (brief nutrition-move-copy-eaten)', () => {
     expect(st().removed).toBeNull();
   });
 });
+
+describe('Undo of a move respects the 20 a day limit (brief nutrition-move-copy-eaten)', () => {
+  it('refuses to put the original back onto a day that filled up', () => {
+    const today = ymd(new Date());
+    const id = st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4 }).id!;
+    st().copyDietEntry(id, '2026-10-29', true);
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ d: today, n: `F${i}`, kcal: 100, p: 1 });
+    st().undoRemoved();
+    expect(st().diet.filter(e => e.d === today)).toHaveLength(MAX_DIET_PER_DAY);
+    expect(st().diet.some(e => e.n === 'Rice' && e.d === '2026-10-29')).toBe(true);
+  });
+});

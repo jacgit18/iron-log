@@ -61,7 +61,9 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
       // Undo puts the original back where it was and takes the copy away again, so an undone move is a no-op (nothing duplicated).
       get().noteRemoved('diet', `${gone.n} to ${shortDay(toDay)}`, () => {
         if (get().blocked() || get().diet.some(e => e.id === id) || !get().diet.some(e => e.id === copyId)) return false;
-        const l = get().diet.filter(e => e.id !== copyId); l.splice(Math.min(at, l.length), 0, gone);
+        const l = get().diet.filter(e => e.id !== copyId);
+        if (!roomOn(l, gone.d)) return false; // the day filled up since: Undo must not push it past the limit
+        l.splice(Math.min(at, l.length), 0, gone);
         set({ diet: normDietEntries(l) }); get().saveDiet(); return true;
       }, { verb: 'Moved' });
     }
