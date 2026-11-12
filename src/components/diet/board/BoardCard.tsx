@@ -1,5 +1,5 @@
 import { isEaten } from '../../../lib/dietPlan.js';
-import { fmtNum } from '../../../lib/dietLog.js';
+import { macroLine } from '../../../lib/macroLine.js';
 import { PLAN_SLOTS } from '../../../shared/diet.js';
 import { SLOT_LABEL, type BoardItem } from '../../../lib/weekBoard.js';
 import type { PlanSlot } from '../../../types.ts';
@@ -23,7 +23,7 @@ export default function BoardCard({ item, day, today, days, open, moving, onOpen
       <button type="button" className={`wb-card${open ? ' open' : ''}`} draggable aria-expanded={open} data-from={`${day}:${index}`} onClick={onOpen}
         onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ day, index })); e.dataTransfer.effectAllowed = 'move'; }}>
         <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}</span>
-        <span className="wb-cm">{r.gone ? 'Removed' : r.kcal !== undefined ? `${fmtNum(r.kcal)} kcal${r.p !== undefined ? ` · ${fmtNum(r.p)} g protein` : ''}` : 'No calories'}</span>
+        <span className="wb-cm">{r.gone ? 'Removed' : macroLine(r) || 'Needs numbers'}</span>
       </button>
       </div>
       {open && (
