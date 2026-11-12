@@ -69,6 +69,10 @@
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
+/* The dots icon is the whole label: no side padding, so the button stays the 44 px target the old text glyph made it. */
+.edbtns .edmore {
+  padding-inline: 0;
+}
 /* The Day stepper (previous, a picker of the seven days, next) fills the row; the Day buttons below it jump straight to a day and are for wide screens only. */
 .dayctl {
   display: flex;
