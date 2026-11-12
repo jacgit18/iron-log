@@ -35,7 +35,7 @@ export function setRecipesViewState<K extends keyof RecipesViewState>(key: K, va
   listeners.forEach(fn => fn());
 }
 
-/** Back to the start (sign-out, and the tests). */
+/** Back to the start (the tests; sign-out reloads the page, which clears it). */
 export function resetRecipesViewState(): void {
   state = { ...INITIAL_VIEW_STATE };
   listeners.forEach(fn => fn());
