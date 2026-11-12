@@ -60,4 +60,12 @@ test('Goes with has no accessibility violations and 44 px targets on a phone', a
   const axe = await new AxeBuilder({ page }).include('.rc-goes').analyze();
   expect(axe.violations).toEqual([]);
   for (const b of await goes(page).getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(43.5);
+  // Make a meal is a quiet underlined link, and the row stays on one line idle and with Remove armed (its longer label must not re-wrap it).
+  const make = goes(page).getByRole('button', { name: 'Make a meal of Chili with Rice' });
+  expect(await make.evaluate(el => { const c = getComputedStyle(el); return [c.textDecorationLine, c.backgroundColor, c.borderTopWidth]; })).toEqual(['underline', 'rgba(0, 0, 0, 0)', '0px']);
+  const row = goes(page).locator('.rc-goeslist li').first();
+  expect((await row.boundingBox()).height).toBeLessThan(50);
+  await goes(page).getByRole('button', { name: 'Remove Rice from Goes with' }).click();
+  await expect(goes(page).getByRole('button', { name: 'Tap again to remove' })).toBeVisible();
+  expect((await row.boundingBox()).height).toBeLessThan(50);
 });
