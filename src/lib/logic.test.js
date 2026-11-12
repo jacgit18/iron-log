@@ -520,6 +520,17 @@ describe('dayDate: the date a board was worked', () => {
     expect(dayDate([a], { hack: [e] }, WK)).toBe('2026-09-29');
     expect(dayDate([a], { hack: [e] }, '2026-09-20')).toBeNull();
   });
+  it('with the week, a day nothing is ticked on is not stamped, even when moved-in cards carry dated entries', () => {
+    const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-30')] };
+    expect(dayDate([a, b], logs, WK, { done: {} })).toBeNull();
+    expect(dayDate([a, b], logs, WK, { done: { a: true } })).toBe('2026-09-30');
+  });
+  it('with the week, only ticked cards vote: a moved-in majority that is not done cannot outvote the worked card', () => {
+    const c = card('c', 'curl');
+    const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-29')], curl: [entry('c', '2026-09-29')] };
+    expect(dayDate([a, b, c], logs, WK)).toBe('2026-09-29');
+    expect(dayDate([a, b, c], logs, WK, { done: { a: true } })).toBe('2026-09-30');
+  });
   it('counts hand-logged sessions and every exercise of a pair', () => {
     const pair = { id: 'p', day: 1, type: 'superset', items: [{ ex: 'hack' }, { ex: 'legext' }] };
     expect(dayDate([pair], { legext: [entry('p', '2026-10-01', { auto: undefined })] }, WK)).toBe('2026-10-01');

@@ -266,7 +266,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           );
           const dayDef = prog.days[pd - 1];
           const list = cols[d];
-          const date = dayDate(list, logs, wk);
+          const date = dayDate(list, logs, wk, week);
           const t = tally(list, week);
           const count = wide ? <span>{t.done}/{t.total} exercises</span> : null; // the phone's day tabs already show it
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
