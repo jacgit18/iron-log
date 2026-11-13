@@ -34,7 +34,7 @@ test('Skip day is in a floating menu under the day header ⋯ at the right end; 
   await expect(col.locator('.addrow')).toBeHidden(); // no extra row on a phone
   const vw = page.viewportSize().width;
   const box = await dots.boundingBox();
-  expect(box.x + box.width, '⋯ sits at the right end of the header').toBeGreaterThan(vw - 40);
+  expect(box.x + box.width, '⋯ sits at the right end of the header').toBeGreaterThan(vw - 30);
   expect(box.width).toBeGreaterThanOrEqual(44);
   const h0 = (await col.boundingBox()).height;
   await dots.click();
@@ -48,6 +48,12 @@ test('Skip day is in a floating menu under the day header ⋯ at the right end; 
   await dots.click();
   await page.mouse.click(5, 300); // outside tap
   await expect(item).toBeHidden();
+  await dots.click();
+  await page.keyboard.press('Tab'); // tabbing out of the menu closes it
+  await expect(item).toBeHidden();
+  await dots.click();
+  await page.locator('.wdc-tabs [role=tab]').nth(1).click(); // picking another day closes it
+  await expect(page.locator('.daypop:visible')).toHaveCount(0);
   await dots.click();
   await item.click(); // Skip day closes the menu and puts focus back on ⋯
   await expect(col.locator('.colhead .count')).toHaveText('Skipped');
