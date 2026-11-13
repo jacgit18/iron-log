@@ -29,8 +29,10 @@ test('phone: the day tabs move with the arrow keys, Home and End, and a tab name
   await page.reload();
   const tabs = page.locator('.wdc-tabs [role="tab"]');
   await tabs.nth(1).click();
+  await page.evaluate(() => window.scrollTo(0, 300));
   await page.keyboard.press('ArrowRight');
   await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100); // a key moves the day, a tap also returns to the top, a key does not
   await expect(tabs.nth(2)).toBeFocused();
   await page.keyboard.press('End');
   await expect(tabs.nth(6)).toHaveAttribute('aria-selected', 'true');

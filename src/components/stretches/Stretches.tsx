@@ -133,8 +133,8 @@ export default function Stretches() {
   return (
     <div className="strroot">
       {wide ? <div className="weekbar">{weekRow}</div> : null}
+      {!wide && <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="sdaytab-" controlsPrefix="scol-" onPick={id => choose(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>}
       {items.length === 0 && <StretchFirstRun />}
-      {!wide && <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="sdaytab-" controlsPrefix="scol-" onPick={id => { choose(Number(id)); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>{weekRow}</WeekDayCard>}
 
       <div className="board">
         {DAYS7.map(d => {
