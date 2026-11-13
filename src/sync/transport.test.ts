@@ -58,6 +58,18 @@ describe('transport: a body that never arrives', () => {
     expect(await guard(t.eraseData())).toEqual({ ok: true });
   });
 
+  it('erase and delete send the account the page was opened as, over the header of whoever it last verified', async () => {
+    const seen: Array<Record<string, string>> = [];
+    const stub = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init?.headers as Record<string, string>);
+      return { ok: false, status: 409, headers: new Headers(), json: async () => ({ ok: false, error: 'account' }) } as unknown as Response;
+    }) as typeof fetch;
+    const t = createTransport({ clientVersion: 'x', fetch: stub, headers: () => ({ 'x-expected-user': 'bob' }) });
+    await guard(t.eraseData('ann'));
+    await guard(t.deleteAccount('ann'));
+    expect(seen.map(h => h['x-expected-user'])).toEqual(['ann', 'ann']);
+  });
+
   it('erase and delete carry the expected-user header, and a 409 account answer is a pause, not a refusal', async () => {
     const seen: Array<Record<string, string>> = [];
     const stub = (async (_url: RequestInfo | URL, init?: RequestInit) => {

@@ -42,6 +42,8 @@ export function fakeServer() {
   const rows = new Map<string, Stored>();
   let seq = 0;
   const sent: { name: CommandName; env: Envelope }[] = [];
+  /** Each erase or delete asked of the fake server, with the account the page named for it. */
+  const accountActions: { action: 'erase' | 'delete'; expectedUser?: string }[] = [];
   const fail: (CommandOutcome | PullOutcome)[] = [];
   let busy = 0;
   let overlapped = false;
@@ -114,6 +116,7 @@ export function fakeServer() {
   return {
     rows,
     sent,
+    accountActions,
     fail,
     /** True if two requests were ever in flight at once. */
     get overlapped() { return overlapped; },
@@ -136,8 +139,8 @@ export function fakeServer() {
         return { ok: true, rows: page as never, cursor: page.length ? page[page.length - 1]!.seq : since, more: page.length < all.length, epoch };
       }),
       // The server's two account actions. `fail` queues outcomes for them too, one per request.
-      eraseData: (): Promise<AccountActionOutcome> => guard(() => { const next = fail.shift() as AccountActionOutcome | undefined; if (next) return next; erase(); return { ok: true }; }),
-      deleteAccount: (): Promise<AccountActionOutcome> => guard(() => { const next = fail.shift() as AccountActionOutcome | undefined; if (next) return next; erase(); return { ok: true }; }),
+      eraseData: (expectedUser?: string): Promise<AccountActionOutcome> => guard(() => { accountActions.push({ action: 'erase', expectedUser }); const next = fail.shift() as AccountActionOutcome | undefined; if (next) return next; erase(); return { ok: true }; }),
+      deleteAccount: (expectedUser?: string): Promise<AccountActionOutcome> => guard(() => { accountActions.push({ action: 'delete', expectedUser }); const next = fail.shift() as AccountActionOutcome | undefined; if (next) return next; erase(); return { ok: true }; }),
     },
   };
 }
