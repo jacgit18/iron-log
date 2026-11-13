@@ -12,7 +12,7 @@ export default function WeekDayCard({ children, tabs, selected, onPick, idPrefix
       <div className="weekbar wdc-week">{children}</div>
       <div className="wdc-tabs" role="tablist" aria-label="Day" onKeyDown={e => {
         const n = tabAfterKey(e.key, Math.max(at, 0), tabs.length); if (n == null) return;
-        e.preventDefault(); const els = e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'); onPick(tabs[n]!.id); els[n]?.focus(); // by position: the tab ids can change with the week
+        e.preventDefault(); const els = e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'); onPick(tabs[n]!.id); els[n]?.focus({ preventScroll: true }); // by position: the tab ids can change with the week
       }}>
         {tabs.map(t => (
           <button type="button" role="tab" key={t.id} id={`${idPrefix}${t.id}`} aria-selected={t.id === selected} aria-controls={controls?.(t.id)} tabIndex={t.id === selected ? 0 : -1}

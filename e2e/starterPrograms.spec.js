@@ -33,6 +33,15 @@ test('a new account picks a starter and gets its cards on the first days, withou
   await expect(page.getByText('Squat').first()).toBeVisible();
 });
 
+// On a phone the empty-board prompt stays above the filter row and the pinned card, so it is on screen without scrolling.
+test('on a phone the starter prompt is in view without scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openNewAccount(page);
+  const prompt = page.getByRole('region', { name: 'Build your first workout' });
+  await expect(prompt).toBeVisible({ timeout: 30_000 });
+  await expect(prompt).toBeInViewport();
+});
+
 test('the days-a-week choice changes how many days are filled', async ({ page }) => {
   await openNewAccount(page);
   const prompt = page.getByRole('region', { name: 'Build your first workout' });
