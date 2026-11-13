@@ -31,8 +31,15 @@ describe('compareLabel', () => {
   });
   it('treats only per 100 g and unreadable as failures unless the label allows them', () => {
     expect(compareLabel({ kind: 'per100g' }, spec)).toMatchObject({ pass: false, calProteinOk: false });
-    expect(compareLabel({ kind: 'per100g' }, { ...spec, allowPer100g: true }).pass).toBe(true);
+    expect(compareLabel({ kind: 'per100g' }, { ...spec, allowPer100g: true })).toMatchObject({ pass: true, calProteinOk: true }); // a right answer, so it is not a miss
     expect(compareLabel({ kind: 'unreadable' }, spec).pass).toBe(false);
+  });
+  it('holds protein to half a gram or 5% and amounts to 10% (a 3 g label does not pass at 3.6 g, 0.2 mg does not pass at 0.25 mg)', () => {
+    const tight = { kind: 'label', kcal: 100, p: 3, micro: { thiamin: 0.2 } };
+    expect(compareLabel({ kind: 'ok', label: { kcal: 100, p: 3.6 } }, tight).calProteinOk).toBe(false);
+    expect(compareLabel({ kind: 'ok', label: { kcal: 100, p: 3.4 } }, tight).calProteinOk).toBe(true);
+    expect(compareLabel({ kind: 'ok', label: { kcal: 100, p: 3, micro: { thiamin: 0.25 } } }, tight).pass).toBe(false);
+    expect(compareLabel({ kind: 'ok', label: { kcal: 100, p: 3, micro: { thiamin: 0.21 } } }, tight).pass).toBe(true);
   });
   it('accepts another printed pair of calories and protein (a column with milk added)', () => {
     const s = { ...spec, alt: [{ kcal: 263, p: 9.8 }] };
@@ -65,8 +72,23 @@ describe('summarize', () => {
     expect(summarize(twelve(wrongAmount)).pass).toBe(false);
     expect(summarize([...twelve(), row('notLabel', compareLabel(ok({}), { kind: 'notLabel' }))]).pass).toBe(false);
   });
-  it('allows no miss at all with fewer than 10 real labels', () => {
+  it('allows no miss with fewer than 10 real labels, and one with 10', () => {
     expect(summarize(Array.from({ length: 9 }, () => row('label', good)).concat(row('label', miss))).allowedMisses).toBe(1);
-    expect(summarize([row('label', miss), ...Array.from({ length: 8 }, () => row('label', good))]).pass).toBe(false);
+    expect(summarize([row('label', miss), ...Array.from({ length: 8 }, () => row('label', good))])).toMatchObject({ allowedMisses: 0, pass: false });
+  });
+  it('counts a correct per-100 g answer as right, so it never uses up the one allowed miss', () => {
+    const per100 = compareLabel({ kind: 'per100g' }, { kind: 'label', kcal: 1, p: 1, allowPer100g: true });
+    expect(summarize([...twelve(miss).slice(0, 11), row('label', per100)])).toMatchObject({ real: 12, calOk: 11, pass: true });
+  });
+  it('is INCOMPLETE, never PASS, when no real label was checked or an expected photo was not run', () => {
+    expect(summarize([])).toMatchObject({ pass: false, verdict: 'INCOMPLETE', real: 0 });
+    const ran = twelve().map((r, i) => ({ ...r, name: `p${i}.jpg` }));
+    const names = ran.map(r => r.name);
+    expect(summarize(ran, names)).toMatchObject({ pass: true, verdict: 'PASS', unrun: [] });
+    expect(summarize(ran, [...names, 'missing.jpg'])).toMatchObject({ pass: false, verdict: 'INCOMPLETE', unrun: ['missing.jpg'] });
+  });
+  it('does not blame a failed scan call on a wrong amount', () => {
+    const failed = { spec: { kind: 'label' }, pass: false, calProteinOk: false, problems: ['the scan call failed'], notes: [] };
+    expect(summarize([failed])).toMatchObject({ microProblems: 0, calOk: 0 });
   });
 });

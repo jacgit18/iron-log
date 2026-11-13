@@ -10,8 +10,8 @@
 
 const within = (got, want, abs, rel) => Math.abs(got - want) <= Math.max(abs, Math.abs(want) * rel);
 export const kcalOk = (got, want) => within(got, want, 5, 0.03);
-export const proteinOk = (got, want) => within(got, want, 0.6, 0.1);
-const amountOk = (got, want) => within(got, want, 0.05, 0.1);
+export const proteinOk = (got, want) => within(got, want, 0.5, 0.05);
+const amountOk = (got, want) => within(got, want, 0.02, 0.1);
 
 /** One photo: `{ pass, calProteinOk, problems, notes }`. `problems` fail the photo; `notes` are for reading (a nutrient the scan left out is safe, a carb or fat a little off is not the test). */
 export function compareLabel(result, spec) {
@@ -27,7 +27,8 @@ export function compareLabel(result, spec) {
   }
   if (result.kind === 'per100g') {
     if (!spec.allowPer100g && !soft) problems.push('answered "only per 100 g" but the label has a per-serving column');
-    return { pass: Boolean(spec.allowPer100g || soft), calProteinOk: spec.allowPer100g || soft ? null : false, problems, notes };
+    // A correct "only per 100 g" answer counts as right for calories and protein (the label has no serving column); a blurred photo has no mark either way.
+    return { pass: Boolean(spec.allowPer100g || soft), calProteinOk: spec.allowPer100g ? true : soft ? null : false, problems, notes };
   }
   const label = result.label;
   const sets = [{ kcal: spec.kcal, p: spec.p }, ...(spec.alt ?? [])];
@@ -50,13 +51,18 @@ export function compareLabel(result, spec) {
   return { pass: problems.length === 0, calProteinOk: Boolean(match), problems, notes };
 }
 
-/** All photos: how many real labels had calories and protein right, how many wrong or invented amounts there were, and the verdict (at most one miss per 10 real labels, rounded down; no wrong amount; every non-label refused). */
-export function summarize(rows) {
+/** All photos: how many real labels had calories and protein right, how many wrong or invented amounts there were, which expected photos were never run (`expectedNames`, when given), and the verdict:
+ *  PASS or FAIL by the brief's rule (at most one miss per 10 real labels, rounded down; no wrong amount; every non-label refused), or INCOMPLETE when no real label was checked or an expected photo was not run,
+ *  so a wrong folder or a skipped file can never read as a pass. */
+export function summarize(rows, expectedNames = []) {
   const real = rows.filter(r => r.spec.kind === 'label');
   const calOk = real.filter(r => r.calProteinOk).length;
-  const microProblems = rows.reduce((n, r) => n + r.problems.filter(p => !/^(calories|unreadable|answered|not a nutrition)/.test(p)).length, 0);
+  const microProblems = rows.reduce((n, r) => n + r.problems.filter(p => !/^(calories|unreadable|answered|not a nutrition|the scan call)/.test(p)).length, 0);
   const others = rows.filter(r => r.spec.kind !== 'label' && !r.pass).length;
   const allowedMisses = Math.floor(real.length / 10);
-  const pass = real.length - calOk <= allowedMisses && microProblems === 0 && others === 0;
-  return { real: real.length, calOk, microProblems, others, allowedMisses, pass };
+  const ran = new Set(rows.map(r => r.name).filter(Boolean));
+  const unrun = expectedNames.filter(n => !ran.has(n));
+  const incomplete = real.length === 0 || unrun.length > 0;
+  const pass = !incomplete && real.length - calOk <= allowedMisses && microProblems === 0 && others === 0;
+  return { real: real.length, calOk, microProblems, others, allowedMisses, unrun, incomplete, pass, verdict: incomplete ? 'INCOMPLETE' : pass ? 'PASS' : 'FAIL' };
 }
