@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
-import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
+import { groupsOf, dayTally, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
 import { useMountedDays } from '../board/useMountedDays.js';
@@ -112,11 +112,7 @@ export default function Stretches() {
   const dayDrawn = useMountedDays(day + 1, useWide());
   const [arming, setArming] = useState<string | null>(null); // the added stretch whose Remove was pressed once
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
-  const days = weekDaysDone(items, week);
-  const counted = weekDaysCounted(week);
-  const todayTally = thisWeek ? dayTally(items, week, today.getDay()) : null;
   const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Skip day button is showing
-  const pct = counted ? Math.round(days / counted * 100) : 0;
 
   return (
     <div className="strroot">
@@ -126,10 +122,6 @@ export default function Stretches() {
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => s.gotoWeek('next')}><Icon name="chevron-right" /></button>
           {!thisWeek && <button type="button" className="btn sm ghost" onClick={() => s.gotoWeek('today')}>This week</button>}
-        </div>
-        <div className="progress">
-          <span role="status">{days} of {counted} days done{counted < STRETCH_DAYS ? ` · ${STRETCH_DAYS - counted} skipped` : ''}{todayTally && todayTally.total > 0 ? ` · Today ${todayTally.done} of ${todayTally.total}` : ''}</span>
-          <div className="bar"><i style={{ width: `${pct}%` }} /></div>
         </div>
       </div>
       {items.length === 0 && <StretchFirstRun />}
@@ -152,7 +144,7 @@ export default function Stretches() {
 
       <div className="board">
         {DAYS7.map(d => {
-          const t = dayTally(items, week, d); const date = addDays(weekStart, d);
+          const t = dayTally(items, week, d);
           const extras = extrasOn(week, d);
           const allIds = [...items.filter(i => i.tier === 'primary').map(i => i.id), ...extras.map(x => x.id)];
           const drawn = dayDrawn(d + 1);
@@ -162,9 +154,8 @@ export default function Stretches() {
                 <input type="checkbox" className="chk" id={`sday-${d}`} checked={t.full} disabled={!allIds.length || t.skipped} aria-label={`Mark all of ${DAY_NAMES[d]} done`} onChange={e => s.setStretchesDone(d, allIds, e.target.checked)} />
                 <div>
                   <h3 id={`scolh-${d}`}>{DAY_NAMES[d]}</h3>
-                  <div className="sub daydate">{String(date.getMonth() + 1).padStart(2, '0')}/{String(date.getDate()).padStart(2, '0')}</div>
                 </div>
-                <span className="count">{t.skipped ? 'Skipped' : `${t.done}/${t.total}`}</span>
+                {t.skipped && <span className="count">Skipped</span>}
                 <button type="button" className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={dayMore === d || !!t.skipped} aria-controls={`sskiprow-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
                   onClick={() => setDayMore(dayMore === d ? null : d)}><Icon name="dots" /></button>
               </div>
