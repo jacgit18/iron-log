@@ -96,6 +96,18 @@ describe('x-expected-user', () => {
     expect(await transport.deleteAccount()).toMatchObject({ ok: false, class: 'account', status: 409 });
   });
 
+  it('a page opened as Alice that overrides the last verified header is refused on Bob erase and delete, and nothing is erased (S-73)', async () => {
+    const alice = await idOf('alice');
+    const bob = await idOf('bob');
+    await log('bob');
+    // The page last verified as Bob (an empty page handed over on wake) but was opened as Alice: the client names Alice for the two account actions.
+    const transport = createTransport({ clientVersion: '1', baseUrl: base, headers: () => ({ 'x-dev-user': 'bob', 'x-expected-user': bob }) });
+    expect(await transport.eraseData(alice)).toMatchObject({ ok: false, class: 'account', status: 409 });
+    expect(await transport.deleteAccount(alice)).toMatchObject({ ok: false, class: 'account', status: 409 });
+    expect(await rows()).toBe(1);
+    expect(await db.selectFrom('users').select('id').where('id', '=', bob).execute()).toHaveLength(1);
+  });
+
   it('takes a request with no header, as an older client sends it', async () => {
     const res = await log('bob');
     expect(res.ok).toBe(true);
