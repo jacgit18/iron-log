@@ -76,7 +76,7 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
   expect(await pinnable(page)).toEqual({ position: 'sticky', blockers: [] });
 });
 
-test('above 700 px the Board and Stretches keep their own week bars; Nutrition draws the card up to 1439 px and not from 1440 px', async ({ page }) => {
+test('above 700 px the Board and Stretches keep their own desktop week cards; Nutrition draws the card up to 1439 px and not from 1440 px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   await expect(page.locator('.boardroot > .wsec > .weekbar')).toBeVisible(); // the desktop week card (boardSwitch.spec.js), not the joined phone card
