@@ -26,7 +26,7 @@ test('on a phone the day it moved to is shown, with both day tabs outlined', asy
   await expect(page.locator('#daytab-2')).toHaveClass(/swapped/);
   await expect(page.locator('#daytab-3')).toHaveClass(/swapped/);
   await expect(page.locator('#col-3')).toBeInViewport();
-  await expect(page.locator('.daytabs button.swapped')).toHaveCount(0, { timeout: 5000 });
+  await expect(page.locator('.wdc-tabs button.swapped')).toHaveCount(0, { timeout: 5000 });
 });
 
 test('with reduced motion the outline still shows and the pulse does not run', async ({ page }) => {

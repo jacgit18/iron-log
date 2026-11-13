@@ -30,11 +30,11 @@ for (const w of [1440, 1920, 2560]) {
 }
 
 for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 3], [1439, 3]]) {
-  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and the day stepper`, async ({ page }) => {
+  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and ${w < 700 ? 'the joined day tabs' : 'the day stepper'}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);
     await expect(page.locator('.nb-col')).toHaveCount(n);
-    await expect(page.locator('.nb-step')).toBeVisible();
+    await expect(page.locator(w < 700 ? '.wdc-tabs' : '.nb-step')).toBeVisible();
     const cols = await page.evaluate(() => [...document.querySelectorAll('.nb-col')].map(c => { const b = c.getBoundingClientRect(); return { x: b.x, y: b.y, right: b.right }; }));
     expect(cols[0].x).toBeGreaterThanOrEqual(0);
     const board = await page.locator('.nb-board').evaluate(b => b.getBoundingClientRect().width);

@@ -68,6 +68,7 @@ export type ScenarioFeature =
   | 'Week board'
   | 'Nutrition board'
   | 'Supplement portions'
+  | 'Joined week and day tabs'
   | 'Vitamin and mineral totals'
   | 'Vitamin and mineral day line'
   | 'Food vitamins and minerals'
@@ -106,7 +107,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Supplement portions',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Program tab clarity', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Price history', 'Moved-card tag', 'Ideas to try', 'Program desktop layout', 'Groceries views', 'Food type', 'Recipes find', 'Nutrition quick log', 'Meals from foods', 'Grocery budget', 'Recipe star', 'Used as', 'Library rows', 'Goes with', 'Saved meals move', 'Counts as', 'Week board', 'Nutrition board', 'Supplement portions', 'Joined week and day tabs',
   'Vitamin and mineral totals', 'Vitamin and mineral day line', 'Food vitamins and minerals', 'Typed amounts', 'Age and sex amounts',
   'Supplement times', 'Active ingredients', 'Ingredient day line',
   'Nutrition week', 'Grocery purchase log', 'Receipts for everyone', 'Ideas filters', 'Exercise notes', 'Skipped entry', 'Board day stamp',
@@ -3572,6 +3573,54 @@ export const SCENARIOS: readonly Scenario[] = [
       'The button is enabled although only a snack is missing something. The notice reads "Added n to Shopping" with Undo, and Shopping lists the snack\'s missing ingredient once, however many days show the snack.',
       'Shopping shows each ingredient once and nothing already at home or already on the list.',
       'With the snack skipped on every day the button adds nothing; a snack already ticked eaten on a day is not counted again from that day.',
+    ],
+  },
+  {
+    id: 'S-290', feature: 'Joined week and day tabs', title: 'Board on a phone: the week row and D1 to D7 are one pinned card under the filter row', persona: 'heavy-logger', brief: 'week-day-joined-tabs',
+    steps: [
+      'On a phone (375 px wide) open Board. Read the order from the top: Injury prevention and filter row, week arrows, D1 to D7, Body weight, then any notices.',
+      'Scroll down through the exercise cards. Tap another day tab, then press the Right arrow and Home on the keyboard.',
+      'Press Next week, then This week.',
+    ],
+    expected: [
+      'One bordered card holds the week arrows on top and the seven day tabs under them, the selected day underlined; there is no separate week bar above the filter row. Body weight sits under the card.',
+      'The whole card stays pinned at the top while the cards scroll. A tapped tab selects its day and the page returns to the top; the arrow keys, Home and End move between tabs.',
+      'The week changes and the tabs show that week\'s counts, a Rest day tab keeps "Rest" and a finished day keeps its check.',
+    ],
+  },
+  {
+    id: 'S-291', feature: 'Joined week and day tabs', title: 'Stretches on a phone: Sun to Sat with counts in the same card, one-line week row', persona: 'heavy-logger', brief: 'week-day-joined-tabs',
+    steps: [
+      'On a phone (375 px wide) open Board, then Stretches. Read the card.',
+      'Tick all of one day done, then read its tab.',
+    ],
+    expected: [
+      'The card holds the week arrows with the dates on one line and seven tabs, Sun to Sat, each with its count; there is no "N of 7 days done" line and the card stays pinned while scrolling.',
+      'That day\'s tab shows the check.',
+    ],
+  },
+  {
+    id: 'S-292', feature: 'Joined week and day tabs', title: 'Nutrition on a phone: week switcher and seven day tabs in the card, Manage at the right', persona: 'meal-planner', brief: 'week-day-joined-tabs',
+    steps: [
+      'On a phone (375 px wide) open Nutrition. Read the top, then tap Fri.',
+      'Press Next week, read the selected day, then tap Sat. Press Previous week twice, then This week.',
+      'Read the row under the add-food buttons.',
+    ],
+    expected: [
+      'One card holds the week switcher and Sun to Sat with the date numbers, today marked and selected; there is no day dropdown and no Previous day or Next day buttons. Tapping Fri shows Fri and the toolbar says "Adding to Fri".',
+      'Next week selects its first day; Last week selects its first day; This week goes back to today. Each week shows its own seven days.',
+      'Manage is a text link at the right end of its row.',
+    ],
+  },
+  {
+    id: 'S-293', feature: 'Joined week and day tabs', title: 'The card on the smallest phone and at large text', persona: 'heavy-logger', brief: 'week-day-joined-tabs', edge: true,
+    steps: [
+      'Set the screen to 320 px wide and the text size to 200%. On Board, Stretches and Nutrition read the card.',
+      'Scroll sideways.',
+    ],
+    expected: [
+      'The week arrows, dates and all seven tabs are inside the card; a tab\'s text wraps inside its cell and every tab is still at least 44 px tall.',
+      'Nothing scrolls sideways.',
     ],
   },
 ];

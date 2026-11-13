@@ -8,6 +8,7 @@ import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { countTab, type DayTab } from '../../lib/weekDayTabs.js';
 import { boardFilterCount, boardFilterSummary } from '../../lib/boardFilter.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
@@ -19,6 +20,7 @@ import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
 import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
+import WeekDayCard from '../WeekDayCard.js';
 import { useBoardFilter } from './useBoardFilter.js';
 import { useMountedDays } from './useMountedDays.js';
 import { useWide } from './useWide.js';
@@ -154,18 +156,20 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
-  return (
-    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div className="weekbar">
-        <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
-          <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
-          <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
-          {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-        </div>
-        <ProgramSwitch />
+  // The week row (switcher and program switch): its own bar above the notices on a wide screen, the top of the joined week and day card on a phone (WeekDayCard).
+  const weekRow = (
+    <>
+      <div className="weeknav">
+        <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
+        <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
+        <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
+        {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
       </div>
-
+      <ProgramSwitch />
+    </>
+  );
+  const notices = (
+    <>
       {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
@@ -194,60 +198,65 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
         </div>
       )}
       {slots.length === 0 && <FirstRun />}
-      {!wide && <BodyWeightRow draft={bodyWeight} />}
-      <div className="filterbar">
-        {wide && (
-          <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
-            <div className="filterfields" id="filter-fields">
-              <label className="field">Sort by muscle
-                <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
-                  <option value="">Program order</option>
-                  {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-                </select>
-              </label>
-              <label className="field">Equipment
-                <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
-                  <option value="">All equipment</option>
-                  {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-              {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
-            </div>
-          </div>
-        )}
-        <InjurySwitch />
-        {!wide && (
-          <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
-            <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
-          </button>
-        )}
-        {!wide && boardFilterCount(filter) > 0 && (
-          <div className="filtersummary" role="status">
-            <span>{boardFilterSummary(muscleName, eqLabel)}</span>
-            <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
-          </div>
-        )}
-        {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
-        {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
-      </div>
+    </>
+  );
+  // Only the phone card draws them. The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
+  const tabs: DayTab[] = wide ? [] : DAYS.map(d => ({ ...countTab(String(d), `D${d}`, `Day ${d}`, tally(cols[d], week), rest.includes(d) ? 'rest' : undefined), swapped: !!swapFlash?.includes(d) }));
 
-      <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
-        const n = { ArrowRight: (day as number) + 1, ArrowLeft: (day as number) - 1, Home: 1, End: DAYS.length }[e.key]; if (n == null) return;
-        e.preventDefault(); const d = ((n - 1 + DAYS.length) % DAYS.length) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`)!.focus();
-      }}>
-        {DAYS.map(d => {
-          const t = tally(cols[d], week); const isRest = rest.includes(d);
-          const short = isRest ? 'Rest' : t.full ? '✓' : `${t.done}/${t.total}`;
-          return (
-            <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
-              // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
-              className={`${isRest || t.full ? 'full' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`.trim()} aria-label={`D${d} ${short}: Day ${d}, ${isRest ? 'rest day' : t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
-              onClick={() => { st.setMDay(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
-              <b aria-hidden="true">D{d}</b>{' '}<span aria-hidden="true">{short}</span>
-            </button>
-          );
-        })}
-      </div>
+  const filterbar = (
+    <div className="filterbar">
+      {wide && (
+        <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
+          <div className="filterfields" id="filter-fields">
+            <label className="field">Sort by muscle
+              <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
+                <option value="">Program order</option>
+                {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+              </select>
+            </label>
+            <label className="field">Equipment
+              <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
+                <option value="">All equipment</option>
+                {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </label>
+            {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
+          </div>
+        </div>
+      )}
+      <InjurySwitch />
+      {!wide && (
+        <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
+          <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
+        </button>
+      )}
+      {!wide && boardFilterCount(filter) > 0 && (
+        <div className="filtersummary" role="status">
+          <span>{boardFilterSummary(muscleName, eqLabel)}</span>
+          <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
+        </div>
+      )}
+      {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
+      {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
+    </div>
+  );
+
+  return (
+    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      {wide ? (
+        <>
+          <div className="weekbar">{weekRow}</div>
+          {notices}
+          {filterbar}
+        </>
+      ) : (
+        <>
+          {notices}
+          {filterbar}
+          <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
+          <BodyWeightRow draft={bodyWeight} />
+        </>
+      )}
 
       <div className="board">
         {DAYS.map(d => {

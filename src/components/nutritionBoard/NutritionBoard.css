@@ -320,7 +320,7 @@
   border-color: var(--m-supp);
 }
 @media (max-width: 699px) {
-  /* The week switcher is the only thing on the week row (Manage is in .nb-links under the day stepper). */
+  /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */
   .nb-head {
     gap: var(--sp-8);
   }
@@ -341,6 +341,7 @@
   .nb-links {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     margin-bottom: 0;
   }
   .nb-link {
@@ -356,8 +357,8 @@
     text-decoration: underline;
     cursor: pointer;
   }
-  .nb-link:first-child {
-    padding-left: 0;
+  .nb-link:last-child {
+    padding-right: 0;
   }
   /* Option B (owner 2026-11-12): the week's dates sit in the switcher row, and the status line and the "Adding to" line stay for screen readers only. The date range stays in .nb-weeklab (role=status). */
   .nb-weekname {
