@@ -298,7 +298,7 @@
 .wb-cardwrap.eaten .wb-card {
   border-color: var(--m-supp);
 }
-/* Under 1440 px the week row is the joined card's (WeekDayCard): the switcher stays at the left, Manage at the right end as it was in the header. */
+/* From 700 px the week row is the joined card's (WeekDayCard): the switcher stays at the left, Manage at the right end as it was in the header. */
 .wdc-week .nb-weeksw {
   flex: 0 1 auto;
   justify-content: flex-start;
@@ -330,7 +330,7 @@
 }
 /* The pinned card is taller with the toolbar: anchors and focus scroll to below it. */
 html:has(.wdc-foot) {
-  scroll-padding-top: calc(176px + env(safe-area-inset-top, 0px));
+  scroll-padding-top: calc(260px + env(safe-area-inset-top, 0px));
 }
 @media (max-width: 699px) {
   /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */
