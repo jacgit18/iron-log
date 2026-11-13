@@ -18,6 +18,7 @@ const PUBLIC: Record<string, string> = {
   'GET /api/health/db': 'uptime probe; rate-limited, answer cached 5 s',
   'POST /api/client-errors': 'a signed-out phone has errors too; 4 kb, rate-limited, scrubbed',
   'POST /api/stripe/webhook': 'Stripe calls it; the signature is the check',
+  'POST /api/usage': 'opt-in anonymous usage counts from a phone that may be signed out; 2 kb, rate-limited, whitelisted names, stores only an HMAC of a random install id',
 };
 
 /** Public only when sign-in is configured (`if (auth)` in createApp). */
@@ -30,7 +31,7 @@ const PUBLIC_WITH_AUTH: Record<string, string> = {
 // its check, push/fire.ts) and its token and limit tests live in the push tests.
 
 /** Mounted routers (app.use with a prefix) cannot be listed from the router, so each prefix is probed by hand. */
-const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'supplement-barcode', 'supplement-label', 'sync'];
+const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'supplement-barcode', 'supplement-label', 'sync', 'usage-admin'];
 
 let db: Kysely<DB>;
 let auth: ReturnType<typeof createAuth>;

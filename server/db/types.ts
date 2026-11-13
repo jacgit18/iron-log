@@ -271,6 +271,14 @@ export interface SupplementUpcs {
   upc: string;
 }
 
+export interface UsageDays {
+  counts: Generated<Json>;
+  day: string;
+  from_app: Generated<boolean>;
+  install_hash: string;
+  version: Generated<string>;
+}
+
 export interface Users {
   auth_user_id: string;
   change_seq: Generated<Int8>;
@@ -321,6 +329,7 @@ export interface DB {
   stripe_events: StripeEvents;
   supplement_days: SupplementDays;
   supplement_upcs: SupplementUpcs;
+  usage_days: UsageDays;
   users: Users;
   weeks: Weeks;
 }
