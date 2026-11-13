@@ -36,7 +36,7 @@ export const deleteEaten = async (page, name) => {
   await del.click(); await del.click(); // two taps: arm, then confirm
   await expect(page.getByRole('dialog')).toHaveCount(0);
 };
-// The Manage sheet (daily targets, weight and goal, water, library), opened from the board header. Returns the dialog.
+// The Manage sheet (daily targets with the goal under them, water, library), opened from the board header. Returns the dialog.
 export const openManage = async page => {
   await page.locator('#nb-manage').click();
   const sheet = page.getByRole('dialog', { name: 'Manage' });

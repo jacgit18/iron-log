@@ -3,9 +3,10 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { leaveSheet } from '../../lib/backNav.js';
 import { recommend } from '../../lib/dietTarget.js';
-import { goalLine, recommendInputs, weightLine } from '../../lib/manageTargets.js';
+import { goalLine, recommendInputs } from '../../lib/manageTargets.js';
 import { weekDays, weekOf } from '../../lib/nutritionBoard.js';
 import { dayToShow, usePickedDay } from '../../lib/nutritionDayPick.js';
+import { requestProgressJump } from '../../lib/progressJump.js';
 import { requestSettingsJump } from '../../lib/settingsJump.js';
 import { ymd } from '../../shared/dates.js';
 import { navigate } from '../useRoute.js';
@@ -18,7 +19,7 @@ import WaterGoal from './WaterGoal.js';
 import '../diet/Diet.css';
 import '../supplements/Supplements.css';
 
-// The Manage sheet (brief nutrition-board, PR 2; brief targets-into-manage): daily targets, weight and goal (read-only: weight is typed on the Board, the goal is edited in Progress), the base water goal with its reminder link, and the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
+// The Manage sheet (brief nutrition-board, PR 2; brief targets-into-manage): daily targets with the weight goal under them (read-only: the goal is edited in Progress, the link opens the Body weight chart), the base water goal with its reminder link, and the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
 // Meals and foods (opens Recipes) opens the existing Recipes screen (the sheet closes first).
 export default function ManageSheet() {
   const closeModal = useAppStore(s => s.closeModal);
@@ -52,9 +53,7 @@ export default function ManageSheet() {
       <h2 className="cond">Manage</h2>
       <div className="sect nb-sect-first">Daily targets</div>
       <div className="dt"><DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} hasDate={weeksLeft !== null && weeksLeft > 0} /></div>
-      <div className="sect">Weight and goal</div>
-      <p className="nb-ro" id="nb-manage-weight">{weightLine(body)} <button type="button" className="nb-inlink" id="nb-manage-weight-edit" onClick={() => leave(() => useAppStore.getState().setTab('board'))}>{latest !== null ? 'Weigh in on the Board' : 'Add one on the Board'}</button></p>
-      <p className="nb-ro" id="nb-manage-goal">{goalLine(cfg.bwGoal)} <button type="button" className="nb-inlink" id="nb-manage-goal-edit" onClick={() => leave(() => { useAppStore.getState().setTab('progress'); navigate('progress/trends', 'push'); })}>Edit in Progress</button></p>
+      <p className="nb-ro" id="nb-manage-goal">{goalLine(cfg.bwGoal)} <button type="button" className="nb-inlink" id="nb-manage-goal-edit" onClick={() => leave(() => { requestProgressJump('body'); useAppStore.getState().setTab('progress'); navigate('progress', 'push'); })}>Edit in Progress</button></p>
       <div className="sect" id="nb-manage-water-h" ref={waterRef}>Water</div>
       <WaterGoal day={today} />
       <ul className="nb-manage">

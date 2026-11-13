@@ -1,6 +1,9 @@
 import type { BodyEntry, Cfg, Logs, MuscleKey, PhaseKey, WeightChange as Change } from '../../types.ts';
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { motionOK } from '../../lib/motion.js';
+import { scrollWhenSettled } from '../../lib/scrollSettle.js';
+import { takeProgressJump } from '../../lib/progressJump.js';
 import { isSkipMark } from '../../lib/skipMark.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
@@ -257,11 +260,18 @@ function BodyChart() {
   const body = useAppStore(s => s.body); const deleteBodyWeight = useAppStore(s => s.deleteBodyWeight);
   const [arming, setArming] = useState<string | null>(null); // the week whose ✕ was pressed once
   const L = bwSorted(body);
+  // Opened by Manage's Edit in Progress: land on this chart (the goal editor sits under it).
+  useEffect(() => {
+    if (takeProgressJump() !== 'body') return;
+    // The sections above grow as history and charts draw (OnePage does the same on a wide screen), so scroll again once they have, unless the reader has already moved.
+    // Not cancelled on purpose: StrictMode runs this effect twice in development and the second run finds the request already read; a second scroll after Progress closed finds no element and does nothing.
+    scrollWhenSettled(() => document.getElementById('bw-chart')?.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' }));
+  }, []);
   // The Removed notice sits right after the heading in both layouts, so deleting the last weigh-in keeps it (and its Undo).
-  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><RemovedNotice scope="body" /><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
+  if (!L.length) return <section className="panel tchart" id="bw-chart"><h2>Body weight</h2><RemovedNotice scope="body" /><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
   const rec = [...L].reverse().slice(0, 6);
   return (
-    <section className="panel tchart">
+    <section className="panel tchart" id="bw-chart">
       <h2>Body weight</h2>
       <RemovedNotice scope="body" />
       {L.length > 1 ? <LineChart entries={L.map(e => ({ d: e.d, w: e.w }))} height={180} label="Body weight over time" /> : <p className="note">One more weekly weigh-in and the trend line starts.</p>}

@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyEntry, BodyGoal } from '../types.ts';
-import { goalLine, recommendInputs, weightLine } from './manageTargets.js';
+import { goalLine, recommendInputs } from './manageTargets.js';
 
 const entry = (wk: string, w: number): BodyEntry => ({ wk, d: wk, w, updatedAt: '2026-11-01T00:00:00Z' }) as BodyEntry;
 const goal = (w: number, by?: string): BodyGoal => ({ w, start: { w: 190, d: '2026-09-01' }, ...(by ? { by } : {}) }) as BodyGoal;
 const today = new Date(2026, 10, 12);
-
-describe('weightLine', () => {
-  it('says there is no weigh-in yet', () => expect(weightLine([])).toBe('No weigh-in yet'));
-  it('shows the latest weigh-in', () => expect(weightLine([entry('2026-11-02', 183.04), entry('2026-11-09', 182.44)])).toBe('Current weight: 182.4 lb'));
-});
 
 describe('goalLine', () => {
   it('says no goal when there is none', () => { expect(goalLine(undefined)).toBe('No goal set'); expect(goalLine(null)).toBe('No goal set'); });
