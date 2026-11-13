@@ -1,11 +1,11 @@
 import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openDrink, openManage, openNutrition } from './nutritionBoardHelpers.js';
 
-// PR 2 of brief nutrition-board, then brief targets-into-manage: the Manage sheet (daily targets, read-only weight and goal, water, library), opened from the board's header. The numbers behind them are node tests (dietTarget.test.ts, water.test.ts);
+// PR 2 of brief nutrition-board, then brief targets-into-manage: the Manage sheet (daily targets with the read-only goal under them, water, library), opened from the board's header. The numbers behind them are node tests (dietTarget.test.ts, water.test.ts);
 // this covers the wiring: the sheet opens and closes, a saved number shows where it is used, the old Targets panel, the Targets and goal sheet and the on-page editor are gone, and Manage reaches the other screens. The fixed clock is Thursday 2026-09-24.
 const sheet = page => page.getByRole('dialog');
 
-test('Manage holds the targets and the water base, shows weight and goal read-only, and saved numbers survive a reload', async ({ page }) => {
+test('Manage holds the targets and the water base, shows the goal read-only, and saved numbers survive a reload', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('#diet-h')).toHaveCount(0); // no Diet panel under the board
   const s = await openManage(page);
@@ -29,12 +29,14 @@ test('Manage holds the targets and the water base, shows weight and goal read-on
   await expect(again).toContainText('100 oz');
 });
 
-test('Manage shows the latest weigh-in and the goal from the data, and "Edit in Progress" opens the Body weight chart in Progress', async ({ page }) => {
+const withGoalAndWeight = page => page.evaluate(() => {
+  localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: 190, by: '2027-03-01' } }));
+  localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w: 180 }] }));
+});
+
+test('Manage shows the goal from the data and no weight line, and "Edit in Progress" opens the Body weight chart in Progress', async ({ page }) => {
   await openNutrition(page);
-  await page.evaluate(() => {
-    localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: 190, by: '2027-03-01' } }));
-    localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w: 180 }] }));
-  });
+  await withGoalAndWeight(page);
   await page.reload();
   const m = await openManage(page);
   await expect(m.locator('#nb-manage-weight')).toHaveCount(0);
@@ -42,6 +44,22 @@ test('Manage shows the latest weigh-in and the goal from the data, and "Edit in 
   await m.locator('#nb-manage-goal-edit').click();
   await expect(sheet(page)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/progress$/);
+  await expect(page.locator('#bw-chart')).toBeInViewport();
+});
+
+test('on a phone, where the chart is the last section of the Progress hub, Edit in Progress and Set a goal weight both land on it', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await openNutrition(page);
+  await withGoalAndWeight(page);
+  await page.reload();
+  const m = await openManage(page);
+  await m.locator('#nb-manage-goal-edit').click();
+  await expect(page.locator('#bw-chart')).toBeInViewport();
+  await page.evaluate(() => { localStorage.setItem('ironlog:config/main', '{}'); }); // no goal: the targets say how to set one
+  await page.reload();
+  await openNutrition(page);
+  const m2 = await openManage(page);
+  await m2.getByRole('button', { name: /^(Set a goal weight|Change goal weight)$/ }).click();
   await expect(page.locator('#bw-chart')).toBeInViewport();
 });
 

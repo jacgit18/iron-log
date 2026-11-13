@@ -2,6 +2,7 @@ import type { BodyEntry, Cfg, Logs, MuscleKey, PhaseKey, WeightChange as Change 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { motionOK } from '../../lib/motion.js';
+import { scrollWhenSettled } from '../../lib/scrollSettle.js';
 import { takeProgressJump } from '../../lib/progressJump.js';
 import { isSkipMark } from '../../lib/skipMark.js';
 import { useToday } from '../../store/useToday.js';
@@ -263,12 +264,8 @@ function BodyChart() {
   useEffect(() => {
     if (takeProgressJump() !== 'body') return;
     // The sections above grow as history and charts draw (OnePage does the same on a wide screen), so scroll again once they have, unless the reader has already moved.
-    const go = () => document.getElementById('bw-chart')?.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
-    let moved = false; const stop = () => { moved = true; };
-    for (const e of ['wheel', 'touchstart', 'keydown']) window.addEventListener(e, stop, { once: true, passive: true });
-    requestAnimationFrame(go);
-    // No cleanup on purpose: StrictMode runs this effect twice in development and the second run finds the request already read; a timer firing after Progress closed finds no element and does nothing.
-    window.setTimeout(() => { for (const e of ['wheel', 'touchstart', 'keydown']) window.removeEventListener(e, stop); if (!moved) go(); }, 700);
+    // Not cancelled on purpose: StrictMode runs this effect twice in development and the second run finds the request already read; a second scroll after Progress closed finds no element and does nothing.
+    scrollWhenSettled(() => document.getElementById('bw-chart')?.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' }));
   }, []);
   // The Removed notice sits right after the heading in both layouts, so deleting the last weigh-in keeps it (and its Undo).
   if (!L.length) return <section className="panel tchart" id="bw-chart"><h2>Body weight</h2><RemovedNotice scope="body" /><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;

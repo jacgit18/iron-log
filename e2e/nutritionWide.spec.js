@@ -90,7 +90,7 @@ test('Manage opens the supplement editor and library in a sheet, and Done closes
   await expect(page.locator('#sched-h')).toHaveCount(0);
 });
 
-test('the Manage sheet (daily targets, weight and goal, water) has no accessibility violations', async ({ page }) => {
+test('the Manage sheet (daily targets and goal, water) has no accessibility violations', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await open(page);
   await openManage(page);
