@@ -293,35 +293,43 @@ test('a sheet adds one Back step and Back closes it; the page keeps its address'
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 375, height: 800 } });
 
-  test('one day with a stepper: Next crosses into next week and stops at the end; no sideways scroll', async ({ page }) => {
+  test('one day with joined day tabs: this week goes to today, other weeks to their first day; the week arrows stop at the ends; no sideways scroll', async ({ page }) => {
     await openNutrition(page);
     await expect(page.locator('.nb-col')).toHaveCount(1);
-    const step = page.getByRole('group', { name: 'Day stepper' });
-    const pick = step.getByRole('combobox', { name: 'Day to show' });
-    await expect(pick).toHaveValue(TODAY);
-    expect(await pick.locator('optgroup').evaluateAll(g => g.map(x => x.label))).toEqual(['Last week', 'This week', 'Next week']);
-    for (let i = 0; i < 7; i++) await step.getByRole('button', { name: 'Next day' }).click();
-    await expect(pick).toHaveValue('2026-10-01');
+    const tabs = page.locator('.wdc-tabs [role="tab"]');
+    await expect(page.locator('.nb-stepper, .nb-step')).toHaveCount(0); // the dropdown stepper is gone on a phone
+    await expect(tabs).toHaveCount(7);
+    await expect(tabs.nth(4)).toHaveAttribute('aria-selected', 'true'); // Thursday, today
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', TODAY);
+    await tabs.nth(5).click();
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-09-25');
+    await page.getByRole('button', { name: 'Next week' }).click();
     await expect(page.locator('.nb-weekname')).toHaveText('Next week');
-    for (let i = 0; i < 2; i++) await step.getByRole('button', { name: 'Next day' }).click(); // a disabled button cannot be clicked, so stop at the last day
-    await expect(pick).toHaveValue('2026-10-03'); // the Saturday that ends next week
-    await expect(step.getByRole('button', { name: 'Next day' })).toHaveAttribute('aria-disabled', 'true');
-    for (let i = 0; i < 20; i++) await step.getByRole('button', { name: 'Previous day' }).click(); // Oct 3 back to Sep 13
-    await expect(pick).toHaveValue('2026-09-13'); // the Sunday that starts last week
-    await expect(step.getByRole('button', { name: 'Previous day' })).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-09-27'); // its first day
+    await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('button', { name: 'Next week' })).toHaveAttribute('aria-disabled', 'true');
+    await tabs.nth(6).click();
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-10-03'); // the Saturday that ends next week
+    await page.getByRole('button', { name: 'Previous week' }).click();
+    await page.getByRole('button', { name: 'Previous week' }).click();
+    await expect(page.locator('.nb-weekname')).toHaveText('Last week');
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-09-13'); // the Sunday that starts last week
+    await expect(page.getByRole('button', { name: 'Previous week' })).toHaveAttribute('aria-disabled', 'true');
+    await page.getByRole('button', { name: 'This week' }).click();
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', TODAY);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
 
-  test('the toolbar follows the stepper and every button is at least 44 px', async ({ page }) => {
+  test('the toolbar follows the day tabs and every button is at least 44 px', async ({ page }) => {
     await openNutrition(page);
-    await page.getByRole('group', { name: 'Day stepper' }).getByRole('button', { name: 'Next day' }).click();
+    await page.locator('.wdc-tabs [role="tab"]').nth(5).click();
     await expect(page.locator('.nb-target')).toHaveText('Adding to Fri 25');
-    const small = await page.locator('.nb-toolbar .btn, .nb-step .btn, .nb-weeksw button, .nb-hydration button, .nb-tick').evaluateAll(els => els.filter(e => e.offsetParent).map(e => ({ n: e.textContent.trim(), h: e.getBoundingClientRect().height })).filter(x => x.h < 43.5));
+    const small = await page.locator('.nb-toolbar .btn, .wdc-tabs [role="tab"], .nb-weeksw button, .nb-hydration button, .nb-tick').evaluateAll(els => els.filter(e => e.offsetParent).map(e => ({ n: e.textContent.trim(), h: e.getBoundingClientRect().height })).filter(x => x.h < 43.5));
     expect(small).toEqual([]);
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: Manage is a text link under the day stepper, the week switcher has its row, Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: Manage is a text link at the right end of its row under the add-food buttons, the week switcher has its row, Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
@@ -340,18 +348,16 @@ test.describe('on a phone', () => {
       expect(new Set(big.map(b => b.y)).size).toBe(1);
       expect(big[3].x).toBeGreaterThan(big[2].x);
       await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
-      expect(await page.locator('.nb-steppick').evaluate(e => getComputedStyle(e).textAlignLast)).toBe('center');
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     });
   }
 
   test('on a day ahead Add food shows with Recipes and Saved meals; on last week it logs like today', async ({ page }) => {
     await openNutrition(page);
-    const step = page.getByRole('group', { name: 'Day stepper' });
-    await step.getByRole('button', { name: 'Next day' }).click();
+    await page.locator('.wdc-tabs [role="tab"]').nth(5).click();
     await expect(page.locator('#nb-add')).toBeVisible();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Recipes', 'Saved meals', 'Add food']);
-    await step.getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
+    await page.getByRole('button', { name: 'Previous week' }).click();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan and log', 'Quick add', 'One-off food', 'Add food']);
     await expect(page.getByText('Last week\'s food cannot be changed')).toHaveCount(0);
   });

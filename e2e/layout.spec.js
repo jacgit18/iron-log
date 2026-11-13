@@ -55,7 +55,7 @@ test('short landscape phone (667x375): the tab bar is a left rail, so a running 
   // Everything above the timer bar is board: at least 250px of the 375px, and the bar does not sit under the rail.
   expect(t.y).toBeGreaterThanOrEqual(250);
   expect(t.x).toBeGreaterThanOrEqual(tabs.width - 1);
-  const day = await box(page.locator('.daytabs'));
+  const day = await box(page.locator('.wdc-tabs'));
   expect(day.height).toBeLessThanOrEqual(64);
 });
 

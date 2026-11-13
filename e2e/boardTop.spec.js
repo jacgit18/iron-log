@@ -12,14 +12,14 @@ test('on a phone the pickers are in a sheet behind the filter icon, and the day 
   await phone(page);
   const icon = page.getByRole('button', { name: /^Sort and filter/ });
   await expect(page.getByLabel('Sort by muscle')).toHaveCount(0);
-  const before = await page.locator('.daytabs').boundingBox();
+  const before = await page.locator('.wdc-tabs').boundingBox();
   await icon.click();
   const dialog = page.getByRole('dialog', { name: 'Sort & filter' });
   await expect(dialog.getByLabel('Sort by muscle')).toBeVisible();
   await expect(dialog.getByLabel('Equipment')).toBeVisible();
   await dialog.getByRole('button', { name: 'Show cards' }).click();
   await expect(dialog).toBeHidden();
-  expect((await page.locator('.daytabs').boundingBox()).y).toBe(before.y);
+  expect((await page.locator('.wdc-tabs').boundingBox()).y).toBe(before.y);
 });
 
 test('a filter in use shows a count and a summary line, and Clear still works', async ({ page }) => {
@@ -38,7 +38,7 @@ test('a filter in use shows a count and a summary line, and Clear still works', 
 
 test('the day tabs are on the first phone screen', async ({ page }) => {
   await phone(page);
-  const box = await page.locator('.daytabs').boundingBox();
+  const box = await page.locator('.wdc-tabs').boundingBox();
   expect(box.y + box.height).toBeLessThan(812);
 });
 
