@@ -184,8 +184,10 @@ export function createTransport(options: TransportOptions) {
   }
 
   // Erasing the account's data, or deleting the account (Phase F). Never retried on its own: the person asked once, and sees the answer.
-  async function accountAction(path: '/api/account/erase-data' | '/api/account/delete', word: 'ERASE' | 'DELETE'): Promise<AccountActionOutcome> {
-    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: word }) },
+  async function accountAction(path: '/api/account/erase-data' | '/api/account/delete', word: 'ERASE' | 'DELETE', expectedUser?: string): Promise<AccountActionOutcome> {
+    // `expectedUser` is the account this page was opened as: it overrides the header of whoever the page last verified, so a page that was
+    // handed over to another account (an empty device does that on wake) still cannot erase or delete the account the browser moved to.
+    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json', ...(expectedUser ? { 'x-expected-user': expectedUser } : {}) }, body: JSON.stringify({ confirm: word }) },
       status => status >= 300 && pauseFor(status, null) === null); // a success needs no body: do not turn an erase that happened into a timeout
     if (isPause(res)) return res;
     const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
@@ -195,8 +197,8 @@ export function createTransport(options: TransportOptions) {
     if (isAccountRefusal(res.status, answer)) return accountPause(); // this page is for another account: nothing was erased or deleted
     return { ok: false, class: 'refused', status: res.status, message: typeof answer?.error === 'string' ? answer.error : `status ${res.status}` };
   }
-  const eraseData = () => accountAction('/api/account/erase-data', 'ERASE');
-  const deleteAccount = () => accountAction('/api/account/delete', 'DELETE');
+  const eraseData = (expectedUser?: string) => accountAction('/api/account/erase-data', 'ERASE', expectedUser);
+  const deleteAccount = (expectedUser?: string) => accountAction('/api/account/delete', 'DELETE', expectedUser);
 
   return { command, pull, importLegacy, eraseData, deleteAccount };
 }
