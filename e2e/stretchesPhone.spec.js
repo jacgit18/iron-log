@@ -31,7 +31,7 @@ test('Skip day is in a floating menu under the day header ⋯ at the right end; 
   const dots = col.locator('.daymore');
   const item = col.locator('.daypop button');
   await expect(item).toBeHidden();
-  await expect(col.locator('.addrow')).toBeHidden(); // no extra row on a phone
+  await expect(col.locator('.addrow')).toHaveCount(0); // no extra row on a phone: only the menu's Skip day is rendered
   const vw = page.viewportSize().width;
   const box = await dots.boundingBox();
   expect(box.x + box.width, '⋯ sits at the right end of the header').toBeGreaterThan(vw - 30);

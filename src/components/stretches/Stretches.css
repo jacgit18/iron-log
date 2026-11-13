@@ -52,9 +52,6 @@
 .strroot .warmrow {
   min-height: 44px;
 }
-.strroot .daymenu {
-  display: none;
-}
 @media (max-width:700px) {
   .strroot .daymenu {
     display: block;
@@ -88,9 +85,6 @@
   .strroot .daypop .btn {
     min-height: 44px;
     white-space: nowrap;
-  }
-  .strroot .addrow {
-    display: none;
   }
   .strroot .colhead .count {
     margin-right: 0;
