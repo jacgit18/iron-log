@@ -168,9 +168,10 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
       <ProgramSwitch />
     </>
   );
+  // Two notices explain an empty or wrong board, so they stay above the filter row on a phone; the tip and the leftovers go under Body weight there.
+  const missingNotice = !fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>;
   const notices = (
     <>
-      {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
           <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export all data in Settings to keep a copy.'}</span>
@@ -197,9 +198,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           </div>
         </div>
       )}
-      {slots.length === 0 && <FirstRun />}
     </>
   );
+  const firstRun = slots.length === 0 && <FirstRun />;
   // Only the phone card draws them. The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
   const tabs: DayTab[] = wide ? [] : DAYS.map(d => ({ ...countTab(String(d), `D${d}`, `Day ${d}`, tally(cols[d], week), rest.includes(d) ? 'rest' : undefined), swapped: !!swapFlash?.includes(d) }));
 
@@ -246,11 +247,15 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
       {wide ? (
         <>
           <div className="weekbar">{weekRow}</div>
+          {missingNotice}
           {notices}
+          {firstRun}
           {filterbar}
         </>
       ) : (
         <>
+          {missingNotice}
+          {firstRun}
           {filterbar}
           <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
           <BodyWeightRow draft={bodyWeight} />
