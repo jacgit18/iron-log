@@ -15,11 +15,12 @@ for (const w of [320, 375, 430]) {
       return {
         prev: r('.weekbar [aria-label="Previous week"]'), next: r('.weekbar [aria-label="Next week"]'), h2: h,
         lines: Math.round(h.height / parseFloat(getComputedStyle(document.querySelector('.weekbar .weeknav h2')).lineHeight)),
-        navBottom: r('.weekbar .weeknav').bottom, navRight: r('.weekbar .weeknav').right,
+        navRight: r('.weekbar .weeknav').right,
       };
     });
     expect(Math.abs(m.prev.top - m.next.top), 'arrows share one row').toBeLessThan(12);
     expect(m.lines, 'the date is one line').toBe(1);
+    expect(m.navRight, 'the nav stays inside the viewport').toBeLessThanOrEqual(w);
   });
 }
 
@@ -41,9 +42,9 @@ test('phone: the Stretches day header has no date line and no count, and a skipp
 test('phone: the Board week bar is a grid, the Stretches week bar is not', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  const display = () => page.evaluate(() => getComputedStyle(document.querySelector('.weekbar')).display);
-  expect(await display()).toBe('grid');
+  const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
+  expect(await display('.boardroot > .weekbar')).toBe('grid');
   await page.click('#board-stretches');
-  await expect(page.locator('.strroot .weekbar')).toBeVisible();
-  expect(await display()).not.toBe('grid');
+  await expect(page.locator('.strroot > .weekbar')).toBeVisible();
+  expect(await display('.strroot > .weekbar')).not.toBe('grid');
 });
