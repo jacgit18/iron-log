@@ -75,7 +75,7 @@ export default function NutritionBoard() {
       {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
     </div>
   );
-  const joined = phone || shown !== 7; // the day tabs are in the card wherever there are fewer than seven columns (brief week-day-joined-tabs); at 1440 px the seven columns are the day control, so the card has the week row and the add-food toolbar only (brief nutrition-desktop-one-card)
+  const joined = phone || shown !== 7; // the day tabs are in the card wherever there are fewer than seven columns (brief week-day-joined-tabs); at 1440 px the seven columns are the day control, so the card has the week row and the add-food toolbar only (brief week-day-joined-tabs)
   const tabs = joined ? (phone ? nutritionTabs(today, offset) : shadeTabs(nutritionTabs(today, offset), shownDays)) : [];
   const pickDay = (d: string) => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); };
   const dates = <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>;

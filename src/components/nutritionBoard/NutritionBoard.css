@@ -10,15 +10,6 @@
 .nb-head h2 {
   margin: 0;
 }
-.nb-headbtns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-  margin-left: auto;
-}
-.nb-headbtns .btn {
-  min-height: 44px;
-}
 .nb-manage {
   display: grid;
   gap: var(--sp-12);
@@ -307,7 +298,7 @@
   margin-inline-start: auto;
   min-height: 44px;
 }
-/* From 700 px the one card also holds the week's dates (row 1, after the switcher) and the add-food toolbar (the last row, under a hairline): "Adding to ..." at the left, the buttons at the right end with Add food last, wrapping onto a second line inside the card when the width runs out (brief nutrition-desktop-one-card). The phone keeps both outside the card. */
+/* From 700 px the one card also holds the week's dates (row 1, after the switcher) and the add-food toolbar (the last row, under a hairline): "Adding to ..." at the left, the buttons at the right end with Add food last, wrapping onto a second line inside the card when the width runs out (brief week-day-joined-tabs). The phone keeps both outside the card. */
 .wdc-week .nb-weeklab {
   flex: 1 1 auto;
   min-width: 0;
@@ -330,7 +321,18 @@
 }
 /* The pinned card is taller with the toolbar: anchors and focus scroll to below it. */
 html:has(.wdc-foot) {
-  scroll-padding-top: calc(260px + env(safe-area-inset-top, 0px));
+  /* --wdc-h is the card's measured height (WeekDayCard.tsx), so the offset follows wrapping and text size */
+  scroll-padding-top: calc(var(--wdc-h, 260px) + var(--sp-16) + env(safe-area-inset-top, 0px));
+}
+/* On a short window (a landscape tablet) the taller card would cover a large share of the screen, so it scrolls with the page. */
+@media (max-height: 599px) {
+  .wdc:has(.wdc-foot) {
+    position: static;
+    box-shadow: none;
+  }
+  html:has(.wdc-foot) {
+    scroll-padding-top: 0;
+  }
 }
 @media (max-width: 699px) {
   /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */
