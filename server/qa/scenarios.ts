@@ -3631,7 +3631,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Make the window 768 px wide, then 1280 px, then 1440 px.',
     ],
     expected: [
-      'One card holds the week arrows, This week or its dates, Manage at the right end, and Sun to Sat under them; there is no day dropdown and no Previous day or Next day buttons. Three day tabs are lightly shaded and match the three columns shown.',
+      'One card holds the week arrows, This week or its dates, Manage at the right end, and Sun to Sat under them; there is no day dropdown and no Previous day or Next day buttons. Three day tabs are lightly shaded, with a bar on their top edge, and match the three columns shown (a screen reader says "shown below").',
       'A tab outside the shade moves the columns to start at it (held inside the week) and the shade follows; a shaded tab keeps the columns where they are and moves the underline. The toolbar says "Adding to" the underlined day.',
       'At 768 px two tabs are shaded, at 1280 px three. At 1440 px the card is gone: the week switcher and Manage are in the header above seven columns, as before.',
     ],

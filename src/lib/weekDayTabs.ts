@@ -50,5 +50,5 @@ export function countTab(id: string, head: string, dayName: string, t: { done: n
 
 /** The tabs with the days in `shown` marked, so the card says which columns are on screen. An empty `shown` marks none. */
 export function shadeTabs(tabs: DayTab[], shown: readonly string[]): DayTab[] {
-  return tabs.map(t => (shown.includes(t.id) ? { ...t, shaded: true } : t));
+  return tabs.map(t => (shown.includes(t.id) ? { ...t, shaded: true, label: `${t.label}, shown below` } : t)); // the label says it too: a tint alone is not a cue
 }

@@ -55,6 +55,9 @@ describe('shadeTabs', () => {
     const out = shadeTabs(tabs, [tabs[4]!.id, tabs[5]!.id, tabs[6]!.id]);
     expect(out.map(t => !!t.shaded)).toEqual([false, false, false, false, true, true, true]);
     expect(out[4]).toMatchObject({ id: tabs[4]!.id, head: tabs[4]!.head, today: true });
+    expect(out[4]!.label).toBe(`${tabs[4]!.label}, shown below`);
+    expect(out[4]!.label.startsWith(`${tabs[4]!.head} ${tabs[4]!.sub}`)).toBe(true);
+    expect(out[0]!.label).toBe(tabs[0]!.label);
   });
   it('marks none for an empty window and does not change the input', () => {
     expect(shadeTabs(tabs, []).some(t => t.shaded)).toBe(false);

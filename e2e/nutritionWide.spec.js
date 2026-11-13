@@ -29,8 +29,8 @@ for (const w of [1440, 1920, 2560]) {
   });
 }
 
-for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 3], [1439, 3]]) {
-  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and ${'the joined week and day card'}`, async ({ page }) => {
+for (const [w, n] of [[375, 1], [700, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 3], [1439, 3]]) {
+  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and the joined week and day card`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);
     await expect(page.locator('.nb-col')).toHaveCount(n);
@@ -41,6 +41,7 @@ for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 
       await expect(page.locator('#nb-manage')).toBeVisible();
       const [week, manage] = await Promise.all([page.locator('.wdc-week').boundingBox(), page.locator('#nb-manage').boundingBox()]);
       expect(Math.abs(manage.x + manage.width - (week.x + week.width))).toBeLessThan(16); // Manage stays at the right end of the week row
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0); // and nothing scrolls sideways
     }
     const cols = await page.evaluate(() => [...document.querySelectorAll('.nb-col')].map(c => { const b = c.getBoundingClientRect(); return { x: b.x, y: b.y, right: b.right }; }));
     expect(cols[0].x).toBeGreaterThanOrEqual(0);
