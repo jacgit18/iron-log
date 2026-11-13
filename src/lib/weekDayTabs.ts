@@ -17,6 +17,8 @@ export interface DayTab {
   today?: boolean;
   /** A day that just swapped on the Board keeps its flash on the tab. */
   swapped?: boolean;
+  /** Nutrition on a tablet or small desktop: the day is one of the columns on screen (lightly shaded). */
+  shaded?: boolean;
 }
 
 /** The tab a key moves to (Arrow keys wrap, Home and End jump), or null for any other key. */
@@ -44,4 +46,9 @@ export function countTab(id: string, head: string, dayName: string, t: { done: n
   const sub = state === 'rest' ? 'Rest' : state === 'skipped' ? 'Skip' : t.full ? '\u2713' : `${t.done}/${t.total}`;
   const status = state === 'rest' ? 'rest day' : state === 'skipped' ? 'skipped' : t.full ? 'all done' : `${t.done} of ${t.total} done`;
   return { id, head, sub, done: !!state || t.full, label: `${head} ${sub}: ${dayName}, ${status}` };
+}
+
+/** The tabs with the days in `shown` marked, so the card says which columns are on screen. An empty `shown` marks none. */
+export function shadeTabs(tabs: DayTab[], shown: readonly string[]): DayTab[] {
+  return tabs.map(t => (shown.includes(t.id) ? { ...t, shaded: true } : t));
 }

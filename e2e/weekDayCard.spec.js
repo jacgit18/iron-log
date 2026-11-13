@@ -76,7 +76,7 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
   expect(await pinnable(page)).toEqual({ position: 'sticky', blockers: [] });
 });
 
-test('above 700 px the Board, Stretches and Nutrition keep their own week bars and draw no card', async ({ page }) => {
+test('above 700 px the Board and Stretches keep their own week bars; Nutrition draws the card up to 1439 px and not from 1440 px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   await expect(page.locator('.boardroot > .weekbar')).toBeVisible();
@@ -84,6 +84,11 @@ test('above 700 px the Board, Stretches and Nutrition keep their own week bars a
   await page.click('#board-stretches');
   await expect(page.locator('.strroot > .weekbar')).toBeVisible();
   await expect(page.locator('.wdc')).toHaveCount(0);
+  await openNutrition(page);
+  await expect(page.locator('.wdc .wdc-tabs [role="tab"]')).toHaveCount(7);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('.wdc')).toHaveCount(0);
+  await expect(page.locator('.nb-weeksw')).toBeVisible();
 });
 
 test('phone: notices stay above the filter row and the card on the Board', async ({ page }) => {
