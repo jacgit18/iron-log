@@ -68,6 +68,7 @@ export type ScenarioFeature =
   | 'Week board'
   | 'Nutrition board'
   | 'Supplement portions'
+  | 'Joined week and day tabs'
   | 'Vitamin and mineral totals'
   | 'Vitamin and mineral day line'
   | 'Food vitamins and minerals'

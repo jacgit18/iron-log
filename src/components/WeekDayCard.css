@@ -9,6 +9,8 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
+  /* a halo in the page colour, so the cards scrolling under the pinned card do not show through its rounded corners */
+  box-shadow: 0 0 0 var(--sp-6) var(--bg);
   overflow: hidden;
 }
 .wdc-week {
