@@ -56,3 +56,26 @@ test('on a wide screen the day tabs are one row under the header card, starting 
   const rows = await page.locator('.dtabs button').evaluateAll(bs => new Set(bs.map(b => Math.round(b.getBoundingClientRect().top))).size);
   expect(rows).toBe(1);
 });
+
+// The desktop day tabs never show a scrollbar: overflow-x:auto made the strip a vertical scroller too, and the tabs' -1px bottom margin over its border then overflowed it by 1px (b-program-days-scrollbar). A phone has no tab strip (stepper only).
+for (const w of [1024, 1280, 1440, 1920]) {
+  test(`at ${w}px the day tabs have no scrollbar and stay on one row`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 900 });
+    await page.click('#tab-program');
+    const m = await page.locator('.dtabs').evaluate(el => {
+      const cs = getComputedStyle(el);
+      return { ox: cs.overflowX, oy: cs.overflowY, bar: el.offsetWidth - el.clientWidth, rows: new Set([...el.children].map(b => Math.round(b.getBoundingClientRect().top))).size };
+    });
+    expect(['auto', 'scroll']).not.toContain(m.ox);
+    expect(['auto', 'scroll']).not.toContain(m.oy);
+    expect(m.bar).toBe(0);
+    expect(m.rows).toBe(1);
+  });
+}
+
+test('on a phone there is no day tab strip, only the stepper', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.click('#tab-program');
+  await expect(page.locator('.dtabs')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Day stepper' })).toBeVisible();
+});

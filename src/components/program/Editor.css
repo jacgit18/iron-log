@@ -326,11 +326,11 @@
     display: none;
   }
 }
-/* Desktop: one row of day tabs with each day's exercise count replaces the stepper and the Day buttons; a phone keeps the stepper (brief program-tab-desktop-layout). */
+/* Desktop: one row of day tabs with each day's exercise count replaces the stepper and the Day buttons; a phone keeps the stepper (brief program-tab-desktop-layout). The strip wraps instead of scrolling: overflow-x:auto also made it a vertical scroller, and the tabs' -1px bottom margin over its border then showed a scrollbar (owner, 2026-11-13). */
 .dtabs {
   display: flex;
   flex: 1 0 100%;
-  overflow-x: auto;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
 }
 .dtabs button {
