@@ -200,7 +200,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
       {slots.length === 0 && <FirstRun />}
     </>
   );
-  const tabs: DayTab[] = DAYS.map(d => {
+  const tabs: DayTab[] = wide ? [] : DAYS.map(d => { // only the phone card draws them
     const t = tally(cols[d], week); const isRest = rest.includes(d);
     const sub = isRest ? 'Rest' : t.full ? '✓' : `${t.done}/${t.total}`;
     // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
@@ -208,41 +208,41 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   });
 
   const filterbar = (
-  <div className="filterbar">
-    {wide && (
-      <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
-        <div className="filterfields" id="filter-fields">
-          <label className="field">Sort by muscle
-            <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
-              <option value="">Program order</option>
-              {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-            </select>
-          </label>
-          <label className="field">Equipment
-            <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
-              <option value="">All equipment</option>
-              {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-          </label>
-          {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
+    <div className="filterbar">
+      {wide && (
+        <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
+          <div className="filterfields" id="filter-fields">
+            <label className="field">Sort by muscle
+              <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
+                <option value="">Program order</option>
+                {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+              </select>
+            </label>
+            <label className="field">Equipment
+              <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
+                <option value="">All equipment</option>
+                {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </label>
+            {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
+          </div>
         </div>
-      </div>
-    )}
-    <InjurySwitch />
-    {!wide && (
-      <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
-        <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
-      </button>
-    )}
-    {!wide && boardFilterCount(filter) > 0 && (
-      <div className="filtersummary" role="status">
-        <span>{boardFilterSummary(muscleName, eqLabel)}</span>
-        <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
-      </div>
-    )}
-    {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
-    {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
-  </div>
+      )}
+      <InjurySwitch />
+      {!wide && (
+        <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
+          <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
+        </button>
+      )}
+      {!wide && boardFilterCount(filter) > 0 && (
+        <div className="filtersummary" role="status">
+          <span>{boardFilterSummary(muscleName, eqLabel)}</span>
+          <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
+        </div>
+      )}
+      {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
+      {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
+    </div>
   );
 
   return (

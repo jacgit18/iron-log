@@ -79,7 +79,6 @@ export default function NutritionBoard() {
   const pickDay = (d: string) => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); };
   return (
     <section className="wb nb" aria-labelledby="nb-h">
-      {phone && <WeekDayCard tabs={nutritionTabs(today, offset)} selected={day} onPick={pickDay} idPrefix="nbdaytab-">{weekSwitch}</WeekDayCard>}
       <div className="nb-head">
         <h2 id="nb-h" className="cond vh">Nutrition</h2>
         {!phone && weekSwitch}
@@ -89,6 +88,7 @@ export default function NutritionBoard() {
           </div>
         )}
       </div>
+      {phone && <WeekDayCard tabs={nutritionTabs(today, offset)} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controlsId="nb-day-panel">{weekSwitch}</WeekDayCard>}
       <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
       <div className="nb-toolbar" role="group" aria-label="Add food">
         <span className="nb-target nb-target-quiet">{target}</span>
@@ -111,7 +111,7 @@ export default function NutritionBoard() {
               <button type="button" className="nb-link" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
             </div>
           )}
-          <div className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
+          <div id="nb-day-panel" className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}
     </section>
