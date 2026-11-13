@@ -1054,7 +1054,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera (retired 2026-11-13: needs a real camera, which the QA pane cannot supply; the miss ladder is covered by e2e/barcodeMissLadder.spec.js)', persona: 'diet-fresh', brief: 'barcode-scan', retired: true, edge: true,
     steps: [
       'Open + New, then Add a food by hand, press Scan to fill form and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan to fill form again, and press Photo instead with a saved photo of a barcode (or of a table).',
@@ -1546,7 +1546,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program tab clarity ----
   {
-    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs', persona: 'superset-builder', brief: 'program-tab-clarity',
+    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs (retired 2026-11-13: needs a first visit with cleared site data, which cannot be set up on a shared QA browser; covered by e2e/programTabClarity.spec.js)', persona: 'superset-builder', brief: 'program-tab-clarity', retired: true,
     steps: [
       'On a computer open the Program tab for the first time on this browser (clear the site data first if you have been here).',
       'Read the guide card at the top, then the section tabs (Programs, Exercises, Stretches, Saved, Compare) and the card under them.',
@@ -2129,7 +2129,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget',
+    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts (retired 2026-11-13: the Groceries switch is now Shopping, Bought and Inventory, covered by S-122 and S-138)', persona: 'grocery-shopper', brief: 'grocery-budget', retired: true,
     steps: [
       'Open Groceries on a computer and look at the Shopping and Bought buttons.',
     ],
