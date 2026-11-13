@@ -2,8 +2,8 @@ import type { BodyEntry, BodyGoal } from '../types.ts';
 import { fmtShort, parseDate } from '../shared/dates.js';
 import { bwSorted, fmtLb, goalStatus } from './body.js';
 
-// What the Manage sheet needs from the body data (brief targets-into-manage): the inputs the calorie and protein recommendation reads, and the two read-only lines.
-// Weight is typed on the Board and the goal is edited in Progress, so Manage only shows them.
+// What the Manage sheet needs from the body data (brief targets-into-manage): the inputs the calorie and protein recommendation reads, and the read-only goal line.
+// The goal is edited in Progress, so Manage only shows it.
 export interface RecommendInputs { latest: number | null; goalLb: number | null; weeksLeft: number | null }
 
 export function recommendInputs(goal: BodyGoal | null | undefined, body: BodyEntry[], today: Date): RecommendInputs {
@@ -13,11 +13,6 @@ export function recommendInputs(goal: BodyGoal | null | undefined, body: BodyEnt
   const g = goalStatus(goal, body, today);
   const weeksLeft = g && 'weeksLeft' in g && typeof g.weeksLeft === 'number' ? g.weeksLeft : null; // weeks to the goal date, when one is set
   return { latest, goalLb, weeksLeft };
-}
-
-export function weightLine(body: BodyEntry[]): string {
-  const weights = bwSorted(body);
-  return weights.length ? `Current weight: ${fmtLb(weights[weights.length - 1]!.w)} lb` : 'No weigh-in yet';
 }
 
 export function goalLine(goal: BodyGoal | null | undefined): string {

@@ -9,7 +9,6 @@ test('Manage holds the targets and the water base, shows weight and goal read-on
   await openNutrition(page);
   await expect(page.locator('#diet-h')).toHaveCount(0); // no Diet panel under the board
   const s = await openManage(page);
-  await expect(s.locator('#nb-manage-weight')).toContainText('No weigh-in yet');
   await expect(s.locator('#nb-manage-goal')).toContainText('No goal set');
   await expect(s.locator('#nbt-weight, #nbt-goal, #nbt-goal-by')).toHaveCount(0); // no weight or goal form: weight is typed on the Board, the goal in Progress
   await s.getByRole('button', { name: 'Set target' }).click();
@@ -30,7 +29,7 @@ test('Manage holds the targets and the water base, shows weight and goal read-on
   await expect(again).toContainText('100 oz');
 });
 
-test('Manage shows the latest weigh-in and the goal from the data, and "Edit in Progress" opens Progress > Trends', async ({ page }) => {
+test('Manage shows the latest weigh-in and the goal from the data, and "Edit in Progress" opens the Body weight chart in Progress', async ({ page }) => {
   await openNutrition(page);
   await page.evaluate(() => {
     localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: 190, by: '2027-03-01' } }));
@@ -38,12 +37,12 @@ test('Manage shows the latest weigh-in and the goal from the data, and "Edit in 
   });
   await page.reload();
   const m = await openManage(page);
-  await expect(m.locator('#nb-manage-weight')).toContainText('Current weight: 180 lb');
+  await expect(m.locator('#nb-manage-weight')).toHaveCount(0);
   await expect(m.locator('#nb-manage-goal')).toContainText('Goal: 190 lb by');
-  await expect(m.locator('#nb-manage-weight-edit')).toHaveText('Weigh in on the Board');
   await m.locator('#nb-manage-goal-edit').click();
   await expect(sheet(page)).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => location.hash)).toContain('progress/trends');
+  await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/progress$/);
+  await expect(page.locator('#bw-chart')).toBeInViewport();
 });
 
 test('the drink sheet sends the base goal to Manage, and the water base is there', async ({ page }) => {
