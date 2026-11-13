@@ -307,6 +307,31 @@
   margin-inline-start: auto;
   min-height: 44px;
 }
+/* From 700 px the one card also holds the week's dates (row 1, after the switcher) and the add-food toolbar (the last row, under a hairline): "Adding to ..." at the left, the buttons at the right end with Add food last, wrapping onto a second line inside the card when the width runs out (brief nutrition-desktop-one-card). The phone keeps both outside the card. */
+.wdc-week .nb-weeklab {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.wdc-foot {
+  padding: var(--sp-6) var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+.wdc-foot .nb-toolbar {
+  justify-content: space-between;
+  margin: 0;
+}
+.wdc-foot .nb-tbtns {
+  justify-content: flex-end;
+  margin-inline-start: auto;
+}
+.wdc-foot .nb-tbtns .btn {
+  min-height: 44px;
+}
+/* The pinned card is taller with the toolbar: anchors and focus scroll to below it. */
+html:has(.wdc-foot) {
+  scroll-padding-top: calc(176px + env(safe-area-inset-top, 0px));
+}
 @media (max-width: 699px) {
   /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */
   .nb-head {

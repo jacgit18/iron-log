@@ -181,7 +181,7 @@ test('the Nutrition screen is the week board with Manage in its header; Suppleme
   await expect(todayCol(page).getByText('Hydration', { exact: true })).toBeVisible();
   await expect(page.locator('#diet-h')).toHaveCount(0); // the Targets block is no longer under the board
   expect(await y(page.locator('#nb-manage'))).toBeLessThan(await y(todayCol(page)));
-  await expect(page.locator('.weekbar')).toHaveCount(0);
+  await expect(page.locator('.weekbar:not(.wdc-week)')).toHaveCount(0); // the week row is the card's (WeekDayCard), no second date bar
   await openManage(page);
   await expect(diet(page).getByRole('button', { name: /Day before|Day after|Previous day|Next day/ })).toHaveCount(0); // no day selector inside Manage
 });

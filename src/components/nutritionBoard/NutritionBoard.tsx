@@ -25,7 +25,7 @@ import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
 
-// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back; under 1440 px it is the week row of the joined week and day card, with the seven day tabs under it and the days drawn as columns shaded), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day.
+// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back) in one joined card: the week row with the dates and Manage, under 1440 px the seven day tabs (the days drawn as columns shaded), and from 700 px the add-food toolbar naming the day it adds to (on a phone the toolbar is below the card), and day columns: seven from 1440 px, three from 1000, two from 768, else one day.
 // Each day holds six meters (calories, protein, carbs when there is a target or data, fat, supplements, water), its meals with the food eaten in them, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
@@ -75,35 +75,32 @@ export default function NutritionBoard() {
       {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
     </div>
   );
-  const joined = phone || shown !== 7; // the joined card holds the week row and the day tabs wherever there are fewer than seven columns (brief week-day-joined-tabs); at 1440 px the seven columns are the day control
+  const joined = phone || shown !== 7; // the day tabs are in the card wherever there are fewer than seven columns (brief week-day-joined-tabs); at 1440 px the seven columns are the day control, so the card has the week row and the add-food toolbar only (brief nutrition-desktop-one-card)
   const tabs = joined ? (phone ? nutritionTabs(today, offset) : shadeTabs(nutritionTabs(today, offset), shownDays)) : [];
   const pickDay = (d: string) => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); };
+  const dates = <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>;
+  const toolbar = (
+    <div className="nb-toolbar" role="group" aria-label="Add food">
+      <span className="nb-target nb-target-quiet">{target}</span>
+      <div className="nb-tbtns">
+        {!phone && foodEditable(day, today) && <ShoppingButton week={days} today={today} onMsg={setMsg} />}
+        {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
+        <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
+      </div>
+    </div>
+  );
   return (
     <section className="wb nb" aria-labelledby="nb-h">
       <div className="nb-head">
         <h2 id="nb-h" className="cond vh">Nutrition</h2>
-        {!joined && weekSwitch}
-        {!joined && (
-          <div className="nb-headbtns">
-            <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
-          </div>
-        )}
       </div>
-      {joined && (
-        <WeekDayCard tabs={tabs} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controls={() => 'nb-day-panel'}>
-          {weekSwitch}
-          {!phone && <button type="button" className="btn sm nb-cardmanage" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>}
-        </WeekDayCard>
-      )}
-      <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
-      <div className="nb-toolbar" role="group" aria-label="Add food">
-        <span className="nb-target nb-target-quiet">{target}</span>
-        <div className="nb-tbtns">
-          {!phone && foodEditable(day, today) && <ShoppingButton week={days} today={today} onMsg={setMsg} />}
-          {toolbarFlows(day, today).map(f => <button key={f} type="button" className="btn" onClick={() => (f === 'barcode' ? scan() : open(f))}>{ADD_FLOWS[f].label}</button>)}
-          <button type="button" className="btn primary" id="nb-add" onClick={() => open()}>Add food</button>
-        </div>
-      </div>
+      <WeekDayCard tabs={tabs} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controls={() => 'nb-day-panel'} footer={phone ? undefined : toolbar}>
+        {weekSwitch}
+        {!phone && dates}
+        {!phone && <button type="button" className="btn sm nb-cardmanage" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>}
+      </WeekDayCard>
+      {phone && dates}
+      {phone && toolbar}
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}</p>

@@ -76,7 +76,7 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
   expect(await pinnable(page)).toEqual({ position: 'sticky', blockers: [] });
 });
 
-test('above 700 px the Board and Stretches keep their own week bars; Nutrition draws the card up to 1439 px and not from 1440 px', async ({ page }) => {
+test('above 700 px the Board and Stretches keep their own week bars; Nutrition draws the card with day tabs up to 1439 px and without them from 1440 px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   await expect(page.locator('.boardroot > .weekbar')).toBeVisible();
@@ -87,8 +87,8 @@ test('above 700 px the Board and Stretches keep their own week bars; Nutrition d
   await openNutrition(page);
   await expect(page.locator('.wdc .wdc-tabs [role="tab"]')).toHaveCount(7);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator('.wdc')).toHaveCount(0);
-  await expect(page.locator('.nb-weeksw')).toBeVisible();
+  await expect(page.locator('.wdc .wdc-tabs')).toHaveCount(0); // the seven columns are the day control (brief nutrition-desktop-one-card: the card stays, without tabs)
+  await expect(page.locator('.wdc .nb-weeksw')).toBeVisible();
 });
 
 // The local-mode tip is the notice these two tests look at: the fixture hides it, so the test shows it again before the page loads.
