@@ -288,7 +288,7 @@ describe('reset (the seed, run in the app on QA)', () => {
       expect((await call(base, jar, 'POST', '/qa/personas/reset', { id })).status).toBe(200);
       expect(await counts(id)).toEqual(expected(id));
     }
-    expect(expected('meal-planner')).toMatchObject({ config: 1, recipes: 4 });
+    expect(expected('meal-planner')).toMatchObject({ config: 1, recipes: 5 });
     // Change it, then reset: the extra row is gone, the counts are a fresh seed's again.
     await sql`insert into list_items (user_id, seq, client_id, list, position, data) select id, 9999, 'extra', 'recipe', 99, '{"id":"extra","n":"Extra"}'::jsonb from users where auth_user_id = ${personaAuthId('recipe-collector')}`.execute(db);
     expect((await counts('recipe-collector')).recipes).toBe(31);

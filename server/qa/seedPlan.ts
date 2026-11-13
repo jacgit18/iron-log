@@ -12,14 +12,17 @@ export interface SeedGrocery { clientId: string; position: number; data: { id: s
 export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number; micro?: Record<string, number> } }
 export interface SeedSupplement { clientId: string; position: number; data: { id: string; n: string; slot: 'morning' | 'noon' | 'night'; dose?: string; serving?: { units: number; form: string }; nutrients?: { key: string; amount: number; unit: string }[]; ingredients?: { name: string; amount: number; unit: string }[]; portion?: number } }
 export interface SeedSupplementDay { day: string; taken: Record<string, true> }
-export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f: number; pairs?: string[]; counts?: string[]; micro?: Record<string, number> } }
+export interface SeedRecipe { clientId: string; position: number; data: { id: string; n: string; cat: string; ing: { n: string; amt: string }[]; steps: string[]; servings: number; minutes: number; kcal: number; p: number; c: number; f?: number; url?: string; pairs?: string[]; counts?: string[]; micro?: Record<string, number> } }
+export interface SeedStretch { clientId: string; position: number; data: { id: string; n: string; group: string; tier: 'primary' | 'secondary' | ''; url?: string } }
 export interface PersonaRows {
+  /** Stretches in the Stretches tab and the Stretch library (list 'stretch'). */
+  stretches: SeedStretch[];
   dietEntries: SeedDiet[];
   supplements: SeedSupplement[];
   supplementDays: SeedSupplementDay[];
   recipes: SeedRecipe[];
   /** The config row's document, or null when the account has no settings. */
-  config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string }>; ingredientLimits?: Record<string, { kind: 'target' | 'cap'; amount: number; unit: string }> } | null;
+  config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string; url?: string }>; ingredientLimits?: Record<string, { kind: 'target' | 'cap'; amount: number; unit: string }> } | null;
   logs: SeedLog[];
   body: SeedBody[];
   groceryItems: SeedGrocery[];
@@ -114,7 +117,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
   const dietEntries = buildDiet(persona, t);
   const recipes = buildRecipes(persona);
   const { supplements, supplementDays } = buildVitamins(persona, t);
-  return { logs, body, groceryItems, groceryStores, groceryGroups, dietEntries, supplements, supplementDays, recipes, config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
+  return { logs, body, groceryItems, groceryStores, groceryGroups, dietEntries, supplements, supplementDays, recipes, stretches: buildStretches(persona), config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
 }
 
 /** The diet log: `pastDays` full days, then today up to its share of the targets (the first foods in order, or every food scaled up when over). */
@@ -199,6 +202,17 @@ function buildVitamins(persona: Persona, today: Date): { supplements: SeedSupple
   return { supplements, supplementDays };
 }
 
+/** Brief qa-unblock: a recipe with calories, protein and carbs but no fat figure (S-191, the Fat bar's "n of m foods have it" line). It is not planned: the tester plans it. */
+const NO_FAT_RECIPE = { n: 'Black bean rice', ing: ['Black beans', 'Rice', 'Salsa'], kcal: 420, p: 16, c: 78 };
+/** Brief qa-unblock: the video links of the 'recipe-collector' persona (S-265, the Watch link on a recipe, a Board card, Stretches and the Stretch library). */
+const WATCH_URL = { recipe: 'https://www.youtube.com/watch?v=qa-watch-recipe', exercise: 'https://www.youtube.com/watch?v=qa-watch-exercise', stretch: 'https://www.youtube.com/watch?v=qa-watch-stretch' };
+
+function buildStretches(persona: Persona): SeedStretch[] {
+  if (!persona.data.watchLinks) return [];
+  const id = `qa-${persona.id}-stretch-1`;
+  return [{ clientId: id, position: 0, data: { id, n: 'Hamstring stretch', group: 'Legs', tier: 'primary', url: WATCH_URL.stretch } }];
+}
+
 function buildRecipes(persona: Persona): SeedRecipe[] {
   const rand = rng(hash(`${persona.id}:recipes`));
   const out: SeedRecipe[] = [];
@@ -213,6 +227,11 @@ function buildRecipes(persona: Persona): SeedRecipe[] {
       steps: ['Prep the ingredients.', 'Cook until done.', 'Serve warm.'], servings, minutes: 10 + Math.floor(rand() * 12) * 5,
       kcal: 250 + Math.floor(rand() * 40) * 10, p: 12 + Math.floor(rand() * 30), c: 20 + Math.floor(rand() * 50), f: 5 + Math.floor(rand() * 25),
     } });
+  }
+  if (persona.data.watchLinks && out[0]) out[0].data.url = WATCH_URL.recipe;
+  if (persona.data.noFatRecipe) {
+    const id = `qa-${persona.id}-nofat`;
+    out.push({ clientId: id, position: out.length, data: { id, n: NO_FAT_RECIPE.n, cat: 'protein', ing: NO_FAT_RECIPE.ing.map(n => ({ n, amt: '1 cup' })), steps: ['Prep the ingredients.', 'Cook until done.', 'Serve warm.'], servings: 2, minutes: 25, kcal: NO_FAT_RECIPE.kcal, p: NO_FAT_RECIPE.p, c: NO_FAT_RECIPE.c } });
   }
   if (persona.data.vitamins) {
     const r = VITAMIN_READY_MADE; const rid = `qa-${persona.id}-ready`;
@@ -249,13 +268,15 @@ function buildConfig(persona: Persona, today: Date, recipes: SeedRecipe[], exerc
   for (let day = 0; day < (spec.planDays ?? 0); day++) {
     const items: unknown[] = [];
     if (meals.length) items.push({ k: 'm', id: meals[day % meals.length]!.id });
-    const r = recipes[day % Math.max(1, recipes.length)];
+    const pool = recipes.filter(x => !x.clientId.endsWith('-nofat')); // the no-fat recipe is left unplanned for the tester to plan (S-191)
+    const r = pool[day % Math.max(1, pool.length)];
     if (r) items.push({ k: 'r', id: r.clientId, ...(day % 3 === 1 ? { x: 1.5 } : day % 3 === 2 ? { x: 2 } : {}) });
     plan[iso(addDays(today, day))] = items;
   }
   if (Object.keys(plan).length) diet.plan = plan;
-  const ex: Record<string, { n: string; eq?: string }> = {};
+  const ex: Record<string, { n: string; eq?: string; url?: string }> = {};
   if (spec.programs) for (const id of exerciseIds) { const b = BUILTIN_EXERCISES[id]; if (b) ex[id] = b.eq ? { n: b.n, eq: b.eq } : { n: b.n }; }
+  if (spec.watchLinks && exerciseIds[0] && ex[exerciseIds[0]]) ex[exerciseIds[0]]!.url = WATCH_URL.exercise; // the first exercise of Program A, Day 1: its Board card shows the Watch link
   const config: NonNullable<PersonaRows['config']> = {};
   if (Object.keys(ex).length) config.ex = ex;
   if (Object.keys(diet).length) config.diet = diet;

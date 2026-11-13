@@ -37,7 +37,8 @@ describe('QA personas', () => {
       expect(rows.groceryItems).toHaveLength(p.data.groceryItems);
       expect(rows.programs).toBe(p.data.programs);
       expect(rows.erased).toBe(p.data.erased === true);
-      expect(rows.recipes).toHaveLength((p.data.recipes ?? 0) + (p.data.vitamins ? 1 : 0)); // the vitamin persona adds one ready-made food
+      expect(rows.recipes).toHaveLength((p.data.recipes ?? 0) + (p.data.vitamins ? 1 : 0) + (p.data.noFatRecipe ? 1 : 0)); // the vitamin persona adds one ready-made food, the no-fat flag one recipe
+      expect(rows.stretches).toHaveLength(p.data.watchLinks ? 1 : 0);
     }
   });
 
@@ -87,7 +88,9 @@ describe('QA personas', () => {
         const r = buildPersonaRows(p, all, TODAY);
         if (!p.data.programs) { expect(r.config?.ex).toBeUndefined(); continue; }
         expect(Object.keys(r.config!.ex!)).toEqual(all);
-        expect(r.config!.ex!['latpd']).toEqual({ n: BUILTIN_EXERCISES['latpd']!.n, eq: 'cable' });
+        const { url, ...rest } = r.config!.ex!['latpd']!; // the collector's first exercise also carries a video link (watchLinks)
+        expect(rest).toEqual({ n: BUILTIN_EXERCISES['latpd']!.n, eq: 'cable' });
+        expect(url !== undefined).toBe(p.data.watchLinks === true);
       }
     });
 
@@ -133,16 +136,35 @@ describe('QA personas', () => {
       expect(r.recipes).toHaveLength(0);
     });
 
-    it('gives the planner 4 saved meals, 4 recipes and a 7-day plan that points at them, with portions', () => {
+    it('gives the planner 4 saved meals, 5 recipes (the fifth with no fat figure, unplanned) and a 7-day plan that points at them, with portions', () => {
       const r = rowsOf('meal-planner');
       const diet = r.config!.diet as { meals: { id: string }[]; plan: Record<string, { k: string; id: string; x?: number }[]> };
       expect(diet.meals).toHaveLength(4);
-      expect(r.recipes).toHaveLength(4);
+      expect(r.recipes).toHaveLength(5);
+      const noFat = r.recipes.filter(x => x.data.f === undefined);
+      expect(noFat.map(x => x.data.n)).toEqual(['Black bean rice']);
+      expect(noFat[0]!.data.kcal).toBeGreaterThan(0);
       expect(Object.keys(diet.plan)).toHaveLength(7);
       const mealIds = new Set(diet.meals.map(m => m.id)), recipeIds = new Set(r.recipes.map(x => x.clientId));
       const items = Object.values(diet.plan).flat();
       for (const it of items) expect(it.k === 'm' ? mealIds : recipeIds).toContain(it.id);
       expect(items.some(it => it.x === 1.5)).toBe(true);
+      expect(items.some(it => it.id === noFat[0]!.clientId)).toBe(false); // the tester plans it (S-191)
+      // S-280 relies on this: Baked salmon is the only recipe planned on a single day.
+      const days = (n: string) => Object.values(diet.plan).filter(d => d.some(it => it.k === 'r' && it.id === r.recipes.find(x => x.data.n === n)!.clientId)).length;
+      expect(days('Baked salmon')).toBe(1);
+      expect(days('Egg and spinach scramble')).toBe(2);
+    });
+
+    it('gives the collector three video links: the first recipe, the first exercise and one stretch', () => {
+      const r = rowsOf('recipe-collector');
+      expect(r.recipes[0]!.data.url).toMatch(/^https:\/\//);
+      expect(r.recipes.slice(1).every(x => x.data.url === undefined)).toBe(true);
+      expect(r.stretches.map(x => [x.data.n, x.data.tier])).toEqual([['Hamstring stretch', 'primary']]);
+      expect(r.stretches[0]!.data.url).toMatch(/^https:\/\//);
+      const withUrl = Object.entries(r.config!.ex!).filter(([, v]) => v.url);
+      expect(withUrl).toHaveLength(1);
+      expect(withUrl[0]![0]).toBe(EXERCISES[0]); // the first exercise passed in; in the real seed that is the first card of Program A, Day 1 (Sled push → lateral pull)
     });
 
     it('gives the collector 30 recipes with nutrition and 30 grocery items', () => {

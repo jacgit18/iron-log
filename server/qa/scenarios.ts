@@ -1198,8 +1198,8 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes Inventory, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
     steps: [
       'On Shopping, press Select items and tick two Costco items and press Change who shares Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
-      'Open Inventory, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to Shopping, press Select items, pick the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
-      'Open Inventory again and look at the same items\' split.',
+      'Open Inventory, press Edit, then press "Adjust shares for Costco" so every Costco row shows its split picker (a closed row names a split only when the item has its own). Read the same two items. Then go back to Shopping, press Select items, pick the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'Open Inventory, Edit, Adjust shares for Costco again and look at the same items\' split.',
     ],
     expected: [
       'After the first Apply Shopping shows the new split but Inventory still shows the store\'s split for those items (this month only).',
@@ -2409,8 +2409,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-191', feature: 'Week board', title: 'The Fat bar says when some foods have no fat figure', persona: 'meal-planner', brief: 'week-board', edge: true,
     steps: [
-      'On a day after today plan a recipe that has a fat figure and one that has none (Add food, Recipes, Plan). Read the Fat meter.',
-      'Add more portions of the food with no fat until it makes up most of the day\'s calories.',
+      'On a day after today plan Baked salmon (it has a fat figure) and Black bean rice (it has none: Meal planner seeds it for this scenario) with Add food, Recipes, Plan. Read the Fat meter.',
+      'Add more portions of Black bean rice until it makes up most of the day\'s calories.',
     ],
     expected: [
       'With a few foods missing fat the meter is hatched and a line says "Fat: n of m foods have it." and it never turns red.',
@@ -2704,17 +2704,18 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-214', feature: 'Nutrition board', title: 'On a phone: one day, a stepper, and no sideways scroll', persona: 'diet-on-target', brief: 'nutrition-board', edge: true,
+    id: 'S-214', feature: 'Nutrition board', title: 'On a phone: one day at a time under seven day tabs, and no sideways scroll', persona: 'diet-on-target', brief: 'nutrition-board', edge: true,
+    // Rewritten 2026-11-13: the phone's Previous day / Day to show / Next day stepper became seven day tabs in one card (PRs 968, 973, S-292); the 13-day limits went with it.
     steps: [
       'Emulate a 375 px wide window and open Nutrition.',
-      'Press Next day seven times, then read the Week buttons. Keep pressing Next day.',
-      'Open Day to show and read its groups. Press Previous day until it stops.',
-      'Scroll the page sideways and look at the toolbar and the day.',
+      'Tap each of the seven day tabs in turn, then press Next week and tap two of its tabs, then press Previous week until you are three weeks back.',
+      'Scroll the page sideways and look at the card, the add-food row and the day.',
+      'Read the height of the day tabs and of every button in the add-food row.',
     ],
     expected: [
-      'One day shows, with Previous day, Day to show and Next day; the day it names is the day food is added to (on a phone the "Adding to" line is read by a screen reader but not drawn).',
-      'After the seventh press the stepper has crossed into Next week and Next week is pressed; Next day stops at the end of next week (13 days on). Day to show has groups Last week, This week and Next week.',
-      'Previous day stops seven days back. There is no sideways scroll and every button is at least 44 px tall.',
+      'One day shows under the card, and the tab you tapped is the selected one; the day it names is the day food is added to (on a phone the "Adding to" line is read by a screen reader but not drawn).',
+      'Each week shows its own seven days and the week arrows keep going in both directions; Next week selects its first day.',
+      'There is no sideways scroll, and every day tab and every button is at least 44 px tall.',
     ],
   },
   {
@@ -3219,8 +3220,8 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-258', feature: 'Board day stamp', title: 'A day\'s date stamp is the date most of its cards were logged on', persona: 'superset-builder', brief: 'feature-map',
     steps: [
       'Press Reset on Superset builder first (switch to another account to do it), then switch back.',
-      'Tick a card on one day, move it into another day\'s column, and read both columns\' date stamps.',
-      'Move a ticked card into a day that has nothing else done, read its stamp, then move the card back home.',
+      'Tick two cards on Day 1 and read the stamps of Day 1 and Day 2. A ticked card moves into the collapsed Finished group, which has no More actions menu, so a card cannot be moved after it is ticked: move first, then tick.',
+      'Move an unticked Day 1 card into Day 2 (card menu, Move), tick it there, and read both columns\' date stamps. Move it into a day that has nothing else done and tick it there, read that stamp, then Put it back (Finished group) and move the card back home.',
     ],
     expected: [
       'The receiving day shows the date most of its own cards were logged on, not the moved card\'s earlier date. A day that holds only moved-in work shows no date, and a day with nothing done shows none.',
@@ -3293,8 +3294,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-265', feature: 'Watch link', title: 'The video link looks the same on a recipe, the Board card, Stretches and the Stretch library', persona: 'recipe-collector', brief: 'ideas-card-filters-watch',
     steps: [
-      'Press Reset on Recipe collector first (switch to another account to do it), then switch back.',
-      'First add a video link to a recipe and to an exercise and a stretch (no QA account has any), then read the recipe\'s Watch link and open that Board card, Stretches and the Stretch library.',
+      'Press Reset on Recipe collector first (switch to another account to do it), then switch back. It is seeded with three video links: the first recipe (Egg and spinach scramble), the first exercise of Program A (Sled push → lateral pull, the first card on the Board\'s Day 1) and a stretch (Hamstring stretch, in Stretches and the Stretch library).',
+      'Read the recipe\'s Watch link, then open that Board card, Stretches and Program > Stretches > the Stretch library.',
     ],
     expected: [
       'Each shows the same "Watch on <site>" link with a play icon (a large tile on the recipe, compact on the Board card, Stretches and the Stretch library), at least 44 px tall; nothing else on the Board card moved (the Board is hands-off: compare it with before).',
@@ -3447,11 +3448,11 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-280', feature: 'Week to Shopping', title: 'An item already eaten adds nothing', persona: 'meal-planner', brief: 'week-shopping', edge: true,
     steps: [
-      'Plan a recipe with an ingredient you do not have for today (plan it for a day ahead and move it to today), then tick it as eaten.',
+      'Press Reset on Meal planner first (switch to another account to do it), then switch back. Baked salmon is the one seeded recipe planned on a single day, so plan it for today: move its card from its day (three days ahead) to today, then tick it as eaten. The other recipes are planned on two days each, so ticking one of them still leaves it needed on its other day.',
       'Read Add missing to Shopping.',
     ],
     expected: [
-      'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients.',
+      'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients (none of Baked salmon\'s: Salmon, Sweet potatoes, Lemon).',
     ],
   },
   {
