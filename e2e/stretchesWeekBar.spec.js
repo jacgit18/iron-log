@@ -45,8 +45,71 @@ test('desktop: the Board week row (in its card) is not the old grid, the Stretch
   const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
   expect(await display('.boardroot .wsec > .weekbar')).toBe('flex'); // the Board's week card row (WeekSection.css)
   await page.click('#board-stretches');
-  await expect(page.locator('.strroot > .weekbar')).toBeVisible();
-  expect(await display('.strroot > .weekbar')).not.toBe('grid');
+  await expect(page.locator('.strroot > .swk')).toBeVisible();
+  expect(await display('.strroot > .swk')).not.toBe('grid');
+});
+
+// Desktop: the week row and the progress line are one bordered card (arrows and date at the left, progress at the right end); from 701 to
+// 1000 px (wide starts above 700) the progress wraps inside the card instead of overflowing. Layout and wiring only.
+for (const w of [701, 768, 1000, 1280, 1440, 1920]) {
+  test(`desktop ${w}: the Stretches week row and progress are one card, nothing overflows`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 900 });
+    await page.reload();
+    await page.click('#board-stretches');
+    const card = page.locator('.strroot > .swk');
+    await expect(card).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Previous week' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Next week' })).toBeVisible();
+    await expect(card.getByRole('status')).toContainText(/\d+ of \d+ days done/);
+    await expect(page.locator('.strroot > .weekbar')).toHaveCount(0);
+    const m = await page.evaluate(() => {
+      const q = s => document.querySelector(s);
+      const c = q('.strroot > .swk').getBoundingClientRect();
+      const kids = ['.swk .weeknav', '.swk-prog', '.swk-bar'].map(s => q(s).getBoundingClientRect());
+      const h = q('.swk .weeknav h2');
+      const cs = getComputedStyle(q('.strroot > .swk'));
+      return {
+        c, kids, border: cs.borderTopWidth, radius: cs.borderTopLeftRadius,
+        lines: Math.round(h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)),
+        scroll: document.documentElement.scrollWidth,
+      };
+    });
+    expect(m.border).toBe('1px');
+    expect(m.lines, 'the date is one line').toBe(1);
+    for (const r of m.kids) { expect(r.left).toBeGreaterThanOrEqual(m.c.left); expect(r.right).toBeLessThanOrEqual(m.c.right + 0.5); }
+    expect(m.scroll, 'no horizontal page scroll').toBeLessThanOrEqual(w);
+    if (w >= 1280) { // one row: progress to the right of the arrows, on the same line
+      expect(m.kids[1].left).toBeGreaterThan(m.kids[0].right);
+      expect(Math.abs((m.kids[1].top + m.kids[1].height / 2) - (m.kids[0].top + m.kids[0].height / 2))).toBeLessThan(8);
+    }
+  });
+}
+
+// Large text: the progress wraps onto its own line inside the card, still at the right end, and the date stays on one line.
+test('desktop 768 with large text: the progress wraps under the arrows inside the card', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.reload();
+  await page.click('#board-stretches');
+  await expect(page.locator('.strroot > .swk')).toBeVisible();
+  await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+  const m = await page.evaluate(() => {
+    const q = s => document.querySelector(s).getBoundingClientRect();
+    const h = document.querySelector('.swk .weeknav h2');
+    return { c: q('.strroot > .swk'), nav: q('.swk .weeknav'), prog: q('.swk-prog'), lines: Math.round(h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)), scroll: document.documentElement.scrollWidth };
+  });
+  expect(m.prog.top, 'the progress is on a second line').toBeGreaterThanOrEqual(m.nav.bottom - 1);
+  expect(m.prog.right, 'inside the card').toBeLessThanOrEqual(m.c.right + 0.5);
+  expect(m.lines, 'the date is one line').toBe(1);
+  expect(m.scroll, 'no horizontal page scroll').toBeLessThanOrEqual(768);
+});
+
+// The phone keeps the joined card and has no desktop card or progress line.
+test('phone: no desktop week card on Stretches', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await page.click('#board-stretches');
+  await expect(page.locator('.strroot .wdc')).toBeVisible();
+  await expect(page.locator('.strroot .swk')).toHaveCount(0);
 });
 
 // On a phone the week row sits in the joined card (`.wdc .weekbar`): the Board's grid must not reach it on the Board or on Stretches.
