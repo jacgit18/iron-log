@@ -101,7 +101,8 @@ export type ScenarioFeature =
   | 'Move and copy eaten'
   | 'Usual portion'
   | 'Saved meals removal'
-  | 'Daily snacks';
+  | 'Daily snacks'
+  | 'Desktop week card';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
