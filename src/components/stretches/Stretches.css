@@ -74,6 +74,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-10);
+  /* margin-left:auto keeps the progress at the right end, also when it wraps onto its own line (space-between alone would left-align a lone wrapped item) */
   margin-left: auto;
   font-size: var(--fs-md);
   color: var(--muted);

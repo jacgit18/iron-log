@@ -82,7 +82,7 @@ test('above 700 px the Board and Stretches keep their own week bars; Nutrition d
   await expect(page.locator('.boardroot > .wsec > .weekbar')).toBeVisible(); // the desktop week card (boardSwitch.spec.js), not the joined phone card
   await expect(page.locator('.wdc')).toHaveCount(0);
   await page.click('#board-stretches');
-  await expect(page.locator('.strroot > .weekbar')).toBeVisible();
+  await expect(page.locator('.strroot > .swk')).toBeVisible(); // the desktop Stretches week card (stretchesWeekBar.spec.js)
   await expect(page.locator('.wdc')).toHaveCount(0);
   await openNutrition(page);
   await expect(page.locator('.wdc .wdc-tabs [role="tab"]')).toHaveCount(7);

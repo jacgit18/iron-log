@@ -142,7 +142,7 @@ export default function Stretches() {
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose ⋯ menu is open
 
-  const prog = weekProgress(items, week, thisWeek ? today.getDay() : null);
+  const prog = wide ? weekProgress(items, week, thisWeek ? today.getDay() : null) : null; // only the desktop card shows it
 
   const weekRow = (
     <div className="weeknav">
@@ -156,12 +156,12 @@ export default function Stretches() {
 
   return (
     <div className="strroot">
-      {wide && (
+      {wide && prog && (
         <div className="swk">
           {weekRow}
           <div className="swk-prog">
             <span role="status">{prog.text}</span>
-            <div className="swk-bar"><i style={{ width: `${prog.pct}%` }} /></div>
+            <div className="swk-bar" aria-hidden="true"><i style={{ width: `${prog.pct}%` }} /></div>
           </div>
         </div>
       )}

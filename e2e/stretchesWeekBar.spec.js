@@ -85,6 +85,24 @@ for (const w of [701, 768, 1000, 1280, 1440, 1920]) {
   });
 }
 
+// Large text: the progress wraps onto its own line inside the card, still at the right end, and the date stays on one line.
+test('desktop 768 with large text: the progress wraps under the arrows inside the card', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.reload();
+  await page.click('#board-stretches');
+  await expect(page.locator('.strroot > .swk')).toBeVisible();
+  await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+  const m = await page.evaluate(() => {
+    const q = s => document.querySelector(s).getBoundingClientRect();
+    const h = document.querySelector('.swk .weeknav h2');
+    return { c: q('.strroot > .swk'), nav: q('.swk .weeknav'), prog: q('.swk-prog'), lines: Math.round(h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)), scroll: document.documentElement.scrollWidth };
+  });
+  expect(m.prog.top, 'the progress is on a second line').toBeGreaterThanOrEqual(m.nav.bottom - 1);
+  expect(m.prog.right, 'inside the card').toBeLessThanOrEqual(m.c.right + 0.5);
+  expect(m.lines, 'the date is one line').toBe(1);
+  expect(m.scroll, 'no horizontal page scroll').toBeLessThanOrEqual(768);
+});
+
 // The phone keeps the joined card and has no desktop card or progress line.
 test('phone: no desktop week card on Stretches', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
