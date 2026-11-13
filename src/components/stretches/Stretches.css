@@ -52,10 +52,15 @@
 .strroot .warmrow {
   min-height: 44px;
 }
-.strroot .daymore {
+.strroot .daymenu {
   display: none;
 }
 @media (max-width:700px) {
+  .strroot .daymenu {
+    display: block;
+    position: relative;
+    margin-left: auto;
+  }
   .strroot .daymore {
     display: inline-flex;
     align-items: center;
@@ -66,7 +71,25 @@
     font-size: var(--fs-2xl);
     line-height: 1;
   }
-  .strroot .col:not(.skipd, .more) .addrow {
+  .strroot .daypop {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: var(--z-tip);
+    padding: var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-lift);
+  }
+  .strroot .daypop[hidden] {
+    display: none;
+  }
+  .strroot .daypop .btn {
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .strroot .addrow {
     display: none;
   }
   .strroot .colhead .count {
