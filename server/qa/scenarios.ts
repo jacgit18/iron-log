@@ -5,7 +5,7 @@
    Ids are never reused or renumbered; a scenario that no longer applies stays in the list with `retired: true`.
    Each one is written from its shipped brief's Done when lines and the feature map. Seed facts the steps lean on are in server/qa/seedPlan.ts:
    the Diet accounts hold targets of 2,400 kcal and 160 g protein, meals "Usual breakfast", "Chicken bowl", "Post-workout" and "Quick dinner",
-   four recipes (Egg and spinach scramble, Overnight oats, Chicken and rice bowl, Baked salmon) for the planner, and 30 generated recipes for the collector. */
+   five recipes (Egg and spinach scramble, Overnight oats, Chicken and rice bowl, Baked salmon, and Black bean rice with no fat figure) for the planner, and 30 generated recipes for the collector. */
 
 export type ScenarioFeature =
   | 'Diet targets and log'
@@ -2705,16 +2705,16 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   {
     id: 'S-214', feature: 'Nutrition board', title: 'On a phone: one day at a time under seven day tabs, and no sideways scroll', persona: 'diet-on-target', brief: 'nutrition-board', edge: true,
-    // Rewritten 2026-11-13: the phone's Previous day / Day to show / Next day stepper became seven day tabs in one card (PRs 968, 973, S-292); the 13-day limits went with it.
+    // Rewritten 2026-11-13: the phone's Previous day / Day to show / Next day stepper became seven day tabs in one card (PRs 968, 973, S-292); the limits are now one week each way (WEEK_OFFSETS in src/lib/nutritionBoard.ts).
     steps: [
       'Emulate a 375 px wide window and open Nutrition.',
-      'Tap each of the seven day tabs in turn, then press Next week and tap two of its tabs, then press Previous week until you are three weeks back.',
+      'Tap each of the seven day tabs in turn, then press Next week and tap two of its tabs, then press Previous week twice (last week is as far back as the board goes) and look at the arrows.',
       'Scroll the page sideways and look at the card, the add-food row and the day.',
       'Read the height of the day tabs and of every button in the add-food row.',
     ],
     expected: [
       'One day shows under the card, and the tab you tapped is the selected one; the day it names is the day food is added to (on a phone the "Adding to" line is read by a screen reader but not drawn).',
-      'Each week shows its own seven days and the week arrows keep going in both directions; Next week selects its first day.',
+      'Each week shows its own seven days. The board has last week, this week and next week only: Previous week is dimmed on last week and Next week on next week; Next week selects its first day.',
       'There is no sideways scroll, and every day tab and every button is at least 44 px tall.',
     ],
   },
@@ -3294,7 +3294,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-265', feature: 'Watch link', title: 'The video link looks the same on a recipe, the Board card, Stretches and the Stretch library', persona: 'recipe-collector', brief: 'ideas-card-filters-watch',
     steps: [
-      'Press Reset on Recipe collector first (switch to another account to do it), then switch back. It is seeded with three video links: the first recipe (Egg and spinach scramble), the first exercise of Program A (Sled push → lateral pull, the first card on the Board\'s Day 1) and a stretch (Hamstring stretch, in Stretches and the Stretch library).',
+      'Press Reset on Recipe collector first (switch to another account to do it), then switch back. It is seeded with three video links: the first recipe (Egg and spinach scramble), the first exercise of Program A (Sled push → lateral pull, the first card on the Board\'s Day 1) and a stretch (Hamstring stretch, in Stretches and the Stretch library). The three links go to placeholder videos, so tapping one opens a YouTube error page: that is expected, only how the link looks is checked.',
       'Read the recipe\'s Watch link, then open that Board card, Stretches and Program > Stretches > the Stretch library.',
     ],
     expected: [
@@ -3452,7 +3452,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Read Add missing to Shopping.',
     ],
     expected: [
-      'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients (none of Baked salmon\'s: Salmon, Sweet potatoes, Lemon).',
+      'The ticked item is skipped: with nothing else planned the button is dimmed, and a tap with other planned recipes adds only their ingredients (none of Baked salmon\'s own: Salmon, Sweet potatoes, Lemon; Olive oil is still added because Egg and spinach scramble, planned for today, needs it too).',
     ],
   },
   {

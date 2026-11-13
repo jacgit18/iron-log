@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normDietCfg, normDietEntries } from '../../src/shared/diet.ts';
-import { normSupplementItem } from '../../src/shared/listItems.ts';
+import { normConfig } from '../../src/shared/config.ts';
+import { normStretchItem, normSupplementItem } from '../../src/shared/listItems.ts';
 import { normRecipes } from '../../src/shared/recipes.ts';
 import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import { SEED_EXERCISE_IDS } from './seedPersona.ts';
@@ -38,7 +39,7 @@ describe('QA personas', () => {
       expect(rows.programs).toBe(p.data.programs);
       expect(rows.erased).toBe(p.data.erased === true);
       expect(rows.recipes).toHaveLength((p.data.recipes ?? 0) + (p.data.vitamins ? 1 : 0) + (p.data.noFatRecipe ? 1 : 0)); // the vitamin persona adds one ready-made food, the no-fat flag one recipe
-      expect(rows.stretches).toHaveLength(p.data.watchLinks ? 1 : 0);
+      expect(rows.stretches).toHaveLength(p.data.watchLinks ? 20 : 0); // the 19 default stretches and Hamstring stretch (scripts/qaStretchSeed.test.ts holds the copy to the defaults)
     }
   });
 
@@ -160,11 +161,26 @@ describe('QA personas', () => {
       const r = rowsOf('recipe-collector');
       expect(r.recipes[0]!.data.url).toMatch(/^https:\/\//);
       expect(r.recipes.slice(1).every(x => x.data.url === undefined)).toBe(true);
-      expect(r.stretches.map(x => [x.data.n, x.data.tier])).toEqual([['Hamstring stretch', 'primary']]);
-      expect(r.stretches[0]!.data.url).toMatch(/^https:\/\//);
+      expect(r.stretches).toHaveLength(20); // the app's 19 default stretches plus Hamstring stretch: one row alone would replace the default routine
+      const own = r.stretches.at(-1)!;
+      expect([own.data.n, own.data.tier]).toEqual(['Hamstring stretch', 'primary']);
+      expect(own.data.url).toMatch(/^https:\/\//);
       const withUrl = Object.entries(r.config!.ex!).filter(([, v]) => v.url);
       expect(withUrl).toHaveLength(1);
       expect(withUrl[0]![0]).toBe(EXERCISES[0]); // the first exercise passed in; in the real seed that is the first card of Program A, Day 1 (Sled push → lateral pull)
+    });
+
+    it('keeps the seeded links, the stretch and the no-fat recipe through the app\'s own cleaners, so a link the app would drop fails here and not in QA', () => {
+      const r = rowsOf('recipe-collector');
+      expect(normRecipes(r.recipes.map(x => x.data))[0]!.url).toBe(r.recipes[0]!.data.url);
+      const own = normStretchItem(r.stretches.at(-1)!.data);
+      expect(own).toMatchObject({ n: 'Hamstring stretch', url: r.stretches.at(-1)!.data.url });
+      expect(r.stretches.every(x => normStretchItem(x.data) !== null)).toBe(true);
+      const ex = normConfig(r.config).ex as Record<string, { url?: string }>;
+      expect(ex[EXERCISES[0]!]!.url).toBe(r.config!.ex![EXERCISES[0]!]!.url);
+      const noFat = normRecipes(rowsOf('meal-planner').recipes.map(x => x.data)).find(x => x.n === 'Black bean rice');
+      expect(noFat).toBeDefined();
+      expect(noFat!.f).toBeUndefined();
     });
 
     it('gives the collector 30 recipes with nutrition and 30 grocery items', () => {
