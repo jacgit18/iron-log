@@ -52,6 +52,45 @@
 .strroot .warmrow {
   min-height: 44px;
 }
+/* Desktop week card (Stretches.tsx, wide screens only; the phone keeps the joined WeekDayCard): one bordered card in the look of .wdc and .wsec.
+   The week switcher at the left, the progress text with its bar at the right end of the row; under about 1000 px the progress wraps onto its own line inside the card. */
+.strroot .swk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8) var(--sp-16);
+  margin-block: var(--sp-6) var(--sp-12);
+  padding: var(--sp-6) var(--sp-12);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+}
+.strroot .swk .weeknav h2 {
+  min-width: 0;
+  white-space: nowrap;
+}
+.strroot .swk-prog {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-10);
+  margin-left: auto;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.strroot .swk-bar {
+  flex: none;
+  width: 140px;
+  height: 8px;
+  border-radius: var(--r-sm);
+  background: var(--sunk);
+  overflow: hidden;
+}
+.strroot .swk-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent-fill);
+}
 @media (max-width:700px) {
   .strroot .daymenu {
     display: block;

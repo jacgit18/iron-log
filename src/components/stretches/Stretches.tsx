@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
-import { groupsOf, dayTally, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
+import { groupsOf, dayTally, isStretchDone, extrasOn, weekProgress, STRETCH_DAYS } from '../../lib/stretches.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
 import { countTab, type DayTab } from '../../lib/weekDayTabs.js';
@@ -142,6 +142,8 @@ export default function Stretches() {
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose ⋯ menu is open
 
+  const prog = weekProgress(items, week, thisWeek ? today.getDay() : null);
+
   const weekRow = (
     <div className="weeknav">
       <button type="button" className="btn sm" aria-label="Previous week" onClick={() => s.gotoWeek('prev')}><Icon name="chevron-left" /></button>
@@ -154,7 +156,15 @@ export default function Stretches() {
 
   return (
     <div className="strroot">
-      {wide ? <div className="weekbar">{weekRow}</div> : null}
+      {wide && (
+        <div className="swk">
+          {weekRow}
+          <div className="swk-prog">
+            <span role="status">{prog.text}</span>
+            <div className="swk-bar"><i style={{ width: `${prog.pct}%` }} /></div>
+          </div>
+        </div>
+      )}
       {!wide && <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="sdaytab-" controls={id => `scol-${id}`} onPick={id => choose(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>}
       {items.length === 0 && <StretchFirstRun />}
 

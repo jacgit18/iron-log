@@ -91,6 +91,15 @@ export function dayTally(items: Stretch[], week: StretchWeek, day: number) {
 export const weekDaysDone = (items: Stretch[], week: StretchWeek) => Array.from({ length: STRETCH_DAYS }, (_, d) => d).filter(d => dayTally(items, week, d).full).length;
 export const weekDaysCounted = (week: StretchWeek) => STRETCH_DAYS - Object.keys(week.skipped).length; // a skipped day isn't counted for or against the week
 
+/** The desktop week card's progress: the text ("2 of 7 days done · 1 skipped · Today 3 of 12") and the bar's width in percent. Today's part shows only in the current week and only when today has stretches. */
+export function weekProgress(items: Stretch[], week: StretchWeek, todayDay: number | null) {
+  const days = weekDaysDone(items, week);
+  const counted = weekDaysCounted(week);
+  const t = todayDay === null ? null : dayTally(items, week, todayDay);
+  const text = `${days} of ${counted} days done${counted < STRETCH_DAYS ? ` · ${STRETCH_DAYS - counted} skipped` : ''}${t && t.total > 0 ? ` · Today ${t.done} of ${t.total}` : ''}`;
+  return { text, pct: counted ? Math.round(days / counted * 100) : 0 };
+}
+
 // Drop check-offs for a stretch that was deleted from the library.
 export function withoutStretch(week: StretchWeek, id: string): StretchWeek {
   const done: Record<string, true> = {}; Object.keys(week.done).forEach(k => { if (k.slice(2) !== id) done[k] = true; });
