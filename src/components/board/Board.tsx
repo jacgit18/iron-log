@@ -18,6 +18,7 @@ import Experiments from './Experiments.jsx';
 import FinishedGroup from './FinishedGroup.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
+import ModeSelect from './ModeSelect.js';
 import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
 import WeekDayCard from '../WeekDayCard.js';
@@ -28,7 +29,7 @@ import './BoardTop.css';
 import './DayCount.css';
 import './DayHeader.css';
 import './Leftovers.css';
-import './WeekBar.css';
+import './WeekSection.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -156,15 +157,18 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
-  // The week row (switcher and program switch): its own bar above the notices on a wide screen, the top of the joined week and day card on a phone (WeekDayCard).
+  // weekNav is the week switcher, shared by both layouts. weekRow (switcher and program switch) is the phone's: the top of the joined week and day card (WeekDayCard). A wide screen composes weekNav, ProgramSwitch, ModeSelect and BodyWeightRow in its own card (.wsec) below, so keep the ProgramSwitch placement in step.
+  const weekNav = (
+    <div className="weeknav">
+      <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
+      <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
+      <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
+      {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
+    </div>
+  );
   const weekRow = (
     <>
-      <div className="weeknav">
-        <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
-        <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
-        <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
-        {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-      </div>
+      {weekNav}
       <ProgramSwitch />
     </>
   );
@@ -246,11 +250,21 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
     <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       {wide ? (
         <>
-          <div className="weekbar">{weekRow}</div>
+          {/* One card (WeekSection.css): the week switcher with the program switch, mode menu and body weight on the first row, the sort and filter row under a hairline. The notices sit under it. */}
+          <div className="wsec">
+            <div className="weekbar wsec-top">
+              {weekNav}
+              <div className="wsec-end">
+                <ProgramSwitch />
+                <ModeSelect />
+                <BodyWeightRow draft={bodyWeight} />
+              </div>
+            </div>
+            {filterbar}
+          </div>
           {missingNotice}
           {notices}
           {firstRun}
-          {filterbar}
         </>
       ) : (
         <>

@@ -101,7 +101,8 @@ export type ScenarioFeature =
   | 'Move and copy eaten'
   | 'Usual portion'
   | 'Saved meals removal'
-  | 'Daily snacks';
+  | 'Daily snacks'
+  | 'Desktop week card';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -114,6 +115,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Supplement add sheet', 'Supplement label lookup', 'Supplement UPC', 'Backup coverage', 'Watch link',
   'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts', 'Week to Shopping',
   'Add food any day', 'Move and copy eaten', 'Usual portion', 'Saved meals removal', 'Daily snacks',
+  'Desktop week card',
 ];
 
 export interface Scenario {
@@ -3634,6 +3636,19 @@ export const SCENARIOS: readonly Scenario[] = [
       'One card holds the week arrows, This week or its dates, Manage at the right end, and Sun to Sat under them; there is no day dropdown and no Previous day or Next day buttons. Three day tabs are lightly shaded, with a bar on their top edge, and match the three columns shown (a screen reader says "shown below").',
       'A tab outside the shade moves the columns to start at it (held inside the week) and the shade follows; a shaded tab keeps the columns where they are and moves the underline. The toolbar says "Adding to" the underlined day.',
       'At 768 px two tabs are shaded, at 1280 px three. At 1440 px the card is gone: the week switcher and Manage are in the header above seven columns, as before.',
+    ],
+  },
+  {
+    id: 'S-295', feature: 'Desktop week card', title: 'Board on a desktop: one card with the week, mode, body weight and filters, notices under it', persona: 'heavy-logger', brief: 'feature-map',
+    steps: [
+      'On a desktop (1280 px wide) open Board. Read the top from the Workout and Stretches buttons down.',
+      'In the card, change the week with the arrows, pick Mode 2 and flip A and B, type a body weight and press Save, pick a muscle in Sort by muscle, pick an equipment, press Clear, and flip Injury prevention.',
+      'Narrow the window to 768 px, then 701 px, then widen to 1920 px.',
+    ],
+    expected: [
+      'Under Workout and Stretches there is one bordered card. Its first row has the week arrows, date range and This week at the left and the program switch, the mode menu and Body weight with Save at the right. Under a hairline, its second row has Sort by muscle, Equipment (and Clear once one is set) at the left and Injury prevention at the right.',
+      'Every control does what it did before. The notices (the local-save tip, the unchecked-exercises notice) sit under the card, above the seven day columns, which are unchanged.',
+      'At the narrower widths the rows wrap onto more lines inside the card; nothing runs past the card or scrolls sideways. On a phone the card does not exist: Board keeps the joined week and day card, with Body weight and the notices under it.',
     ],
   },
 ];
