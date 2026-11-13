@@ -262,7 +262,13 @@ function BodyChart() {
   // Opened by Manage's Edit in Progress: land on this chart (the goal editor sits under it).
   useEffect(() => {
     if (takeProgressJump() !== 'body') return;
-    requestAnimationFrame(() => document.getElementById('bw-chart')?.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' }));
+    // The sections above grow as history and charts draw (OnePage does the same on a wide screen), so scroll again once they have, unless the reader has already moved.
+    const go = () => document.getElementById('bw-chart')?.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
+    let moved = false; const stop = () => { moved = true; };
+    for (const e of ['wheel', 'touchstart', 'keydown']) window.addEventListener(e, stop, { once: true, passive: true });
+    requestAnimationFrame(go);
+    // No cleanup on purpose: StrictMode runs this effect twice in development and the second run finds the request already read; a timer firing after Progress closed finds no element and does nothing.
+    window.setTimeout(() => { for (const e of ['wheel', 'touchstart', 'keydown']) window.removeEventListener(e, stop); if (!moved) go(); }, 700);
   }, []);
   // The Removed notice sits right after the heading in both layouts, so deleting the last weigh-in keeps it (and its Undo).
   if (!L.length) return <section className="panel tchart" id="bw-chart"><h2>Body weight</h2><RemovedNotice scope="body" /><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
