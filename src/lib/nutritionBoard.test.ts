@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, stepDay, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -56,19 +56,12 @@ describe('a mid-week today', () => {
     expect(onBoard(THU, '2026-10-31')).toBe(false);
     expect(onBoard(THU, '2026-11-21')).toBe(true);
     expect(onBoard(THU, '2026-11-22')).toBe(false);
-    expect(stepDay(THU, '2026-11-14', 1)).toBe('2026-11-15');
     expect(weekOf('2026-11-14', '2026-11-14')).toBe(0); // Saturday is still this week; the next day starts next week
     expect(weekOf('2026-11-14', '2026-11-15')).toBe(1);
   });
 });
 
-describe('stepping a day', () => {
-  it('crosses weeks and stops at the ends', () => {
-    expect(stepDay(TODAY, '2026-11-14', 1)).toBe('2026-11-15');
-    expect(stepDay(TODAY, '2026-11-01', -1)).toBe('2026-11-01');
-    expect(stepDay(TODAY, '2026-11-21', 1)).toBe('2026-11-21');
-    expect(stepDay(TODAY, TODAY, -1)).toBe('2026-11-07');
-  });
+describe('the board range', () => {
   it('knows what is on the board', () => {
     expect(onBoard(TODAY, '2026-11-01')).toBe(true);
     expect(onBoard(TODAY, '2026-10-31')).toBe(false);

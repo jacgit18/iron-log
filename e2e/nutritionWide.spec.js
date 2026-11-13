@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 import { closeSupplementEditor, openManage, openSupplementEditor } from './nutritionBoardHelpers.js';
 
-// What a unit test cannot catch: the Nutrition week board's seven day columns sit side by side in the page container from 1440px (one column with a day stepper below it); only a real layout shows it.
+// What a unit test cannot catch: the Nutrition week board's seven day columns sit side by side in the page container from 1440px (under 1440px the joined week and day card holds the day tabs); only a real layout shows it.
 const boxes = page => page.evaluate(() => {
   const r = s => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, right: b.right }; };
   return { board: r('.wb-board'), vw: innerWidth };
@@ -29,12 +29,20 @@ for (const w of [1440, 1920, 2560]) {
   });
 }
 
-for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 3], [1439, 3]]) {
-  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and ${w < 700 ? 'the joined day tabs' : 'the day stepper'}`, async ({ page }) => {
+for (const [w, n] of [[375, 1], [700, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 3], [1439, 3]]) {
+  test(`at ${w}px Nutrition shows ${n} day${n > 1 ? 's' : ''} and the joined week and day card`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);
     await expect(page.locator('.nb-col')).toHaveCount(n);
-    await expect(page.locator(w < 700 ? '.wdc-tabs' : '.nb-step')).toBeVisible();
+    await expect(page.locator('.wdc-tabs')).toBeVisible();
+    await expect(page.locator('.nb-step, .nb-steppick')).toHaveCount(0); // no dropdown stepper at any width under 1440
+    if (w >= 700) {
+      await expect(page.locator('.wdc-tabs .shaded')).toHaveCount(n); // the days drawn as columns are shaded
+      await expect(page.locator('#nb-manage')).toBeVisible();
+      const [week, manage] = await Promise.all([page.locator('.wdc-week').boundingBox(), page.locator('#nb-manage').boundingBox()]);
+      expect(Math.abs(manage.x + manage.width - (week.x + week.width))).toBeLessThan(16); // Manage stays at the right end of the week row
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0); // and nothing scrolls sideways
+    }
     const cols = await page.evaluate(() => [...document.querySelectorAll('.nb-col')].map(c => { const b = c.getBoundingClientRect(); return { x: b.x, y: b.y, right: b.right }; }));
     expect(cols[0].x).toBeGreaterThanOrEqual(0);
     const board = await page.locator('.nb-board').evaluate(b => b.getBoundingClientRect().width);
@@ -44,28 +52,23 @@ for (const [w, n] of [[375, 1], [767, 1], [768, 2], [999, 2], [1000, 3], [1279, 
   });
 }
 
-test('at 1280px tapping a day inside the window keeps the three days where they are', async ({ page }) => {
+test('at 1280px tapping a tab inside the window keeps the three days where they are, a tab outside it moves the window and the shading', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await open(page);
   const names = () => page.locator('.nb-col').evaluateAll(cs => cs.map(c => c.getAttribute('data-day')));
-  await page.getByRole('button', { name: 'Next day' }).click();
-  const before = await names();
-  await page.locator('.nb-dayname').nth(1).click();
-  expect(await names()).toEqual(before);
-});
-
-test('at 1280px the stepper picks the first of three days and the window holds inside the week', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 1000 });
-  await open(page);
-  const names = () => page.locator('.nb-col').evaluateAll(cs => cs.map(c => c.getAttribute('data-day')));
+  const shaded = () => page.locator('.wdc-tabs .shaded').evaluateAll(bs => bs.map(b => b.id.replace('nbdaytab-', '')));
+  const tabs = page.locator('.wdc-tabs [role="tab"]');
+  await tabs.nth(0).click();
   const first = await names();
-  await page.getByRole('button', { name: 'Next day' }).click();
-  const next = await names();
-  expect(next).toHaveLength(3);
-  expect(new Set([...first, ...next]).size).toBeGreaterThanOrEqual(3);
-  await page.locator('.nb-steppick').selectOption({ index: 13 }); // a Saturday of this week: the window ends on it
-  const sat = await names();
-  expect(sat).toHaveLength(3);
+  expect(await shaded()).toEqual(first);
+  await tabs.nth(1).click(); // inside the window: it stays
+  expect(await names()).toEqual(first);
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await tabs.nth(5).click(); // outside: the window starts at it and is held inside the week
+  const moved = await names();
+  expect(moved).toHaveLength(3);
+  expect(moved).toContain(await tabs.nth(5).evaluate(b => b.id.replace('nbdaytab-', '')));
+  expect(await shaded()).toEqual(moved);
 });
 
 test('the header holds Manage, and no Diet panel sits under the board', async ({ page }) => {

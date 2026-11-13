@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* Nutrition as one week board (NutritionBoard.tsx). The day columns, meters, meal sections and plate marks reuse the week board's rules (diet/board/WeekBoard.css, class prefix wb-); this file adds the header, toolbar, day stepper, Supplements, Hydration, Eaten and the two sheets. */
+/* Nutrition as one week board (NutritionBoard.tsx). The day columns, meters, meal sections and plate marks reuse the week board's rules (diet/board/WeekBoard.css, class prefix wb-); this file adds the header, toolbar, joined week card extras, Supplements, Hydration, Eaten and the two sheets. */
 .nb-head {
   display: flex;
   flex-wrap: wrap;
@@ -86,27 +86,6 @@
 }
 .nb-scan {
   margin-bottom: var(--sp-8);
-}
-.nb-step {
-  display: flex;
-  gap: var(--sp-6);
-  align-items: center;
-  margin-bottom: var(--sp-8);
-}
-.nb-stepbtn {
-  flex: 0 0 auto;
-  min-width: 44px;
-  min-height: 44px;
-}
-.nb-stepbtn[aria-disabled="true"] {
-  opacity: 0.45;
-}
-.nb-steppick {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  text-align: center;
-  text-align-last: center;
 }
 .nb-dayname {
   min-height: 44px;
@@ -318,6 +297,15 @@
 }
 .wb-cardwrap.eaten .wb-card {
   border-color: var(--m-supp);
+}
+/* Under 1440 px the week row is the joined card's (WeekDayCard): the switcher stays at the left, Manage at the right end as it was in the header. */
+.wdc-week .nb-weeksw {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+}
+.nb-cardmanage {
+  margin-inline-start: auto;
+  min-height: 44px;
 }
 @media (max-width: 699px) {
   /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */

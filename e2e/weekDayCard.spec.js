@@ -76,7 +76,7 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
   expect(await pinnable(page)).toEqual({ position: 'sticky', blockers: [] });
 });
 
-test('above 700 px the Board, Stretches and Nutrition keep their own week bars and draw no card', async ({ page }) => {
+test('above 700 px the Board and Stretches keep their own week bars; Nutrition draws the card up to 1439 px and not from 1440 px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   await expect(page.locator('.boardroot > .weekbar')).toBeVisible();
@@ -84,14 +84,40 @@ test('above 700 px the Board, Stretches and Nutrition keep their own week bars a
   await page.click('#board-stretches');
   await expect(page.locator('.strroot > .weekbar')).toBeVisible();
   await expect(page.locator('.wdc')).toHaveCount(0);
+  await openNutrition(page);
+  await expect(page.locator('.wdc .wdc-tabs [role="tab"]')).toHaveCount(7);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('.wdc')).toHaveCount(0);
+  await expect(page.locator('.nb-weeksw')).toBeVisible();
 });
 
-test('phone: notices stay above the filter row and the card on the Board', async ({ page }) => {
+// The local-mode tip is the notice these two tests look at: the fixture hides it, so the test shows it again before the page loads.
+const showTip = page => page.addInitScript(() => localStorage.removeItem('ironlog:hidelocal'));
+const TIP = '.boardroot > .notice.tip';
+for (const [name, width, height, order] of [
+  ['phone: the tip sits under Body weight, after the filter row and the card', 375, 812, ['.filterbar', '.wdc', '.boardroot .bwrow', TIP]],
+  ['desktop: the tip stays above the filter row', 1280, 900, [TIP, '.filterbar']],
+]) {
+  test(name, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await showTip(page);
+    await page.reload();
+    await expect(page.locator(TIP)).toBeVisible();
+    const boxes = [];
+    for (const sel of order) boxes.push(await box(page, sel));
+    boxes.slice(1).forEach((b, k) => expect(boxes[k].b, `${order[k]} ends above ${order[k + 1]}`).toBeLessThanOrEqual(b.y + 1));
+  });
+}
+
+test('phone: a key move on the Stretches tabs leaves the page where it was', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  const notice = page.locator('.boardroot > .notice').first();
-  if (!(await notice.count())) test.skip(true, 'no notice shows for this fixture');
-  const n = await box(page, '.boardroot > .notice'), f = await box(page, '.filterbar'), c = await box(page, '.wdc');
-  expect(n.b).toBeLessThanOrEqual(f.y + 1);
-  expect(f.b).toBeLessThanOrEqual(c.y + 1);
+  await page.click('#board-stretches');
+  const tabs = page.locator('.wdc-tabs [role="tab"]');
+  await tabs.nth(1).click();
+  await page.evaluate(() => window.scrollTo(0, 300));
+  await page.keyboard.press('ArrowRight');
+  await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.nth(2)).toBeFocused();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });

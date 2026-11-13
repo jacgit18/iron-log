@@ -1055,7 +1055,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera (retired 2026-11-13: needs a real camera, which the QA pane cannot supply; the miss ladder is covered by e2e/barcodeMissLadder.spec.js)', persona: 'diet-fresh', brief: 'barcode-scan', retired: true, edge: true,
     steps: [
       'Open + New, then Add a food by hand, press Scan to fill form and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
       'Close the sheet. In your browser settings block the camera for the site, press Scan to fill form again, and press Photo instead with a saved photo of a barcode (or of a table).',
@@ -1547,7 +1547,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program tab clarity ----
   {
-    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs', persona: 'superset-builder', brief: 'program-tab-clarity',
+    id: 'S-114', feature: 'Program tab clarity', title: 'First visit: the guide, the header card and the section tabs (retired 2026-11-13: needs a first visit with cleared site data, which cannot be set up on a shared QA browser; covered by e2e/programTabClarity.spec.js)', persona: 'superset-builder', brief: 'program-tab-clarity', retired: true,
     steps: [
       'On a computer open the Program tab for the first time on this browser (clear the site data first if you have been here).',
       'Read the guide card at the top, then the section tabs (Programs, Exercises, Stretches, Saved, Compare) and the card under them.',
@@ -2130,7 +2130,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts', persona: 'grocery-shopper', brief: 'grocery-budget',
+    id: 'S-167', feature: 'Grocery budget', title: 'The Shopping and Bought switch is centered with no counts (retired 2026-11-13: the Groceries switch is now Shopping, Bought and Inventory, covered by S-122 and S-138)', persona: 'grocery-shopper', brief: 'grocery-budget', retired: true,
     steps: [
       'Open Groceries on a computer and look at the Shopping and Bought buttons.',
     ],
@@ -3621,6 +3621,19 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The week arrows, dates and all seven tabs are inside the card; a tab\'s text wraps inside its cell and every tab is still at least 44 px tall.',
       'Nothing scrolls sideways.',
+    ],
+  },
+  {
+    id: 'S-294', feature: 'Joined week and day tabs', title: 'Nutrition on a tablet or small desktop: the card with the days on screen shaded, no day dropdown', persona: 'meal-planner', brief: 'week-day-joined-tabs',
+    steps: [
+      'Make the window 1024 px wide and open Nutrition. Read the top, then tap the first day tab that is not shaded.',
+      'Tap a shaded day tab, then press Next week and tap a day.',
+      'Make the window 768 px wide, then 1280 px, then 1440 px.',
+    ],
+    expected: [
+      'One card holds the week arrows, This week or its dates, Manage at the right end, and Sun to Sat under them; there is no day dropdown and no Previous day or Next day buttons. Three day tabs are lightly shaded, with a bar on their top edge, and match the three columns shown (a screen reader says "shown below").',
+      'A tab outside the shade moves the columns to start at it (held inside the week) and the shade follows; a shaded tab keeps the columns where they are and moves the underline. The toolbar says "Adding to" the underlined day.',
+      'At 768 px two tabs are shaded, at 1280 px three. At 1440 px the card is gone: the week switcher and Manage are in the header above seven columns, as before.',
     ],
   },
 ];

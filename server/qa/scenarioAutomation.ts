@@ -133,7 +133,6 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-164': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js'], partial: 'edit, Remove and reload are walked with other amounts than 600; the budget showing on a second signed-in device is not' },
   'S-165': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js', 'src/lib/groceryBudget.test.ts'], partial: 'the browser spec types only abc; an empty box, 0 and 425.50 are covered by the parseDollars unit test' },
   'S-166': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js'] },
-  'S-167': { auto: 'e2e', specs: ['e2e/groceryBudget.spec.js'], partial: 'the spec checks Shopping and Bought only; Inventory is not asserted' },
   'S-168': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js', 'e2e/groceryQuickAdd.spec.js'] },
   'S-169': { auto: 'e2e', specs: ['e2e/groceryOneTime.spec.js'], partial: 'the box is asserted ticked right after the tap; reopening the row to see it still ticked is not' },
   'S-170': { auto: 'unit', specs: ['src/store/groceryQuickAddStore.test.ts', 'src/lib/groceryOneTime.test.ts'], partial: 'no browser spec unticks a bought one-time item on Bought and checks Shopping, Inventory and the still-ticked box' },
@@ -163,7 +162,6 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-70': { auto: 'unit', specs: ['src/lib/importFile.test.ts'], partial: 'the wording is unit tested; showing it in Settings after a real undownloaded cloud file is not' },
   'S-73': { auto: 'api', specs: ['server/expectedUser.test.ts'], partial: 'the server 409 and client transport are tested; the Delete my data note, the other-account card and the reload are not driven in a browser' },
   'S-74': { auto: 'manual' }, // needs a real phone; e2e/barcodeScan.spec.js, e2e/nutritionQuickLog.spec.js stub it. Not covered: scripted detector and product; a real camera, USDA numbers against the label and the camera light are not covered
-  'S-75': { auto: 'e2e', specs: ['e2e/barcodeScan.spec.js', 'e2e/barcodeMissLadder.spec.js'], partial: 'the miss is stubbed; the camera-blocked message with Photo instead is not asserted on this path' },
   'S-79': { auto: 'manual' }, // needs a real phone; e2e/receiptBoughtAt.spec.js stubs it. Not covered: scripted receipt, no real photo; Undo unticking each item is unconfirmed
   'S-82': { auto: 'manual' }, // needs a real phone; e2e/receiptMerge.spec.js stubs it. Not covered: merge, one checkbox, count 2 and the each-price are asserted via Add to list; ticking, picking an existing item, Apply, Undo and the unchanged total check are not
   'S-83': { auto: 'manual' }, // needs a real phone; e2e/receiptMerge.spec.js stubs it. Not covered: scripted receipt; the month bill matching the receipt is not asserted
@@ -261,7 +259,6 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-109': { auto: 'e2e', specs: ['e2e/help.spec.js'], partial: 'Help is checked for the Ideas to try term and + Add idea only; the Stretches to try heading, + Add stretch, the Add a stretch to try sheet and the first-run line are not asserted' },
   'S-110': { auto: 'manual' }, // needs a real phone; e2e/receiptAddStore.spec.js stubs it. Not covered: the scan is stubbed (no real photo or phone); matched items listed under the new store on Shopping, ticked and priced, are not asserted
   'S-111': { auto: 'e2e', specs: ['e2e/receiptAddStore.spec.js', 'e2e/receiptNewStoreItem.spec.js'] },
-  'S-114': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'src/lib/programGuide.test.ts', 'src/lib/programRowFacts.test.ts'], partial: 'tab descriptions are checked as accessible descriptions, not visible text; the N exercises across 7 days text is unit tested only' },
   'S-115': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'src/lib/programRowFacts.test.ts'], partial: 'an either/or row, the Optional and Supersets notes and a self-named section are not asserted in the browser; Day at a glance only draws from 1280 px and the spec runs at 1920' },
   'S-116': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js', 'e2e/programTabLayout.spec.js'], partial: 'Archive, Delete and Compare programs after a put on Board are not walked in this flow (Archive has e2e/programArchive.spec.js)' },
   'S-117': { auto: 'e2e', specs: ['e2e/programTabClarity.spec.js'] },
