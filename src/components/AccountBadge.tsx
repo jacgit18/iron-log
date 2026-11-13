@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { flag, useAppStore } from '../store/useAppStore.js';
 import { motionOK } from '../lib/motion.js';
 import { forgetSession } from '../lib/gate.js';
@@ -11,6 +11,7 @@ import { LS } from '../lib/storage.js';
 import { createAccountClient } from '../sync/account.js';
 import { signIn as devHeaders } from '../sync/devUser.js';
 import { useQa } from '../sync/qaState.js';
+import { useDismiss } from './useDismiss.js';
 import './AccountBadge.css';
 
 // Who is signed in, at the right end of the header: a round initial with a green dot, and the name beside it where there is room. It
@@ -30,14 +31,7 @@ export default function AccountBadge({ name, email = null, canSignOut = false }:
   const [busy, setBusy] = useState(false);
   const qaRow = qaEntries(useQa()).menuRow; // QA service, admin on their own account (brief qa-picker-access)
   const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); btn.current?.focus(); } };
-    const onDown = (e: Event) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('pointerdown', onDown);
-    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown); };
-  }, [open]);
+  useDismiss(open, wrap, () => setOpen(false), { returnFocus: () => btn.current?.focus() });
   if (name === null) return null;
   const initial = (name.match(/[\p{L}\p{N}]/u)?.[0] ?? '?').toUpperCase();
   const go = (id: string) => {
