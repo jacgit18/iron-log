@@ -76,22 +76,37 @@ test('in Mode 1 the week bar has no switch and no progress row', async ({ page }
   await expect(page.locator('.weekbar .progress')).toHaveCount(0);
 });
 
-// Wide screens: the body weight leaves its own row and sits right after the mode menu in the Workout / Stretches row, small. A phone keeps it under the notices.
-test('desktop: the body weight sits next to the mode menu, small, and is drawn once', async ({ page }) => {
+// Wide screens: one bordered card holds the week switcher, the mode menu and the body weight (row 1) and the sort, equipment and injury controls (row 2);
+// the notices sit under it. A phone keeps the joined week and day card with the body weight under it.
+test('desktop: week, mode and body weight share row 1 of one card, filters are row 2, notices are below', async ({ page }) => {
+  for (const width of [701, 768, 1000, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    const box = async sel => page.locator(sel).first().boundingBox();
+    const card = await box('.wsec');
+    const nav = await box('.wsec .weeknav');
+    const mode = await box('.wsec #board-mode');
+    const bw = await box('.wsec .bwrow');
+    const filt = await box('.wsec .filterbar');
+    const inj = await box('.wsec .injsw');
+    for (const b of [nav, mode, bw, filt, inj]) { expect(b.x).toBeGreaterThanOrEqual(card.x); expect(b.x + b.width).toBeLessThanOrEqual(card.x + card.width + 1); expect(b.y + b.height).toBeLessThanOrEqual(card.y + card.height + 1); }
+    expect(filt.y).toBeGreaterThanOrEqual(Math.max(nav.y + nav.height, mode.y + mode.height, bw.y + bw.height) - 1); // row 2 under row 1
+    expect(inj.x + inj.width).toBeGreaterThan(card.x + card.width - 40); // the injury toggle at the right end of row 2
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
   await page.setViewportSize({ width: 1280, height: 900 });
   const box = async sel => page.locator(sel).first().boundingBox();
-  const mode = await box('.modesel');
-  const bw = await box('.boardtabtop > .bwrow');
-  expect(Math.abs((bw.y + bw.height / 2) - (mode.y + mode.height / 2))).toBeLessThan(10); // on the mode menu's row
-  expect(bw.x).toBeGreaterThanOrEqual(mode.x + mode.width); // after it
-  expect(bw.x - (mode.x + mode.width)).toBeLessThan(40); // and close to it
-  expect(bw.width).toBeLessThan(400);
-  await expect(page.locator('.weekbar .bwrow')).toHaveCount(0);
-  await expect(page.locator('.bwrow .bwsub')).toBeHidden(); // the shorter label
+  const nav = await box('.wsec .weeknav'); const bw = await box('.wsec .bwrow'); const mode = await box('.wsec #board-mode');
+  expect(bw.x).toBeGreaterThan(nav.x + nav.width); // the mode menu and body weight are at the right of the week switcher
+  expect(mode.x).toBeLessThan(bw.x);
   await expect(page.locator('.bwrow')).toHaveCount(1); // drawn once
-  await page.locator('.boardtabtop > .bwrow input').fill('180');
-  await page.locator('.boardtabtop > .bwrow').getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('.boardtabtop > .bwrow b')).toHaveText('180 lb');
+  await expect(page.locator('.bwrow .bwsub')).toBeHidden(); // the shorter label
+  await expect(page.locator('.boardtabtop #board-mode')).toHaveCount(0); // the mode menu left the Workout / Stretches row
+  const card = await box('.wsec'); const days = await box('.board');
+  const tip = page.locator('.boardroot > .notice.tip');
+  if (await tip.count()) { const t = await tip.first().boundingBox(); expect(t.y).toBeGreaterThanOrEqual(card.y + card.height - 1); expect(t.y + t.height).toBeLessThanOrEqual(days.y + 1); }
+  await page.locator('.wsec .bwrow input').fill('180');
+  await page.locator('.wsec .bwrow').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.wsec .bwrow b')).toHaveText('180 lb');
 });
 
 test('desktop: the body weight is not on the Stretches view', async ({ page }) => {
@@ -103,18 +118,20 @@ test('desktop: the body weight is not on the Stretches view', async ({ page }) =
 test('phone: the body weight stays under the notices, not next to the mode menu', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  await expect(page.locator('.boardtabtop > .bwrow')).toHaveCount(0);
+  await expect(page.locator('.wsec .bwrow')).toHaveCount(0);
+  await expect(page.locator('.wsec')).toHaveCount(0); // the desktop card is not drawn
+  await expect(page.locator('.boardtabtop #board-mode')).toHaveCount(1); // the mode menu stays in the Workout / Stretches row
   await expect(page.locator('.boardroot > .bwrow')).toHaveCount(1);
 });
 
-// The body weight is drawn in one of two places (next to the mode menu above 700px, under the notices below), so the form's state lives above both:
+// The body weight is drawn in one of two places (in the week card above 700px, under the notices below), so the form's state lives above both:
 // turning a phone to landscape in the middle of an edit must not lose what was typed or close the form.
 test('turning the screen across 700px in the middle of a body weight entry keeps what was typed', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
   await page.locator('.boardroot > .bwrow input').fill('181.5');
-  await page.setViewportSize({ width: 1280, height: 900 }); // landscape: the row moves next to the mode menu
-  await expect(page.locator('.boardtabtop > .bwrow input')).toHaveValue('181.5');
+  await page.setViewportSize({ width: 1280, height: 900 }); // landscape: the row moves into the week card
+  await expect(page.locator('.wsec .bwrow input')).toHaveValue('181.5');
   await page.setViewportSize({ width: 375, height: 812 }); // and back under the notices
   await expect(page.locator('.boardroot > .bwrow input')).toHaveValue('181.5');
 });
@@ -128,14 +145,14 @@ test('turning the screen across 700px in the middle of editing a saved body weig
   await page.locator('.boardroot > .bwrow').getByRole('button', { name: 'Edit' }).click();
   await page.locator('.boardroot > .bwrow input').fill('182');
   await page.setViewportSize({ width: 1280, height: 900 });
-  await expect(page.locator('.boardtabtop > .bwrow input')).toHaveValue('182'); // still editing, number kept
-  await page.locator('.boardtabtop > .bwrow').getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('.boardtabtop > .bwrow b')).toHaveText('182 lb');
+  await expect(page.locator('.wsec .bwrow input')).toHaveValue('182'); // still editing, number kept
+  await page.locator('.wsec .bwrow').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.wsec .bwrow b')).toHaveText('182 lb');
 });
 
 test('the typed body weight does not carry over to another week', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.locator('.boardtabtop > .bwrow input').fill('190');
+  await page.locator('.wsec .bwrow input').fill('190');
   await page.getByRole('button', { name: 'Next week' }).click();
-  await expect(page.locator('.boardtabtop > .bwrow input')).toHaveValue('');
+  await expect(page.locator('.wsec .bwrow input')).toHaveValue('');
 });

@@ -39,11 +39,11 @@ test('phone: the Stretches day header has no date line and no count, and a skipp
 });
 
 // The Board's week bar grid must not leak to the Stretches bar (it reuses `.weekbar`), and the Board keeps its grid.
-test('desktop: the Board week bar is a grid, the Stretches week bar is not', async ({ page }) => {
+test('desktop: the Board week row (in its card) is not the old grid, the Stretches week bar is not either', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
-  expect(await display('.boardroot > .weekbar')).toBe('grid');
+  expect(await display('.boardroot .wsec > .weekbar')).toBe('flex'); // the Board's week card row (WeekSection.css)
   await page.click('#board-stretches');
   await expect(page.locator('.strroot > .weekbar')).toBeVisible();
   expect(await display('.strroot > .weekbar')).not.toBe('grid');

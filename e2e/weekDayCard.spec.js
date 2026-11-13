@@ -79,7 +79,7 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
 test('above 700 px the Board, Stretches and Nutrition keep their own week bars and draw no card', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
-  await expect(page.locator('.boardroot > .weekbar')).toBeVisible();
+  await expect(page.locator('.boardroot > .wsec > .weekbar')).toBeVisible(); // the desktop week card (boardSwitch.spec.js), not the joined phone card
   await expect(page.locator('.wdc')).toHaveCount(0);
   await page.click('#board-stretches');
   await expect(page.locator('.strroot > .weekbar')).toBeVisible();
@@ -91,7 +91,7 @@ const showTip = page => page.addInitScript(() => localStorage.removeItem('ironlo
 const TIP = '.boardroot > .notice.tip';
 for (const [name, width, height, order] of [
   ['phone: the tip sits under Body weight, after the filter row and the card', 375, 812, ['.filterbar', '.wdc', '.boardroot .bwrow', TIP]],
-  ['desktop: the tip stays above the filter row', 1280, 900, [TIP, '.filterbar']],
+  ['desktop: the tip sits under the week card (its filter row is inside it), above the day columns', 1280, 900, ['.wsec', TIP, '.board']],
 ]) {
   test(name, async ({ page }) => {
     await page.setViewportSize({ width, height });
