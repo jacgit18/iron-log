@@ -33,13 +33,6 @@ const lastDay = (today: string): string => shiftDay(sundayOf(today), 13);
 /** Whether a day is on the board at all: the first day of last week to the last day of next week. */
 export const onBoard = (today: string, day: string): boolean => day >= firstDay(today) && day <= lastDay(today);
 
-/** `day` moved by `delta` days and held inside the board (stepping stops at the ends). */
-export function stepDay(today: string, day: string, delta: number): string {
-  const lo = firstDay(today), hi = lastDay(today);
-  const next = shiftDay(day, delta);
-  return next < lo ? lo : next > hi ? hi : next;
-}
-
 /** How many day columns the board shows at a screen width (brief nutrition-header-sheet-wording): seven from 1440 px, three from 1000, two from 768, else one. */
 export type DaysShown = 1 | 2 | 3 | 7;
 export const daysShown = (width: number): DaysShown => (width >= 1440 ? 7 : width >= 1000 ? 3 : width >= 768 ? 2 : 1);

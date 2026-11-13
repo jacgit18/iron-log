@@ -1,6 +1,6 @@
 import type { Stretch, StretchTier } from '../../types.ts';
 import type { AppState } from '../../store/types.ts';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
@@ -99,6 +99,37 @@ function Experiments({ day }: { day: number }) {
   );
 }
 
+// The Skip day / Undo skip button: the wide screens' own row and the phone menu's item share its label, aria-label and handler (the caller adds id, ref and class).
+function SkipButton({ d, skipped, onSkip, id, btnRef, pressed }: { d: number; skipped: boolean; onSkip: () => void; id: string; btnRef?: Ref<HTMLButtonElement>; pressed?: boolean }) {
+  return <button type="button" ref={btnRef} className="btn sm ghost" id={id} aria-pressed={pressed} aria-label={skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip day for ${DAY_NAMES[d]}`} onClick={onSkip}>{skipped ? 'Undo skip' : 'Skip day'}</button>;
+}
+
+// Phones: the day header's ⋯ and the small floating menu under it (one item: Skip day / Undo skip). Closes on an outside press, Escape or a choice; focus goes back to ⋯.
+function DayMenu({ d, skipped, open, onOpen, onSkip }: { d: number; skipped: boolean; open: boolean; onOpen: (open: boolean) => void; onSkip: () => void }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const dots = useRef<HTMLButtonElement>(null);
+  const item = useRef<HTMLButtonElement>(null);
+  const set = useRef(onOpen); // the latest callback, so a re-render while the menu is open does not re-run the effect (it would pull focus back to the item)
+  set.current = onOpen;
+  useEffect(() => {
+    if (!open) return;
+    item.current?.focus();
+    const away = (e: Event) => { if (!box.current?.contains(e.target as Node)) set.current(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  const close = () => { onOpen(false); dots.current?.focus(); };
+  return (
+    <span className="daymenu" ref={box} onKeyDown={e => { if (e.key === 'Escape' && open) { e.stopPropagation(); close(); } }} onBlur={e => { if (open && !box.current?.contains(e.relatedTarget as Node | null)) onOpen(false); }}>
+      <button type="button" ref={dots} className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={open} aria-controls={`sdaymenu-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
+        onClick={() => onOpen(!open)}><Icon name="dots" /></button>
+      <div className="daypop" id={`sdaymenu-${d}`} role="group" aria-label={`More for ${DAY_NAMES[d]}`} hidden={!open}>
+        <SkipButton d={d} skipped={skipped} id={`sskipm-${d}`} btnRef={item} onSkip={() => { onSkip(); close(); }} />
+      </div>
+    </span>
+  );
+}
+
 export default function Stretches() {
   const items = useAppStore(x => x.stretches);
   const week = useAppStore(x => x.strWeek);
@@ -109,13 +140,13 @@ export default function Stretches() {
   const thisWeek = ymd(weekStartOf(today)) === wk;
   const [pick, setPick] = useState<{ wk: string; d: number } | null>(null); // {wk, d}: the phone's day, only for the week it was picked in
   const day = pick && pick.wk === wk ? pick.d : thisWeek ? today.getDay() : 0;
-  const choose = (d: number) => setPick({ wk, d });
+  const choose = (d: number) => { setPick({ wk, d }); setDayMore(null); };
   const wide = useWide();
   // Same as the Board (lib/boardMount.ts): a phone draws the selected day's stretches at once and the other days on idle. That hook counts days from 1.
   const dayDrawn = useMountedDays(day + 1, wide);
   const [arming, setArming] = useState<string | null>(null); // the added stretch whose Remove was pressed once
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
-  const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Skip day button is showing
+  const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose ⋯ menu is open
 
   const weekRow = (
     <div className="weeknav">
@@ -140,19 +171,16 @@ export default function Stretches() {
           const allIds = [...items.filter(i => i.tier === 'primary').map(i => i.id), ...extras.map(x => x.id)];
           const drawn = dayDrawn(d + 1);
           return (
-            <section key={d} id={`scol-${d}`} aria-labelledby={`scolh-${d}`} className={`col${t.full || t.skipped ? ' complete' : ''}${t.skipped ? ' skipd' : ''}${d === day ? ' sel' : ''}${dayMore === d ? ' more' : ''}`}>
+            <section key={d} id={`scol-${d}`} aria-labelledby={`scolh-${d}`} className={`col${t.full || t.skipped ? ' complete' : ''}${t.skipped ? ' skipd' : ''}${d === day ? ' sel' : ''}`}>
               <div className="colhead">
                 <input type="checkbox" className="chk" id={`sday-${d}`} checked={t.full} disabled={!allIds.length || t.skipped} aria-label={`Mark all of ${DAY_NAMES[d]} done`} onChange={e => s.setStretchesDone(d, allIds, e.target.checked)} />
                 <div>
                   <h3 id={`scolh-${d}`}>{DAY_NAMES[d]}</h3>
                 </div>
                 {t.skipped && <span className="count">Skipped</span>}
-                <button type="button" className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={dayMore === d || !!t.skipped} aria-controls={`sskiprow-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
-                  onClick={() => setDayMore(dayMore === d ? null : d)}><Icon name="dots" /></button>
+                {!wide && <DayMenu d={d} skipped={!!t.skipped} open={dayMore === d} onOpen={o => setDayMore(o ? d : null)} onSkip={() => s.skipStretchDay(d, !t.skipped)} />}
               </div>
-              <div className="addrow" id={`sskiprow-${d}`}>
-                <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip day for ${DAY_NAMES[d]}`} onClick={() => { s.skipStretchDay(d, !t.skipped); if (t.skipped && dayMore !== d) requestAnimationFrame(() => document.getElementById(`sdaymore-${d}`)?.focus()); }}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
-              </div>
+              {wide && <div className="addrow"><SkipButton d={d} skipped={!!t.skipped} pressed={!!t.skipped} id={`sskip-${d}`} onSkip={() => s.skipStretchDay(d, !t.skipped)} /></div>}
               <RemovedNotice scope={`sday:${wk}:${d}`} />
               {drawn && items.length > 0 && <WarmUp d={d} />}
               {!drawn ? null : t.skipped ? <p className="note">Skipped. It doesn’t count for or against this week.</p> : <>

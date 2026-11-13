@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countTab, nutritionTabs, tabAfterKey } from './weekDayTabs.js';
+import { countTab, nutritionTabs, shadeTabs, tabAfterKey } from './weekDayTabs.js';
 
 describe('tabAfterKey', () => {
   it('moves right and left and wraps at the ends', () => {
@@ -46,5 +46,21 @@ describe('countTab', () => {
     expect(countTab('2', 'Mon', 'Monday', { done: 3, total: 3, full: true })).toMatchObject({ sub: '\u2713', done: true, label: 'Mon \u2713: Monday, all done' });
     expect(countTab('3', 'D3', 'Day 3', { done: 0, total: 0, full: false }, 'rest')).toMatchObject({ sub: 'Rest', done: true, label: 'D3 Rest: Day 3, rest day' });
     expect(countTab('4', 'Tue', 'Tuesday', { done: 0, total: 5, full: false }, 'skipped')).toMatchObject({ sub: 'Skip', done: true, label: 'Tue Skip: Tuesday, skipped' });
+  });
+});
+
+describe('shadeTabs', () => {
+  const tabs = nutritionTabs('2026-09-24', 0);
+  it('marks only the days shown as columns and leaves the rest alone', () => {
+    const out = shadeTabs(tabs, [tabs[4]!.id, tabs[5]!.id, tabs[6]!.id]);
+    expect(out.map(t => !!t.shaded)).toEqual([false, false, false, false, true, true, true]);
+    expect(out[4]).toMatchObject({ id: tabs[4]!.id, head: tabs[4]!.head, today: true });
+    expect(out[4]!.label).toBe(`${tabs[4]!.label}, shown below`);
+    expect(out[4]!.label.startsWith(`${tabs[4]!.head} ${tabs[4]!.sub}`)).toBe(true);
+    expect(out[0]!.label).toBe(tabs[0]!.label);
+  });
+  it('marks none for an empty window and does not change the input', () => {
+    expect(shadeTabs(tabs, []).some(t => t.shaded)).toBe(false);
+    expect(tabs.some(t => t.shaded)).toBe(false);
   });
 });

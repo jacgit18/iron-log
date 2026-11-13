@@ -34,7 +34,7 @@ test('phone: the Stretches day header has no date line and no count, and a skipp
   await expect(col.locator('.colhead .daydate')).toHaveCount(0);
   await expect(col.locator('.colhead .count')).toHaveCount(0);
   await col.locator('.daymore').click();
-  await col.getByRole('button', { name: /Skip day/ }).click();
+  await col.locator('.daypop').getByRole('button', { name: /Skip day/ }).click();
   await expect(col.locator('.colhead .count')).toHaveText('Skipped');
 });
 

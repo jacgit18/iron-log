@@ -6,7 +6,7 @@ import { recommendInputs } from '../../lib/manageTargets.js';
 import { planLog, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
-import { nutritionTabs } from '../../lib/weekDayTabs.js';
+import { nutritionTabs, shadeTabs } from '../../lib/weekDayTabs.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -19,14 +19,13 @@ import WeekDayCard from '../WeekDayCard.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
-import DayStepper from './DayStepper.js';
 import ShoppingButton from './ShoppingButton.js';
 import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
 
 
-// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day, with a stepper under seven.
+// Nutrition as one week board (brief nutrition-board): a week switcher (previous and next arrows like the Board's, This week to come back; under 1440 px it is the week row of the joined week and day card, with the seven day tabs under it and the days drawn as columns shaded), an add-food toolbar naming the day it adds to, and day columns: seven from 1440 px, three from 1000, two from 768, else one day.
 // Each day holds six meters (calories, protein, carbs when there is a target or data, fat, supplements, water), its meals with the food eaten in them, Supplements and Hydration. Meters count eaten food for last week and today, the plan for days ahead (ADR 105).
 export default function NutritionBoard() {
   const now = useToday(s => s.today);
@@ -76,19 +75,26 @@ export default function NutritionBoard() {
       {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
     </div>
   );
+  const joined = phone || shown !== 7; // the joined card holds the week row and the day tabs wherever there are fewer than seven columns (brief week-day-joined-tabs); at 1440 px the seven columns are the day control
+  const tabs = joined ? (phone ? nutritionTabs(today, offset) : shadeTabs(nutritionTabs(today, offset), shownDays)) : [];
   const pickDay = (d: string) => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); };
   return (
     <section className="wb nb" aria-labelledby="nb-h">
       <div className="nb-head">
         <h2 id="nb-h" className="cond vh">Nutrition</h2>
-        {!phone && weekSwitch}
-        {!phone && (
+        {!joined && weekSwitch}
+        {!joined && (
           <div className="nb-headbtns">
             <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
           </div>
         )}
       </div>
-      {phone && <WeekDayCard tabs={nutritionTabs(today, offset)} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controls={() => 'nb-day-panel'}>{weekSwitch}</WeekDayCard>}
+      {joined && (
+        <WeekDayCard tabs={tabs} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controls={() => 'nb-day-panel'}>
+          {weekSwitch}
+          {!phone && <button type="button" className="btn sm nb-cardmanage" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>}
+        </WeekDayCard>
+      )}
       <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
       <div className="nb-toolbar" role="group" aria-label="Add food">
         <span className="nb-target nb-target-quiet">{target}</span>
@@ -105,7 +111,6 @@ export default function NutritionBoard() {
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
         <>
-          {!phone && <DayStepper today={today} day={day} onPick={pickDay} />}
           {phone && (
             <div className="nb-links" role="group" aria-label="Nutrition settings">
               <button type="button" className="nb-link" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
