@@ -19,9 +19,9 @@ test('a stretch row is one line: the tick box sits beside the name', async ({ pa
   expect(name.x).toBeGreaterThan(box.x);
 });
 
-test("today's tally is in the progress line, and there is no separate summary box", async ({ page }) => {
+test('there is no progress line and no separate summary box (the day tabs carry the counts)', async ({ page }) => {
   await open(page);
-  await expect(page.locator('.progress [role="status"]')).toContainText(/days done · Today \d+ of \d+/);
+  await expect(page.locator('.strroot .progress')).toHaveCount(0);
   await expect(page.locator('.bwrow')).toHaveCount(0);
 });
 
