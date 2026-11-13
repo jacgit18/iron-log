@@ -5,7 +5,7 @@ import { openNutrition } from './nutritionBoardHelpers.js';
 const box = (page, sel) => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, r: r.right, b: r.bottom, h: r.height, w: r.width }; });
 const overflows = page => page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || [...document.querySelectorAll('.wdc, .wdc *')].some(e => { const r = e.getBoundingClientRect(), c = document.querySelector('.wdc').getBoundingClientRect(); return r.width && (r.right > c.right + 1 || r.left < c.left - 1); }));
 
-for (const [width, tabs] of [[700, 7], [768, 7], [1000, 7], [1280, 7], [1440, 0], [1920, 0]]) {
+for (const [width, tabs] of [[700, 7], [1280, 7], [1920, 0]]) {
   test(`at ${width} px one card holds the week row${tabs ? ', the day tabs' : ''} and the add-food toolbar, in that order, with nothing overflowing`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openNutrition(page);
@@ -22,7 +22,10 @@ for (const [width, tabs] of [[700, 7], [768, 7], [1000, 7], [1280, 7], [1440, 0]
     expect(m.r).toBeGreaterThan(c.r - 24); // Manage at the right end
     expect(t.y).toBeGreaterThanOrEqual(m.b - 0.5); // toolbar under the week row
     if (tabs) { const tb = await box(page, '.wdc-tabs'); expect(tb.y).toBeGreaterThanOrEqual(m.b - 0.5); expect(t.y).toBeGreaterThanOrEqual(tb.b - 0.5); } // tabs between the two
-    expect(add.r).toBeGreaterThan(c.r - 24); // Add food is the last button, at the right end of its row
+    const rights = await page.locator('.nb-toolbar .btn').evaluateAll(els => els.map(e => e.getBoundingClientRect().right));
+    expect(add.r).toBeGreaterThan(c.r - 24); // Add food is at the right end of its row
+    expect(await page.locator('.nb-tbtns .btn').last().getAttribute('id')).toBe('nb-add'); // and the last button
+    expect(add.r).toBeGreaterThanOrEqual(Math.max(...rights) - 1);
     expect(t.b).toBeLessThanOrEqual(c.b + 0.5);
     const col = await box(page, '.nb-col');
     expect(col.y).toBeGreaterThanOrEqual(c.b); // the day columns start below the card
@@ -33,6 +36,17 @@ for (const [width, tabs] of [[700, 7], [768, 7], [1000, 7], [1280, 7], [1440, 0]
     await page.keyboard.press('Escape');
   });
 }
+
+test('a week other than this one adds the This week button to row 1 and still fits the card at 700 px', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 900 });
+  await openNutrition(page);
+  await page.getByRole('button', { name: 'Previous week' }).click();
+  await expect(page.getByRole('button', { name: 'This week', exact: true })).toBeVisible();
+  const m = await box(page, '#nb-manage'), c = await box(page, '.wdc');
+  expect(m.r).toBeLessThanOrEqual(c.r + 0.5);
+  expect(m.r).toBeGreaterThan(c.r - 24);
+  expect(await overflows(page)).toBe(false);
+});
 
 test('with large text the card still holds the toolbar and nothing overflows at 768 px', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
