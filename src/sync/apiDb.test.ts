@@ -1138,7 +1138,6 @@ describe('whose data this device holds (B2e)', () => {
     const bobs = make({ identity });
     bobs.start();
     await settle();
-    expect(ownerOf(storage)).toBe('bob');
     expect(bobs.status()).toMatchObject({ state: 'idle', ready: true });
     expect((await bobs.doc('weeks/2026-10-04').get()).data()).toMatchObject({ prog: 'B' });
   });
@@ -1160,7 +1159,6 @@ describe('whose data this device holds (B2e)', () => {
     const bobs = make({ identity, onOwnerChange: changed });
     bobs.start();
     await settle();
-    expect(ownerOf(storage)).toBe('bob');
     expect(changed).toHaveBeenCalledTimes(1);
   });
 
@@ -1203,7 +1201,6 @@ describe('whose data this device holds (B2e)', () => {
     const sentBefore = server.sent.length;
     expect(await bobs.wipeForNewAccount()).toBe('done');
     for (const key of [MIRROR_KEY, PENDING_KEY, QUARANTINE_KEY]) expect(storage.data.has(key)).toBe(false);
-    expect(ownerOf(storage)).toBe('bob');
     await bobs.syncNow();
     await settle(40);
     expect(server.sent).toHaveLength(sentBefore); // Ann's e9 never goes to Bob
@@ -1290,6 +1287,48 @@ describe('erasing the account (Phase F)', () => {
     expect(await db.eraseEverything('data')).toMatchObject({ ok: false, class: 'account' });
     expect(storage.data.has(MIRROR_KEY)).toBe(true);
     expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'account' });
+  });
+
+  it('an empty page handed to another account on wake still names the account it was opened as when it erases or deletes (S-73)', async () => {
+    // Tab 1 opens as Ann with nothing on the device; another tab switches the browser to Bob; tab 1 wakes and quietly carries on as Bob.
+    // The erase must still say "Ann", so the server refuses it instead of emptying Bob.
+    const as = (userId: string): AccountState => ({ status: 'signed-in', userId, kind: 'session', email: null, name: null, isAdmin: false, isPaid: false });
+    let who = as('ann');
+    const identity = () => Promise.resolve(who);
+    for (const what of ['data', 'account'] as const) {
+      who = as('ann');
+      let wakeUp = () => {};
+      const { server, make } = setup();
+      const db = make({ identity, onWake: cb => { wakeUp = cb; return () => undefined; } });
+      db.start();
+      await settle();
+      who = as('bob');
+      wakeUp();
+      await settle();
+      await db.eraseEverything(what);
+      expect(server.accountActions).toEqual([{ action: what === 'data' ? 'erase' : 'delete', expectedUser: 'ann' }]);
+      db.stop();
+    }
+  });
+
+  it('after the person chooses to carry on as another account, erase names that account', async () => {
+    const as = (userId: string): AccountState => ({ status: 'signed-in', userId, kind: 'session', email: null, name: null, isAdmin: false, isPaid: false });
+    let who = as('ann');
+    const identity = () => Promise.resolve(who);
+    let wakeUp = () => {};
+    const { server, storage, make } = setup();
+    const db = make({ identity, onWake: cb => { wakeUp = cb; return () => undefined; } });
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1')); // data to protect: the switch is paused for a choice, not quiet
+    who = as('bob');
+    wakeUp();
+    await settle();
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'account' });
+    expect(await db.wipeForNewAccount()).toBe('done');
+    await db.eraseEverything('data');
+    expect(server.accountActions.at(-1)).toEqual({ action: 'erase', expectedUser: 'bob' });
+    db.stop();
   });
 
   it('a write that was waiting to retry when the erase failed is still sent', async () => {

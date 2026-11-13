@@ -155,7 +155,10 @@ export function createApiDb(options: ApiDbOptions) {
     return isObjectLike(saved) && typeof saved.userId === 'string' ? saved.userId : null;
   };
   const hasData = () => mirror.rows().size > 0 || outbox.paths().length > 0 || outbox.quarantined().length > 0;
-  const adopt = (userId: string) => { storage.set(OWNER_KEY, { userId }); verified = true; options.onVerified?.(userId); };
+  // The account this page was opened as. Set by the first verification of the page and by the person's own choice to carry on as another account
+  // (wipeForNewAccount); never by the quiet hand-over of an empty device. Erase and delete name it, so they are refused if the browser has moved on.
+  let pageUser: string | null = null;
+  const adopt = (userId: string, chosen = false) => { storage.set(OWNER_KEY, { userId }); verified = true; if (pageUser === null || chosen) pageUser = userId; options.onVerified?.(userId); };
   type Gate = { ok: true } | { ok: false; because: PauseReason };
   async function gate(): Promise<Gate> {
     if (!options.identity || verified) return { ok: true };
@@ -645,7 +648,7 @@ export function createApiDb(options: ApiDbOptions) {
       outbox.clear();
       bases.clear(); handed.clear(); retryKeep.clear(); // a week saved before the reload must not merge against the old data
       notices = [];
-      adopt(who.userId);
+      adopt(who.userId, true);
       options.onOwnerChange?.();
       wake();
       announce();
@@ -682,7 +685,7 @@ export function createApiDb(options: ApiDbOptions) {
       halted = true;
       wake(); // anything waiting to retry looks again, sees the halt and lets go
       await chain; // a send already on its way finishes before the server erases, so it cannot land after
-      const out = await act();
+      const out = await act(pageUser ?? undefined);
       if (!out.ok) {
         // The halt made every waiting send let go, so start them again, as start() does; else they wait for a reload.
         halted = false;
