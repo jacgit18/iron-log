@@ -154,6 +154,7 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await expect(menu.getByRole('button')).toHaveText([/Recipe or meal/, /Scan to fill a food form/, /Add a food by hand/]);
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
+  await expect(page.locator('#recipes-new')).toBeFocused(); // Escape hands focus back to + New
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Recipe or meal' }).click();
   await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
   await page.goBack();
