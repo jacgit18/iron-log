@@ -44,9 +44,6 @@
 .wsec .bwrow input {
   width: 72px;
 }
-.wsec .bwrow .note {
-  white-space: nowrap;
-}
 .wsec .filterbar {
   margin: 0;
   padding: var(--sp-6) var(--sp-12);

@@ -29,7 +29,6 @@ import './BoardTop.css';
 import './DayCount.css';
 import './DayHeader.css';
 import './Leftovers.css';
-import './WeekBar.css';
 import './WeekSection.css';
 
 // Cards moved in from another day are grouped under their own heading.
@@ -158,7 +157,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
-  // The week row (switcher and program switch): its own bar above the notices on a wide screen, the top of the joined week and day card on a phone (WeekDayCard).
+  // weekNav is the week switcher, shared by both layouts. weekRow (switcher and program switch) is the phone's: the top of the joined week and day card (WeekDayCard). A wide screen composes weekNav, ProgramSwitch, ModeSelect and BodyWeightRow in its own card (.wsec) below, so keep the ProgramSwitch placement in step.
   const weekNav = (
     <div className="weeknav">
       <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>

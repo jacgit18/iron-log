@@ -79,6 +79,8 @@ test('in Mode 1 the week bar has no switch and no progress row', async ({ page }
 // Wide screens: one bordered card holds the week switcher, the mode menu and the body weight (row 1) and the sort, equipment and injury controls (row 2);
 // the notices sit under it. A phone keeps the joined week and day card with the body weight under it.
 test('desktop: week, mode and body weight share row 1 of one card, filters are row 2, notices are below', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('ironlog:hidelocal')); // the fixture hides the local-save tip; show it so the order below is checked
+  await page.reload();
   for (const width of [701, 768, 1000, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     const box = async sel => page.locator(sel).first().boundingBox();
@@ -103,10 +105,16 @@ test('desktop: week, mode and body weight share row 1 of one card, filters are r
   await expect(page.locator('.boardtabtop #board-mode')).toHaveCount(0); // the mode menu left the Workout / Stretches row
   const card = await box('.wsec'); const days = await box('.board');
   const tip = page.locator('.boardroot > .notice.tip');
-  if (await tip.count()) { const t = await tip.first().boundingBox(); expect(t.y).toBeGreaterThanOrEqual(card.y + card.height - 1); expect(t.y + t.height).toBeLessThanOrEqual(days.y + 1); }
+  await expect(tip).toBeVisible();
+  const t = await tip.boundingBox(); expect(t.y).toBeGreaterThanOrEqual(card.y + card.height - 1); expect(t.y + t.height).toBeLessThanOrEqual(days.y + 1); // under the card, above the day columns
   await page.locator('.wsec .bwrow input').fill('180');
   await page.locator('.wsec .bwrow').getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.wsec .bwrow b')).toHaveText('180 lb');
+  // the widest state (a saved weight) still fits inside the card at the narrowest desktop width
+  await page.setViewportSize({ width: 701, height: 900 });
+  const c2 = await box('.wsec'); const r2 = await box('.wsec .bwrow');
+  expect(r2.x + r2.width).toBeLessThanOrEqual(c2.x + c2.width + 1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('desktop: the body weight is not on the Stretches view', async ({ page }) => {
