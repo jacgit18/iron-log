@@ -86,12 +86,20 @@ test('above 700 px the Board, Stretches and Nutrition keep their own week bars a
   await expect(page.locator('.wdc')).toHaveCount(0);
 });
 
-test('phone: notices stay above the filter row and the card on the Board', async ({ page }) => {
+test('phone: notices sit under Body weight, after the filter row and the card', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  const notice = page.locator('.boardroot > .notice').first();
-  if (!(await notice.count())) test.skip(true, 'no notice shows for this fixture');
-  const n = await box(page, '.boardroot > .notice'), f = await box(page, '.filterbar'), c = await box(page, '.wdc');
-  expect(n.b).toBeLessThanOrEqual(f.y + 1);
+  await expect(page.locator('.boardroot > .notice').first()).toBeVisible();
+  const f = await box(page, '.filterbar'), c = await box(page, '.wdc'), w = await box(page, '.boardroot .bwrow'), n = await box(page, '.boardroot > .notice');
   expect(f.b).toBeLessThanOrEqual(c.y + 1);
+  expect(c.b).toBeLessThanOrEqual(w.y + 1);
+  expect(w.b).toBeLessThanOrEqual(n.y + 1);
+});
+
+test('desktop: notices stay above the filter row', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.reload();
+  await expect(page.locator('.boardroot > .notice').first()).toBeVisible();
+  const n = await box(page, '.boardroot > .notice'), f = await box(page, '.filterbar');
+  expect(n.b).toBeLessThanOrEqual(f.y + 1);
 });

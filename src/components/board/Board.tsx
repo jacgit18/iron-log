@@ -251,10 +251,10 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
         </>
       ) : (
         <>
-          {notices}
           {filterbar}
           <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
           <BodyWeightRow draft={bodyWeight} />
+          {notices}
         </>
       )}
 
