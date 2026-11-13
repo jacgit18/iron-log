@@ -13,7 +13,7 @@ const shopping = page => page.locator('#nb-shopping');
 // What is on Shopping, read from the stored list (the store writes it as items are added or removed).
 const listed = page => page.evaluate(() => { const d = JSON.parse(localStorage.getItem('ironlog:grocery/main') || 'null'); return ((d && (d.items || (d.data && d.data.items))) || []).map(i => i.n).sort(); });
 const planTomorrow = async (page, name, phone = false) => {
-  if (phone) await page.getByRole('group', { name: 'Day stepper' }).getByRole('button', { name: 'Next day' }).click(); // one day at a time on a phone
+  if (phone) await page.locator('.wdc-tabs [role="tab"][aria-selected="true"] + [role="tab"]').click(); // one day at a time on a phone
   else await page.locator(`.nb-col[data-day="${TOMORROW}"] .nb-dayname`).click();
   const sheet = await openAdd(page, 'Recipes');
   await sheet.getByRole('group', { name: 'Which meal' }).getByRole('button', { name: 'Dinner', exact: true }).click();
@@ -59,7 +59,7 @@ test('on a phone the button is in the Manage sheet, not the toolbar; a tap close
   await expect.poll(() => listed(page)).toEqual(['garlic', 'pasta']);
   await page.locator('.removednote').getByRole('button', { name: 'Undo' }).click();
   await expect.poll(() => listed(page)).toEqual([]);
-  await page.getByRole('group', { name: 'Day stepper' }).getByRole('combobox', { name: 'Day to show' }).selectOption('2026-09-19');
+  await page.getByRole('button', { name: 'Previous week' }).click(); // last week: its first day
   await page.locator('#nb-manage').click();
   await expect(page.getByRole('dialog').locator('#nb-shopping')).toBeDisabled(); // last week adds nothing
 });

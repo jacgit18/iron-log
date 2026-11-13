@@ -6,6 +6,7 @@ import { recommendInputs } from '../../lib/manageTargets.js';
 import { planLog, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
 import { ADD_FLOWS, addingTo, dayView, foodEditable, longDay, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { nutritionTabs } from '../../lib/weekDayTabs.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -14,6 +15,7 @@ import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
 import type { PlanSlot } from '../../types.ts';
 import Icon from '../Icon.jsx';
+import WeekDayCard from '../WeekDayCard.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
@@ -66,16 +68,21 @@ export default function NutritionBoard() {
   const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
   const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
   const target = addingTo(day, today);
+  const weekSwitch = (
+    <div className="weeknav nb-weeksw" role="group" aria-label="Week">
+      <button type="button" className="btn sm" aria-label="Previous week" aria-disabled={offset === WEEK_OFFSETS[0]} onClick={() => { if (offset > WEEK_OFFSETS[0]!) goWeek((offset - 1) as WeekOffset); }}><Icon name="chevron-left" /></button>
+      <span className="nb-weekname cond" data-dates={weekDates(today, offset)}>{WEEK_NAME[offset]}</span>
+      <button type="button" className="btn sm" aria-label="Next week" aria-disabled={offset === WEEK_OFFSETS[WEEK_OFFSETS.length - 1]} onClick={() => { if (offset < WEEK_OFFSETS[WEEK_OFFSETS.length - 1]!) goWeek((offset + 1) as WeekOffset); }}><Icon name="chevron-right" /></button>
+      {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
+    </div>
+  );
+  const pickDay = (d: string) => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); };
   return (
     <section className="wb nb" aria-labelledby="nb-h">
+      {phone && <WeekDayCard tabs={nutritionTabs(today, offset)} selected={day} onPick={pickDay} idPrefix="nbdaytab-">{weekSwitch}</WeekDayCard>}
       <div className="nb-head">
         <h2 id="nb-h" className="cond vh">Nutrition</h2>
-        <div className="weeknav nb-weeksw" role="group" aria-label="Week">
-          <button type="button" className="btn sm" aria-label="Previous week" aria-disabled={offset === WEEK_OFFSETS[0]} onClick={() => { if (offset > WEEK_OFFSETS[0]!) goWeek((offset - 1) as WeekOffset); }}><Icon name="chevron-left" /></button>
-          <span className="nb-weekname cond" data-dates={weekDates(today, offset)}>{WEEK_NAME[offset]}</span>
-          <button type="button" className="btn sm" aria-label="Next week" aria-disabled={offset === WEEK_OFFSETS[WEEK_OFFSETS.length - 1]} onClick={() => { if (offset < WEEK_OFFSETS[WEEK_OFFSETS.length - 1]!) goWeek((offset + 1) as WeekOffset); }}><Icon name="chevron-right" /></button>
-          {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
-        </div>
+        {!phone && weekSwitch}
         {!phone && (
           <div className="nb-headbtns">
             <button type="button" className="btn sm" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
@@ -98,7 +105,7 @@ export default function NutritionBoard() {
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
         <>
-          <DayStepper today={today} day={day} onPick={d => { setPicked(d); setAnchor(shownDays.includes(d) ? shownDays[0]! : d); setMsg(''); }} />
+          {!phone && <DayStepper today={today} day={day} onPick={pickDay} />}
           {phone && (
             <div className="nb-links" role="group" aria-label="Nutrition settings">
               <button type="button" className="nb-link" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>

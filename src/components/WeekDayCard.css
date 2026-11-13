@@ -1,0 +1,112 @@
+@layer base, components;
+@layer components {
+/* The phone's joined week and day card (WeekDayCard.tsx): one bordered card, the week row on top, seven day tabs under it with the selected day underlined, pinned at the top while the page scrolls. Its own classes only: the shared .daytabs, .weeknav and .seg rules are for the screens that still use them. */
+.wdc {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: var(--z-sticky);
+  margin-block: var(--sp-6) var(--sp-8);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.wdc-week {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: var(--sp-8);
+  padding: var(--sp-4) var(--sp-6);
+}
+.wdc-week .weeknav {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: space-between;
+}
+.wdc-week .weeknav h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-xl);
+  text-align: center;
+}
+.wdc-week .weeknav .btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+.wdc-week .progswitch {
+  flex: none;
+  margin-block-start: 0;
+}
+.wdc-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+.wdc-tabs button {
+  min-height: 44px;
+  padding: var(--sp-4) var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  overflow-wrap: anywhere;
+  text-align: center;
+  cursor: pointer;
+}
+.wdc-tabs b {
+  font-family: "Barlow Condensed", "Barlow Condensed Fallback", sans-serif;
+  font-size: var(--fs-lg);
+  color: var(--ink);
+}
+.wdc-tabs span {
+  font-size: var(--fs-2xs);
+}
+.wdc-tabs button.full span {
+  color: var(--accent);
+  font-weight: 700;
+}
+.wdc-tabs button.today b::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-inline-start: var(--sp-2);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  vertical-align: middle;
+}
+.wdc-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+.wdc-tabs button[aria-selected="true"] b {
+  color: var(--accent);
+}
+/* A swap just happened (Board.tsx): the two tabs get the faint tint, as the old day tabs did. */
+.wdc-tabs button.swapped {
+  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  animation: wdcswaptint 1.8s ease-out forwards;
+}
+@keyframes wdcswaptint {
+  0%, 35% {
+    background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wdc-tabs button.swapped {
+    animation: none;
+  }
+}
+}

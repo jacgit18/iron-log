@@ -7,6 +7,7 @@ import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dat
 import { groupsOf, dayTally, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
+import type { DayTab } from '../../lib/weekDayTabs.js';
 import { useMountedDays } from '../board/useMountedDays.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import { useWide } from '../board/useWide.js';
@@ -16,6 +17,7 @@ import ExperimentSearch from '../ExperimentSearch.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WatchLink from '../WatchLink.jsx';
+import WeekDayCard from '../WeekDayCard.js';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 import './Stretches.css';
@@ -108,39 +110,31 @@ export default function Stretches() {
   const [pick, setPick] = useState<{ wk: string; d: number } | null>(null); // {wk, d}: the phone's day, only for the week it was picked in
   const day = pick && pick.wk === wk ? pick.d : thisWeek ? today.getDay() : 0;
   const choose = (d: number) => setPick({ wk, d });
+  const wide = useWide();
   // Same as the Board (lib/boardMount.ts): a phone draws the selected day's stretches at once and the other days on idle. That hook counts days from 1.
-  const dayDrawn = useMountedDays(day + 1, useWide());
+  const dayDrawn = useMountedDays(day + 1, wide);
   const [arming, setArming] = useState<string | null>(null); // the added stretch whose Remove was pressed once
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Skip day button is showing
 
+  const weekRow = (
+    <div className="weeknav">
+      <button type="button" className="btn sm" aria-label="Previous week" onClick={() => s.gotoWeek('prev')}><Icon name="chevron-left" /></button>
+      <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
+      <button type="button" className="btn sm" aria-label="Next week" onClick={() => s.gotoWeek('next')}><Icon name="chevron-right" /></button>
+      {!thisWeek && <button type="button" className="btn sm ghost" onClick={() => s.gotoWeek('today')}>This week</button>}
+    </div>
+  );
+  const tabs: DayTab[] = DAYS7.map(d => {
+    const t = dayTally(items, week, d); const sub = t.skipped ? 'Skip' : t.full ? '✓' : `${t.done}/${t.total}`;
+    return { id: String(d), head: DAY_NAMES[d].slice(0, 3), sub, done: !!(t.full || t.skipped), label: `${DAY_NAMES[d].slice(0, 3)} ${sub}: ${DAY_NAMES[d]}, ${t.skipped ? 'skipped' : t.full ? 'all done' : `${t.done} of ${t.total} done`}` };
+  });
+
   return (
     <div className="strroot">
-      <div className="weekbar">
-        <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => s.gotoWeek('prev')}><Icon name="chevron-left" /></button>
-          <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
-          <button type="button" className="btn sm" aria-label="Next week" onClick={() => s.gotoWeek('next')}><Icon name="chevron-right" /></button>
-          {!thisWeek && <button type="button" className="btn sm ghost" onClick={() => s.gotoWeek('today')}>This week</button>}
-        </div>
-      </div>
+      {wide ? <div className="weekbar">{weekRow}</div> : null}
       {items.length === 0 && <StretchFirstRun />}
-
-      <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
-        const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 0, End: STRETCH_DAYS - 1 }[e.key]; if (n == null) return;
-        e.preventDefault(); const d = (n + STRETCH_DAYS) % STRETCH_DAYS; choose(d); document.getElementById(`sdaytab-${d}`)!.focus();
-      }}>
-        {DAYS7.map(d => {
-          const t = dayTally(items, week, d); const short = t.skipped ? 'Skip' : t.full ? '✓' : `${t.done}/${t.total}`;
-          return (
-            <button type="button" role="tab" key={d} id={`sdaytab-${d}`} aria-selected={d === day} aria-controls={`scol-${d}`} tabIndex={d === day ? 0 : -1}
-              className={t.full || t.skipped ? 'full' : ''} aria-label={`${DAY_NAMES[d].slice(0, 3)} ${short}: ${DAY_NAMES[d]}, ${t.skipped ? 'skipped' : t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
-              onClick={() => { choose(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
-              <b aria-hidden="true">{DAY_NAMES[d].slice(0, 3)}</b>{' '}<span aria-hidden="true">{short}</span>
-            </button>
-          );
-        })}
-      </div>
+      {!wide && <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="sdaytab-" controlsPrefix="scol-" onPick={id => { choose(Number(id)); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>{weekRow}</WeekDayCard>}
 
       <div className="board">
         {DAYS7.map(d => {

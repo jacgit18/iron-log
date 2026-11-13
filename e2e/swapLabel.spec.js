@@ -21,7 +21,7 @@ for (const width of [360, 375, 390]) {
 test('phone 360: a tap on the left arrow\'s right edge, under the words, still swaps the day', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/');
-  await page.locator('.daytabs button').nth(1).click();
+  await page.locator('.wdc-tabs button').nth(1).click();
   const arrow = page.locator('#swap-2--1');
   await expect(arrow).toBeVisible();
   const box = await arrow.boundingBox();
