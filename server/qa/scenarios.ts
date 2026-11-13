@@ -3639,7 +3639,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-295', feature: 'Joined week and day tabs', title: 'Nutrition on a desktop: the week row and the add-food toolbar are one card', persona: 'meal-planner', brief: 'week-day-joined-tabs',
+    id: 'S-296', feature: 'Joined week and day tabs', title: 'Nutrition on a desktop: the week row and the add-food toolbar are one card', persona: 'meal-planner', brief: 'week-day-joined-tabs',
     steps: [
       'Make the window 1920 px wide and open Nutrition. Read the top of the page, then press Add food and close the sheet.',
       'Make the window 1000 px wide, then 700 px, and read the card again.',
