@@ -682,6 +682,12 @@ export function createApiDb(options: ApiDbOptions) {
     async eraseEverything(what: 'data' | 'account'): Promise<AccountActionOutcome | { ok: false; class: 'unavailable' }> {
       const act = what === 'data' ? transport.eraseData : transport.deleteAccount;
       if (!act) return { ok: false, class: 'unavailable' };
+      // A page that has not yet checked who is signed in does not know which account it would erase: ask first, and refuse if that cannot be answered
+      // (offline, signed out, or the browser holds another account's data). Without an identity check there is nothing to ask.
+      if (options.identity && pageUser === null) {
+        const asked = await gate();
+        if (!asked.ok || pageUser === null) return { ok: false, class: 'unavailable' };
+      }
       halted = true;
       wake(); // anything waiting to retry looks again, sees the halt and lets go
       await chain; // a send already on its way finishes before the server erases, so it cannot land after

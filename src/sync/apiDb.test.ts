@@ -1138,6 +1138,7 @@ describe('whose data this device holds (B2e)', () => {
     const bobs = make({ identity });
     bobs.start();
     await settle();
+    expect(ownerOf(storage)).toBe('bob');
     expect(bobs.status()).toMatchObject({ state: 'idle', ready: true });
     expect((await bobs.doc('weeks/2026-10-04').get()).data()).toMatchObject({ prog: 'B' });
   });
@@ -1159,6 +1160,7 @@ describe('whose data this device holds (B2e)', () => {
     const bobs = make({ identity, onOwnerChange: changed });
     bobs.start();
     await settle();
+    expect(ownerOf(storage)).toBe('bob');
     expect(changed).toHaveBeenCalledTimes(1);
   });
 
@@ -1201,6 +1203,7 @@ describe('whose data this device holds (B2e)', () => {
     const sentBefore = server.sent.length;
     expect(await bobs.wipeForNewAccount()).toBe('done');
     for (const key of [MIRROR_KEY, PENDING_KEY, QUARANTINE_KEY]) expect(storage.data.has(key)).toBe(false);
+    expect(ownerOf(storage)).toBe('bob');
     await bobs.syncNow();
     await settle(40);
     expect(server.sent).toHaveLength(sentBefore); // Ann's e9 never goes to Bob
@@ -1309,6 +1312,19 @@ describe('erasing the account (Phase F)', () => {
       expect(server.accountActions).toEqual([{ action: what === 'data' ? 'erase' : 'delete', expectedUser: 'ann' }]);
       db.stop();
     }
+  });
+
+  it('a page that has not verified who is signed in refuses to erase or delete, and asks first when it can', async () => {
+    const as = (userId: string): AccountState => ({ status: 'signed-in', userId, kind: 'session', email: null, name: null, isAdmin: false, isPaid: false });
+    // Never started, identity unreachable: nothing is sent.
+    const offline = setup({ identity: () => Promise.resolve<AccountState>({ status: 'unreachable' } as AccountState) });
+    expect(await offline.db.eraseEverything('data')).toEqual({ ok: false, class: 'unavailable' });
+    expect(await offline.db.eraseEverything('account')).toEqual({ ok: false, class: 'unavailable' });
+    expect(offline.server.accountActions).toEqual([]);
+    // Never started, identity answers: it asks, then names that account.
+    const asked = setup({ identity: () => Promise.resolve(as('ann')) });
+    expect(await asked.db.eraseEverything('data')).toEqual({ ok: true });
+    expect(asked.server.accountActions).toEqual([{ action: 'erase', expectedUser: 'ann' }]);
   });
 
   it('after the person chooses to carry on as another account, erase names that account', async () => {
