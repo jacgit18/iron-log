@@ -57,37 +57,27 @@ test('on a wide screen the day tabs are one row under the header card, starting 
   expect(rows).toBe(1);
 });
 
-// The desktop day tabs never show a scrollbar: overflow-x:auto made the strip a vertical scroller too, and the tabs' -1px bottom margin over its border then overflowed it by 1px (b-program-days-scrollbar). A phone has no tab strip (stepper only).
+// The desktop day tabs are one row and never show a scrollbar: the strip's bottom line is an inset shadow, so the tabs no longer overflow it by 1px (b-program-days-scrollbar). A phone has no tab strip (stepper only).
 for (const w of [701, 768, 1024, 1280, 1440, 1920]) {
-  test(`at ${w}px the day tabs have no scrollbar${w >= 1024 ? ' and stay on one row' : ''}`, async ({ page }) => {
+  test(`at ${w}px the day tabs are one row with no scrollbar`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 900 });
     await page.click('#tab-program');
     const m = await page.locator('.dtabs').evaluate(el => {
       const cs = getComputedStyle(el);
-      return { ox: cs.overflowX, oy: cs.overflowY, bar: el.offsetWidth - el.clientWidth, rows: new Set([...el.children].map(b => Math.round(b.getBoundingClientRect().top))).size };
+      return {
+        wrap: cs.flexWrap, oy: cs.overflowY, vbar: el.offsetHeight - el.clientHeight, hbar: el.scrollWidth - el.clientWidth, side: document.documentElement.scrollWidth - innerWidth,
+        tops: new Set([...el.children].map(b => Math.round(b.getBoundingClientRect().top))).size, scrollV: el.scrollHeight - el.clientHeight,
+      };
     });
-    expect(['auto', 'scroll']).not.toContain(m.ox);
-    expect(['auto', 'scroll']).not.toContain(m.oy);
-    expect(m.bar).toBe(0);
-    if (w >= 1024) expect(m.rows).toBe(1); else expect(m.rows).toBeLessThanOrEqual(2); // the strip is drawn above 700 px, where it may wrap once
+    expect(m.wrap).toBe('nowrap');
+    expect(m.oy).toBe('hidden');
+    expect(m.vbar, 'no vertical scrollbar').toBe(0);
+    expect(m.scrollV, 'nothing overflows the strip vertically').toBeLessThanOrEqual(0);
+    expect(m.hbar, 'all seven tabs fit, so nothing scrolls sideways').toBeLessThanOrEqual(0);
+    expect(m.side).toBeLessThanOrEqual(0);
+    expect(m.tops).toBe(1);
   });
 }
-
-// A strip too narrow for seven tabs (browser zoom, large text) wraps: no scrollbar, no sideways scroll, and a second row sits under the first, not over its underline.
-test('a narrow day tab strip wraps onto a second row with no scrollbar and no overlap', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 900 });
-  await page.click('#tab-program');
-  const m = await page.locator('.dtabs').evaluate(el => {
-    el.style.maxWidth = '400px'; el.style.flexBasis = '400px';
-    const tops = [...new Set([...el.children].map(b => Math.round(b.getBoundingClientRect().top)))].sort((x, y) => x - y);
-    const first = el.children[0].getBoundingClientRect(), last = el.children[el.children.length - 1].getBoundingClientRect();
-    return { rows: tops.length, bar: el.offsetWidth - el.clientWidth, vbar: el.offsetHeight - el.clientHeight - 1, firstBottom: first.bottom, lastTop: last.top, side: document.documentElement.scrollWidth - innerWidth };
-  });
-  expect(m.rows).toBeGreaterThanOrEqual(2);
-  expect(m.bar).toBe(0);
-  expect(m.side).toBeLessThanOrEqual(0);
-  expect(m.lastTop).toBeGreaterThanOrEqual(m.firstBottom - 1.5);
-});
 
 test('on a phone there is no day tab strip, only the stepper', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
