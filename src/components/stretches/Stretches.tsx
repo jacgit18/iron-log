@@ -11,6 +11,7 @@ import { countTab, type DayTab } from '../../lib/weekDayTabs.js';
 import { useMountedDays } from '../board/useMountedDays.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import { useWide } from '../board/useWide.js';
+import { useDismiss } from '../useDismiss.js';
 import ArmedButton from '../ArmedButton.jsx';
 import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
@@ -109,15 +110,8 @@ function DayMenu({ d, skipped, open, onOpen, onSkip }: { d: number; skipped: boo
   const box = useRef<HTMLSpanElement>(null);
   const dots = useRef<HTMLButtonElement>(null);
   const item = useRef<HTMLButtonElement>(null);
-  const set = useRef(onOpen); // the latest callback, so a re-render while the menu is open does not re-run the effect (it would pull focus back to the item)
-  set.current = onOpen;
-  useEffect(() => {
-    if (!open) return;
-    item.current?.focus();
-    const away = (e: Event) => { if (!box.current?.contains(e.target as Node)) set.current(false); };
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, [open]);
+  useDismiss(open, box, () => onOpen(false), { escape: false }); // Escape is handled on the menu itself below, so it does not reach a modal's document listener
+  useEffect(() => { if (open) item.current?.focus(); }, [open]);
   const close = () => { onOpen(false); dots.current?.focus(); };
   return (
     <span className="daymenu" ref={box} onKeyDown={e => { if (e.key === 'Escape' && open) { e.stopPropagation(); close(); } }} onBlur={e => { if (open && !box.current?.contains(e.relatedTarget as Node | null)) onOpen(false); }}>

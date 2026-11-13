@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Icon from '../Icon.js';
+import { useDismiss } from '../useDismiss.js';
 
 export type NewChoice = 'scan' | 'recipe' | 'food';
 // One + New button for every way to add (briefs recipes-find-type-tabs, recipes-list-compact: three rows; the Library is the other tab): a disclosure of plain buttons, closed again by a choice, Escape or a tap outside.
@@ -13,13 +14,7 @@ const CHOICES: { key: NewChoice; label: string; hint: string }[] = [
 export default function RecipeNewMenu({ onChoose }: { onChoose: (c: NewChoice) => void }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); box.current?.querySelector('button')?.focus(); } };
-    document.addEventListener('pointerdown', away); document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
-  }, [open]);
+  useDismiss(open, box, () => setOpen(false), { returnFocus: () => box.current?.querySelector('button')?.focus() });
   return (
     <div className="rc-new" ref={box}>
       <button type="button" className="btn" id="recipes-new" aria-expanded={open} aria-controls="recipes-new-list" onClick={() => setOpen(!open)}><Icon name="plus" /> New</button>
