@@ -1,6 +1,10 @@
 @layer base, components;
 @layer components {
 /* The phone's joined week and day card (WeekDayCard.tsx): one bordered card, the week row on top, seven day tabs under it with the selected day underlined, pinned at the top while the page scrolls. Its own classes only: the shared .daytabs, .weeknav and .seg rules are for the screens that still use them. */
+/* Focus and anchors scroll to below the pinned card, not under it (about 104px: week row 52, tabs 52). */
+html:has(.wdc) {
+  scroll-padding-top: calc(112px + env(safe-area-inset-top, 0px));
+}
 .wdc {
   position: sticky;
   top: env(safe-area-inset-top, 0px);

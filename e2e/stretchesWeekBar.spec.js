@@ -45,6 +45,17 @@ test('desktop: the Board week bar is a grid, the Stretches week bar is not', asy
   const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
   expect(await display('.boardroot > .weekbar')).toBe('grid');
   await page.click('#board-stretches');
-  await expect(page.locator('.strroot .weekbar')).toBeVisible();
+  await expect(page.locator('.strroot > .weekbar')).toBeVisible();
   expect(await display('.strroot > .weekbar')).not.toBe('grid');
+});
+
+// On a phone the week row sits in the joined card (`.wdc .weekbar`): the Board's grid must not reach it on the Board or on Stretches.
+test('phone: the week row in the card is not a grid on the Board or on Stretches', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
+  expect(await display('.boardroot .wdc .weekbar')).not.toBe('grid');
+  await page.click('#board-stretches');
+  await expect(page.locator('.strroot .wdc .weekbar')).toBeVisible();
+  expect(await display('.strroot .wdc .weekbar')).not.toBe('grid');
 });

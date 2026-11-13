@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nutritionTabs, tabAfterKey } from './weekDayTabs.js';
+import { countTab, nutritionTabs, tabAfterKey } from './weekDayTabs.js';
 
 describe('tabAfterKey', () => {
   it('moves right and left and wraps at the ends', () => {
@@ -34,5 +34,17 @@ describe('nutritionTabs', () => {
     expect(nutritionTabs(today, -1)[0]!.id).toBe('2026-09-13');
     expect(nutritionTabs(today, 1)[6]!.id).toBe('2026-10-03');
     expect(nutritionTabs(today, 1).some(x => x.today)).toBe(false);
+  });
+});
+
+describe('countTab', () => {
+  it('shows done/total and names the visible text first', () => {
+    const t = countTab('1', 'D1', 'Day 1', { done: 0, total: 11, full: false });
+    expect(t).toMatchObject({ id: '1', head: 'D1', sub: '0/11', done: false, label: 'D1 0/11: Day 1, 0 of 11 done' });
+  });
+  it('shows a check for a finished day, Rest for a rest day and Skip for a skipped day', () => {
+    expect(countTab('2', 'Mon', 'Monday', { done: 3, total: 3, full: true })).toMatchObject({ sub: '\u2713', done: true, label: 'Mon \u2713: Monday, all done' });
+    expect(countTab('3', 'D3', 'Day 3', { done: 0, total: 0, full: false }, 'rest')).toMatchObject({ sub: 'Rest', done: true, label: 'D3 Rest: Day 3, rest day' });
+    expect(countTab('4', 'Tue', 'Tuesday', { done: 0, total: 5, full: false }, 'skipped')).toMatchObject({ sub: 'Skip', done: true, label: 'Tue Skip: Tuesday, skipped' });
   });
 });

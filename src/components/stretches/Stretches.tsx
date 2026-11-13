@@ -7,7 +7,7 @@ import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dat
 import { groupsOf, dayTally, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
-import type { DayTab } from '../../lib/weekDayTabs.js';
+import { countTab, type DayTab } from '../../lib/weekDayTabs.js';
 import { useMountedDays } from '../board/useMountedDays.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import { useWide } from '../board/useWide.js';
@@ -125,15 +125,12 @@ export default function Stretches() {
       {!thisWeek && <button type="button" className="btn sm ghost" onClick={() => s.gotoWeek('today')}>This week</button>}
     </div>
   );
-  const tabs: DayTab[] = DAYS7.map(d => {
-    const t = dayTally(items, week, d); const sub = t.skipped ? 'Skip' : t.full ? '✓' : `${t.done}/${t.total}`;
-    return { id: String(d), head: DAY_NAMES[d].slice(0, 3), sub, done: !!(t.full || t.skipped), label: `${DAY_NAMES[d].slice(0, 3)} ${sub}: ${DAY_NAMES[d]}, ${t.skipped ? 'skipped' : t.full ? 'all done' : `${t.done} of ${t.total} done`}` };
-  });
+  const tabs: DayTab[] = DAYS7.map(d => { const t = dayTally(items, week, d); return countTab(String(d), DAY_NAMES[d].slice(0, 3), DAY_NAMES[d], t, t.skipped ? 'skipped' : undefined); });
 
   return (
     <div className="strroot">
       {wide ? <div className="weekbar">{weekRow}</div> : null}
-      {!wide && <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="sdaytab-" controlsPrefix="scol-" onPick={id => choose(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>}
+      {!wide && <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="sdaytab-" controls={id => `scol-${id}`} onPick={id => choose(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>}
       {items.length === 0 && <StretchFirstRun />}
 
       <div className="board">

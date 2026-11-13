@@ -88,7 +88,7 @@ export default function NutritionBoard() {
           </div>
         )}
       </div>
-      {phone && <WeekDayCard tabs={nutritionTabs(today, offset)} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controlsId="nb-day-panel">{weekSwitch}</WeekDayCard>}
+      {phone && <WeekDayCard tabs={nutritionTabs(today, offset)} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controls={() => 'nb-day-panel'}>{weekSwitch}</WeekDayCard>}
       <p className="nb-weeklab" role="status">{weekLabel(today, offset)}</p>
       <div className="nb-toolbar" role="group" aria-label="Add food">
         <span className="nb-target nb-target-quiet">{target}</span>

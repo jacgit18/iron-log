@@ -38,3 +38,10 @@ export function nutritionTabs(today: string, offset: WeekOffset): DayTab[] {
     return { id, head, sub: n, label: `${head} ${n}: ${weekday(id, 'long')} ${n}${isToday ? ', today' : ''}`, today: isToday };
   });
 }
+
+/** A day tab that shows a count (Board, Stretches): the second line is "Rest", "Skip", a check or done/total, and the name starts with the visible text. */
+export function countTab(id: string, head: string, dayName: string, t: { done: number; total: number; full: boolean }, state?: 'rest' | 'skipped'): DayTab {
+  const sub = state === 'rest' ? 'Rest' : state === 'skipped' ? 'Skip' : t.full ? '\u2713' : `${t.done}/${t.total}`;
+  const status = state === 'rest' ? 'rest day' : state === 'skipped' ? 'skipped' : t.full ? 'all done' : `${t.done} of ${t.total} done`;
+  return { id, head, sub, done: !!state || t.full, label: `${head} ${sub}: ${dayName}, ${status}` };
+}

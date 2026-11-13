@@ -8,7 +8,7 @@ import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
-import type { DayTab } from '../../lib/weekDayTabs.js';
+import { countTab, type DayTab } from '../../lib/weekDayTabs.js';
 import { boardFilterCount, boardFilterSummary } from '../../lib/boardFilter.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
@@ -200,12 +200,8 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
       {slots.length === 0 && <FirstRun />}
     </>
   );
-  const tabs: DayTab[] = wide ? [] : DAYS.map(d => { // only the phone card draws them
-    const t = tally(cols[d], week); const isRest = rest.includes(d);
-    const sub = isRest ? 'Rest' : t.full ? '✓' : `${t.done}/${t.total}`;
-    // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
-    return { id: String(d), head: `D${d}`, sub, done: isRest || t.full, swapped: !!swapFlash?.includes(d), label: `D${d} ${sub}: Day ${d}, ${isRest ? 'rest day' : t.full ? 'all done' : `${t.done} of ${t.total} done`}` };
-  });
+  // Only the phone card draws them. The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
+  const tabs: DayTab[] = wide ? [] : DAYS.map(d => ({ ...countTab(String(d), `D${d}`, `Day ${d}`, tally(cols[d], week), rest.includes(d) ? 'rest' : undefined), swapped: !!swapFlash?.includes(d) }));
 
   const filterbar = (
     <div className="filterbar">
@@ -255,10 +251,10 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
         </>
       ) : (
         <>
-          {filterbar}
-          <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controlsPrefix="col-" onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
-          <BodyWeightRow draft={bodyWeight} />
           {notices}
+          {filterbar}
+          <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
+          <BodyWeightRow draft={bodyWeight} />
         </>
       )}
 
