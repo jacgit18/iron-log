@@ -100,7 +100,8 @@ html:has(.wdc) {
 /* Nutrition from 700 to 1439 px: the days drawn as columns are tinted, the underline still marks the day food is added to. */
 .wdc-tabs button.shaded {
   background-color: color-mix(in srgb, var(--accent) 10%, transparent);
-  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--accent) 55%, transparent); /* a bar on the top edge as well, so the tint is not the only cue */
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  /* a bar on the top edge as well, so the tint is not the only cue */
 }
 /* A swap just happened (Board.tsx): the two tabs get the faint tint, as the old day tabs did. */
 .wdc-tabs button.swapped {
