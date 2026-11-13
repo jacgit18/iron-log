@@ -100,13 +100,12 @@ test('a planned card has a check box only on today; checking it marks it eaten a
   await expect(today(page).getByRole('checkbox', { name: 'Check Chili as eaten' })).not.toBeChecked();
 });
 
-test('on a phone the board shows one day at a time, with a stepper', async ({ page }) => {
+test('on a phone the board shows one day at a time, with the joined day tabs', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await seed(page);
   await expect(board(page).locator('.nb-col')).toHaveCount(1);
-  await expect(board(page).locator('.nb-step')).toBeVisible();
-  await expect(board(page).getByLabel('Day to show').locator('option')).toHaveCount(21);
-  await board(page).getByRole('button', { name: 'Next day' }).click();
+  await expect(page.locator('.wdc-tabs [role="tab"]')).toHaveCount(7);
+  await page.locator('.wdc-tabs [role="tab"][aria-selected="true"] + [role="tab"]').click();
   await expect(board(page).locator('.nb-col')).toHaveAttribute('data-day', TOMORROW);
   const axe = await new AxeBuilder({ page }).include('.wb').analyze();
   expect(axe.violations).toEqual([]);

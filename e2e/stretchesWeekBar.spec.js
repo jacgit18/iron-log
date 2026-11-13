@@ -39,12 +39,23 @@ test('phone: the Stretches day header has no date line and no count, and a skipp
 });
 
 // The Board's week bar grid must not leak to the Stretches bar (it reuses `.weekbar`), and the Board keeps its grid.
-test('phone: the Board week bar is a grid, the Stretches week bar is not', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+test('desktop: the Board week bar is a grid, the Stretches week bar is not', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
   expect(await display('.boardroot > .weekbar')).toBe('grid');
   await page.click('#board-stretches');
   await expect(page.locator('.strroot > .weekbar')).toBeVisible();
   expect(await display('.strroot > .weekbar')).not.toBe('grid');
+});
+
+// On a phone the week row sits in the joined card (`.wdc .weekbar`): the Board's grid must not reach it on the Board or on Stretches.
+test('phone: the week row in the card is not a grid on the Board or on Stretches', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  const display = (sel) => page.evaluate(s => getComputedStyle(document.querySelector(s)).display, sel);
+  expect(await display('.boardroot .wdc .weekbar')).not.toBe('grid');
+  await page.click('#board-stretches');
+  await expect(page.locator('.strroot .wdc .weekbar')).toBeVisible();
+  expect(await display('.strroot .wdc .weekbar')).not.toBe('grid');
 });

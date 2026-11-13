@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 import { openNutrition } from './nutritionBoardHelpers.js';
 
 // Nutrition phone header option B (owner 2026-11-12): one week row with the dates, the add buttons, the day stepper, then a last row with the Manage link (the Targets link and the colour key were removed by brief targets-into-manage). What a unit test cannot catch: where the links sit on a phone, their tap size, and that they open the sheets.
-const box = (page, sel) => page.locator(sel).evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, b: r.bottom, h: r.height }; });
+const box = (page, sel) => page.locator(sel).evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, b: r.bottom, h: r.height, w: r.width }; });
 
 for (const width of [375, 390]) {
   test(`at ${width} px the last row holds Manage as a link (44px tap area), no Targets link and no colour key; the week row has the dates; the Adding to line is not drawn; the sheet opens`, async ({ page }) => {
@@ -19,9 +19,9 @@ for (const width of [375, 390]) {
     expect(await page.locator('.nb-weeklab').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
     await expect(page.locator('.nb-target')).toHaveText('Adding to Thu 24 · today'); // read by a screen reader
     expect(await page.locator('.nb-target').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // not drawn: the day stepper names the day
-    const step = await box(page, '.nb-step'), m = await box(page, '#nb-manage'), col = await box(page, '.nb-col');
+    const step = await box(page, '.wdc'), m = await box(page, '#nb-manage'), col = await box(page, '.nb-col');
     expect(m.y).toBeGreaterThanOrEqual(step.b - 0.5);
-    expect(m.x).toBeLessThan(20); // left-aligned
+    expect(m.x + m.w).toBeGreaterThan(width - 20); // right-aligned
     expect(m.h).toBeGreaterThanOrEqual(43.5);
     expect(col.y).toBeGreaterThan(m.y);
     await page.locator('#nb-manage').click();
