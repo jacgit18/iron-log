@@ -1,8 +1,7 @@
 import { test, expect } from './fixtures.js';
-import { openNutrition } from './nutritionBoardHelpers.js';
+import { box, openNutrition } from './nutritionBoardHelpers.js';
 
 // The phone's week and day selectors are one underlined card (brief week-day-joined-tabs). A unit test cannot catch where it sits, that it stays pinned, or that nothing scrolls sideways.
-const box = (page, sel) => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, b: r.bottom, w: r.width, h: r.height }; });
 // The card is pinned by `position: sticky`; an ancestor with its own overflow would stop that, so check the chain on every screen that draws the card.
 const pinnable = page => page.locator('.wdc').first().evaluate(e => {
   const blockers = []; for (let n = e.parentElement; n && n !== document.documentElement; n = n.parentElement) { const o = getComputedStyle(n).overflow; if (o !== 'visible') blockers.push(`${n.className || n.tagName}: ${o}`); }
@@ -76,7 +75,7 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
   expect(await pinnable(page)).toEqual({ position: 'sticky', blockers: [] });
 });
 
-test('above 700 px the Board and Stretches keep their own desktop week cards; Nutrition draws the card up to 1439 px and not from 1440 px', async ({ page }) => {
+test('above 700 px the Board and Stretches keep their own desktop week cards; Nutrition draws the card with day tabs up to 1439 px and without them from 1440 px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   await expect(page.locator('.boardroot > .wsec > .weekbar')).toBeVisible(); // the desktop week card (boardSwitch.spec.js), not the joined phone card
@@ -87,8 +86,8 @@ test('above 700 px the Board and Stretches keep their own desktop week cards; Nu
   await openNutrition(page);
   await expect(page.locator('.wdc .wdc-tabs [role="tab"]')).toHaveCount(7);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator('.wdc')).toHaveCount(0);
-  await expect(page.locator('.nb-weeksw')).toBeVisible();
+  await expect(page.locator('.wdc .wdc-tabs')).toHaveCount(0); // the seven columns are the day control (brief week-day-joined-tabs: the card stays, without tabs)
+  await expect(page.locator('.wdc .nb-weeksw')).toBeVisible();
 });
 
 // The local-mode tip is the notice these two tests look at: the fixture hides it, so the test shows it again before the page loads.

@@ -10,15 +10,6 @@
 .nb-head h2 {
   margin: 0;
 }
-.nb-headbtns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-  margin-left: auto;
-}
-.nb-headbtns .btn {
-  min-height: 44px;
-}
 .nb-manage {
   display: grid;
   gap: var(--sp-12);
@@ -298,7 +289,7 @@
 .wb-cardwrap.eaten .wb-card {
   border-color: var(--m-supp);
 }
-/* Under 1440 px the week row is the joined card's (WeekDayCard): the switcher stays at the left, Manage at the right end as it was in the header. */
+/* From 700 px the week row is the joined card's (WeekDayCard): the switcher stays at the left, Manage at the right end as it was in the header. */
 .wdc-week .nb-weeksw {
   flex: 0 1 auto;
   justify-content: flex-start;
@@ -306,6 +297,42 @@
 .nb-cardmanage {
   margin-inline-start: auto;
   min-height: 44px;
+}
+/* From 700 px the one card also holds the week's dates (row 1, after the switcher) and the add-food toolbar (the last row, under a hairline): "Adding to ..." at the left, the buttons at the right end with Add food last, wrapping onto a second line inside the card when the width runs out (brief week-day-joined-tabs). The phone keeps both outside the card. */
+.wdc-week .nb-weeklab {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.wdc-foot {
+  padding: var(--sp-6) var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+.wdc-foot .nb-toolbar {
+  justify-content: space-between;
+  margin: 0;
+}
+.wdc-foot .nb-tbtns {
+  justify-content: flex-end;
+  margin-inline-start: auto;
+}
+.wdc-foot .nb-tbtns .btn {
+  min-height: 44px;
+}
+/* The pinned card is taller with the toolbar: anchors and focus scroll to below it. */
+html:has(.wdc-foot) {
+  /* --wdc-h is the card's measured height (WeekDayCard.tsx), so the offset follows wrapping and text size */
+  scroll-padding-top: calc(var(--wdc-h, 260px) + var(--sp-16) + env(safe-area-inset-top, 0px));
+}
+/* On a short window (a landscape tablet) the taller card would cover a large share of the screen, so it scrolls with the page. */
+@media (max-height: 599px) {
+  .wdc:has(.wdc-foot) {
+    position: static;
+    box-shadow: none;
+  }
+  html:has(.wdc-foot) {
+    scroll-padding-top: 0;
+  }
 }
 @media (max-width: 699px) {
   /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */

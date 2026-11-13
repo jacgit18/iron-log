@@ -66,3 +66,6 @@ export const openDayTotals = async col => {
   if ((await tog.getAttribute('aria-expanded')) !== 'true') await tog.click();
   await col.locator('.nb-vit-all').click();
 };
+// The box of the first element matching `sel`, and whether anything in the week and day card (or the page) runs past the card's edge (shared by nutritionOneCard.spec.js and weekDayCard.spec.js).
+export const box = (page, sel) => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, r: r.right, b: r.bottom, w: r.width, h: r.height }; });
+export const overflows = page => page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || [...document.querySelectorAll('.wdc, .wdc *')].some(e => { const r = e.getBoundingClientRect(), c = document.querySelector('.wdc').getBoundingClientRect(); return r.width && (r.right > c.right + 1 || r.left < c.left - 1); }));
