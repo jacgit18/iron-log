@@ -83,3 +83,23 @@ export function resultText(verb: 'Copied' | 'Moved', done: readonly string[], sk
   const where = done.length === 1 ? shortDay(done[0]!) : `${done.length} days`;
   return `${verb} to ${where}.${skip}`;
 }
+
+/** The button text: "Copy to 5 days", "Copy to Sun 15" for one, "Pick a day" for none. */
+export function goLabel(verb: 'Copy' | 'Move', days: readonly string[]): string {
+  if (!days.length) return 'Pick a day';
+  return `${verb} to ${days.length === 1 ? shortDay(days[0]!) : `${days.length} days`}`;
+}
+
+/** "This day on": `day` to the last plannable day, one entry per day. Empty when `day` is outside today..today + 13. */
+export function onwardDays(day: string, today: string): string[] {
+  const out: string[] = [], last = lastPlanDay(today);
+  for (let d = day < today ? today : day; d <= last; d = shiftDay(d, 1)) out.push(d);
+  return out;
+}
+
+/** The sentence after planning one food on several days: "Planned Soup for Lunch on 5 days. Skipped Tue 18: full." */
+export function plannedText(name: string, meal: string, done: readonly string[], skipped: readonly SkippedDay[]): string {
+  const skip = skipped.length ? ` Skipped ${skipped.map(s => `${shortDay(s.day)}: ${s.reason}`).join(', ')}.` : '';
+  if (!done.length) return `Nothing planned.${skip}`;
+  return `Planned ${name} for ${meal} on ${done.length === 1 ? shortDay(done[0]!) : `${done.length} days`}.${skip}`;
+}

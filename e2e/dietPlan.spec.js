@@ -3,7 +3,7 @@ import { startRecipe } from './recipesNav.js';
 
 // The meal planner (brief diet-meal-planner). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
 // this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today and a day with no Log button.
-import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, moveCard, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // The Nutrition board's planner, once the Diet panel's Plan strip (brief diet-meal-planner, now on the week board of brief nutrition-board). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
 // this covers the wiring: plan a recipe and a saved meal from the add sheet, change a portion, Log on today and a day with no Log button.
@@ -14,10 +14,7 @@ const status = page => board(page).locator('.nb-msg');
 const nutrition = openNutrition;
 // A day's planned card moved to today (the add sheet no longer plans on today, so a test that needs a planned card on today plans a day ahead and moves it, which is also how a person does it).
 const moveToToday = async (page, name, from) => {
-  const c = col(page, from);
-  await c.locator('.wb-card', { hasText: name }).click();
-  await c.getByRole('button', { name: `Move ${name}`, exact: true }).click();
-  await c.getByRole('group', { name: `Move ${name} to` }).getByRole('button', { name: 'Thu, Sep 24' }).click();
+  await moveCard(page, col(page, from), name, { day: 'Thu 24 · today' });
   await todayCol(page).locator('.nb-dayname').click();
 };
 // Picks a day on the board (by its name), opens the add sheet's Recipes or Saved meals way and plans into a meal.

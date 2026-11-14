@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayReason, lastPlanDay, ONE_OFF_REASON, pickerDays, pickerWeek, pickerWeekRange, quickPicks, resultText, type PickerSource } from './dayPicker.js';
+import { dayReason, goLabel, lastPlanDay, onwardDays, plannedText, ONE_OFF_REASON, pickerDays, pickerWeek, pickerWeekRange, quickPicks, resultText, type PickerSource } from './dayPicker.js';
 import { dayLabel, sundayOf } from './dayNames.js';
 import { oldestDay, shiftDay } from './dietLog.js';
 
@@ -97,5 +97,26 @@ describe('resultText', () => {
     expect(resultText('Copied', ['2026-11-15'], [])).toBe('Copied to Sun 15.');
     expect(resultText('Moved', ['2026-11-15'], [])).toBe('Moved to Sun 15.');
     expect(resultText('Copied', [], [{ day: '2026-11-17', reason: 'full' }, { day: '2026-11-18', reason: 'already there' }])).toBe('Nothing copied. Skipped Tue 17: full, Wed 18: already there.');
+  });
+});
+
+describe('goLabel, onwardDays, plannedText (the Add sheet and the buttons)', () => {
+  it('words the button for none, one and several days', () => {
+    expect(goLabel('Copy', [])).toBe('Pick a day');
+    expect(goLabel('Move', ['2026-11-15'])).toBe('Move to Sun 15');
+    expect(goLabel('Copy', ['2026-11-15', '2026-11-16'])).toBe('Copy to 2 days');
+  });
+  it('"This day on" runs from the day to today + 13, one entry each', () => {
+    const d = onwardDays('2026-11-20', today);
+    expect(d[0]).toBe('2026-11-20');
+    expect(d.at(-1)).toBe(lastPlanDay(today));
+    expect(d).toHaveLength(8);
+    expect(onwardDays(today, today)).toHaveLength(14);
+    expect(onwardDays('2026-11-30', today)).toEqual([]);
+  });
+  it('says what was planned and what was skipped', () => {
+    expect(plannedText('Soup', 'Lunch', ['2026-11-15', '2026-11-16'], [{ day: '2026-11-17', reason: 'full' }])).toBe('Planned Soup for Lunch on 2 days. Skipped Tue 17: full.');
+    expect(plannedText('Soup', 'Lunch', ['2026-11-15'], [])).toBe('Planned Soup for Lunch on Sun 15.');
+    expect(plannedText('Soup', 'Lunch', [], [{ day: '2026-11-17', reason: 'full' }])).toBe('Nothing planned. Skipped Tue 17: full.');
   });
 });

@@ -74,7 +74,7 @@ export function copyEatenMany(list: readonly DietEntry[], id: string, days: read
     next = [...next, copy];
     copied.push({ day, id: copy.id });
   }
-  if (!copied.length && !planAdds.length) return { list: [...list], copied: [], planAdds: [], skipped, error: resultText('Copied', [], skipped) };
+  if (!copied.length && !planAdds.length) return { list: [...list], copied: [], planAdds: [], skipped, error: resultText(move ? 'Moved' : 'Copied', [], skipped) };
   if (move) next = next.filter(e => e.id !== id);
   return { list: next, copied, planAdds, skipped, error: null };
 }

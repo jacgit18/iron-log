@@ -3,7 +3,7 @@ import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
-import { resultText, type SkippedDay } from '../lib/dayPicker.js';
+import { plannedText, resultText, type SkippedDay } from '../lib/dayPicker.js';
 import { copyEaten, copyEatenMany } from '../lib/moveCopyEaten.js';
 import { shortDay } from '../lib/nutritionBoard.js';
 import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
@@ -89,7 +89,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (move && plan.skipped.length) return refuse(resultText('Moved', [], skipped));
     const gone = list.find(e => e.id === id)!, at = list.indexOf(gone), copyId = r.copied[0]?.id;
     const done = [...r.copied.map(c => c.day), ...plan.added];
-    if (!done.length) return refuse(resultText('Copied', [], skipped));
+    if (!done.length) return refuse(resultText(move ? 'Moved' : 'Copied', [], skipped));
     if (plan.added.length) putPlan(get, plan.plan); // the plan first: if the log write below never happens, a move leaves the original and a card (a duplicate), never a lost entry
     if (r.copied.length || move) { set({ diet: pruned(r.list, today) }); get().saveDiet(); } // a move to a day ahead drops the original without a copy in the log
     if (move) {
@@ -183,6 +183,18 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return null;
+  },
+
+  // One recipe or saved meal planned on several days in one plan write (the Add sheet's "This day on" and "Pick days"). Days that are full, outside the window or already hold it are skipped and named.
+  addPlanItemToDays(kind, id, days, slot) {
+    const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
+    const gone = kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
+    if (!there) return { done: [], skipped: [], message: gone, error: gone };
+    const item: PlanItem = { k: kind, id, ...(slot ? { s: slot } : {}) };
+    const r = addItemsToDays(planOf(get), [...new Set(days)].map(day => ({ day, item })), ymd(new Date()), get().cfg.diet?.snacks);
+    if (!r.added.length) { const m = plannedText('', '', [], r.skipped); return { done: [], skipped: r.skipped, message: m, error: m }; }
+    putPlan(get, r.plan);
+    return { done: r.added, skipped: r.skipped, message: '', error: null };
   },
 
   movePlanItem(day, index, toDay, slot) {
