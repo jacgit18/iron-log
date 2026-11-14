@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openDrink, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
-// Nutrition as one week board (brief nutrition-board). The rules (which days a week holds, the four meters eaten or planned, the meal pick by time, the hydration lines) are node tests (src/lib/nutritionBoard.test.ts);
+// Nutrition as one week board (brief nutrition-board). The rules (which days a week holds, the four meters (eaten only, the plan as a line on a day ahead), the meal pick by time, the hydration lines) are node tests (src/lib/nutritionBoard.test.ts);
 // this covers the wiring and layout: the board and its week switcher, the toolbar's target day, the add sheet, the drink sheet, supplements on any day, the phone stepper, Back. The fixed clock is Thursday 2026-09-24, 18:30.
 const TODAY = '2026-09-24';
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
@@ -135,7 +135,7 @@ test('empty meals say Nothing planned and have no button; Snack sits between Lun
   await expect(c.getByRole('button', { name: /^\+ Add/ })).toHaveCount(0);
 });
 
-test('a day ahead plans recipes into the picked meal, and its meters count the plan', async ({ page }) => {
+test('a day ahead plans recipes into the picked meal, and shows the plan as a line while its meters stay empty', async ({ page }) => {
   await seedRecipes(page);
   await openNutrition(page);
   await col(page, '2026-09-25').getByRole('button', { name: /^Fri 25/ }).click();
@@ -148,7 +148,8 @@ test('a day ahead plans recipes into the picked meal, and its meters count the p
   await closeSheet(page);
   const fri = col(page, '2026-09-25');
   await expect(fri.locator('.wb-slot', { hasText: 'Lunch' }).locator('.wb-card')).toContainText('Chili');
-  await expect(meter(fri, 'Calories')).toHaveAttribute('aria-label', /planned: 400/);
+  await expect(meter(fri, 'Calories')).toHaveAttribute('aria-label', /eaten so far: 0/); // a day ahead's bar stays empty (ADR 126)
+  await expect(fri.locator('.nb-planline')).toContainText('Planned: 400 kcal'); // the plan is the muted line
   await expect(meter(todayCol(page), 'Calories')).toHaveAttribute('aria-label', /: 0/); // today counts only what was eaten
 });
 

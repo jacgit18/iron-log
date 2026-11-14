@@ -1,0 +1,9 @@
+@layer base, components;
+@layer components {
+/* The plan's totals under a day ahead's meters (DayMeters.tsx, ADR 126): muted, so it reads as a preview and never as a bar. */
+.nb-planline {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+}

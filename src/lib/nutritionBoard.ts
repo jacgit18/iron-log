@@ -116,14 +116,10 @@ export const addGroups = (day: string, today: string, eaten: number): { label: s
   return ADD_GROUPS.map(g => ({ label: g.label, flows: g.flows.filter(f => on.includes(f)) })).filter(g => g.flows.length > 0);
 };
 
-/** Which way a day's numbers are counted: eaten food for last week and today, the plan for days ahead. */
-export type MeterBasis = 'eaten' | 'planned';
-export const basisOf = (day: string, today: string): MeterBasis => (day <= today ? 'eaten' : 'planned');
-
 export interface Meter { key: 'kcal' | 'protein' | 'carbs' | 'fat' | 'water'; label: string; unit: string; value: number; target: number | null; over: boolean; text: string; note?: string; hidden?: boolean }
 /** The Supplements meter of a day: the share ticked, no target and never over. `pct` is 0 to 100; a day with nothing scheduled is an empty bar that says so. */
 export interface SuppMeter { done: number; total: number; pct: number; text: string; label: string }
-export interface DayView { day: string; kind: DayKind; basis: MeterBasis; meters: Meter[]; supps: SuppMeter; plan: BoardDay; eaten: DietEntry[]; fatNote: string | null; /** The day's eaten food that no planned item's check added, placed in its meal (today) or in the "Not in a meal" group. */ placed: EatenPlacement }
+export interface DayView { day: string; kind: DayKind; meters: Meter[]; supps: SuppMeter; plan: BoardDay; eaten: DietEntry[]; fatNote: string | null; /** The plan's totals as a muted line under the meters, on a day ahead with something planned (ADR 126); null otherwise. */ planLine: string | null; /** The day's eaten food that no planned item's check added, placed in its meal (today) or in the "Not in a meal" group. */ placed: EatenPlacement }
 
 const meterText = (value: number, target: number | null, unit: string): string => `${fmtNum(value)}${target ? ` / ${fmtNum(target)}` : ''} ${unit}`;
 const meter = (key: Meter['key'], label: string, unit: string, value: number, target: number | null): Meter => ({ key, label, unit, value, target, over: !!target && value > target, text: meterText(value, target, unit) });
@@ -167,27 +163,31 @@ export function mealKcalText(plan: { kcal: number; share: number | null; items: 
 /** What a day's targets are. */
 export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null; carbs?: number | null }
 
-/** A day as the board draws it: four meters (calories, protein, fat from the diet log for last week and today, from the plan for days ahead; water from the water log against that day's goal), the plan's meals, and the eaten food. */
+/** The plan's totals on a day ahead, kept out of the meters (ADR 126: a bar moves only when food is checked off or logged as eaten): "Planned: 2,100 kcal · 160 g protein · 70 g fat". Fat is left out when no planned food has it and says how many do when only some do. Null for today and past days, and for a day with nothing planned. */
+export function planLine(plan: BoardDay, ahead: boolean): string | null {
+  if (!ahead || plan.count === 0) return null;
+  const parts = [`${fmtNum(plan.kcal)} kcal`, `${fmtNum(plan.protein)} g protein`];
+  if (plan.fatState === 'full') parts.push(`${fmtNum(plan.fat)} g fat`);
+  if (plan.fatState === 'partial') parts.push(`${fmtNum(plan.fat)} g fat (${plan.fatFoods.known} of ${plan.fatFoods.all} foods have fat)`);
+  return `Planned: ${parts.join(' · ')}`;
+}
+
+/** A day as the board draws it: four meters (calories, protein, fat from the diet log on every day, so food only counts once it is eaten or checked off; a day ahead reads 0 and shows its plan in `planLine`; water from the water log against that day's goal), the plan's meals, and the eaten food. */
 export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; moved?: Readonly<Record<string, string>>; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets }): DayView {
-  const basis = basisOf(day, today);
   const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal, a.moved);
   const eaten = a.diet.filter(e => e.d === day);
   const tot = totalsFor(a.diet, day);
   const water = goalFor(a.supp, a.body, day);
-  const planned = basis === 'planned';
-  const fatHidden = planned && plan.fatState === 'hidden';
+  const ahead = day > today;
   const meters: Meter[] = [
-    meter('kcal', 'Calories', 'kcal', planned ? plan.kcal : tot.kcal, a.targets.kcal),
-    meter('protein', 'Protein', 'g', planned ? plan.protein : tot.protein, a.targets.protein),
-    carbsMeter(planned, tot.carbs, a.targets.carbs ?? null),
-    meter('fat', 'Fat', 'g', planned ? plan.fat : tot.fat, a.targets.fat),
+    meter('kcal', 'Calories', 'kcal', tot.kcal, a.targets.kcal),
+    meter('protein', 'Protein', 'g', tot.protein, a.targets.protein),
+    carbsMeter(ahead, tot.carbs, a.targets.carbs ?? null),
+    meter('fat', 'Fat', 'g', tot.fat, a.targets.fat),
     meter('water', 'Water', 'oz', sumOz(a.supp.water[day]), water.oz),
   ];
-  const fatMeter = meters.find(m => m.key === 'fat')!;
-  if (planned && plan.fatState === 'partial') fatMeter.note = `Fat: ${plan.fatFoods.known} of ${plan.fatFoods.all} foods have it.`;
-  if (fatHidden) { fatMeter.note = 'Add fat to your foods to see fat here.'; fatMeter.hidden = true; }
-  const fatNote = !planned && eaten.length > 0 && missingCarbsFat(a.diet, day) ? 'Carbs and fat count only what you enter.' : null;
-  return { day, kind: dayKind(day, today), basis, meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote, placed: placeEaten(day, today, eaten, plan) };
+  const fatNote = !ahead && eaten.length > 0 && missingCarbsFat(a.diet, day) ? 'Carbs and fat count only what you enter.' : null;
+  return { day, kind: dayKind(day, today), meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote, planLine: planLine(plan, ahead), placed: placeEaten(day, today, eaten, plan) };
 }
 
 /** The Supplements meter (drawn before Water): "2 of 4 taken" fills 50%; nothing scheduled says "None scheduled" with an empty bar. Counts ticks on any day. */
@@ -197,9 +197,9 @@ export function suppMeter(supp: Supplements, day: string): SuppMeter {
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0, text, label: `Supplements taken: ${text}` };
 }
 
-/** The label of a meter for a screen reader: the numbers in words, and whether they are eaten or planned. */
-export const meterLabel = (m: Meter, basis: MeterBasis, kind: DayKind): string =>
-  `${m.label} ${m.key === 'water' ? 'drunk' : basis === 'eaten' ? (kind === 'past' ? 'eaten' : 'eaten so far') : 'planned'}: ${m.text}${m.over ? `, ${fmtNum(Math.round((m.value - (m.target ?? 0)) * 10) / 10)} ${m.unit} over` : ''}${m.target ? '' : ', no target set'}`;
+/** The label of a meter for a screen reader: the numbers in words, eaten (or drunk) so far on today and days ahead, eaten on a past day. */
+export const meterLabel = (m: Meter, kind: DayKind): string =>
+  `${m.label} ${m.key === 'water' ? 'drunk' : kind === 'past' ? 'eaten' : 'eaten so far'}: ${m.text}${m.over ? `, ${fmtNum(Math.round((m.value - (m.target ?? 0)) * 10) / 10)} ${m.unit} over` : ''}${m.target ? '' : ', no target set'}`;
 
 export interface HydrationView { goal: number; drunk: number; left: number; status: string; tags: string[]; lines: { label: string; oz: number }[]; future: boolean }
 
