@@ -9,19 +9,26 @@ export const MAX_CHIPS = 2;
 
 /** Whether `r` is a combo: it has at least one line and every line is a link to an item you still have (`rid`) with an amount (`q`). A typed ingredient, a sauce link without an amount or a link to a deleted item makes it a normal recipe. */
 export function isCombo(r: Recipe, list: readonly Recipe[]): boolean {
-  if (!r.ing.length) return false;
-  return r.ing.every(i => !!i.rid && i.rid !== r.id && typeof i.q === 'number' && list.some(o => o.id === i.rid));
+  return isComboIn(r, new Set(list.map(o => o.id)));
+}
+const isComboIn = (r: Recipe, have: ReadonlySet<string>): boolean =>
+  r.ing.length > 0 && r.ing.every(i => !!i.rid && i.rid !== r.id && typeof i.q === 'number' && have.has(i.rid));
+
+/** The ids of every combo in `list`, worked out in one pass (the list view asks per row, so it asks this once). */
+export function comboIds(list: readonly Recipe[]): Set<string> {
+  const have = new Set(list.map(o => o.id));
+  return new Set(list.filter(r => isComboIn(r, have)).map(r => r.id));
 }
 
 /** The items a combo is made from (each once), by name. Empty for a recipe that is not a combo. */
-export function comboParts(combo: Recipe, list: readonly Recipe[]): Recipe[] {
-  if (!isCombo(combo, list)) return [];
+export function comboParts(combo: Recipe, list: readonly Recipe[], combos: ReadonlySet<string> = comboIds(list)): Recipe[] {
+  if (!combos.has(combo.id)) return [];
   const ids = new Set(combo.ing.map(i => i.rid));
   return sortByName(list.filter(o => ids.has(o.id)), o => o.n, o => o.id);
 }
 
 /** "Cereal + Milk": the parts of a combo, named. */
-export const partsLine = (combo: Recipe, list: readonly Recipe[]): string => comboParts(combo, list).map(p => p.n).join(' + ');
+export const partsLine = (combo: Recipe, list: readonly Recipe[], combos?: ReadonlySet<string>): string => comboParts(combo, list, combos).map(p => p.n).join(' + ');
 
 /** The text of a chip on `part`'s row: "with Milk" when the combo is named "<part> with Milk", else the combo's own name. */
 export function chipLabel(part: Pick<Recipe, 'n'>, combo: Pick<Recipe, 'n'>): string {
@@ -48,13 +55,13 @@ export interface MineRows {
  *  only when none is does a matching combo of that tab become its own row (a search for "breakfast bowl", or a filter its parts do not pass), so it is never unreachable. */
 export function mineRows(matched: readonly Recipe[], all: readonly Recipe[], tab: RecipeTab): MineRows {
   const chips = new Map<string, ComboChip[]>();
-  const combo = new Set(all.filter(r => isCombo(r, all)).map(r => r.id));
+  const combo = comboIds(all);
   if (tab === 'meals') return { rows: matched.filter(r => combo.has(r.id) || inTab(r, 'meals')), chips };
   const rows = matched.filter(r => !combo.has(r.id) && inTab(r, tab));
   const shown = new Set(rows.map(r => r.id));
   const carried = new Set<string>();
   for (const c of sortByName(all.filter(r => combo.has(r.id)), r => r.n, r => r.id)) {
-    for (const p of comboParts(c, all)) {
+    for (const p of comboParts(c, all, combo)) {
       if (!shown.has(p.id)) continue;
       carried.add(c.id);
       chips.set(p.id, [...(chips.get(p.id) ?? []), { id: c.id, label: chipLabel(p, c), name: c.n }]);

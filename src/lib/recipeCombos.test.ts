@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { chipLabel, chipsShown, comboParts, comboTabCounts, isCombo, mineRows, partsLine } from './recipeCombos.js';
+import { chipLabel, chipsShown, comboIds, comboParts, comboTabCounts, isCombo, mineRows, partsLine } from './recipeCombos.js';
 import { filterRecipes } from './recipeList.js';
 
 const food = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'ready', type: 'ready', ing: [{ n }], steps: [], ...extra });
@@ -97,5 +97,26 @@ describe('comboTabCounts', () => {
     const n = comboTabCounts(all, all);
     expect(n).toEqual({ all: 3, foods: 2, meals: 1, ingredients: 0, drinks: 1 });
     for (const t of ['all', 'foods', 'meals', 'ingredients', 'drinks'] as const) expect(n[t]).toBe(mineRows(all, all, t).rows.length);
+  });
+});
+
+describe('comboIds', () => {
+  it('lists the combos in one pass, the same ones isCombo finds', () => {
+    const list = [cereal, milk, rice, cwm, bowl, meal('x', 'Gone', ['nope'])];
+    expect([...comboIds(list)].sort()).toEqual(['bowl', 'cwm']);
+    for (const r of list) expect(comboIds(list).has(r.id)).toBe(isCombo(r, list));
+  });
+  it('treats a combo made of combos as a combo, chipped only on its direct parts', () => {
+    const big = meal('big', 'Big breakfast', ['cwm', 'milk']);
+    const list = [cereal, milk, cwm, big];
+    const { rows, chips } = mineRows(list, list, 'all');
+    expect(ids(rows)).toEqual(['cereal', 'milk']);
+    expect(chips.get('milk')?.map(c => c.id).sort()).toEqual(['big', 'cwm']);
+    expect(chips.get('cereal')?.map(c => c.id)).toEqual(['cwm']);
+  });
+  it('shows a combo made only of combos as its own row, so it is never lost', () => {
+    const only = meal('only', 'Only combos', ['cwm', 'bowl']);
+    const list = [cereal, milk, cwm, bowl, only];
+    expect(ids(mineRows(list, list, 'all').rows)).toEqual(['cereal', 'milk', 'only']);
   });
 });

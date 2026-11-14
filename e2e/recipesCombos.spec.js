@@ -52,3 +52,19 @@ test('Meals lists the combo as its own row with its parts named', async ({ page 
   await expect(itemOf(page, 'Cereal with Milk').locator('.rc-parts')).toHaveText('Cereal + Milk');
   await expect(page.locator('.rc-combochip')).toHaveCount(0);
 });
+
+test('"+N more" has its own name and opens Meals with the combos of that food', async ({ page }) => {
+  await seed(page);
+  await page.evaluate(() => {
+    const k = 'ironlog:recipes/main', d = JSON.parse(localStorage.getItem(k));
+    const m = (id, n) => ({ id, n, cat: 'other', servings: 1, ing: [{ n: 'Cereal', rid: 'cereal', q: 1 }], steps: [] });
+    d.items.push(m('a', 'Cereal bar'), m('b', 'Cereal bowl'));
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await page.reload();
+  await openRecipes(page);
+  await expect(itemOf(page, 'Cereal').locator('.rc-combochip')).toHaveCount(3); // two chips and the more button
+  await itemOf(page, 'Cereal').getByRole('button', { name: '+1 more with Cereal' }).click();
+  await expect(page.locator('#recipes-tab-meals')).toHaveAttribute('aria-pressed', 'true');
+  await expect(rows(page)).toHaveText(['Cereal bar', 'Cereal bowl', 'Cereal with Milk']);
+});

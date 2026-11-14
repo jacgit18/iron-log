@@ -18,7 +18,7 @@ import './RecipeFind.css';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
 import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
-import { isCombo, comboTabCounts, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
+import { comboIds, comboTabCounts, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
@@ -113,10 +113,11 @@ export default function Recipes() {
   const libHave = useMemo(() => new Map(libShown.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libShown, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
   const recentOn = recent && picks.length > 0; // the pill is hidden, and Recent off, when nothing was starred, logged or opened
+  const combos = useMemo(() => comboIds(recipes), [recipes]);
   const mineList = useMemo(() => mineRows(narrowed, recipes, tab), [narrowed, recipes, tab]);
   const shown = recentOn ? recentRows(narrowed, picks) : sortRecipes(mineList.rows, mineSort, recipes, makeable);
   const chipRows = recentOn ? EMPTY_CHIPS : mineList.chips; // Recent lists recipes as they are
-  const chipped = recipes.find(r => r.id === selId && isCombo(r, recipes)); // a combo opened from a chip is in the pane although it is not a row
+  const chipped = recipes.find(r => r.id === selId && combos.has(r.id)); // a combo opened from a chip is in the pane although it is not a row
   const selected = shown.find(r => r.id === selId) ?? chipped ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export default function Recipes() {
   };
 
   const back = () => setView({ kind: 'list' });
+  const showCombosOf = (name: string) => { setRecent(false); setCat(null); setCanMake(false); setTagSel([]); setNutSel([]); setQ(name); setTab('meals'); }; // "+N more": every filter clears so Meals shows the combos the chips counted
   const openCombo = (id: string) => { // a chip: the combo opens as it is, the list and its tab stay
     if (pane) setSelId(id);
     else { openedThisVisit.push(id); setView({ kind: 'mine', id }); }
@@ -190,7 +192,7 @@ export default function Recipes() {
       </button>
       {o.logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${o.key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: o.logId! })}>Log</button>}
       {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add ${o.title}`} onClick={o.addIt}>+ Add</button>}
-      {o.chips?.length ? <ComboChips chips={o.chips} onOpen={openCombo} onMore={() => { setRecent(false); setQ(o.title); setTab('meals'); }} /> : null}
+      {o.chips?.length ? <ComboChips chips={o.chips} onOpen={openCombo} owner={o.title} onMore={() => showCombosOf(o.title)} /> : null}
     </li>
   );
 
@@ -269,7 +271,7 @@ export default function Recipes() {
           <div className={pane ? 'rc-split' : undefined}>
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
-                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), tag: typeTag(r), ...(isCombo(r, recipes) ? { parts: partsLine(r, recipes) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
+                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
             {pane && recipes.length > 0 && <RecipeDetailPane recipe={selected} onEdit={id => setView({ kind: 'form', id })} onGone={() => setSelId(null)} onOpen={setSelId} />}
