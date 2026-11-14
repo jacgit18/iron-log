@@ -104,7 +104,7 @@ async function main() {
     const port = await freePort();
     const url = `http://127.0.0.1:${port}`;
     const out = openSync(join(tmpdir(), `qa-local-${db}.log`), 'a');
-    writeFileSync(stateFile, JSON.stringify({ db, login, port, url, pid: null, scratch: scratch.href, app: appUrl.href, base: base.href, log: join(tmpdir(), `qa-local-${db}.log`) }));
+    writeFileSync(stateFile, JSON.stringify({ db, login, port, url, pid: null, scratch: scratch.href, app: appUrl.href, base: base.href, log: join(tmpdir(), `qa-local-${db}.log`) }), { mode: 0o600 }); // holds the scratch login's password: owner-only
     try {
       await withClient(maintenance.href, async c => { await c.query(`create database "${db}"`); await c.query(`comment on database "${db}" is '${SCRATCH_MARK}'`); });
       execFileSync('npx', ['dbmate', 'up'], { cwd: root, env: { ...process.env, DATABASE_URL: scratch.href, DBMATE_NO_DUMP_SCHEMA: 'true', DBMATE_MIGRATIONS_DIR: 'db/migrations' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -116,7 +116,7 @@ async function main() {
         BETTER_AUTH_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only-secret', GOOGLE_CLIENT_ID: 'e2e-client.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'e2e-client-secret',
         DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href } });
       child.unref();
-      writeFileSync(stateFile, JSON.stringify({ ...readState(), pid: child.pid }));
+      writeFileSync(stateFile, JSON.stringify({ ...readState(), pid: child.pid }), { mode: 0o600 });
       for (let i = 0; i < 90; i++) {
         try { if ((await fetch(`${url}/api/health/db`)).ok) { console.log(JSON.stringify({ url, port, database: db, pid: child.pid, log: readState().log })); return; } } catch { /* not up yet */ }
         await new Promise(r => setTimeout(r, 1000));
