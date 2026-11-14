@@ -2,6 +2,8 @@ import type { DietEntry, Recipe } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
 import { scaleMicro, withMicro } from '../shared/foodMicro.js';
 import type { Micro } from '../shared/foodMicro.js';
+import { liveRows, microOfRows, rowsFromMicro } from './foodAmountRows.js';
+import type { AmountRow } from './foodAmountRows.js';
 
 /* ---------- Per-portion basis of an eaten item (brief portion-scaled-micros, ADR 123) ----------
    An entry stores its totals (what the day adds up) and, since this brief, the portion `x` they were logged at. The eaten-row Edit sheet shows ONE portion's numbers and a live total:
@@ -12,7 +14,7 @@ export const PORTION_MIN = 0.5, PORTION_STEP = 0.5, PORTION_CEIL = 10;
 /** One portion's numbers, exact (not rounded for display). */
 export interface PerPortion { kcal: number; p: number; c?: number; f?: number; micro?: Micro }
 /** What the sheet starts from: the portion, whether it was recorded (false for an entry logged before this change: it opens as 1 portion of its logged numbers), and one portion's numbers. */
-export interface PortionBasis { x: number; recorded: boolean; per: PerPortion }
+export interface PortionBasis { x: number; recorded: boolean; per: PerPortion; /** One portion's amounts unrounded (`per.micro` is rounded to 3 decimals, as the rows show it): what a save with the rows untouched scales, so 100 over 3 portions comes back as 100. */ microExact?: Micro }
 /** An entry's numbers at some portion count, ready for `updateDietEntry`. */
 export interface PortionTotals { kcal: number; p: number; c: number | null; f: number | null; micro: Micro | null }
 
@@ -22,7 +24,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export function portionBasis(e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'x'>): PortionBasis {
   const recorded = e.x !== undefined && e.x > 0, x = recorded ? e.x! : 1;
   const micro = scaleMicro(e.micro, 1 / x);
-  return { x, recorded, per: { kcal: e.kcal / x, p: e.p / x, ...(e.c !== undefined ? { c: e.c / x } : {}), ...(e.f !== undefined ? { f: e.f / x } : {}), ...withMicro(micro) } };
+  const microExact = e.micro && micro ? Object.fromEntries(Object.keys(micro).map(k => [k, (e.micro as Record<string, number>)[k]! / x])) as Micro : undefined;
+  return { x, recorded, ...(microExact ? { microExact } : {}), per: { kcal: e.kcal / x, p: e.p / x, ...(e.c !== undefined ? { c: e.c / x } : {}), ...(e.f !== undefined ? { f: e.f / x } : {}), ...withMicro(micro) } };
 }
 
 /** The text a per-portion box starts with: calories whole, grams to one decimal. */
@@ -60,8 +63,17 @@ export const stepPortionCount = (x: number, dir: 1 | -1, max: number): number =>
 /** "You ate 2.5 portions" / "You ate 1 portion". */
 export const portionWords = (x: number): string => `${x} ${x === 1 ? 'portion' : 'portions'}`;
 
-/** Whether the sheet offers "also save to the recipe": the entry's linked recipe exists and has no amounts (never overwrites). */
-export const canSaveToRecipe = (recipe: Pick<Recipe, 'micro'> | undefined): boolean => recipe !== undefined && !(recipe.micro && Object.keys(recipe.micro).length);
+/** One portion's amounts as the sheet saves them, and the rows it draws. The calorie rule: when the per-portion calories no longer match the ones the kept rows came with, the untouched kept rows go (`cleared`); a row typed here stays;
+ *  changing the portion never touches them. Rows left exactly as they were shown keep the exact per-portion amounts, so opening and saving with no edit cannot drift by the 3-decimal rounding (100 over 3 portions is 33.333, and 33.333 x 3 is 99.999). */
+export function portionAmounts(rows: AmountRow[], kcalText: string, basis: PortionBasis): { rows: AmountRow[]; cleared: boolean; microPer: Micro | null } {
+  const live = liveRows(rows, num(kcalText), Math.round(basis.per.kcal));
+  const shown = rowsFromMicro(basis.per.micro, true);
+  const same = live.rows.length === shown.length && live.rows.every((r, i) => r.key === shown[i]!.key && r.amount === shown[i]!.amount && r.unit === shown[i]!.unit);
+  return { ...live, microPer: same ? basis.microExact ?? null : microOfRows(live.rows).micro ?? null };
+}
+
+/** Whether the sheet offers "also save to the recipe": the entry's linked recipe exists and has no amounts (never overwrites), and the portion was recorded. Without a recorded portion the sheet's "one portion" is a guess (a planned item at 2 portions, logged before `x` was stored, opens as 1), so per-serving amounts written to the recipe could be doubled. */
+export const canSaveToRecipe = (recipe: Pick<Recipe, 'micro'> | undefined, recorded = true): boolean => recorded && recipe !== undefined && !(recipe.micro && Object.keys(recipe.micro).length);
 
 /** What the sheet saves, from what is typed: totals at `x` (null total = out of range), one portion's amounts for the optional recipe save. `microPer` is one portion's typed or kept amounts (null for none). */
 export function portionValues(i: { shown: PerText; typed: PerText; exact: PerPortion; x: number; microPer: Micro | null }): { totals: PortionTotals | null; per: { kcal: number; p: number; c: number | null; f: number | null }; microPer: Micro | null } {

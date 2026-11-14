@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canSaveToRecipe, portionBasis, portionMaxFor, portionValues, portionWords, shownPer, stepPortionCount, totalsAt } from './portionBasis.js';
+import { canSaveToRecipe, portionAmounts, portionBasis, portionMaxFor, portionValues, portionWords, shownPer, stepPortionCount, totalsAt } from './portionBasis.js';
+import { rowsFromMicro } from './foodAmountRows.js';
 import { ateEntry } from './dietLog.js';
 import { normDietEntry } from '../shared/diet.js';
 import type { DietEntry } from '../types.ts';
@@ -59,6 +60,35 @@ describe('portionValues: what the sheet saves', () => {
   });
 });
 
+describe('portionAmounts: the calorie rule and exact amounts (review of PR 984)', () => {
+  const basis = portionBasis({ kcal: 300, p: 9, x: 3, micro: { calcium: 100, iron: 6 } }); // calcium 33.333 a portion
+  const rows = rowsFromMicro(basis.per.micro, true);
+  it('rows left as shown keep the exact amounts: open and save at 3 portions is still 100, not 99.999', () => {
+    const a = portionAmounts(rows, String(Math.round(basis.per.kcal)), basis);
+    expect(a.cleared).toBe(false);
+    expect(a.microPer).toEqual(basis.microExact);
+    const shown = shownPer(basis.per);
+    expect(portionValues({ shown, typed: shown, exact: basis.per, x: 3, microPer: a.microPer }).totals?.micro).toEqual({ calcium: 100, iron: 6 });
+  });
+  it('changing the portion alone never drops the rows', () => {
+    expect(portionAmounts(rows, String(Math.round(basis.per.kcal)), basis).rows).toHaveLength(2);
+  });
+  it('changing the per-portion calories drops the untouched rows and says so', () => {
+    const a = portionAmounts(rows, '120', basis);
+    expect(a.rows).toEqual([]);
+    expect(a.cleared).toBe(true);
+    expect(a.microPer).toBeNull();
+  });
+  it('a row typed or edited here stays through a calorie change and is what is saved', () => {
+    const typed = [{ key: 'iron' as const, amount: '4', unit: 'mg' as const }, ...rows.filter(r => r.key === 'calcium')];
+    const a = portionAmounts(typed, '120', basis);
+    expect(a.rows).toEqual([typed[0]]);
+    expect(a.microPer).toEqual({ iron: 4 });
+    const edited = rows.map(r => (r.key === 'iron' ? { key: r.key, amount: '5', unit: r.unit } : r));
+    expect(portionAmounts(edited, String(Math.round(basis.per.kcal)), basis).microPer).toEqual({ calcium: 33.333, iron: 5 });
+  });
+});
+
 describe('stepper helpers', () => {
   it('portionMaxFor lowers the top until the totals fit one entry', () => {
     expect(portionMaxFor({ kcal: 200, p: 5, c: null, f: null })).toBe(10);
@@ -78,6 +108,10 @@ describe('canSaveToRecipe: the tick', () => {
     expect(canSaveToRecipe({})).toBe(true);
     expect(canSaveToRecipe({ micro: {} })).toBe(true);
     expect(canSaveToRecipe({ micro: { iron: 1 } })).toBe(false);
+  });
+  it('is hidden when the portion was not recorded: one portion would be a guess, and the recipe could get doubled amounts', () => {
+    expect(canSaveToRecipe({}, false)).toBe(false);
+    expect(canSaveToRecipe({}, true)).toBe(true);
   });
 });
 

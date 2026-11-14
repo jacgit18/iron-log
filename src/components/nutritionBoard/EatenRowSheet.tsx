@@ -20,20 +20,25 @@ export default function EatenRowSheet({ id }: { id: string }) {
   const modal = useAppStore(s => s.modal);
   const today = ymd(useToday(s => s.today));
   const [editing, setEditing] = useState(false);
+  const [note, setNote] = useState(''); // why the recipe was not changed after a save with the tick on
   const [picking, setPicking] = useState<'copy' | 'move' | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   useEffect(() => { if (!entry) closeModal(); }, [entry, closeModal]);
   if (!entry) return null;
   if (editing) {
+    const basis = portionBasis(entry);
     return (
       <Sheet className="nbsheet" aria-label={`Edit ${entry.n}`}>
         <h2 className="cond">Edit {entry.n}</h2>
         <EntryForm idp={`nb-e-${entry.id}`} initial={{ n: entry.n, kcal: entry.kcal, p: entry.p }} submitLabel="Save" onCancel={() => setEditing(false)}
-          portion={{ basis: portionBasis(entry), offerRecipeSave: canSaveToRecipe(recipe) }}
+          portion={{ basis, offerRecipeSave: canSaveToRecipe(recipe, basis.recorded) }}
           onSubmit={v => {
             const err = useAppStore.getState().updateDietEntry(entry.id, { n: v.n, kcal: v.kcal, p: v.p, c: v.c, f: v.f, micro: v.micro ?? null, ...(v.x !== undefined ? { x: v.x } : {}) });
             if (err) return err;
-            if (v.saveToRecipe && v.microPer && entry.from && canSaveToRecipe(useAppStore.getState().recipes.find(r => r.id === entry.from))) useAppStore.getState().setRecipeMicro(entry.from, v.microPer);
+            if (v.saveToRecipe && v.microPer && entry.from) {
+              const saved = canSaveToRecipe(useAppStore.getState().recipes.find(r => r.id === entry.from), basis.recorded) ? useAppStore.getState().setRecipeMicro(entry.from, v.microPer) : 'That recipe already has amounts.';
+              setNote(saved ? `Saved. ${saved} The recipe was not changed.` : ''); // the entry is saved; say why the recipe was not touched
+            }
             setEditing(false); return null;
           }} />
       </Sheet>
@@ -51,6 +56,7 @@ export default function EatenRowSheet({ id }: { id: string }) {
     <Sheet className="nbsheet" aria-label={entry.n}>
       <h2 className="cond">{entry.n}</h2>
       <p className="nb-eatsheet-nums">{entryText(entry)}</p>
+      {note && <p className="note" role="status">{note}</p>}
       {picking && (
         <>
           <DayPicker source={{ kind: 'eaten', entry }} today={today} picked={picked} onPick={setPicked} single={move} label={`${move ? 'Move' : 'Copy'} to day`} />

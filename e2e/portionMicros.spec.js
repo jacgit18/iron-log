@@ -51,7 +51,7 @@ test('an item with no amounts takes them per portion: 2 portions saves doubled, 
   expect((await storedRecipes(page))[0].micro).toEqual({ iron: 12 }); // per serving
 });
 
-test('the tick can be turned off, and an entry logged before this change opens as 1 portion with a note', async ({ page }) => {
+test('an entry logged before this change opens as 1 portion with a note, and offers no tick (its portion is a guess)', async ({ page }) => {
   await seed(page, [{ id: 'o', d: TODAY, n: 'Oats bowl', kcal: 300, p: 12, t: 8, from: 'r1' }], [recipe('r1')]);
   await openNutrition(page);
   const dlg = await openEdit(page, 'Oats bowl');
@@ -60,8 +60,37 @@ test('the tick can be turned off, and an entry logged before this change opens a
   await dlg.getByRole('button', { name: /Vitamins and minerals per serving/ }).click();
   await dlg.getByRole('button', { name: '+ Add a nutrient' }).click();
   await dlg.getByLabel('Amount 1').fill('5');
+  await expect(dlg.locator('input[id$="-tick"]')).toHaveCount(0); // never writes a guessed per-serving amount to the recipe
+  await dlg.getByRole('button', { name: 'Save', exact: true }).click();
+  expect((await stored(page)).find(x => x.id === 'o').micro).toBeTruthy();
+  expect((await storedRecipes(page))[0].micro).toBeUndefined();
+});
+
+test('the tick can be turned off: the entry keeps the amounts and the recipe stays without', async ({ page }) => {
+  await seed(page, [{ id: 'o', d: TODAY, n: 'Oats bowl', kcal: 300, p: 12, t: 8, from: 'r1', x: 1 }], [recipe('r1')]);
+  await openNutrition(page);
+  const dlg = await openEdit(page, 'Oats bowl');
+  await dlg.getByRole('button', { name: /Vitamins and minerals per serving/ }).click();
+  await dlg.getByRole('button', { name: '+ Add a nutrient' }).click();
+  await dlg.getByLabel('Amount 1').fill('5');
   await dlg.locator('input[id$="-tick"]').uncheck();
   await dlg.getByRole('button', { name: 'Save', exact: true }).click();
   expect((await stored(page)).find(x => x.id === 'o').micro).toBeTruthy();
   expect((await storedRecipes(page))[0].micro).toBeUndefined();
+});
+
+test('opening and saving with no edit keeps the amounts exactly, and a calorie change drops the ones that came with the old calories', async ({ page }) => {
+  await seed(page, [{ id: 'o', d: TODAY, n: 'Oats bowl', kcal: 900, p: 36, t: 8, x: 3, micro: { calcium: 100 } }], [recipe('r1', { micro: { calcium: 1 } })]);
+  await openNutrition(page);
+  let dlg = await openEdit(page, 'Oats bowl');
+  await expect(dlg.getByLabel('Amount 1')).toHaveValue('33.333');
+  await dlg.getByRole('button', { name: 'Save', exact: true }).click();
+  expect((await stored(page)).find(x => x.id === 'o')).toMatchObject({ kcal: 900, x: 3, micro: { calcium: 100 } }); // not 99.999
+  await dlg.getByRole('button', { name: 'Edit', exact: true }).click(); // the sheet is back on the item's view after a save
+  await dlg.locator('input[id$="-k"]').fill('200'); // a different calorie number per portion: the old amounts no longer match
+  await expect(dlg.getByLabel('Amount 1')).toHaveCount(0);
+  await dlg.getByRole('button', { name: 'Save', exact: true }).click();
+  const e = (await stored(page)).find(x => x.id === 'o');
+  expect(e).toMatchObject({ kcal: 600, x: 3 });
+  expect(e.micro).toBeUndefined();
 });
