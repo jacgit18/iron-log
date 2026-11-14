@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe, RecipeIngredient } from '../types.ts';
-import { MAX_SEGMENTS, fmtAmount, hasBreakdown, mealMicroBreakdown } from './mealMicroBreakdown.js';
+import { MAX_SEGMENTS, fmtAmount, mealMicroBreakdown } from './mealMicroBreakdown.js';
 import { mealRollup } from './mealRollup.js';
 
 const food = (id: string, n: string, micro: Recipe['micro'], extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'ready', type: 'ingredient', ing: [], steps: [], kcal: 100, p: 5, ...(micro ? { micro } : {}), ...extra });
@@ -49,8 +49,6 @@ describe('mealMicroBreakdown', () => {
     expect(mealMicroBreakdown(meal('own', [line(cereal, 1), line(milk, 1)], { own: true }), all)).toBeNull();
     const bare = food('bare', 'Bare', undefined);
     expect(mealMicroBreakdown(meal('b', [line(bare, 1)]), [bare])).toBeNull();
-    expect(hasBreakdown(meal('b', [line(bare, 1)]), [bare])).toBe(false);
-    expect(hasBreakdown(meal('bowl', [line(cereal, 1)]), all)).toBe(true);
   });
 
   it('a part with no calories and protein yet is left out, as the roll-up leaves it out', () => {
@@ -103,7 +101,29 @@ describe('mealMicroBreakdown', () => {
     const stored = mealRollup(m, recipes)!.per.micro!;
     const shown = mealMicroBreakdown(m, recipes)!;
     expect(Object.keys(stored).length).toBeGreaterThan(0);
-    for (const [k, v] of Object.entries(stored)) expect(row(shown, k).total).toBeCloseTo(v as number, 1);
+    for (const [k, v] of Object.entries(stored)) expect(row(shown, k).total).toBeCloseTo(v as number, 2);
+  });
+});
+
+describe('segment shares', () => {
+  it('add up to 1 even when every amount is under 1, so a bar always fills its row', () => {
+    const a = food('a', 'Oats', { thiamin: 0.4, riboflavin: 0.1 });
+    const b = food('b', 'Milk', { thiamin: 0.45, riboflavin: 0.05 });
+    const m = meal('m', [line(a, 1), line(b, 1)]);
+    const r = row(mealMicroBreakdown(m, [a, b, m]), 'thiamin');
+    expect(r.total).toBeCloseTo(0.85, 5);
+    expect(r.segments.map(s => s.share).reduce((x, y) => x + y, 0)).toBeCloseTo(1, 10);
+    expect(r.segments[0]!.share).toBeCloseTo(0.4 / 0.85, 10);
+  });
+
+  it('a not-listed segment has no share, and all-zero amounts share the bar equally', () => {
+    const a = food('a', 'A', { iron: 2 }), b = food('b', 'B', { calcium: 5 });
+    const m = meal('m', [line(a, 1), line(b, 1)]);
+    const iron = row(mealMicroBreakdown(m, [a, b, m]), 'iron');
+    expect(iron.segments.map(s => s.share)).toEqual([1, 0]);
+    const z1 = food('z1', 'Z1', { iron: 0 }), z2 = food('z2', 'Z2', { iron: 0 });
+    const zm = meal('zm', [line(z1, 1), line(z2, 1)]);
+    expect(row(mealMicroBreakdown(zm, [z1, z2, zm]), 'iron').segments.map(s => s.share)).toEqual([0.5, 0.5]);
   });
 });
 

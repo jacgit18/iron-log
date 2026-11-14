@@ -108,6 +108,25 @@ for (const [label, size] of [['phone', { width: 360, height: 800 }], ['desktop',
   });
 }
 
+test('a bar whose amounts are all under 1 still fills its row', async ({ page }) => {
+  const a = rc('a', 'Oat cereal', 'ready', { type: 'ingredient', kcal: 150, p: 5, micro: { thiamin: 0.4, riboflavin: 0.1 } });
+  const b = rc('b', 'Whole milk', 'ready', { type: 'drink', kcal: 150, p: 8, micro: { thiamin: 0.45, riboflavin: 0.05 } });
+  const m = rc('m', 'Small bowl', 'breakfast', { kcal: 300, p: 13, ing: [{ n: 'Oat cereal', rid: 'a', q: 1 }, { n: 'Whole milk', rid: 'b', q: 1 }] });
+  await seed(page, [a, b, m]);
+  await openRecipes(page);
+  await page.getByRole('button', { name: /Small bowl/ }).first().click();
+  await page.locator('.mmb-toggle').click();
+  for (const name of ['Thiamin', 'Riboflavin']) {
+    const track = page.locator('.mmb-row', { hasText: name }).locator('.mmb-track');
+    const gap = await track.evaluate(el => {
+      const segs = [...el.children], used = segs.reduce((sum, c) => sum + c.getBoundingClientRect().width, 0);
+      return el.clientWidth - used - (segs.length - 1) * parseFloat(getComputedStyle(el).columnGap); // what is left empty at the end of the bar
+    });
+    expect(Math.abs(gap)).toBeLessThan(1);
+  }
+  await expect(page.locator('.mmb-row', { hasText: 'Thiamin' }).locator('.mmb-val')).toHaveText('0.85 mg');
+});
+
 test('the bars pass axe in the dark theme too', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await seed(page, [cereal, milk, bowl]);

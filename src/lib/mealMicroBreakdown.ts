@@ -3,7 +3,7 @@ import { NUTRIENT_KEYS } from '../shared/nutrientKeys.js';
 import type { NutrientKey } from '../shared/nutrientKeys.js';
 import type { Recipe } from '../types.ts';
 import { nutrientLabel } from './nutrientInfo.js';
-import { hasParts, isRolledUp, numbersOf } from './mealRollup.js';
+import { isRolledUp, numbersOf } from './mealRollup.js';
 
 /* ---------- A meal's vitamins and minerals, part by part (brief meal-micro-breakdown): pure, so every shape is a node test ----------
    `mealRollup` adds a meal's linked parts into one `micro`; this reads the same parts and the same numbers (`numbersOf`) and keeps each part's share
@@ -19,6 +19,8 @@ export interface Segment {
   name: string;
   /** Per serving, in the nutrient's unit; null when no part in the segment lists the nutrient. */
   amount: number | null;
+  /** This segment's part of the row's total, 0 to 1 (the shares of a row add up to 1; 0 for a not-listed segment): the bar sizes its segments by it, never by the raw amount. */
+  share: number;
   /** Names of the parts in this segment that do not list the nutrient. */
   missing: string[];
 }
@@ -59,7 +61,7 @@ export function mealMicroBreakdown(meal: MealInput, recipes: readonly Recipe[]):
   const rows: BreakdownRow[] = [];
   for (const key of NUTRIENT_KEYS) {
     if (!used.some(u => u.micro[key] !== undefined)) continue;
-    const segments: Segment[] = [...groups].map(([slot, parts]) => {
+    const raw = [...groups].map(([slot, parts]) => {
       const listed = parts.filter(p => p.micro[key] !== undefined);
       return {
         slot,
@@ -68,11 +70,10 @@ export function mealMicroBreakdown(meal: MealInput, recipes: readonly Recipe[]):
         missing: parts.filter(p => p.micro[key] === undefined).map(p => p.name),
       };
     });
-    rows.push({ key, label: nutrientLabel(key), unit: MICRO_UNIT[key], total: segments.reduce((a, s) => a + (s.amount ?? 0), 0), atLeast: segments.some(s => s.missing.length > 0), segments });
+    const total = raw.reduce((a, s) => a + (s.amount ?? 0), 0), known = raw.filter(s => s.amount !== null).length;
+    const segments: Segment[] = raw.map(s => ({ ...s, share: s.amount === null ? 0 : total > 0 ? s.amount / total : 1 / known })); // amounts that are all 0 share the bar equally
+    rows.push({ key, label: nutrientLabel(key), unit: MICRO_UNIT[key], total, atLeast: segments.some(s => s.missing.length > 0), segments });
   }
   if (!rows.length) return null;
   return { rows, legend: [...groups].map(([slot, parts]) => ({ slot, name: slot === 'other' ? 'Other' : parts[0]!.name })) };
 }
-
-/** Whether a meal would show a breakdown, without building it (a cheap test for the editor). */
-export const hasBreakdown = (meal: MealInput, recipes: readonly Recipe[]): boolean => hasParts(meal) && mealMicroBreakdown(meal, recipes) !== null;

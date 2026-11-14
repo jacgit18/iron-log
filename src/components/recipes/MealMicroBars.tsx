@@ -38,7 +38,7 @@ export default function MealMicroBars({ breakdown }: { breakdown: Breakdown }) {
                 <div className="mmb-track" role="img" aria-label={rowLabel(r)}>
                   {r.segments.map(s => s.amount === null
                     ? <div key={String(s.slot)} className="mmb-seg mmb-unk" title={`${s.missing.join(', ')} does not list this`}>not listed</div>
-                    : <div key={String(s.slot)} className={`mmb-seg ${slotClass(s.slot)}`} title={`${s.name}: ${fmtAmount(s.amount)} ${r.unit} per serving`} style={{ flexGrow: s.amount }}>{fmtAmount(s.amount)}</div>)}
+                    : <div key={String(s.slot)} className={`mmb-seg ${slotClass(s.slot)}`} title={`${s.name}: ${fmtAmount(s.amount)} ${r.unit} per serving`} style={{ flexGrow: s.share * 100 }}>{fmtAmount(s.amount)}</div>)}
                 </div>
               </li>
             ))}
