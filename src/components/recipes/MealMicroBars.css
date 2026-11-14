@@ -1,0 +1,140 @@
+@layer base, components;
+@layer components {
+/* A meal's vitamins and minerals (brief meal-micro-breakdown): one bar per nutrient, split by food, the number on each segment. Segment colors are the --seg-* tokens. */
+.mmb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.mmb-toggle {
+  align-self: flex-start;
+}
+.mmb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.mmb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.mmb-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.mmb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-sm);
+  flex: none;
+}
+.mmb-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mmb-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.mmb-row:last-child {
+  border-bottom: 0;
+}
+.mmb-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-8);
+  font-size: var(--fs-md);
+}
+.mmb-val {
+  font-weight: 700;
+  font-size: var(--fs-base);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mmb-flag {
+  display: inline-block;
+  margin-left: var(--sp-4);
+  padding: 1px var(--sp-6);
+  border-radius: var(--r-sm);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+}
+.mmb-track {
+  display: flex;
+  gap: var(--sp-2);
+  height: 24px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--sunk);
+}
+.mmb-seg {
+  display: flex;
+  flex: 0 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  padding: 0 var(--sp-4);
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mmb-unk {
+  flex: 1 1 0;
+  min-width: 64px;
+  color: var(--muted);
+  font-weight: 600;
+  background: repeating-linear-gradient(45deg, transparent 0 4px, var(--line) 4px 8px);
+}
+.mmb-s1 {
+  background: var(--seg-1);
+  color: var(--seg-ink-1);
+}
+.mmb-s2 {
+  background: var(--seg-2);
+  color: var(--seg-ink-2);
+}
+.mmb-s3 {
+  background: var(--seg-3);
+  color: var(--seg-ink-3);
+}
+.mmb-s4 {
+  background: var(--seg-4);
+  color: var(--seg-ink-4);
+}
+.mmb-s5 {
+  background: var(--seg-5);
+  color: var(--seg-ink-5);
+}
+.mmb-sother {
+  background: var(--seg-other);
+  color: var(--seg-ink-other);
+}
+.mmb-warn {
+  padding: var(--sp-8) var(--sp-10);
+  border-radius: var(--r-md);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+}

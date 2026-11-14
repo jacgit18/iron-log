@@ -102,7 +102,8 @@ export type ScenarioFeature =
   | 'Usual portion'
   | 'Saved meals removal'
   | 'Daily snacks'
-  | 'Desktop week card';
+  | 'Desktop week card'
+  | 'Meal vitamin bars';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
@@ -116,6 +117,7 @@ export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Plan labels', 'Grocery list cap', 'Erased account', 'Large history', 'Issues filter', 'Scan keeps its day', 'Launcher shortcuts', 'Week to Shopping',
   'Add food any day', 'Move and copy eaten', 'Usual portion', 'Saved meals removal', 'Daily snacks',
   'Desktop week card',
+  'Meal vitamin bars',
 ];
 
 export interface Scenario {
@@ -3676,6 +3678,43 @@ export const SCENARIOS: readonly Scenario[] = [
       'At 1920 px one bordered card holds the week arrows, This week and its dates at the left, Manage at the right end, and under a hairline "Adding to ..." at the left with Add missing to Shopping, Scan and log, Quick add, One-off food and Add food (last, highlighted) at the right end. The seven day columns start below the card. The buttons open what they opened before.',
       'At 1000 px and 700 px the seven day tabs sit between the week row and the toolbar, inside the same card; at 700 px the buttons wrap onto a second line inside the card and nothing runs past its border.',
       'At 375 px the layout is the phone one: the card has the week and the day tabs only, and the add buttons are in their own row below it.',
+    ],
+  },
+  {
+    id: 'S-298', feature: 'Meal vitamin bars', title: 'Build a meal from two foods and check its calcium adds up', persona: 'meal-planner', brief: 'meal-micro-breakdown',
+    steps: [
+      'Open Recipes, New, Add a food by hand. Name it Oat cereal, set 150 calories and 5 g protein, and add calcium 100 mg and vitamin D 1 mcg in the vitamins and minerals rows. Save it. Do the same for Whole milk: 150 calories, 8 g protein, calcium 300 mg, vitamin D 2.9 mcg.',
+      'Open Recipes, New, Recipe or meal. Name it Cereal bowl. Press + Food or meal and pick Oat cereal, then + Food or meal again and pick Whole milk.',
+      'Under "Per serving, from the parts", read the button, press it, and read the Calcium and Vitamin D rows. Then press More next to Whole milk.',
+    ],
+    expected: [
+      'A button reads "Vitamins and minerals: 2 listed", closed.',
+      'Pressed, it opens a legend with Oat cereal and Whole milk, and a Calcium bar with 100 on a gold segment and 300 on a blue one, 400 mg on the right. Vitamin D shows 1 and 2.9, 3.9 mcg on the right. Neither row has an "at least" tag.',
+      'After More, milk is 1.5 portions and Calcium reads 100 and 450, 550 mg; the segments and the total change together.',
+    ],
+  },
+  {
+    id: 'S-299', feature: 'Meal vitamin bars', title: 'A food that does not list a vitamin shows as not listed, and the total says at least', persona: 'meal-planner', brief: 'meal-micro-breakdown', edge: true,
+    steps: [
+      'Make Oat cereal with calcium 100 mg and iron 8 mg, and Whole milk with calcium 300 mg and no iron (as in the first scenario). Build Cereal bowl from the two and open Vitamins and minerals.',
+      'Read the Iron row and the note under the bars. Save the meal and open it from the Recipes list; open Vitamins and minerals there too.',
+    ],
+    expected: [
+      'The Iron bar is one gold segment reading 8 and a hatched segment reading "not listed"; the total reads "≥ 8 mg" with an "at least" tag. A note says the real total could be higher.',
+      'The meal page shows the same button, closed, and the same rows when opened. Calcium still reads 400 mg with no tag.',
+    ],
+  },
+  {
+    id: 'S-300', feature: 'Meal vitamin bars', title: 'The vitamin bars start closed and go when the meal uses its own numbers', persona: 'meal-planner', brief: 'meal-micro-breakdown', edge: true,
+    steps: [
+      'Open a meal built from two foods that list vitamins (Cereal bowl). Read the line under its calories, without pressing anything.',
+      'Edit the meal, open Nutrition per serving, and tick Use my own numbers. Untick it again.',
+      'Open a recipe you typed by hand with no linked foods.',
+    ],
+    expected: [
+      'One button reads "Vitamins and minerals: N listed" and no bars are showing.',
+      'With Use my own numbers ticked the button is gone; unticked, it is back.',
+      'The typed recipe has no vitamins button.',
     ],
   },
 ];
