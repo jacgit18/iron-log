@@ -108,6 +108,8 @@ export async function freePort() {
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const stateFile = join(tmpdir(), `qa-local-${createHash('sha1').update(root).digest('hex').slice(0, 10)}.json`); // one stack per checkout
 const readState = () => (existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : null);
+/** The address of the stack this script started for this checkout, or null (no password: the QA Runner's hook reads only this). */
+export const readStackUrl = () => readState()?.url ?? null;
 const fail = (msg, code = 1) => { console.error(`qa-local: ${msg}`); process.exit(code); };
 
 async function main() {
