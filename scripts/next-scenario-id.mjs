@@ -17,7 +17,7 @@ const folder = 'server/qa/scenarios';
 
 function namesOnMain() {
   try {
-    return execFileSync('git', ['ls-tree', '--name-only', 'origin/main', `${folder}/`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    return execFileSync('git', ['ls-tree', '--name-only', 'origin/main', `${folder}/`], { cwd: fileURLToPath(new URL('..', import.meta.url)), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
       .split('\n')
       .map(path => path.slice(path.lastIndexOf('/') + 1));
   } catch {
