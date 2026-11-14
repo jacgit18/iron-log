@@ -137,7 +137,6 @@ export default function Recipes() {
   };
 
   const back = () => setView({ kind: 'list' });
-  const showCombosOf = (name: string) => { setRecent(false); setCat(null); setCanMake(false); setTagSel([]); setNutSel([]); setQ(name); setTab('meals'); }; // "+N more": every filter clears so Meals shows the combos the chips counted
   const openCombo = (id: string) => { // a chip: the combo opens as it is, the list and its tab stay
     if (pane) setSelId(id);
     else { openedThisVisit.push(id); setView({ kind: 'mine', id }); }
@@ -192,7 +191,7 @@ export default function Recipes() {
       </button>
       {o.logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${o.key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: o.logId! })}>Log</button>}
       {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add ${o.title}`} onClick={o.addIt}>+ Add</button>}
-      {o.chips?.length ? <ComboChips chips={o.chips} onOpen={openCombo} owner={o.title} onMore={() => showCombosOf(o.title)} /> : null}
+      {o.chips?.length ? <ComboChips key={tab} food={o.title} chips={o.chips} onOpen={openCombo} /> : null}
     </li>
   );
 

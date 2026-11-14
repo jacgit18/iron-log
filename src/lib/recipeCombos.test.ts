@@ -36,6 +36,9 @@ describe('parts and chips', () => {
     const c = (n: string) => ({ id: n, label: n, name: n });
     expect(chipsShown([c('a'), c('b'), c('c'), c('d')])).toMatchObject({ more: 2, shown: [{ id: 'a' }, { id: 'b' }] });
     expect(chipsShown([c('a')])).toMatchObject({ more: 0 });
+    const open = chipsShown([c('a'), c('b'), c('c'), c('d')], true);
+    expect(open.shown.map(x => x.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(open.more).toBe(2); // still above 0, so the button stays to say "Show fewer"
   });
 });
 

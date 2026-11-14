@@ -53,18 +53,25 @@ test('Meals lists the combo as its own row with its parts named', async ({ page 
   await expect(page.locator('.rc-combochip')).toHaveCount(0);
 });
 
-test('"+N more" has its own name and opens Meals with the combos of that food', async ({ page }) => {
+test('"+N more" expands the rest of the chips in place and Show fewer folds them, touching no search, tab or filter', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => {
     const k = 'ironlog:recipes/main', d = JSON.parse(localStorage.getItem(k));
-    const m = (id, n) => ({ id, n, cat: 'other', servings: 1, ing: [{ n: 'Cereal', rid: 'cereal', q: 1 }], steps: [] });
-    d.items.push(m('a', 'Cereal bar'), m('b', 'Cereal bowl'));
+    for (const [id, n] of [['b2', 'Cereal bar'], ['b3', 'Cereal cup']]) d.items.push({ id, n, cat: 'other', servings: 1, ing: [{ n: 'Cereal', rid: 'cereal', q: 1 }], steps: [] });
     localStorage.setItem(k, JSON.stringify(d));
   });
   await page.reload();
   await openRecipes(page);
-  await expect(itemOf(page, 'Cereal').locator('.rc-combochip')).toHaveCount(3); // two chips and the more button
-  await itemOf(page, 'Cereal').getByRole('button', { name: '+1 more with Cereal' }).click();
-  await expect(page.locator('#recipes-tab-meals')).toHaveAttribute('aria-pressed', 'true');
-  await expect(rows(page)).toHaveText(['Cereal bar', 'Cereal bowl', 'Cereal with Milk']);
+  const item = itemOf(page, 'Cereal');
+  await expect(item.locator('.rc-combochip:not(.more)')).toHaveCount(2);
+  const more = item.getByRole('button', { name: '+1 more with Cereal' });
+  await expect(more).toHaveText('+1 more');
+  await more.click();
+  await expect(item.locator('.rc-combochip:not(.more)')).toHaveCount(3);
+  const fewer = item.getByRole('button', { name: 'Show fewer with Cereal' });
+  await expect(fewer).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByLabel('Search recipes')).toHaveValue('');
+  await expect(page.locator('#recipes-tab-all')).toHaveAttribute('aria-pressed', 'true');
+  await fewer.click();
+  await expect(item.locator('.rc-combochip:not(.more)')).toHaveCount(2);
 });
