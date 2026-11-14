@@ -7,6 +7,7 @@ import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
+import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { macroLine } from '../../lib/macroLine.js';
 import { attribution } from '../../lib/recipeDraft.js';
@@ -18,6 +19,7 @@ import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import UsualLogControl from '../diet/UsualLogControl.js';
 import GoesWith from './GoesWith.js';
+import MealMicroBars from './MealMicroBars.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
 import './RecipeDesktop.css';
@@ -40,6 +42,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const credit = attribution(recipe, mine);
   const roll = useMemo(() => (hasParts(recipe) ? mealRollup(recipe, recipes) : null), [recipe, recipes]); // a meal built from linked foods: what its parts add up to
   const rollText = roll && roll.counted > 0 ? macroLine(roll.per) : '';
+  const breakdown = useMemo(() => mealMicroBreakdown(recipe, recipes), [recipe, recipes]); // its vitamins and minerals, part by part
   const macros = macroLine(recipe);
   const scaled = !!recipe.servings && tonight !== null && tonight !== recipe.servings; // a scaled recipe keeps its stepper in view, so the amounts never look like the written ones
   const missing = missingParts(status);
@@ -69,6 +72,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used.${rollText ? ` The parts add up to ${rollText}.` : ' The parts need numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
+      {breakdown && <MealMicroBars key={recipe.id} breakdown={breakdown} />}
       <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}
       <div className="rc-col">
       <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling || scaled} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
