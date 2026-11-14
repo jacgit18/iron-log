@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The local stack the QA Runner agent works on (brief: qa-runner-agent, agent file .claude/agents/qa-scenario-runner.md). The limits of the agent are
 // enforced here, in code, because an agent's tool list cannot say which host or database it may touch:
-//   - the only server it gets is one this script starts on 127.0.0.1, on a port the OS picks;
+//   - the only server it gets is one this script starts, bound to 127.0.0.1 (HOST=127.0.0.1) on a port the OS picks; check-url accepts only that server's address;
 //   - the only database is a scratch one this script creates (named iron_qa_run_<8 hex>, marked with a comment) on a Postgres that is on this machine;
 //   - stop drops only what the state file says this script made, and only if the name and the mark still match.
 // Usage (run with tsx, because seeding reads the TypeScript seed code):
@@ -13,7 +13,7 @@
 // (the `npm run db:start` container). The database named in it is never written to: only a new database next to it is.
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, openSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -51,7 +51,41 @@ export function serverProblem(raw) {
 /** Why `name` may not be dropped by stop, or null: it must be a name this script generates AND be the one the state file recorded. */
 export function dropProblem(name, state) {
   if (typeof name !== 'string' || !SCRATCH_NAME.test(name)) return `${JSON.stringify(name)} is not a scratch database this script makes (${SCRATCH_PREFIX}<8 hex>)`;
-  if (!state || state.db !== name) return `${name} is not the database recorded in the state file: this script did not create it`;
+  if (!state || state.db !== name || state.login !== `${name}_app`) return `${name} is not the database and login recorded in the state file: this script did not create it`;
+  return null;
+}
+
+/** Why `raw` is not the address of the stack this script started (`stateUrl`), or null. Same machine is not enough: another local app is not the stack. */
+export function originProblem(raw, stateUrl) {
+  const bad = urlProblem(raw);
+  if (bad) return bad;
+  if (!stateUrl) return 'no stack is running: run start first';
+  return new URL(raw).origin === new URL(stateUrl).origin ? null : `${new URL(raw).origin} is not the stack this script started (${new URL(stateUrl).origin})`;
+}
+
+/** Whether a process (its command line and working directory) is this checkout's server, so a pid read from an old state file is not killed by mistake. */
+export function pidIsStack(cmdline, cwd, root) {
+  return typeof cmdline === 'string' && cmdline.includes('server/index.ts') && cwd === root;
+}
+
+/** Drops the scratch database and login the state file names; every refusal is a returned reason, nothing is dropped unless all checks pass. `withClient(url, fn)` runs fn on a connection. */
+export async function dropScratch(state, withClient) {
+  const refused = dropProblem(state.db, state);
+  if (refused) return refused;
+  const maintenance = new URL(state.base); maintenance.pathname = '/postgres';
+  const bad = serverProblem(maintenance.href);
+  if (bad) return bad;
+  try {
+    await withClient(maintenance.href, async c => {
+      const { rows } = await c.query(`select shobj_description(oid, 'pg_database') as comment from pg_database where datname = $1`, [state.db]);
+      if (rows.length) {
+        const m = markProblem(rows[0].comment);
+        if (m) throw new Error(m);
+        await c.query(`drop database "${state.db}" with (force)`);
+      }
+      await c.query(`drop role if exists "${state.login}"`);
+    });
+  } catch (e) { return `could not drop ${state.db}: ${e.message}`; }
   return null;
 }
 
@@ -84,7 +118,7 @@ async function main() {
   const given = process.env.QA_LOCAL_PG ?? process.env.DATABASE_URL ?? 'postgres://ironlog:ironlog@127.0.0.1:5433/ironlog';
 
   if (cmd === 'check-url') {
-    const why = urlProblem(arg ?? '');
+    const why = originProblem(arg ?? '', readState()?.url);
     if (why) fail(`refused: ${why}`);
     console.log('ok');
     return;
@@ -112,7 +146,7 @@ async function main() {
       if (!process.argv.includes('--no-build') || !existsSync(join(root, 'dist'))) execFileSync('npm', ['run', 'build'], { cwd: root, stdio: 'ignore' });
       // NODE_ENV=test is for the server only (the least that lets the test-only sign-in start); the build stays a production one.
       const child = spawn('npx', ['tsx', 'server/index.ts'], { cwd: root, detached: true, stdio: ['ignore', out, out], env: {
-        ...process.env, NODE_ENV: 'test', PORT: String(port), BASE_URL: url, STATIC_DIR: 'dist', AUTH_TEST_SIGNIN: 'true',
+        ...process.env, NODE_ENV: 'test', HOST: '127.0.0.1', PORT: String(port), BASE_URL: url, STATIC_DIR: 'dist', AUTH_TEST_SIGNIN: 'true',
         BETTER_AUTH_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only-secret', GOOGLE_CLIENT_ID: 'e2e-client.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'e2e-client-secret',
         DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href } });
       child.unref();
@@ -154,30 +188,22 @@ async function main() {
     return;
   }
 
-  if (cmd === 'status') { console.log(JSON.stringify(readState() ?? { running: false })); return; }
+  if (cmd === 'status') { const st = readState(); console.log(JSON.stringify(st ? { url: st.url, port: st.port, database: st.db, pid: st.pid, log: st.log } : { running: false })); return; } // no passwords: the state file holds the scratch login's
   if (cmd === 'stop') { await stop(); return; }
   fail('usage: qa-local.mjs start [--no-build] | seed <persona-id> | check-url <url> | status | stop', 2);
 
   async function stop() {
     const state = readState();
     if (!state) { console.error('qa-local: nothing to stop'); return; }
-    if (state.pid) { try { process.kill(-state.pid, 'SIGTERM'); } catch { /* already gone */ } }
-    const refused = dropProblem(state.db, state);
-    if (refused) { console.error(`qa-local: not dropping anything: ${refused}`); return; }
-    const maintenance = new URL(state.base); maintenance.pathname = '/postgres';
-    const bad = serverProblem(maintenance.href);
-    if (bad) { console.error(`qa-local: not dropping anything: ${bad}`); return; }
-    try {
-      await withClient(maintenance.href, async c => {
-        const { rows } = await c.query(`select shobj_description(oid, 'pg_database') as comment from pg_database where datname = $1`, [state.db]);
-        if (rows.length) {
-          const m = markProblem(rows[0].comment);
-          if (m) throw new Error(m);
-          await c.query(`drop database "${state.db}" with (force)`);
-        }
-        if (SCRATCH_NAME.test(state.login.replace(/_app$/, ''))) await c.query(`drop role if exists "${state.login}"`);
-      });
-    } catch (e) { console.error(`qa-local: could not drop ${state.db}: ${e.message}`); return; }
+    if (state.pid) {
+      // Only a process that is still this checkout's server is killed: after a crash or reboot the pid may belong to something else.
+      let cmdline = null; let cwd = null;
+      try { cmdline = readFileSync(`/proc/${state.pid}/cmdline`, 'utf8').replaceAll('\0', ' '); cwd = readlinkSync(`/proc/${state.pid}/cwd`); } catch { /* gone, or no /proc */ }
+      if (pidIsStack(cmdline, cwd, root)) { try { process.kill(-state.pid, 'SIGTERM'); } catch { /* already gone */ } }
+      else if (cmdline !== null) console.error(`qa-local: pid ${state.pid} is not this stack's server any more; not killing it`);
+    }
+    const why = await dropScratch(state, withClient);
+    if (why) { console.error(`qa-local: not dropped: ${why}`); process.exitCode = 1; return; }
     rmSync(stateFile, { force: true });
     console.error(`qa-local: stopped; dropped ${state.db} and ${state.login}`);
   }
