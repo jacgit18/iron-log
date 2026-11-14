@@ -73,7 +73,11 @@ export function portionAmounts(rows: AmountRow[], kcalText: string, basis: Porti
 }
 
 /** Whether the sheet offers "also save to the recipe": the entry's linked recipe exists and has no amounts (never overwrites), and the portion was recorded. Without a recorded portion the sheet's "one portion" is a guess (a planned item at 2 portions, logged before `x` was stored, opens as 1), so per-serving amounts written to the recipe could be doubled. */
-export const canSaveToRecipe = (recipe: Pick<Recipe, 'micro'> | undefined, recorded = true): boolean => recorded && recipe !== undefined && !(recipe.micro && Object.keys(recipe.micro).length);
+export const canSaveToRecipe = (recipe: Pick<Recipe, 'micro'> | undefined, recorded = true): boolean => recipeSaveBlock(recipe, recorded) === null;
+
+/** Why the amounts cannot go to the recipe, in the words the sheet shows after a save, or null when they can: the recipe is gone (deleted, or removed on another device), the portion was not recorded, or it has amounts (never overwritten). */
+export const recipeSaveBlock = (recipe: Pick<Recipe, 'micro'> | undefined, recorded = true): string | null =>
+  recipe === undefined ? 'That recipe is gone.' : !recorded ? 'The portion was not recorded.' : recipe.micro && Object.keys(recipe.micro).length ? 'That recipe already has amounts.' : null;
 
 /** What the sheet saves, from what is typed: totals at `x` (null total = out of range), one portion's amounts for the optional recipe save. `microPer` is one portion's typed or kept amounts (null for none). */
 export function portionValues(i: { shown: PerText; typed: PerText; exact: PerPortion; x: number; microPer: Micro | null }): { totals: PortionTotals | null; per: { kcal: number; p: number; c: number | null; f: number | null }; microPer: Micro | null } {

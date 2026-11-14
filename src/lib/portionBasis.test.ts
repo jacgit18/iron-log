@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canSaveToRecipe, portionAmounts, portionBasis, portionMaxFor, portionValues, portionWords, shownPer, stepPortionCount, totalsAt } from './portionBasis.js';
+import { canSaveToRecipe, portionAmounts, portionBasis, portionMaxFor, portionValues, portionWords, recipeSaveBlock, shownPer, stepPortionCount, totalsAt } from './portionBasis.js';
 import { rowsFromMicro } from './foodAmountRows.js';
 import { ateEntry } from './dietLog.js';
 import { normDietEntry } from '../shared/diet.js';
@@ -112,6 +112,13 @@ describe('canSaveToRecipe: the tick', () => {
   it('is hidden when the portion was not recorded: one portion would be a guess, and the recipe could get doubled amounts', () => {
     expect(canSaveToRecipe({}, false)).toBe(false);
     expect(canSaveToRecipe({}, true)).toBe(true);
+  });
+  it('names why it cannot be saved: a gone recipe is not "already has amounts"', () => {
+    expect(recipeSaveBlock(undefined)).toBe('That recipe is gone.');
+    expect(recipeSaveBlock({ micro: { iron: 1 } })).toBe('That recipe already has amounts.');
+    expect(recipeSaveBlock({}, false)).toBe('The portion was not recorded.');
+    expect(recipeSaveBlock({})).toBeNull();
+    expect(recipeSaveBlock({ micro: {} })).toBeNull();
   });
 });
 
