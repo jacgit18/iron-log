@@ -29,7 +29,7 @@ export function logPastFood(ports: Pick<Ports, 'addDietEntry' | 'removeDietEntry
   if (!nums) return { ok: false, error: 'Those numbers are out of range.' };
   const bad = day > today ? 'Only a food from your Recipes can be planned. Pick today or an earlier day.' : ateDayError(day, today);
   if (bad) return { ok: false, error: bad };
-  const r = ports.addDietEntry(entryFromFood(day, { n: food.n, ...nums }));
+  const r = ports.addDietEntry(entryFromFood(day, { n: food.n, ...nums, x: servings }));
   if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
   const id = r.id;
   return { ok: true, text: `Logged ${food.n}: ${amountText(servings, food)} to ${day === today ? 'today' : day}.`, undo: () => ports.removeDietEntry(id, false) };

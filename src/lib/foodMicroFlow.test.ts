@@ -61,6 +61,12 @@ describe('re-logging keeps them', () => {
     expect(suggestNow(diet, 9, '2026-09-25').find(f => f.n === 'Yogurt')!.micro).toEqual({ calcium: 150, zinc: 1 });
     expect(planCopy(diet, '2026-09-23', '2026-09-25', null).add[0]!.micro).toEqual({ calcium: 150, zinc: 1 });
   });
+  it('Copy day and suggestions keep the stored portion, so a copied entry still opens per portion (brief portion-scaled-micros)', () => {
+    const two = [entry({ x: 2 })];
+    expect(planCopy(two, '2026-09-23', '2026-09-25', null).add[0]!.x).toBe(2);
+    expect(suggestNow(two, 9, '2026-09-25').find(f => f.n === 'Yogurt')!.x).toBe(2);
+    expect('x' in planCopy(diet, '2026-09-23', '2026-09-25', null).add[0]!).toBe(false);
+  });
   it('entryFromFood builds the entry with them, and without when there are none', () => {
     expect(entryFromFood('2026-09-25', { n: 'Yogurt', kcal: 100, p: 10, micro: { iron: 1 } })).toEqual({ d: '2026-09-25', n: 'Yogurt', kcal: 100, p: 10, micro: { iron: 1 } });
     expect('micro' in entryFromFood('2026-09-25', { n: 'Rice', kcal: 1, p: 1 })).toBe(false);

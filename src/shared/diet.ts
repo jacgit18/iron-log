@@ -151,6 +151,9 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
 /** The hour of day an entry was added, as stored: a whole number from 0 to 23, or null. */
 export const cleanHour = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23 ? v : null);
 
+/** The portions an entry's totals are for as stored: 0.5 to 99, two decimals, or null. */
+export const cleanPortion = (v: unknown): number | null => (fin(v) && v >= 0.5 && v <= 99 ? Math.round(v * 100) / 100 : null);
+
 /** One entry, cleaned. Null without an id, a real date, a name, or numbers in range. */
 export function normDietEntry(x: unknown): DietEntry | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
@@ -161,7 +164,8 @@ export function normDietEntry(x: unknown): DietEntry | null {
   const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f); // optional: an unusable one is left out
   const t = cleanHour(o.t); // optional too
   const micro = cleanMicro(o.micro); // vitamins and minerals as eaten; unusable keys are dropped, none left means no field
-  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}) };
+  const xp = cleanPortion(o.x); // the portions the totals are for; optional
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}), ...(xp !== null ? { x: xp } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */

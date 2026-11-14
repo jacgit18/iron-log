@@ -312,9 +312,9 @@ export interface BatchResult { done: string[]; skipped: SkippedDay[]; message: s
 export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
-  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; x?: number }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
   copyDietEntry(id: string, toDay: string, move?: boolean): { id: string | null; error: string | null }; // the same food on another day (numbers, micronutrients and hour kept); a move also removes the original and offers Undo (brief nutrition-move-copy-eaten)
-  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null; micro?: Micro | null }): string | null; // an error text, or null when saved
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null; micro?: Micro | null; x?: number }): string | null; // an error text, or null when saved
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
   saveDietMeal(name: string, entryIds: string[]): string | null; // makes a Recipes meal from those entries (brief saved-meals-into-recipes); an error text, or null when saved
@@ -341,6 +341,7 @@ export interface RecipesSlice {
   recipes: Recipe[];
   recipesLoaded: boolean; // the recipes list has been read (from this browser, or pulled from the account): a write built on it before then could replace the account's list
   saveRecipes(): void;
+  setRecipeMicro(id: string, micro: Micro): string | null; // one serving's vitamins and minerals onto a recipe that has none (never overwrites; brief portion-scaled-micros); an error text, or null
   setRecipeUsual(id: string, usual: number | undefined): string | null; // the usual portion alone (undefined clears it); an error text when the recipe is gone, else null
   toggleRecipeFav(id: string): void; // the star on a recipe (brief recipes-find-type-tabs); saved with the recipes
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
