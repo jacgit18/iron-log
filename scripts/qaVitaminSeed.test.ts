@@ -9,7 +9,7 @@ import { personaById } from '../server/qa/personas.ts';
 import { buildPersonaRows } from '../server/qa/seedPlan.ts';
 
 // The vitamin tracker's seed read through the app's own totals code. It lives here, not beside the seed, because server/ may import only src/shared/ (ADR 015) and the totals are in src/lib.
-// If a figure here changes, the QA scenarios S-222 to S-237 (server/qa/scenarios.ts) quote it and need the same edit.
+// If a figure here changes, the QA scenarios S-222 to S-237 (server/qa/scenarios/) quote it and need the same edit.
 const day = '2026-10-27';
 const rows = buildPersonaRows(personaById('vitamin-tracker')!, ['latpd'], new Date('2026-10-27T12:00:00Z'));
 const items = rows.supplements.map(x => normSupplementItem(x.data)!);
