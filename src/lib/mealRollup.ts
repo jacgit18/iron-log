@@ -37,7 +37,7 @@ export const isRolledUp = (r: Draft): boolean => hasParts(r) && !r.own;
 const hasNumbers = (r: Pick<Recipe, 'kcal' | 'p'>): boolean => r.kcal !== undefined && r.p !== undefined;
 
 /** A part's own numbers per serving: rolled up from its parts when it is a meal that rolls up (to `depth` levels), else what it stores. */
-function numbersOf(part: Recipe, recipes: readonly Recipe[], seen: ReadonlySet<string>, depth: number): (PerServing & { c?: number; f?: number }) | null {
+export function numbersOf(part: Recipe, recipes: readonly Recipe[], seen: ReadonlySet<string>, depth: number): (PerServing & { c?: number; f?: number }) | null {
   if (isRolledUp(part) && depth < MAX_LINKS && !seen.has(part.id)) {
     const r = mealRollup(part, recipes, seen, depth + 1);
     if (r && r.counted > 0) return r.per;
