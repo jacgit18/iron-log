@@ -85,12 +85,19 @@ describe('a meal rolls them up from its parts', () => {
     const gone = settleMeals([food('a'), parts[1]!, settled!]);
     expect('micro' in gone[2]!).toBe(false);
   });
-  it('a meal on its own numbers keeps none, and a recipe with no linked line is never touched', () => {
-    const own = meal([{ rid: 'a', q: 1 }], { own: true, kcal: 300, p: 9, micro: { iron: 5 } });
-    expect('micro' in settleMeals([...parts, own])[2]!).toBe(false);
+  it('a meal on its own numbers keeps its typed amounts, and a recipe with no linked line is never touched', () => {
+    const own = meal([{ rid: 'a', q: 1 }], { own: true, kcal: 300, p: 9, micro: { iron: 4, vitaminB12: 1.2 } });
+    const settled = settleMeals([...parts, own])[2]!;
+    expect(settled.micro).toEqual({ iron: 4, vitaminB12: 1.2 });
+    expect(settled.kcal).toBe(300);
     const plain = food('z', { iron: 1 });
     const list = [plain];
     expect(settleMeals(list)).toBe(list);
+  });
+  it('a meal switched back to its parts rolls up again', () => {
+    const own = meal([{ rid: 'a', q: 1 }, { rid: 'b', q: 1 }], { own: true, kcal: 300, p: 9, micro: { iron: 4 } });
+    const { own: _o, ...back } = own;
+    expect(settleMeals([...parts, back])[2]!.micro).toEqual({ calcium: 140, iron: 3 });
   });
   it('a rolled-up meal inside a meal passes its amounts up', () => {
     const inner = meal([{ rid: 'a', q: 1 }], { id: 'i' });
