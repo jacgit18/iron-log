@@ -6,6 +6,7 @@ import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { countedNote, foodCandidates, hasParts, linkError, mealRollup } from '../../lib/mealRollup.js';
+import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { marksOf } from '../../lib/plate.js';
 import { macroLine } from '../../lib/macroLine.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
@@ -24,6 +25,7 @@ import { withMicro } from '../../shared/foodMicro.js';
 import type { Micro } from '../../shared/foodMicro.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
+import MealMicroBars from './MealMicroBars.js';
 import ServingSize from './ServingSize.js';
 import './RecipeDesktop.css';
 import './RecipeFormSections.css';
@@ -126,6 +128,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const parts = hasParts({ ing: shownRows() }); // some line links to a food or meal with an amount
   const roll = parts ? mealRollup({ id: recipe?.id, ing: shownRows(), servings: whole(servings) }, recipes) : null;
   const rollText = roll && roll.counted > 0 ? macroLine(roll.per) : '';
+  const breakdown = parts ? mealMicroBreakdown({ id: recipe?.id, ing: shownRows(), servings: whole(servings), ...(own ? { own: true as const } : {}) }, recipes) : null; // its vitamins and minerals, part by part, as the parts change
   const fromParts = parts && !own; // numbers shown and saved come from the parts
 
   const inUse = useMemo(() => tagCounts(recipes).filter(c => !tags.some(t => tagKey(t) === tagKey(c.tag))), [recipes, tags]); // tags other recipes have that this one does not: offered
@@ -294,6 +297,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
             <div className="rc-roll">
               <p role="status">{own ? `From the parts: ${rollText || 'Needs numbers'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}`}</p>
               <p className="note">{countedNote(roll)}</p>
+              {breakdown && <MealMicroBars breakdown={breakdown} />}
               <label className="rc-own"><input type="checkbox" checked={own} onChange={e => chooseOwn(e.target.checked)} /> Use my own numbers</label>
             </div>
           )}
