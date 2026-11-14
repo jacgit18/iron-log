@@ -97,7 +97,7 @@ export default function NutritionBoard() {
       <WeekDayCard tabs={tabs} selected={day} onPick={pickDay} idPrefix="nbdaytab-" controls={() => 'nb-day-panel'} footer={phone ? undefined : toolbar}>
         {weekSwitch}
         {!phone && dates}
-        {!phone && <button type="button" className="btn sm nb-cardmanage" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>}
+        <button type="button" className="btn sm nb-cardmanage" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
       </WeekDayCard>
       {phone && dates}
       {phone && toolbar}
@@ -108,11 +108,6 @@ export default function NutritionBoard() {
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} days={moveTargets} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
         <>
-          {phone && (
-            <div className="nb-links" role="group" aria-label="Nutrition settings">
-              <button type="button" className="nb-link" id="nb-manage" onClick={() => st().openModal({ type: 'nbmanage' })}>Manage</button>
-            </div>
-          )}
           <div id="nb-day-panel" className={`wb-board nb-board nb-board-${shown}`}>{shownDays.map(d => <DayColumn key={d} v={views[days.indexOf(d)]!} today={today} selected={d === day} days={moveTargets} onPick={() => setPicked(d)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, d, meal)} />)}</div>
         </>
       )}
