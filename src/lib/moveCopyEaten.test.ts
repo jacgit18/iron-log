@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import { entriesOn } from './dietLog.js';
-import { copyEaten, copyError, eatenTargets } from './moveCopyEaten.js';
+import { copyEaten, copyEatenMany, copyError, eatenTargets } from './moveCopyEaten.js';
 
 const today = '2026-11-12', yday = '2026-11-11';
 const rice: DietEntry = { id: 'a', d: today, n: 'Rice', kcal: 200, p: 4, c: 44, f: 0.5, from: 'r1', t: 8, micro: { calcium: 120 } };
@@ -88,5 +88,64 @@ describe('eatenTargets', () => {
   });
   it('none for a source on a future day', () => {
     expect(eatenTargets({ d: '2026-11-13' }, today, days)).toEqual([]);
+  });
+});
+
+describe('copyEatenMany', () => {
+  const ids = () => { let n = 0; return (_taken: DietEntry[]) => `n${++n}`; };
+  const day = (n: number) => `2026-11-${String(n).padStart(2, '0')}`;
+  it('copies one entry to several earlier days: one per day, the original stays, hour and micronutrients carried', () => {
+    const r = copyEatenMany([rice, eggs], 'a', [day(11), day(10), day(9)], today, ids(), false);
+    expect(r.error).toBeNull();
+    expect(r.copied.map(c => c.day)).toEqual([day(11), day(10), day(9)]);
+    for (const c of r.copied) expect(r.list.find(e => e.id === c.id)).toEqual({ ...rice, id: c.id, d: c.day });
+    expect(r.list.find(e => e.id === 'a')).toEqual(rice);
+    expect(r.list).toHaveLength(5);
+    expect(new Set(r.list.map(e => e.id)).size).toBe(5);
+  });
+  it('skips a full day and the own day, names them, and still copies the rest', () => {
+    const full = Array.from({ length: 20 }, (_, i): DietEntry => ({ id: `f${i}`, d: day(10), n: 'X', kcal: 1, p: 1 }));
+    const r = copyEatenMany([rice, ...full], 'a', [day(10), day(12), day(9)], today, ids(), false);
+    expect(r.copied.map(c => c.day)).toEqual([day(9)]);
+    expect(r.skipped).toEqual([{ day: day(10), reason: 'full' }, { day: day(12), reason: 'its own day' }]);
+    expect(entriesOn(r.list, day(10))).toHaveLength(20);
+  });
+  it('a day ahead becomes a plan card for the recipe, in the meal of its hour, and adds no log entry', () => {
+    const r = copyEatenMany([rice], 'a', [day(13), day(14)], today, ids(), false);
+    expect(r.planAdds).toEqual([{ day: day(13), item: { k: 'r', id: 'r1', s: 'breakfast' } }, { day: day(14), item: { k: 'r', id: 'r1', s: 'breakfast' } }]);
+    expect(r.copied).toEqual([]);
+    expect(r.list).toEqual([rice]);
+    expect(r.error).toBeNull();
+  });
+  it('a one-off food or a day beyond today + 13 is skipped, not planned', () => {
+    const oneOff: DietEntry = { id: 'o', d: today, n: 'Bar', kcal: 100, p: 3 };
+    const a = copyEatenMany([oneOff], 'o', [day(13)], today, ids(), false);
+    expect(a.skipped).toEqual([{ day: day(13), reason: 'one-off food' }]);
+    expect(a.error).toBe('Nothing copied. Skipped Fri 13: one-off food.');
+    const b = copyEatenMany([rice], 'a', ['2026-11-25', '2026-11-26'], today, ids(), false);
+    expect(b.skipped).toEqual([{ day: '2026-11-26', reason: 'out of reach' }]);
+    expect(b.planAdds.map(p => p.day)).toEqual(['2026-11-25']);
+  });
+  it('a fully refused batch returns the list unchanged with an error', () => {
+    const list = [rice, eggs];
+    for (const r of [copyEatenMany(list, 'zz', [day(10)], today, ids(), false), copyEatenMany(list, 'a', [], today, ids(), false), copyEatenMany(list, 'a', [today], today, ids(), false), copyEatenMany(list, 'a', ['2020-01-01'], today, ids(), false)]) {
+      expect(r.error).toBeTruthy();
+      expect(r.list).toEqual(list);
+      expect(r.copied).toEqual([]);
+    }
+    expect(copyEatenMany([{ ...rice, d: day(20) }], 'a', [day(10)], today, ids(), false).error).toBe('Only food you ate can move or copy.');
+  });
+  it('a move takes exactly one day and drops the original once', () => {
+    expect(copyEatenMany([rice], 'a', [day(10), day(9)], today, ids(), true).error).toBe('Move takes one day.');
+    const r = copyEatenMany([rice, eggs], 'a', [day(10)], today, ids(), true);
+    expect(sorted(r.list)).toEqual(['b', 'n1']);
+  });
+  it('a move to a day ahead removes the original and returns the plan card', () => {
+    const r = copyEatenMany([rice], 'a', [day(15)], today, ids(), true);
+    expect(r.list).toEqual([]);
+    expect(r.planAdds).toHaveLength(1);
+  });
+  it('repeated days are copied once', () => {
+    expect(copyEatenMany([rice], 'a', [day(10), day(10)], today, ids(), false).copied).toHaveLength(1);
   });
 });

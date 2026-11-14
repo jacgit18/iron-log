@@ -7,6 +7,7 @@ import type {
   BodyEntry, CatalogItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementIngredient, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
+import type { SkippedDay } from '../lib/dayPicker.ts';
 import type { Micro } from '../shared/foodMicro.ts';
 import type { TimeChoice } from '../lib/supplementTimes.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -305,6 +306,9 @@ export interface RemovedSlice {
 }
 
 /** Your food log and typed targets (ADR 086): entries are saved as the document diet/main, the targets as cfg.diet. */
+/** What a batch copy did: the days it reached, the days it skipped with why, the one sentence to show, and an error text when nothing was written. */
+export interface BatchResult { done: string[]; skipped: SkippedDay[]; message: string; error: string | null }
+
 export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
@@ -315,6 +319,8 @@ export interface DietSlice {
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
   saveDietMeal(name: string, entryIds: string[]): string | null; // makes a Recipes meal from those entries (brief saved-meals-into-recipes); an error text, or null when saved
   moveSavedMeals(): number; // copies each saved meal not yet moved into Recipes as a meal, once; the old list is left as it is (brief saved-meals-into-recipes); how many were made
+  copyDietEntries(id: string, days: string[], move?: boolean): BatchResult; // one eaten food to several days in one write: days up to today get an entry, days ahead a plan card (recipe-linked foods only); a full or invalid day is skipped and named; a move takes one day and offers Undo (brief nutrition-multi-day-picker)
+  copyPlanItems(day: string, index: number, days: string[]): BatchResult; // a planned item to the same meal of several days in one plan write; days that can't take it are skipped and named
   addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
