@@ -13,6 +13,13 @@ describe('QA scenarios', () => {
     SCENARIOS.forEach((s, i) => { if (i > 0) expect(Number(s.id.slice(2)), `${s.id} after ${SCENARIOS[i - 1]!.id}`).toBeGreaterThan(Number(SCENARIOS[i - 1]!.id.slice(2))); });
   });
 
+  it('keeps every id from S-01 to S-300: a scenario that no longer applies is retired, never deleted', () => {
+    // The first 300 ids were merged before the split and are fixed. Above them a gap is allowed (parallel branches), so raise this number
+    // only when you want the newer ids guarded the same way.
+    const ids = new Set(SCENARIOS.map(s => s.id));
+    for (let n = 1; n <= 300; n++) expect(ids.has(`S-${String(n).padStart(2, '0')}`), `S-${String(n).padStart(2, '0')} is missing: set retired: true on the scenario instead of deleting its file`).toBe(true);
+  });
+
   it('has one file per scenario, named after its id, and no other file in the folder', async () => {
     const dir = fileURLToPath(new URL('./scenarios/', import.meta.url));
     const names = readdirSync(dir);
