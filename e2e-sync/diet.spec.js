@@ -83,8 +83,9 @@ test('Copy to day and Move to day sync: the copy keeps its hour and numbers in t
   // Copy to yesterday (Wed 23): a second row with the same food and the same hour; the original stays.
   await diet(page).getByRole('button', { name: /^Rice/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Copy to…' }).click();
-  await page.getByRole('dialog').getByRole('group', { name: 'Copy to day' }).getByRole('button', { name: /^Wed 23/ }).click();
-  await expect(page.locator('.nb-msg')).toHaveText('Added 1 from Rice.');
+  await page.getByRole('dialog').getByRole('group', { name: 'Copy to day' }).getByRole('button', { name: 'Wed 23', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Copy to Wed 23' }).click();
+  await expect(page.locator('.nb-msg')).toHaveText('Copied to Wed 23.');
   await expect.poll(async () => (await dietRows(user)).length).toBe(2);
   const copyRow = (await dietRows(user)).find(r => r.client_id !== orig.client_id);
   expect(copyRow.data).toMatchObject({ n: 'Rice', kcal: 200, p: 4, t: orig.data.t });
@@ -103,8 +104,9 @@ test('Copy to day and Move to day sync: the copy keeps its hour and numbers in t
   // Move today's Rice to the same day: one row left there, none today, hour kept.
   await diet(page).getByRole('button', { name: /^Rice/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Move to…' }).click();
-  await page.getByRole('dialog').getByRole('group', { name: 'Move to day' }).getByRole('button', { name: /^Wed 23/ }).click();
-  await expect(page.locator('.nb-msg')).toHaveText('Moved 1 from Rice.');
+  await page.getByRole('dialog').getByRole('group', { name: 'Move to day' }).getByRole('button', { name: 'Wed 23', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Move to Wed 23' }).click();
+  await expect(page.locator('.nb-msg')).toHaveText('Moved to Wed 23.');
   await expect.poll(async () => (await dietRows(user)).map(r => r.data.d)).toEqual([copyRow.data.d, copyRow.data.d]); // none left today, both on the target day
   const rows = await dietRows(user);
   expect(rows.every(r => r.data.d === copyRow.data.d && r.data.t === orig.data.t)).toBe(true);
