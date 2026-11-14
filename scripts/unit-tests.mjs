@@ -15,8 +15,10 @@ import { pathToFileURL } from 'node:url';
 export const PROTECTED = ['src/lib/planOrder.test.js', 'src/lib/logic.test.js', 'src/store/useAppStore.test.js'];
 // Tests that read other source files by path (as text) instead of importing them, so vitest's import graph never links a change to them. Always run,
 // like PROTECTED; they are fast. server/legal.test.ts pins the privacy policy to the code (push payload fields, retention, deletion paths): PR #457 changed
-// the Cloud Tasks payload, the local check skipped this test, and main went red.
-export const TEXT_READERS = ['server/legal.test.ts'];
+// the Cloud Tasks payload, the local check skipped this test, and main went red. The three QA scenario tests are here too: the scenarios load by a computed
+// path (server/qa/scenarioFiles.ts), so a change to one scenario file is not linked to the tests that guard it (file name equals id, S-01 to S-300 present,
+// persona and feature names, automation tags) and a scenario-only PR would skip them locally; CI runs the whole suite.
+export const TEXT_READERS = ['server/legal.test.ts', 'server/qa/scenarios.test.ts', 'server/qa/scenarioAutomation.test.ts', 'server/auth/qaPersonas.test.ts'];
 const tooling = f => /^(package(-lock)?\.json|tsconfig.*\.json|vite\.config\.js|\.oxlintrc.*|src\/test\/.*)$/.test(f);
 
 // Files a test reads by path rather than imports (a shell script it runs, the PR template it fills), so vitest's import graph cannot link them to their tests.
