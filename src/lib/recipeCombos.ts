@@ -43,6 +43,11 @@ export function chipsShown(chips: readonly ComboChip[], expanded = false): { sho
   return { shown: expanded ? [...chips] : chips.slice(0, MAX_CHIPS), more: Math.max(0, chips.length - MAX_CHIPS) };
 }
 
+/** The rows whose chips stay expanded: a row keeps its place only while it still has chips beyond the cap, so a row that lost its "+N more" button (or is not shown) never comes back already expanded. */
+export function expandedRows(ids: readonly string[], chips: ReadonlyMap<string, readonly ComboChip[]>): string[] {
+  return ids.filter(id => (chips.get(id)?.length ?? 0) > MAX_CHIPS);
+}
+
 export interface MineRows {
   /** The rows to show, unsorted (the list's sort is applied after). */
   rows: Recipe[];

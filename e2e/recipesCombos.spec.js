@@ -53,25 +53,51 @@ test('Meals lists the combo as its own row with its parts named', async ({ page 
   await expect(page.locator('.rc-combochip')).toHaveCount(0);
 });
 
-test('"+N more" expands the rest of the chips in place and Show fewer folds them, touching no search, tab or filter', async ({ page }) => {
+const seedThree = async page => { // Cereal carries three combos, so its row has "+1 more"; the tag gives the test a filter to hold
   await seed(page);
   await page.evaluate(() => {
     const k = 'ironlog:recipes/main', d = JSON.parse(localStorage.getItem(k));
+    d.items.find(r => r.id === 'cereal').tags = ['Quick'];
     for (const [id, n] of [['b2', 'Cereal bar'], ['b3', 'Cereal cup']]) d.items.push({ id, n, cat: 'other', servings: 1, ing: [{ n: 'Cereal', rid: 'cereal', q: 1 }], steps: [] });
     localStorage.setItem(k, JSON.stringify(d));
   });
   await page.reload();
   await openRecipes(page);
+};
+const chipsOf = item => item.locator('.rc-combochip:not(.more)');
+
+test('"+N more" expands the rest of the chips in place and Show fewer folds them, touching no search, tab or filter; a tab change folds them', async ({ page }) => {
+  await seedThree(page);
+  await page.getByLabel('Search recipes').fill('Cereal');
+  const tag = page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'Quick' });
+  await tag.click();
   const item = itemOf(page, 'Cereal');
-  await expect(item.locator('.rc-combochip:not(.more)')).toHaveCount(2);
+  await expect(chipsOf(item)).toHaveCount(2);
   const more = item.getByRole('button', { name: '+1 more with Cereal' });
   await expect(more).toHaveText('+1 more');
   await more.click();
-  await expect(item.locator('.rc-combochip:not(.more)')).toHaveCount(3);
+  await expect(chipsOf(item)).toHaveCount(3);
   const fewer = item.getByRole('button', { name: 'Show fewer with Cereal' });
-  await expect(fewer).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByLabel('Search recipes')).toHaveValue('');
+  await expect(fewer).toHaveText('Show fewer');
+  await expect(page.getByLabel('Search recipes')).toHaveValue('Cereal');
+  await expect(tag).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#recipes-tab-all')).toHaveAttribute('aria-pressed', 'true');
   await fewer.click();
-  await expect(item.locator('.rc-combochip:not(.more)')).toHaveCount(2);
+  await expect(chipsOf(item)).toHaveCount(2);
+  await more.click();
+  await expect(chipsOf(item)).toHaveCount(3);
+  await page.locator('#recipes-tab-foods').click(); // the row is on Foods too: the tab change folds it
+  await expect(chipsOf(item)).toHaveCount(2);
+  await page.locator('#recipes-tab-all').click();
+  await expect(chipsOf(item)).toHaveCount(2);
+});
+
+test('on a phone the expanded chips are still open after a combo is opened and Back', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await seedThree(page);
+  const item = itemOf(page, 'Cereal');
+  await item.getByRole('button', { name: '+1 more with Cereal' }).click();
+  await chipsOf(item).nth(2).click();
+  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await expect(chipsOf(item)).toHaveCount(3);
 });
