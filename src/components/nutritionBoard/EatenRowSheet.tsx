@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
 import { goLabel, pickerDays } from '../../lib/dayPicker.js';
+import { canSaveToRecipe, portionBasis } from '../../lib/portionBasis.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -14,6 +15,7 @@ import Sheet from '../Sheet.js';
 // If the entry is gone (deleted here, or by another device) the sheet closes itself, so nothing else changes.
 export default function EatenRowSheet({ id }: { id: string }) {
   const entry = useAppStore(s => s.diet.find(e => e.id === id));
+  const recipe = useAppStore(s => (entry?.from ? s.recipes.find(r => r.id === entry.from) : undefined));
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
   const today = ymd(useToday(s => s.today));
@@ -26,9 +28,14 @@ export default function EatenRowSheet({ id }: { id: string }) {
     return (
       <Sheet className="nbsheet" aria-label={`Edit ${entry.n}`}>
         <h2 className="cond">Edit {entry.n}</h2>
-        <EntryForm idp={`nb-e-${entry.id}`} initial={{ n: entry.n, kcal: entry.kcal, p: entry.p, ...(entry.c !== undefined ? { c: entry.c } : {}), ...(entry.f !== undefined ? { f: entry.f } : {}) }} submitLabel="Save" onCancel={() => setEditing(false)}
-          amounts={{ ...(entry.micro ? { micro: entry.micro } : {}), kcal: entry.kcal }}
-          onSubmit={v => { const err = useAppStore.getState().updateDietEntry(entry.id, v); if (!err) setEditing(false); return err; }} />
+        <EntryForm idp={`nb-e-${entry.id}`} initial={{ n: entry.n, kcal: entry.kcal, p: entry.p }} submitLabel="Save" onCancel={() => setEditing(false)}
+          portion={{ basis: portionBasis(entry), offerRecipeSave: canSaveToRecipe(recipe) }}
+          onSubmit={v => {
+            const err = useAppStore.getState().updateDietEntry(entry.id, { n: v.n, kcal: v.kcal, p: v.p, c: v.c, f: v.f, micro: v.micro ?? null, ...(v.x !== undefined ? { x: v.x } : {}) });
+            if (err) return err;
+            if (v.saveToRecipe && v.microPer && entry.from && canSaveToRecipe(useAppStore.getState().recipes.find(r => r.id === entry.from))) useAppStore.getState().setRecipeMicro(entry.from, v.microPer);
+            setEditing(false); return null;
+          }} />
       </Sheet>
     );
   }

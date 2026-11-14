@@ -146,7 +146,7 @@ describe('ateEntry (shared by the log control and the portion sheet)', () => {
   const today = '2026-11-07';
   it('logs exactly the numbers servingNumbers gives, with the recipe id', () => {
     const out = ateEntry(r, 3, today, today);
-    expect(out).toEqual({ entry: { d: today, n: 'Egg', ...servingNumbers(r, 3)!, from: 'r1' } });
+    expect(out).toEqual({ entry: { d: today, n: 'Egg', ...servingNumbers(r, 3)!, from: 'r1', x: 3 } });
   });
   it('accepts a past day, refuses a future or too-old day with the usual wording', () => {
     expect('entry' in ateEntry(r, 1, '2026-11-01', today)).toBe(true);
