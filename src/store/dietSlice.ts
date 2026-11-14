@@ -3,9 +3,10 @@ import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
-import { copyEaten } from '../lib/moveCopyEaten.js';
+import { resultText, type SkippedDay } from '../lib/dayPicker.js';
+import { copyEaten, copyEatenMany } from '../lib/moveCopyEaten.js';
 import { shortDay } from '../lib/nutritionBoard.js';
-import { moveItem } from '../lib/weekBoard.js';
+import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
 import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
 import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
@@ -75,6 +76,45 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
       }, { verb: 'Moved' });
     }
     return { id: copyId, error: null };
+  },
+
+  // Copy (or move) one eaten entry to several days as ONE write per document (brief nutrition-multi-day-picker): the log list is set and saved once, and the plan cards for days ahead go in one plan write. A full or invalid day is skipped and named; a move takes one day and is refused whole when its plan card can't be added, so nothing is half-copied.
+  copyDietEntries(id, days, move = false) {
+    const list = get().diet, today = ymd(new Date());
+    const refuse = (error: string) => ({ done: [], skipped: [], message: error, error });
+    const r = copyEatenMany(list, id, days, today, newId, move, get().recipes);
+    if (r.error) return refuse(r.error);
+    const plan = addItemsToDays(planOf(get), r.planAdds, today, get().cfg.diet?.snacks);
+    const skipped: SkippedDay[] = [...r.skipped, ...plan.skipped];
+    if (move && plan.skipped.length) return refuse(resultText('Moved', [], skipped));
+    const gone = list.find(e => e.id === id)!, at = list.indexOf(gone), copyId = r.copied[0]?.id;
+    const done = [...r.copied.map(c => c.day), ...plan.added];
+    if (!done.length) return refuse(resultText('Copied', [], skipped));
+    if (plan.added.length) putPlan(get, plan.plan); // the plan first: if the log write below never happens, a move leaves the original and a card (a duplicate), never a lost entry
+    if (r.copied.length || move) { set({ diet: pruned(r.list, today) }); get().saveDiet(); } // a move to a day ahead drops the original without a copy in the log
+    if (move) {
+      const toDay = done[0]!, planned = r.planAdds[0]?.item;
+      get().noteRemoved('diet', `${gone.n} to ${shortDay(toDay)}`, () => {
+        if (get().blocked() || get().diet.some(e => e.id === id) || (copyId && !get().diet.some(e => e.id === copyId))) return false;
+        const l = get().diet.filter(e => e.id !== copyId);
+        if (!roomOn(l, gone.d)) return false; // the day filled up since: Undo must not push it past the limit
+        l.splice(Math.min(at, l.length), 0, gone);
+        set({ diet: normDietEntries(l) }); get().saveDiet();
+        if (planned) { const p = planOf(get), i = (p[toDay] ?? []).findIndex(x => x.k === planned.k && x.id === planned.id && x.s === planned.s); if (i >= 0) putPlan(get, removeItem(p, toDay, i), skipsAfterLeaving(get, toDay, p[toDay]![i])); }
+        return true;
+      }, { verb: 'Moved' });
+    }
+    const message = resultText(move ? 'Moved' : 'Copied', done, skipped);
+    return { done, skipped, message, error: null };
+  },
+
+  // The planned item at `index` of `day` copied to the same meal of each day in `days`, in one plan write. Days that are full, outside the window or already hold it are skipped and named.
+  copyPlanItems(day, index, days) {
+    const today = ymd(new Date());
+    const r = copyItemToDays(planOf(get), day, index, days, today, get().cfg.diet?.snacks);
+    if (r.error) return { done: [], skipped: r.skipped, message: r.error, error: r.error };
+    putPlan(get, r.plan);
+    return { done: r.added, skipped: r.skipped, message: resultText('Copied', r.added, r.skipped), error: null };
   },
 
   updateDietEntry(id, patch) {

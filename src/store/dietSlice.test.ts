@@ -497,3 +497,82 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet).toBeUndefined();
   });
 });
+
+describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)', () => {
+  const today = ymd(new Date()), at = (n: number) => shiftDay(today, n);
+  const recipe = { id: 'rc', n: 'Rice', cat: 'carbs' as const, ing: [], steps: [], kcal: 200, p: 4 };
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe] }); });
+  const eaten = (extra = {}) => st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4, micro: { calcium: 120 }, ...extra }).id!;
+
+  it('copies to several earlier days in one go; the original stays and each copy keeps the micronutrients', () => {
+    const id = eaten();
+    const r = st().copyDietEntries(id, [at(-1), at(-2), at(-3)]);
+    expect(r.error).toBeNull();
+    expect(r.message).toBe('Copied to 3 days.');
+    expect(st().diet).toHaveLength(4);
+    expect(st().diet.filter(e => e.d !== today).every(e => e.n === 'Rice' && e.micro?.calcium === 120)).toBe(true);
+    expect(st().removed).toBeNull();
+  });
+  it('skips a full day, names it, and still copies the others', () => {
+    const id = eaten();
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ ...rice, d: at(-1) });
+    const r = st().copyDietEntries(id, [at(-1), at(-2)]);
+    expect(r.done).toEqual([at(-2)]);
+    expect(r.message).toMatch(/^Copied to .*\. Skipped .*: full\.$/);
+    expect(st().diet.filter(e => e.d === at(-1))).toHaveLength(MAX_DIET_PER_DAY);
+  });
+  it('a refused batch changes nothing', () => {
+    const id = eaten();
+    const before = st().diet, plan = st().cfg.diet?.plan;
+    expect(st().copyDietEntries(id, [today]).error).toBeTruthy();
+    expect(st().copyDietEntries('nope', [at(-1)]).error).toBe('That entry is gone.');
+    expect(st().copyDietEntries(id, [at(-1), at(-2)], true).error).toBe('Move takes one day.');
+    expect(st().diet).toBe(before);
+    expect(st().cfg.diet?.plan).toEqual(plan);
+  });
+  it('a recipe-linked food goes ahead as plan cards; a one-off is skipped', () => {
+    const id = eaten({ from: 'rc' }), one = eaten({ n: 'Bar' });
+    const r = st().copyDietEntries(id, [at(1), at(2)]);
+    expect(r.done).toEqual([at(1), at(2)]);
+    expect(st().cfg.diet!.plan![at(1)]).toMatchObject([{ k: 'r', id: 'rc' }]);
+    expect(st().diet).toHaveLength(2); // no log entry for a day ahead
+    const o = st().copyDietEntries(one, [at(1)]);
+    expect(o.error).toMatch(/^Nothing copied\. Skipped .*: one-off food\.$/);
+  });
+  it('a move to a day ahead refuses whole when its plan card does not fit, and Undo of a move takes the plan card away', () => {
+    const id = eaten({ from: 'rc' });
+    st().copyDietEntries(id, [at(1)]); // the card is now on that day
+    const before = st().diet;
+    const r = st().copyDietEntries(id, [at(1)], true);
+    expect(r.error).toMatch(/already there/);
+    expect(st().diet).toBe(before);
+    expect(st().removed).toBeNull();
+    const m = st().copyDietEntries(id, [at(2)], true);
+    expect(m.error).toBeNull();
+    expect(st().diet.some(e => e.id === id)).toBe(false);
+    st().undoRemoved();
+    expect(st().diet.some(e => e.id === id)).toBe(true);
+    expect(st().cfg.diet!.plan![at(2)]).toBeUndefined();
+  });
+  it('a move to an earlier day keeps the existing Undo', () => {
+    const id = eaten();
+    const r = st().copyDietEntries(id, [at(-1)], true);
+    expect(r.message).toMatch(/^Moved to /);
+    expect(st().removed?.verb).toBe('Moved');
+    st().undoRemoved();
+    expect(st().diet.map(e => e.id)).toEqual([id]);
+  });
+  it('copyPlanItems puts the card in the same meal on each day in one write, skipping full and duplicate days', () => {
+    expect(st().addPlanItem(today, 'r', 'rc', 'dinner')).toBeNull();
+    expect(st().addPlanItem(at(2), 'r', 'rc', 'dinner')).toBeNull();
+    const r = st().copyPlanItems(today, 0, [at(1), at(2), at(3), at(20)]);
+    expect(r.done).toEqual([at(1), at(3)]);
+    expect(r.skipped.map(s => s.reason)).toEqual(['already there', 'out of reach']);
+    expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner' }]);
+    expect(st().cfg.diet!.plan![today]).toHaveLength(1);
+    const before = st().cfg.diet!.plan;
+    expect(st().copyPlanItems(today, 0, [today]).error).toBeTruthy();
+    expect(st().copyPlanItems(today, 9, [at(1)]).error).toBe('That is gone.');
+    expect(st().cfg.diet!.plan).toEqual(before);
+  });
+});

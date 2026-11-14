@@ -1,5 +1,6 @@
 import type { Boost, DietEntry, PlanSlot, Recipe, SavedMeal, Supplements } from '../types.ts';
 import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
+import { dayLabel, shortDay, sundayOf } from './dayNames.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum } from './dietLog.js';
 import type { Plan } from './dietPlan.js';
 import { portionTag } from './supplementPortion.js';
@@ -16,7 +17,6 @@ export const WEEK_NAME: Record<WeekOffset, string> = { '-1': 'Last week', '0': '
 
 const days7 = (start: string): string[] => Array.from({ length: 7 }, (_, i) => shiftDay(start, i));
 /** The Sunday of the week `today` is in. */
-const sundayOf = (today: string): string => ymd(weekStartOf(parseDate(today)));
 
 /** The seven days of a week on the board, Sunday first. The end of next week is at most 13 days ahead (today a Sunday), inside the plan window (MAX_PLAN_AHEAD). */
 export const weekDays = (today: string, offset: WeekOffset): string[] => days7(shiftDay(sundayOf(today), offset * 7));
@@ -48,7 +48,7 @@ export type DayKind = 'past' | 'today' | 'future';
 export const dayKind = (day: string, today: string): DayKind => (day < today ? 'past' : day === today ? 'today' : 'future');
 
 /** "Sun 8": the short name a day goes by in a column header and on a tab. */
-export const shortDay = (day: string): string => { const d = parseDate(day); return `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}`; };
+export { shortDay };
 
 /** "Sun, Nov 8": the name in a dropdown and in the toolbar's target. */
 export const longDay = (day: string): string => parseDate(day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -65,7 +65,7 @@ export const weekLabel = (today: string, offset: WeekOffset): string => `${WEEK_
 
 /** The day dropdown on a phone: three groups of seven, each day named, today marked. */
 export function dayGroups(today: string): { offset: WeekOffset; label: string; days: { id: string; label: string }[] }[] {
-  return WEEK_OFFSETS.map(offset => ({ offset, label: WEEK_NAME[offset], days: weekDays(today, offset).map(id => ({ id, label: `${shortDay(id)}${id === today ? ' · today' : ''}` })) }));
+  return WEEK_OFFSETS.map(offset => ({ offset, label: WEEK_NAME[offset], days: weekDays(today, offset).map(id => ({ id, label: dayLabel(id, today) })) }));
 }
 
 /** The toolbar's target: "Adding to Sun 8 · today". */
