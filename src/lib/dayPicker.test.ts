@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dayReason, lastPlanDay, ONE_OFF_REASON, pickerDays, pickerWeek, pickerWeekRange, quickPicks, resultText, type PickerSource } from './dayPicker.js';
-import { oldestDay } from './dietLog.js';
+import { dayLabel, sundayOf } from './dayNames.js';
+import { oldestDay, shiftDay } from './dietLog.js';
 
 const today = '2026-11-14'; // a Saturday
 const linked: PickerSource = { kind: 'eaten', entry: { d: today, from: 'r1' } };
@@ -13,7 +14,7 @@ describe('dayReason', () => {
     expect(dayReason({ kind: 'eaten', entry: { d: '2026-11-16', from: 'r1' } }, '2026-11-15', today)).toBe('Only food you ate can move or copy.');
     expect(dayReason(linked, '2026-11-28', today)).toBe('You can plan the next two weeks.'); // today + 14
     expect(dayReason(linked, '2026-11-27', today)).toBeNull(); // today + 13
-    expect(dayReason(linked, shiftBack(oldestDay(today)), today)).toMatch(/400 days/);
+    expect(dayReason(linked, shiftDay(oldestDay(today), -1), today)).toMatch(/400 days/);
     expect(dayReason(linked, oldestDay(today), today)).toBeNull();
   });
   it('lets a recipe-linked eaten food go ahead and greys days ahead for a one-off', () => {
@@ -25,11 +26,10 @@ describe('dayReason', () => {
     expect(dayReason({ kind: 'plan', day: '2026-11-16' }, today, today)).toBeNull();
     expect(dayReason(planned, '2026-11-13', today)).toBe('You can plan today and the next two weeks.');
     expect(dayReason(planned, today, today)).toBe('That is its own day.');
-    expect(dayReason(planned, '2026-11-28', today)).toBe('You can plan today and the next two weeks.');
+    expect(dayReason(planned, '2026-11-28', today)).toBe('You can plan the next two weeks.');
   });
   it('the last plannable day is today + 13', () => { expect(lastPlanDay(today)).toBe('2026-11-27'); });
 });
-function shiftBack(d: string) { const x = new Date(`${d}T12:00:00`); x.setDate(x.getDate() - 1); return x.toISOString().slice(0, 10); }
 
 describe('pickerDays', () => {
   it('runs from the oldest kept day to today + 13 with a reason per greyed day', () => {
@@ -79,6 +79,15 @@ describe('quickPicks', () => {
     const q = quickPicks({ kind: 'plan', day: '2026-11-16' }, today);
     expect(q.find(p => p.id === 'next7')!.days).not.toContain('2026-11-16');
     expect(q.find(p => p.id === 'next7')!.days).toHaveLength(6);
+  });
+});
+
+describe('dayNames (shared with the Nutrition board)', () => {
+  it('names a day, marks today, and finds the Sunday of its week', () => {
+    expect(dayLabel('2026-11-14', today)).toBe('Sat 14 · today');
+    expect(dayLabel('2026-11-15', today)).toBe('Sun 15');
+    expect(sundayOf('2026-11-14')).toBe('2026-11-08');
+    expect(sundayOf('2026-11-08')).toBe('2026-11-08');
   });
 });
 

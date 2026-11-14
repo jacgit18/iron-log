@@ -1,8 +1,8 @@
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
-import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
+import { parseDate } from '../shared/dates.js';
 import type { DietEntry } from '../types.ts';
 import { ateDayError, oldestDay, shiftDay } from './dietLog.js';
-import { shortDay } from './nutritionBoard.js';
+import { dayLabel, shortDay, sundayOf } from './dayNames.js';
 
 /* ---------- The multi-day picker's rules (brief nutrition-multi-day-picker): which days a food can go to and why not, the quick picks, the week strip and the sentence after. Pure; the picker draws it. ---------- */
 
@@ -26,7 +26,8 @@ export const lastPlanDay = (today: string): string => shiftDay(today, MAX_PLAN_A
 export function dayReason(source: PickerSource, day: string, today: string): string | null {
   if (source.kind === 'plan') {
     if (day === source.day) return OWN_DAY_REASON;
-    return day < today || day > lastPlanDay(today) ? PLAN_START_REASON : null;
+    if (day > lastPlanDay(today)) return WINDOW_REASON;
+    return day < today ? PLAN_START_REASON : null;
   }
   const { entry } = source;
   if (entry.d > today) return PAST_ONLY_REASON;
@@ -38,14 +39,11 @@ export function dayReason(source: PickerSource, day: string, today: string): str
   return ateDayError(day, today);
 }
 
-/** The Sunday that starts the week `day` is in. */
-const sundayOf = (day: string): string => ymd(weekStartOf(parseDate(day)));
-
 /** Every day the picker reaches, oldest kept day to today + 13, each with its label and reason. Plans start today, so a planned source starts its list there. */
 export function pickerDays(source: PickerSource, today: string): PickerDay[] {
   const from = source.kind === 'plan' ? today : oldestDay(today), to = lastPlanDay(today);
   const out: PickerDay[] = [];
-  for (let d = from; d <= to; d = shiftDay(d, 1)) out.push({ id: d, label: `${shortDay(d)}${d === today ? ' · today' : ''}`, reason: dayReason(source, d, today) });
+  for (let d = from; d <= to; d = shiftDay(d, 1)) out.push({ id: d, label: dayLabel(d, today), reason: dayReason(source, d, today) });
   return out;
 }
 
@@ -60,8 +58,7 @@ export function pickerWeek(source: PickerSource, today: string, weekStart: strin
   const start = weekStart < first ? first : weekStart > last ? last : sundayOf(weekStart);
   const days = Array.from({ length: 7 }, (_, i) => {
     const id = shiftDay(start, i);
-    const reason = dayReason(source, id, today) ?? (id > lastPlanDay(today) ? WINDOW_REASON : id < oldestDay(today) ? ateDayError(id, today) : null);
-    return { id, label: `${shortDay(id)}${id === today ? ' · today' : ''}`, reason };
+    return { id, label: dayLabel(id, today), reason: dayReason(source, id, today) };
   });
   return { start, days, prev: start > first ? shiftDay(start, -7) : null, next: start < last ? shiftDay(start, 7) : null };
 }

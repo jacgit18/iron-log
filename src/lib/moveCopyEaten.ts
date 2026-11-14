@@ -1,8 +1,7 @@
 import { MAX_DIET_PER_DAY, normDietEntry } from '../shared/diet.js';
-import type { DietEntry, PlanItem } from '../types.ts';
+import type { DietEntry, PlanItem, Recipe } from '../types.ts';
 import { ONE_OFF_REASON, PAST_ONLY_REASON, WINDOW_REASON, dayReason, resultText, type SkippedDay } from './dayPicker.js';
 import { ateDayError, oldestDay, roomOn } from './dietLog.js';
-import { mealByTime } from './nutritionBoard.js';
 
 // Move to day and Copy to day for an eaten food (brief nutrition-move-copy-eaten). One rule, here, so the sheet and the store can't drift.
 // A copy is the same food on another day: numbers, micronutrients, recipe link and the hour `t` carry over (the hour rule stays: Move and Copy change the day, never the meal).
@@ -38,13 +37,16 @@ export function copyEaten(list: readonly DietEntry[], id: string, toDay: string,
   return { list: [...(move ? list.filter(e => e.id !== id) : list), copy], id: copy.id, error: null };
 }
 
+/** A refusal sentence as a short reason for the result line ("too far back", "not a day"). */
+const shortReason = (bad: string): string => (/too far back/.test(bad) ? 'too far back' : /^Pick a day/.test(bad) ? 'not a day' : bad.replace(/\.$/, ''));
+
 export interface EatenCopy { day: string; id: string }
-/** A plan card an eaten copy to a day ahead becomes: the recipe the entry came from, in the meal its hour belongs to. */
+/** A plan card an eaten copy to a day ahead becomes: the recipe the entry came from, at the portion its calories suggest, with no meal set (the logged hour is when it was added, not a meal, so the person picks). */
 export interface PlanAdd { day: string; item: PlanItem }
 export interface ManyResult { list: DietEntry[]; copied: EatenCopy[]; planAdds: PlanAdd[]; skipped: SkippedDay[]; error: string | null }
 
 /** Copy (or move) entry `id` to several days in one list-to-list step. Days up to today get a copy (the single-day rules: 20 a day, a kept day, never its own day); a day ahead gets a plan card in `planAdds` when the entry has a recipe link, else it is skipped. A full or invalid day is skipped and named, the rest still copy; a batch with nothing to do comes back unchanged with the sentence to show. A move takes exactly one day. `newId` makes an id not in the list given. */
-export function copyEatenMany(list: readonly DietEntry[], id: string, days: readonly string[], today: string, newId: (taken: DietEntry[]) => string, move: boolean): ManyResult {
+export function copyEatenMany(list: readonly DietEntry[], id: string, days: readonly string[], today: string, newId: (taken: DietEntry[]) => string, move: boolean, recipes: readonly Pick<Recipe, 'id' | 'kcal'>[] = []): ManyResult {
   const refuse = (error: string): ManyResult => ({ list: [...list], copied: [], planAdds: [], skipped: [], error });
   const src = list.find(e => e.id === id);
   if (!src) return refuse('That entry is gone.');
@@ -57,13 +59,15 @@ export function copyEatenMany(list: readonly DietEntry[], id: string, days: read
   for (const day of uniq) {
     if (day > today) {
       const bad = dayReason({ kind: 'eaten', entry: src }, day, today);
-      if (bad) { skipped.push({ day, reason: bad === ONE_OFF_REASON ? 'one-off food' : bad === WINDOW_REASON ? 'out of reach' : 'not allowed' }); continue; }
-      const item: PlanItem = { k: 'r', id: src.from!, ...(src.t !== undefined ? { s: mealByTime(src.t * 60) } : {}) };
-      planAdds.push({ day, item });
+      if (bad) { skipped.push({ day, reason: bad === ONE_OFF_REASON ? 'one-off food' : bad === WINDOW_REASON ? 'out of reach' : shortReason(bad) }); continue; }
+      const recipe = recipes.find(r => r.id === src.from);
+      if (!recipe) { skipped.push({ day, reason: 'recipe is gone' }); continue; } // addPlanItem refuses a missing recipe the same way
+      const x = recipe.kcal ? Math.min(10, Math.max(0.5, Math.round((src.kcal / recipe.kcal) * 2) / 2)) : 1;
+      planAdds.push({ day, item: { k: 'r', id: recipe.id, ...(x !== 1 ? { x } : {}) } });
       continue;
     }
     const bad = copyError(src, day, today);
-    if (bad) { skipped.push({ day, reason: bad === 'Pick another day.' ? 'its own day' : 'not allowed' }); continue; }
+    if (bad) { skipped.push({ day, reason: bad === 'Pick another day.' ? 'its own day' : shortReason(bad) }); continue; }
     if (!roomOn(next, day)) { skipped.push({ day, reason: 'full' }); continue; }
     const copy = normDietEntry({ ...src, id: newId(next), d: day });
     if (!copy || next.some(e => e.id === copy.id)) { skipped.push({ day, reason: 'couldn’t log' }); continue; }

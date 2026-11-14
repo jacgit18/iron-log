@@ -82,7 +82,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   copyDietEntries(id, days, move = false) {
     const list = get().diet, today = ymd(new Date());
     const refuse = (error: string) => ({ done: [], skipped: [], message: error, error });
-    const r = copyEatenMany(list, id, days, today, newId, move);
+    const r = copyEatenMany(list, id, days, today, newId, move, get().recipes);
     if (r.error) return refuse(r.error);
     const plan = addItemsToDays(planOf(get), r.planAdds, today, get().cfg.diet?.snacks);
     const skipped: SkippedDay[] = [...r.skipped, ...plan.skipped];
@@ -90,8 +90,8 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const gone = list.find(e => e.id === id)!, at = list.indexOf(gone), copyId = r.copied[0]?.id;
     const done = [...r.copied.map(c => c.day), ...plan.added];
     if (!done.length) return refuse(resultText('Copied', [], skipped));
+    if (plan.added.length) putPlan(get, plan.plan); // the plan first: if the log write below never happens, a move leaves the original and a card (a duplicate), never a lost entry
     if (r.copied.length || move) { set({ diet: pruned(r.list, today) }); get().saveDiet(); } // a move to a day ahead drops the original without a copy in the log
-    if (plan.added.length) putPlan(get, plan.plan);
     if (move) {
       const toDay = done[0]!, planned = r.planAdds[0]?.item;
       get().noteRemoved('diet', `${gone.n} to ${shortDay(toDay)}`, () => {
@@ -100,7 +100,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
         if (!roomOn(l, gone.d)) return false; // the day filled up since: Undo must not push it past the limit
         l.splice(Math.min(at, l.length), 0, gone);
         set({ diet: normDietEntries(l) }); get().saveDiet();
-        if (planned) { const p = planOf(get), i = (p[toDay] ?? []).findIndex(x => x.k === planned.k && x.id === planned.id && x.s === planned.s); if (i >= 0) putPlan(get, removeItem(p, toDay, i)); }
+        if (planned) { const p = planOf(get), i = (p[toDay] ?? []).findIndex(x => x.k === planned.k && x.id === planned.id && x.s === planned.s); if (i >= 0) putPlan(get, removeItem(p, toDay, i), skipsAfterLeaving(get, toDay, p[toDay]![i])); }
         return true;
       }, { verb: 'Moved' });
     }

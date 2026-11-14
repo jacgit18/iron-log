@@ -1,11 +1,10 @@
 import { MAX_DAY_ITEMS, MAX_PLAN_ITEMS, PLAN_SLOTS, isDailySnackItem, plannedCount, samePlanItem } from '../shared/diet.js';
 import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
-import type { SkippedDay } from './dayPicker.js';
+import { resultText, type SkippedDay } from './dayPicker.js';
 import { inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { servingNumbers } from './dietLog.js';
 import { SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
 import { pairsOf } from './recipePairs.js';
-import { resultText } from './dayPicker.js';
 import { sortByName } from './sort.js';
 
 /* ---------- The week board (brief week-board): what one day looks like as four meals, with its bars and plate checks, and the moves between meals and days. Pure; the board draws it. ---------- */
@@ -112,8 +111,9 @@ export function copyItemToDays(plan: Plan, fromDay: string, index: number, toDay
   const it = plan[fromDay]?.[index];
   if (!it) return { plan, added: [], skipped: [], error: 'That is gone.' };
   const { e: _eaten, v: _virtual, ...item } = it;
-  const own: SkippedDay[] = [], days = [...new Set(toDays)].filter(d => d !== fromDay || (own.push({ day: d, reason: 'its own day' }), false));
-  const r = addItemsToDays(plan, days.map(day => ({ day, item })), today, snacks);
+  const days = [...new Set(toDays)];
+  const own: SkippedDay[] = days.includes(fromDay) ? [{ day: fromDay, reason: 'its own day' }] : [];
+  const r = addItemsToDays(plan, days.filter(d => d !== fromDay).map(day => ({ day, item })), today, snacks);
   const skipped = [...own, ...r.skipped];
   return { ...r, skipped, error: r.added.length ? null : resultText('Copied', [], skipped) };
 }
