@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { dayLabel, shortDay } from '../../lib/dayNames.js';
 import { pickerWeek, quickPicks, type PickerSource } from '../../lib/dayPicker.js';
 import { parseDate } from '../../shared/dates.js';
 import Icon from '../Icon.js';
@@ -13,7 +14,7 @@ export default function DayPicker({ source, today, picked, onPick, single = fals
   const quick = single ? [] : quickPicks(source, today);
   const tick = (id: string) => onPick(single ? (picked[0] === id ? [] : [id]) : picked.includes(id) ? picked.filter(d => d !== id) : [...picked, id].sort());
   const first = parseDate(week.start), last = parseDate(week.days[6]!.id);
-  const month = (d: Date, long = false) => d.toLocaleDateString('en-US', { month: long ? 'long' : 'short' });
+  const month = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' });
   const range = `${month(first)} ${first.getDate()} to ${first.getMonth() === last.getMonth() ? '' : `${month(last)} `}${last.getDate()}`;
   const reasons = [...new Set(week.days.filter(d => d.reason && d.id !== (source.kind === 'eaten' ? source.entry.d : source.day)).map(d => d.reason!))];
   return (
@@ -31,17 +32,17 @@ export default function DayPicker({ source, today, picked, onPick, single = fals
       </div>
       <div className="dpick-days">
         {week.days.map(d => {
-          const dt = parseDate(d.id), on = picked.includes(d.id), name = dt.toLocaleDateString('en-US', { weekday: 'short' });
+          const on = picked.includes(d.id), [name, num] = shortDay(d.id).split(' ');
           return (
             <button key={d.id} type="button" className={`btn dpick-day${d.id === today ? ' today' : ''}`} aria-pressed={on} disabled={d.reason !== null} data-day={d.id} onClick={() => tick(d.id)}
-              aria-label={`${name} ${dt.getDate()}${d.id === today ? ' · today' : ''}${d.reason ? `, ${d.reason}` : ''}`}>
-              <small aria-hidden="true">{name}</small><span aria-hidden="true">{dt.getDate()}</span>
+              aria-label={`${dayLabel(d.id, today)}${d.reason ? `, ${d.reason}` : ''}`}>
+              <small aria-hidden="true">{name}</small><span aria-hidden="true">{num}</span>
             </button>
           );
         })}
       </div>
       {reasons.length > 0 && <p className="note dpick-why">{reasons.join(' ')}</p>}
-      <p className="note dpick-chosen">Chosen: {picked.length ? picked.map(d => { const dt = parseDate(d); return `${dt.toLocaleDateString('en-US', { weekday: 'short' })} ${dt.getDate()}`; }).join(', ') : 'none yet'}</p>
+      <p className="note dpick-chosen">Chosen: {picked.length ? picked.map(shortDay).join(', ') : 'none yet'}</p>
     </div>
   );
 }

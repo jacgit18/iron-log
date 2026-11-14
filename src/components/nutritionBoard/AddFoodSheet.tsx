@@ -77,7 +77,7 @@ export default function AddFoodSheet() {
           <p className="note">Recipes and saved meals you add go into {SLOT_LABEL[meal]}.</p>
         </div>
       )}
-      {addMode(day, today) === 'plan' && (
+      {addMode(day, today) === 'plan' && (!flow || flow === 'recipes' || flow === 'meals') && ( // the choice only applies to planning a recipe or a saved meal
         <div role="group" aria-label="Add to">
           <p className="note" id="nb-scope-h">Add to</p>
           <div className="seg" role="group" aria-labelledby="nb-scope-h">

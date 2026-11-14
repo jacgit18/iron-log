@@ -90,6 +90,13 @@ export function goLabel(verb: 'Copy' | 'Move', days: readonly string[]): string 
   return `${verb} to ${days.length === 1 ? shortDay(days[0]!) : `${days.length} days`}`;
 }
 
+/** A planned card's Move button: the label and whether it can be pressed. A day (and a changed meal) moves it there, a changed meal alone moves it within its day, neither has nothing to do. `meal` is the chip picked, `own` the card's own meal. */
+export function moveButton(days: readonly string[], meal: string | undefined, own: string | undefined, mealLabel: (m: string) => string): { label: string; enabled: boolean } {
+  const changed = !!meal && meal !== own;
+  if (days.length) return { label: `${goLabel('Move', days)}${changed ? `, ${mealLabel(meal!)}` : ''}`, enabled: true };
+  return changed ? { label: `Move to ${mealLabel(meal!)}`, enabled: true } : { label: 'Pick a day', enabled: false };
+}
+
 /** "This day on": `day` to the last plannable day, one entry per day. Empty when `day` is outside today..today + 13. */
 export function onwardDays(day: string, today: string): string[] {
   const out: string[] = [], last = lastPlanDay(today);

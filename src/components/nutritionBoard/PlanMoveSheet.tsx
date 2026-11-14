@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { goLabel } from '../../lib/dayPicker.js';
+import { goLabel, moveButton } from '../../lib/dayPicker.js';
 import { shortDay } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
@@ -20,7 +20,6 @@ export default function PlanMoveSheet() {
   const slot = PLAN_SLOTS.find(s => s === modal?.slot);
   const [picked, setPicked] = useState<string[]>([]);
   const [meal, setMeal] = useState<PlanSlot | undefined>(slot);
-  const mealChanged = !!meal && meal !== slot;
   const say = (t: string) => (modal?.onMsg as ((t: string) => void) | undefined)?.(t);
   const go = () => {
     const at = (modal?.prepare as (() => number) | undefined)?.() ?? -1;
@@ -32,7 +31,7 @@ export default function PlanMoveSheet() {
     } else say(st.copyPlanItems(day, at, picked).message);
     closeModal();
   };
-  const label = move ? (picked.length ? `${goLabel('Move', picked)}${mealChanged ? `, ${SLOT_LABEL[meal!]}` : ''}` : mealChanged ? `Move to ${SLOT_LABEL[meal!]}` : 'Pick a day') : goLabel('Copy', picked);
+  const mv = moveButton(picked, meal, slot, m => SLOT_LABEL[m as PlanSlot]);
   return (
     <Sheet className="nbsheet" aria-label={`${move ? 'Move' : 'Copy'} ${name}`}>
       <h2 className="cond">{move ? 'Move' : 'Copy'} {name}</h2>
@@ -48,7 +47,7 @@ export default function PlanMoveSheet() {
       )}
       <div className="actions">
         <button type="button" className="btn" onClick={closeModal}>Cancel</button>
-        <button type="button" className="btn primary" disabled={move ? !picked.length && !mealChanged : !picked.length} onClick={go}>{label}</button>
+        <button type="button" className="btn primary" disabled={move ? !mv.enabled : !picked.length} onClick={go}>{move ? mv.label : goLabel('Copy', picked)}</button>
       </div>
     </Sheet>
   );

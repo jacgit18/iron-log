@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
-import { goLabel } from '../../lib/dayPicker.js';
+import { goLabel, pickerDays } from '../../lib/dayPicker.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import ArmedButton from '../ArmedButton.jsx';
 import EntryForm from '../diet/EntryForm.js';
 import DayPicker from './DayPicker.js';
@@ -15,6 +16,7 @@ export default function EatenRowSheet({ id }: { id: string }) {
   const entry = useAppStore(s => s.diet.find(e => e.id === id));
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
+  const today = ymd(useToday(s => s.today));
   const [editing, setEditing] = useState(false);
   const [picking, setPicking] = useState<'copy' | 'move' | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
@@ -30,8 +32,7 @@ export default function EatenRowSheet({ id }: { id: string }) {
       </Sheet>
     );
   }
-  const today = ymd(new Date());
-  const can = entry.d <= today;
+  const can = entry.d <= today && pickerDays({ kind: 'eaten', entry }, today).some(d => d.reason === null); // nothing to offer when every day is greyed
   const move = picking === 'move';
   const toggle = (to: 'copy' | 'move') => { setPicking(picking === to ? null : to); setPicked([]); };
   const go = () => {

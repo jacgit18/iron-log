@@ -22,8 +22,16 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
     if (typeof at === 'string') { onMsg(at); return -1; }
     return at;
   };
+  // The sheet may stay open while another device edits the plan: before acting, check the card is still the same food at its place.
+  const stillHere = (): number => {
+    const at = real();
+    if (at < 0) return -1;
+    const now = st().cfg.diet?.plan?.[day]?.[at];
+    if (!now || now.k !== r.item.k || now.id !== r.item.id) { onMsg('That card changed. Open it again.'); return -1; }
+    return at;
+  };
   // Copy to and Move to open the picker sheet; a shown daily snack is stored only when the sheet's button is pressed (`prepare`), so closing the sheet leaves nothing behind.
-  const pick = (mode: 'copy' | 'move') => { st().openModal({ type: 'nbplanmove', mode, day, name: r.name, slot: r.item.s, prepare: real, onMsg }); onOpen(); }; // the card folds as the sheet opens
+  const pick = (mode: 'copy' | 'move') => { st().openModal({ type: 'nbplanmove', mode, day, name: r.name, slot: r.item.s, prepare: stillHere, onMsg }); onOpen(); }; // the card folds as the sheet opens
   const portion = (to: number) => { const at = real(); if (at >= 0) st().setPlanPortion(day, at, to); };
   const tick = () => {
     if (eaten) { st().uncheckPlanItem(day, index); return; }

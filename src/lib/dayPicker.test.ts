@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayReason, goLabel, lastPlanDay, onwardDays, plannedText, ONE_OFF_REASON, pickerDays, pickerWeek, pickerWeekRange, quickPicks, resultText, type PickerSource } from './dayPicker.js';
+import { dayReason, goLabel, lastPlanDay, moveButton, onwardDays, plannedText, ONE_OFF_REASON, pickerDays, pickerWeek, pickerWeekRange, quickPicks, resultText, type PickerSource } from './dayPicker.js';
 import { dayLabel, sundayOf } from './dayNames.js';
 import { oldestDay, shiftDay } from './dietLog.js';
 
@@ -97,6 +97,17 @@ describe('resultText', () => {
     expect(resultText('Copied', ['2026-11-15'], [])).toBe('Copied to Sun 15.');
     expect(resultText('Moved', ['2026-11-15'], [])).toBe('Moved to Sun 15.');
     expect(resultText('Copied', [], [{ day: '2026-11-17', reason: 'full' }, { day: '2026-11-18', reason: 'already there' }])).toBe('Nothing copied. Skipped Tue 17: full, Wed 18: already there.');
+  });
+});
+
+describe('moveButton', () => {
+  const lab = (m: string) => m[0]!.toUpperCase() + m.slice(1);
+  it('a day, a day with a new meal, a meal alone, and nothing', () => {
+    expect(moveButton(['2026-11-15'], 'lunch', 'lunch', lab)).toEqual({ label: 'Move to Sun 15', enabled: true });
+    expect(moveButton(['2026-11-15'], 'dinner', 'lunch', lab)).toEqual({ label: 'Move to Sun 15, Dinner', enabled: true });
+    expect(moveButton([], 'dinner', 'lunch', lab)).toEqual({ label: 'Move to Dinner', enabled: true });
+    expect(moveButton([], 'lunch', 'lunch', lab)).toEqual({ label: 'Pick a day', enabled: false });
+    expect(moveButton([], undefined, undefined, lab).enabled).toBe(false);
   });
 });
 
