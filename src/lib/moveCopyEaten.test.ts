@@ -124,7 +124,7 @@ describe('copyEatenMany', () => {
     const gone = copyEatenMany([rice], 'a', [day(13)], today, ids(), true, []);
     expect(gone.skipped).toEqual([{ day: day(13), reason: 'recipe is gone' }]);
     expect(gone.list).toEqual([rice]); // a move that plans nothing keeps the original
-    expect(gone.error).toBe('Nothing copied. Skipped Fri 13: recipe is gone.');
+    expect(gone.error).toBe('Nothing moved. Skipped Fri 13: recipe is gone.');
   });
   it('names why an old or malformed day is skipped', () => {
     const r = copyEatenMany([rice, { ...eggs, d: today }], 'a', ['2020-01-01', '2026-02-30', day(10)], today, ids(), false);
