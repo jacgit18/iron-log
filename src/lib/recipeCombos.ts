@@ -38,9 +38,14 @@ export function chipLabel(part: Pick<Recipe, 'n'>, combo: Pick<Recipe, 'n'>): st
 
 export interface ComboChip { id: string; label: string; name: string }
 
-/** What a row shows: the chips (name order), at most MAX_CHIPS, and how many more there are. */
-export function chipsShown(chips: readonly ComboChip[]): { shown: ComboChip[]; more: number } {
-  return { shown: chips.slice(0, MAX_CHIPS), more: Math.max(0, chips.length - MAX_CHIPS) };
+/** What a row shows: the chips (name order), at most MAX_CHIPS unless `expanded`, and how many are beyond that cap (the "+N more" or "Show fewer" button exists when it is above 0). */
+export function chipsShown(chips: readonly ComboChip[], expanded = false): { shown: ComboChip[]; more: number } {
+  return { shown: expanded ? [...chips] : chips.slice(0, MAX_CHIPS), more: Math.max(0, chips.length - MAX_CHIPS) };
+}
+
+/** The rows whose chips stay expanded: a row keeps its place only while it still has chips beyond the cap, so a row that lost its "+N more" button (or is not shown) never comes back already expanded. */
+export function expandedRows(ids: readonly string[], chips: ReadonlyMap<string, readonly ComboChip[]>): string[] {
+  return ids.filter(id => (chips.get(id)?.length ?? 0) > MAX_CHIPS);
 }
 
 export interface MineRows {

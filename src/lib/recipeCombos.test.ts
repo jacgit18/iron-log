@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { chipLabel, chipsShown, comboIds, comboParts, comboTabCounts, isCombo, mineRows, partsLine } from './recipeCombos.js';
+import { chipLabel, chipsShown, comboIds, comboParts, comboTabCounts, expandedRows, isCombo, mineRows, partsLine } from './recipeCombos.js';
 import { filterRecipes } from './recipeList.js';
 
 const food = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'ready', type: 'ready', ing: [{ n }], steps: [], ...extra });
@@ -36,6 +36,16 @@ describe('parts and chips', () => {
     const c = (n: string) => ({ id: n, label: n, name: n });
     expect(chipsShown([c('a'), c('b'), c('c'), c('d')])).toMatchObject({ more: 2, shown: [{ id: 'a' }, { id: 'b' }] });
     expect(chipsShown([c('a')])).toMatchObject({ more: 0 });
+    const open = chipsShown([c('a'), c('b'), c('c'), c('d')], true);
+    expect(open.shown.map(x => x.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(open.more).toBe(2); // still above 0, so the button stays to say "Show fewer"
+  });
+
+  it('a row stays expanded only while it has chips beyond the cap', () => {
+    const c = (n: string) => ({ id: n, label: n, name: n });
+    const chips = new Map([['many', [c('a'), c('b'), c('c')]], ['two', [c('a'), c('b')]]]);
+    expect(expandedRows(['many', 'two', 'gone'], chips)).toEqual(['many']); // at the cap the button is gone; a row not shown has no chips
+    expect(expandedRows(['many'], new Map())).toEqual([]); // Recent and Meals draw no chips
   });
 });
 
