@@ -133,7 +133,7 @@ export function deliveryWarnings({ brief, split, tracker, trackerLine = false, o
 export const readScenarioText = path => (statSync(path).isDirectory() ? readdirSync(path).sort().map(name => readFileSync(join(path, name), 'utf8')).join('\n') : readFileSync(path, 'utf8'));
 
 /** Scenario ids a project's scenario file defines (`id: 'S-01'`), read as text so this script needs no TypeScript loader. */
-export const scenarioIds =(text, idPattern = 'S-\\d{2,}') => [...text.matchAll(new RegExp(`id: '(${idPattern})'`, 'g'))].map(m => m[1]);
+export const scenarioIds = (text, idPattern = 'S-\\d{2,}') => [...text.matchAll(new RegExp(`id: '(${idPattern})'`, 'g'))].map(m => m[1]);
 
 /** Warnings for the QA scenarios line (the project's `qa` config). Advisory like the Delivery ones. A user-visible change names the scenarios that cover it, or says
  *  `n/a: <why>`; every id named must exist in the scenario file. `enabled` is false for a project with no `qa` config or a template without the line. */
