@@ -39,7 +39,7 @@ describe('logPastFood', () => {
     const made = logPastFood(ports, pastFoodAsRecipe(chili), 1.5, TODAY, TODAY);
     expect(made.ok).toBe(true);
     expect(s.entries).toHaveLength(1);
-    expect(s.entries[0]).toMatchObject({ d: TODAY, n: 'Chili', kcal: 600, p: 45, c: 60, f: 18 });
+    expect(s.entries[0]).toMatchObject({ d: TODAY, n: 'Chili', kcal: 600, p: 45, c: 60, f: 18, x: 1.5 }); // the servings are stored as the portion
     expect(s.entries[0]).not.toHaveProperty('from');
     if (made.ok) expect(made.text).toMatch(/^Logged Chili: .* to today\.$/);
   });
