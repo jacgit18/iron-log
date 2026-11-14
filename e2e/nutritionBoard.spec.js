@@ -329,7 +329,7 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: Manage is a text link at the right end of its row under the add-food buttons, the week switcher has its row, Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: Manage is the small button at the right end of the week row (brief nutrition-mobile-manage), Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });

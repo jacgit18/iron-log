@@ -9,7 +9,7 @@ test('on a 375 x 812 phone the day card starts under 400px (486px on main, 522px
   const y = await page.locator('.nb-col').first().evaluate(c => c.getBoundingClientRect().y);
   expect(y).toBeLessThan(400);
   const [week, targets] = await page.evaluate(() => ['.nb-weeksw', '#nb-manage'].map(q => Math.round(document.querySelector(q).getBoundingClientRect().y)));
-  expect(targets).toBeGreaterThan(week); // Manage is a link below the day stepper (spec nutritionHeaderLinks)
+  expect(Math.abs(targets - week)).toBeLessThanOrEqual(12); // Manage is on the week row (spec nutritionHeaderLinks)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   for (const n of ['Add food', 'Scan and log', 'Quick add', 'One-off food']) await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
 });
