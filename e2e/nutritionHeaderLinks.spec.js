@@ -4,7 +4,7 @@ import { openNutrition } from './nutritionBoardHelpers.js';
 // Nutrition phone header option B (owner 2026-11-12): one week row with the dates and the small Manage button at its right end (brief nutrition-mobile-manage) (the Targets link and the colour key were removed by brief targets-into-manage). What a unit test cannot catch: where the links sit on a phone, their tap size, and that they open the sheets.
 const box = (page, sel) => page.locator(sel).evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, b: r.bottom, h: r.height, w: r.width }; });
 
-for (const width of [375, 390]) {
+for (const width of [320, 375, 390, 430]) {
   test(`at ${width} px Manage is the small button at the right end of the week row (44px tap area), no Targets link and no colour key; the week row has the dates; the Adding to line is not drawn; the sheet opens`, async ({ page }) => {
     await page.setViewportSize({ width, height: 812 });
     await openNutrition(page);
@@ -34,6 +34,27 @@ for (const width of [375, 390]) {
     await expect(page.getByRole('dialog', { name: 'Manage' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+}
+
+for (const width of [320, 430]) {
+  test(`at ${width} px on another week the dates and This week fit, Manage stays inside the card, and large text moves Manage to its own line without leaving the card`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 812 });
+    await openNutrition(page);
+    await page.getByRole('button', { name: 'Next week' }).click();
+    await expect(page.getByRole('button', { name: 'This week', exact: true })).toBeVisible();
+    const inside = async () => {
+      const card = await box(page, '.wdc'), m = await box(page, '#nb-manage'), w = await box(page, '.nb-weekname');
+      expect(m.x).toBeGreaterThanOrEqual(card.x - 0.5);
+      expect(m.x + m.w).toBeLessThanOrEqual(card.x + card.w + 0.5);
+      expect(w.w).toBeGreaterThan(60); // the name keeps room, never a letter per line
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    };
+    await inside();
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    await inside();
+    await page.locator('#nb-manage').click();
+    await expect(page.getByRole('dialog', { name: 'Manage' })).toBeVisible();
   });
 }
 

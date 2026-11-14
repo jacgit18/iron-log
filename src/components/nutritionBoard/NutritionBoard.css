@@ -339,10 +339,19 @@ html:has(.wdc-foot) {
   .nb-head {
     gap: var(--sp-8);
   }
-  .nb-weeksw {
+  /* The week row may wrap, so with large text Manage drops to its own line, still at the right end, instead of squeezing the name or leaving the card; the switcher keeps room for the arrows and a readable name (rem follows the text size). Scoped to the row that holds Manage: the Board and Stretches rows are untouched. */
+  .wdc-week:has(> .nb-cardmanage) {
+    flex-wrap: wrap;
+  }
+  .nb-cardmanage {
+    flex: none;
+  }
+  .wdc-week .nb-weeksw {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) 44px;
     gap: var(--sp-4);
+    flex: 1 1 0;
+    min-width: min(11.5rem, 100%);
   }
   /* On another week "This week" takes its own line under the arrows so the name and dates keep the room. */
   .nb-weeksw .ghost {
@@ -354,7 +363,6 @@ html:has(.wdc-foot) {
   }
   /* Option B (owner 2026-11-12): the week's dates sit in the switcher row, and the status line and the "Adding to" line stay for screen readers only. The date range stays in .nb-weeklab (role=status). */
   .nb-weekname {
-    flex: 1 1 auto;
     min-width: 0;
     font-size: var(--fs-lg);
     line-height: 1.15;
