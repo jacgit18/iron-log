@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, qaWarnings, readScenarioText, scenarioIds, shorten, touchesUi } from './pr-body.mjs';
+import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, qaWarnings, readScenarioText, scenarioIds, shorten, touchesScenarios, touchesUi } from './pr-body.mjs';
 
 const projectTemplate = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const template = `## What and why
@@ -227,6 +227,12 @@ describe('QA scenarios line (the project qa config)', () => {
     const t = '## What and why\n\n## Audience\n\n- [ ] n/a: x\n\n## Delivery\n\nQA scenarios: none given (pass --qa)\n';
     expect(buildBody(t, 'na', '', false, '', config, { qa: 'S-41, S-42' })).toContain('QA scenarios: S-41, S-42');
     expect(buildBody(t, 'na', '', false, '', config)).toContain('QA scenarios: none given');
+  });
+  it('counts a file inside the scenario folder, or the scenario file itself, as changing the scenarios', () => {
+    expect(touchesScenarios(['server/qa/scenarios/S-301.ts', 'README.md'], 'server/qa/scenarios')).toBe(true);
+    expect(touchesScenarios(['server/qa/scenarios.ts'], 'server/qa/scenarios.ts')).toBe(true);
+    expect(touchesScenarios(['server/qa/scenarioAutomation.ts', 'server/qa/scenarios.test.ts'], 'server/qa/scenarios')).toBe(false);
+    expect(touchesScenarios([], 'server/qa/scenarios')).toBe(false);
   });
   it('the real config points at a scenario file that exists and defines ids, and the real template has the line', () => {
     const real = loadConfig();

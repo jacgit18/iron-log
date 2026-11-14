@@ -130,7 +130,12 @@ export function deliveryWarnings({ brief, split, tracker, trackerLine = false, o
 }
 
 /** The text of a project's scenarios: `scenarioFile` in .github/pr-kit.json is one file, or a folder of one-scenario files (iron-log: `server/qa/scenarios/`). */
-export const readScenarioText = path => (statSync(path).isDirectory() ? readdirSync(path).sort().map(name => readFileSync(join(path, name), 'utf8')).join('\n') : readFileSync(path, 'utf8'));
+export const readScenarioText = path => (statSync(path).isDirectory()
+  ? readdirSync(path, { withFileTypes: true }).filter(entry => entry.isFile()).map(entry => entry.name).sort().map(name => readFileSync(join(path, name), 'utf8')).join('\n')
+  : readFileSync(path, 'utf8'));
+
+/** True when a changed file is the scenario file, or sits inside the scenario folder (`scenarioFile` in .github/pr-kit.json may name either). */
+export const touchesScenarios = (files, scenarioFile) => files.some(file => file === scenarioFile || file.startsWith(`${scenarioFile}/`));
 
 /** Scenario ids a project's scenario file defines (`id: 'S-01'`), read as text so this script needs no TypeScript loader. */
 export const scenarioIds = (text, idPattern = 'S-\\d{2,}') => [...text.matchAll(new RegExp(`id: '(${idPattern})'`, 'g'))].map(m => m[1]);
@@ -183,7 +188,7 @@ function main(argv) {
   for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), overlaps: overlappingPrs(files, otherOpenPrs(git)) })) console.error(w);
   const qaFile = config.qa ? fileURLToPath(new URL(`../${config.qa.scenarioFile}`, import.meta.url)) : null;
   const qaGiven = arg('--qa');
-  for (const w of qaWarnings({ enabled: Boolean(qaFile) && /^QA scenarios:/m.test(template), qa: qaGiven, audience: found.audience, known: qaFile && existsSync(qaFile) ? scenarioIds(readScenarioText(qaFile), config.qa.idPattern) : [], idPattern: config.qa?.idPattern, scenariosChanged: Boolean(config.qa) && files.includes(config.qa.scenarioFile) })) console.error(w);
+  for (const w of qaWarnings({ enabled: Boolean(qaFile) && /^QA scenarios:/m.test(template), qa: qaGiven, audience: found.audience, known: qaFile && existsSync(qaFile) ? scenarioIds(readScenarioText(qaFile), config.qa.idPattern) : [], idPattern: config.qa?.idPattern, scenariosChanged: Boolean(config.qa) && touchesScenarios(files, config.qa.scenarioFile) })) console.error(w);
   // Checks boxes the last `npm run check` backs for this exact commit (rules: autoTickFromCheck in .github/pr-kit.json). Anything else stays open.
   const stampPath = git('rev-parse', '--git-path', STAMP_FILE).trim();
   const stamp = existsSync(stampPath) ? JSON.parse(readFileSync(stampPath, 'utf8')) : null;
