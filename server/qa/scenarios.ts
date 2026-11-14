@@ -234,8 +234,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Tap the card again, press Remove and press Tap again to remove (the first tap only arms it).',
     ],
     expected: [
-      'Each day lists its planned items under Breakfast, Lunch, Dinner and Snack, and a day ahead reads its planned calories and protein against the 2,400 / 160 targets in its meters.',
-      'Raising the portion raises that day\'s planned totals; removing the recipe lowers them. (Today\'s meters count only what was eaten: S-196.)',
+      'Each day lists its planned items under Breakfast, Lunch, Dinner and Snack, and a day ahead shows its planned calories, protein and fat as one muted "Planned: ..." line under its meters, whose bars read 0 against the 2,400 / 160 targets until food is eaten (ADR 126).',
+      'Raising the portion raises that day\'s "Planned:" line; removing the recipe lowers it. The bars do not move. (Today\'s meters count only what was eaten: S-196.)',
     ],
   },
   {
@@ -2380,8 +2380,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Tap that day\'s name, press Add food, pick Dinner, press Recipes and press Plan on a recipe. Tap its card and press More.',
     ],
     expected: [
-      'A day ahead shows Calories, Protein and Fat as "amount / target" of its planned items against 2,400 kcal and 160 g, and each meal (Breakfast, Lunch, Dinner, Snack) shows its calories against its share of the day. Planned items from before meals existed sit under Not set.',
-      'The added recipe appears in that meal and the bars move; More raises that card\'s portion and the bars with it. A bar over its target fills in full in orange and its label says how many grams over (for example "Fat planned: 108.5 / 70 g, 38.5 g over").',
+      'A day ahead shows Calories, Protein and Fat bars at 0 against 2,400 kcal and 160 g, and a muted "Planned: ..." line under them with the totals of its planned items; each meal (Breakfast, Lunch, Dinner, Snack) shows its calories against its share of the day. Planned items from before meals existed sit under Not set.',
+      'The added recipe appears in that meal and the "Planned:" line changes; More raises that card\'s portion and the line with it. The bars stay at 0 on a day ahead; on today or an earlier day a bar over its target fills in full in orange and its label says how many grams over (for example "Fat eaten so far: 108.5 / 70 g, 38.5 g over").',
     ],
   },
   {
@@ -2477,12 +2477,12 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On Nutrition note today\'s Calories meter and the planned items under today\'s meals (the seed plans two under Not set).',
       'Tick the check box of one of today\'s planned items (Check <name> as eaten).',
-      'Look at a day after today that has planned items: add up the calories of its cards and compare with its Calories meter.',
+      'Look at a day after today that has planned items: add up the calories of its cards and compare with its "Planned:" line; its Calories meter reads 0.',
     ],
     expected: [
       'Before logging, today\'s Calories meter counts only the eaten rows of food nobody planned (about 35% of 2,400 kcal), not the planned items.',
       'After the check, the item shows its check in its meal (it is not listed again as a separate eaten row) and the meter rises by that item\'s calories.',
-      'A day ahead reads the sum of its planned items against 2,400 kcal; a screen reader says "planned" there, not "eaten" (ADR 105).',
+      'A day ahead\'s "Planned:" line reads the sum of its planned items; its Calories meter reads 0 of 2,400 kcal and a screen reader says "eaten so far", never "planned" (ADRs 105, 126).',
     ],
   },
   {

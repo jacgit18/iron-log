@@ -40,7 +40,7 @@ test('a wide screen opens the board: seven days, meals each, meters with words',
   await expect(today(page).getByText('Nothing planned')).toHaveCount(3);
   await expect(today(page).getByRole('button', { name: /^Add to / })).toHaveCount(0); // meals have no add button of their own
   for (const b of ['Calories', 'Protein']) await expect(today(page).getByRole('img', { name: new RegExp(`^${b} eaten so far: `) })).toBeVisible();
-  await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories planned: / })).toBeVisible();
+  await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories eaten so far: / })).toBeVisible();
 });
 
 test('planning Dinner shows the card, the plate check and a fix that goes with the food', async ({ page }) => {
@@ -57,13 +57,12 @@ test('planning Dinner shows the card, the plate check and a fix that goes with t
   await expect(dinner(today(page)).getByText('Rice', { exact: true })).toBeVisible();
   // today's meters count what was eaten, so nothing planned moves them; the totals of the plan show in the meal header
   await expect(dinner(today(page)).locator('.wb-slothd')).toContainText('600');
-  // a day ahead counts the plan: both have a fat figure, so the fat meter is whole
+  // a day ahead's bars wait for eaten food (ADR 126) and the plan is a muted line; both foods have a fat figure, so the line carries it whole
   await plan(page, 'Chili', { day: TOMORROW });
   await plan(page, 'Rice', { day: TOMORROW });
   const next = col(page, TOMORROW);
-  await expect(next.getByText('Add fat to your foods')).toHaveCount(0);
-  await expect(next.getByRole('img', { name: /^Calories planned: 600 / })).toBeVisible();
-  await expect(next.getByRole('img', { name: /^Fat planned: 15 / })).toBeVisible();
+  await expect(next.getByRole('img', { name: /^Calories eaten so far: 0 / })).toBeVisible();
+  await expect(next.locator('.nb-planline')).toHaveText('Planned: 600 kcal · 34 g protein · 15 g fat');
 });
 
 test('Move to changes the meal of a card, and a card can be moved to another day', async ({ page }) => {

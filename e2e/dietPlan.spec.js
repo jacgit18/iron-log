@@ -66,7 +66,8 @@ test('plan a saved meal on a day, see the totals, and Log a planned recipe only 
   await sheet.getByRole('group', { name: 'Which meal' }).getByRole('button', { name: 'Breakfast', exact: true }).click();
   await sheet.getByRole('button', { name: /^Breakfast · 1 food · 350 kcal/ }).click();
   await closeSheet(page);
-  await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories planned: 350 / })).toBeVisible();
+  await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories eaten so far: 0 / })).toBeVisible(); // the bar waits for food to be eaten (ADR 126)
+  await expect(col(page, TOMORROW).locator('.nb-planline')).toContainText('Planned: 350 kcal'); // the plan is the muted line under the bars
   await col(page, TOMORROW).locator('.wb-card', { hasText: 'Breakfast' }).click();
   await expect(col(page, TOMORROW).getByRole('checkbox', { name: /Breakfast as eaten/ })).toHaveCount(0);
   await expect(col(page, TOMORROW).getByRole('button', { name: 'Remove Breakfast' })).toBeVisible();

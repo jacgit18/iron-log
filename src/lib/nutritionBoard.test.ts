@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, basisOf, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, onBoard, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -115,14 +115,36 @@ describe('the toolbar and what can be added', () => {
 });
 
 describe('day meters', () => {
-  it('count eaten food for last week and today, the plan for days ahead', () => {
-    expect(basisOf('2026-11-07', TODAY)).toBe('eaten');
-    expect(basisOf(TODAY, TODAY)).toBe('eaten');
-    expect(basisOf('2026-11-09', TODAY)).toBe('planned');
+  it('count only eaten food on every day; a day ahead reads 0 whatever is planned', () => {
     const recipes = [{ id: 'r1', n: 'Chili', kcal: 400, p: 30, f: 14, cat: 'protein' } as unknown as Recipe];
-    const v = view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }] }, diet: [entry('2026-11-09', 999, 99)], recipes });
-    expect(v.meters.find(m => m.key === 'kcal')!.value).toBe(400);
+    const ahead = view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }] }, recipes });
+    expect(ahead.meters.filter(m => m.key !== 'water').map(m => m.value)).toEqual([0, 0, 0, 0]);
+    expect(ahead.meters.find(m => m.key === 'kcal')!.text).toBe('0 / 2,000 kcal');
+    expect(view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }] }, diet: [entry('2026-11-09', 999, 99)], recipes }).meters.find(m => m.key === 'kcal')!.value).toBe(999);
     expect(view('2026-11-07', { diet: [entry('2026-11-07', 1500, 120, 40), entry('2026-11-07', 500, 20, 10)] }).meters.find(m => m.key === 'kcal')!.value).toBe(2000);
+  });
+  it('a meter label never says planned', () => {
+    expect(meterLabel(view('2026-11-09').meters[0]!, 'future')).toMatch(/^Calories eaten so far: 0 \/ 2,000 kcal/);
+    expect(meterLabel(view('2026-11-07').meters[0]!, 'past')).toMatch(/^Calories eaten: /);
+  });
+  it('the plan line shows the planned totals on a day ahead only', () => {
+    const recipes = [{ id: 'r1', n: 'Chili', kcal: 400, p: 30, f: 14, cat: 'protein' } as unknown as Recipe];
+    const plan = { '2026-11-09': [{ k: 'r' as const, id: 'r1' }], [TODAY]: [{ k: 'r' as const, id: 'r1' }] };
+    expect(view('2026-11-09', { plan, recipes }).planLine).toBe('Planned: 400 kcal · 30 g protein · 14 g fat');
+    expect(view(TODAY, { plan, recipes }).planLine).toBeNull();
+    expect(view('2026-11-07', { plan, recipes }).planLine).toBeNull();
+    expect(view('2026-11-10', { plan, recipes }).planLine).toBeNull(); // nothing planned that day
+  });
+  it('the plan line says fat is not entered when no planned food has it, and counts the foods that do', () => {
+    const none = { id: 'r1', n: 'Chili', kcal: 400, p: 30, cat: 'protein' } as unknown as Recipe;
+    expect(view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }] }, recipes: [none] }).planLine).toBe('Planned: 400 kcal · 30 g protein · fat not entered');
+    const rice = { id: 'r2', n: 'Rice', kcal: 100, p: 4, cat: 'carb' } as unknown as Recipe; // no fat entered
+    const chili = { id: 'r1', n: 'Chili', kcal: 400, p: 30, f: 14, cat: 'protein' } as unknown as Recipe;
+    const v = view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }, { k: 'r', id: 'r2' }] }, recipes: [chili, rice] }); // fat covers 80% of the calories: partial (FAT_PARTIAL_FROM is 0.7)
+    expect(v.planLine).toBe('Planned: 500 kcal · 34 g protein · 14 g fat (1 of 2 foods have fat)');
+  });
+  it('planLine is null with nothing planned', () => {
+    expect(planLine(view('2026-11-09').plan, true)).toBeNull();
   });
   it('today ignores the plan: only what was logged counts', () => {
     const recipes = [{ id: 'r1', n: 'Chili', kcal: 400, p: 30, f: 14 } as unknown as Recipe];
@@ -335,9 +357,12 @@ describe('carbs meter', () => {
     expect(carbsMeter(false, 300, 250).over).toBe(true);
     expect(carbsMeter(false, 250, 250).over).toBe(false);
   });
-  it('a day ahead has no carbs to count: hidden with a note', () => {
-    expect(carbsMeter(true, 0, 250).hidden).toBe(true);
-    expect(carbsMeter(true, 0, 250).note).toBeUndefined();
+  it('a day ahead counts the log like any day; with neither target nor carbs it is hidden without a note', () => {
+    expect(carbsMeter(true, 0, 250).hidden).toBeUndefined();
+    expect(carbsMeter(true, 0, 250).text).toBe('0 / 250 g');
+    expect(carbsMeter(true, 40, null).text).toBe('40 g');
+    expect(carbsMeter(true, 0, null).hidden).toBe(true);
+    expect(carbsMeter(true, 0, null).note).toBeUndefined();
   });
   it('sits after protein and before fat in a day', () => {
     const v = dayView(TODAY, TODAY, { plan: {}, recipes: [], meals: [], diet: [{ ...entry(TODAY, 300, 20), c: 40 }], supp: supp(), body: [], targets: { ...targets, carbs: 250 } });
