@@ -124,11 +124,10 @@ export interface DayView { day: string; kind: DayKind; meters: Meter[]; supps: S
 const meterText = (value: number, target: number | null, unit: string): string => `${fmtNum(value)}${target ? ` / ${fmtNum(target)}` : ''} ${unit}`;
 const meter = (key: Meter['key'], label: string, unit: string, value: number, target: number | null): Meter => ({ key, label, unit, value, target, over: !!target && value > target, text: meterText(value, target, unit) });
 
-/** The carbs meter (after protein): shown only with a carbs target or logged carbs, the rule fat uses. A day ahead has no carbs to count (the plan holds calories, protein and fat), so it is hidden there with a note. */
-export function carbsMeter(planned: boolean, eaten: number, target: number | null): Meter {
-  const m = meter('carbs', 'Carbs', 'g', planned ? 0 : eaten, target);
-  if (planned) return { ...m, hidden: true }; // no note: it would repeat on every day ahead
-  if (!target && eaten <= 0) return { ...m, hidden: true, note: 'Add a carbs target or log carbs to see carbs here.' };
+/** The carbs meter (after protein): shown only with a carbs target or logged carbs, the rule fat uses, on every day (it counts the log like the other bars, ADR 126). With neither it is hidden; the note saying so is left off a day ahead, where it would repeat on every column. */
+export function carbsMeter(ahead: boolean, eaten: number, target: number | null): Meter {
+  const m = meter('carbs', 'Carbs', 'g', eaten, target);
+  if (!target && eaten <= 0) return { ...m, hidden: true, ...(ahead ? {} : { note: 'Add a carbs target or log carbs to see carbs here.' }) };
   return m;
 }
 
@@ -163,11 +162,12 @@ export function mealKcalText(plan: { kcal: number; share: number | null; items: 
 /** What a day's targets are. */
 export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null; carbs?: number | null }
 
-/** The plan's totals on a day ahead, kept out of the meters (ADR 126: a bar moves only when food is checked off or logged as eaten): "Planned: 2,100 kcal · 160 g protein · 70 g fat". Fat is left out when no planned food has it and says how many do when only some do. Null for today and past days, and for a day with nothing planned. */
+/** The plan's totals on a day ahead, kept out of the meters (ADR 126: a bar moves only when food is checked off or logged as eaten): "Planned: 2,100 kcal · 160 g protein · 70 g fat". Fat reads "fat not entered" when no planned food has it and says how many foods do when only some do. Null for today and past days, and for a day with nothing planned. */
 export function planLine(plan: BoardDay, ahead: boolean): string | null {
   if (!ahead || plan.count === 0) return null;
   const parts = [`${fmtNum(plan.kcal)} kcal`, `${fmtNum(plan.protein)} g protein`];
   if (plan.fatState === 'full') parts.push(`${fmtNum(plan.fat)} g fat`);
+  if (plan.fatState === 'hidden') parts.push('fat not entered');
   if (plan.fatState === 'partial') parts.push(`${fmtNum(plan.fat)} g fat (${plan.fatFoods.known} of ${plan.fatFoods.all} foods have fat)`);
   return `Planned: ${parts.join(' · ')}`;
 }

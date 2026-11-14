@@ -135,9 +135,9 @@ describe('day meters', () => {
     expect(view('2026-11-07', { plan, recipes }).planLine).toBeNull();
     expect(view('2026-11-10', { plan, recipes }).planLine).toBeNull(); // nothing planned that day
   });
-  it('the plan line leaves fat out when no planned food has it, and counts the foods that do', () => {
+  it('the plan line says fat is not entered when no planned food has it, and counts the foods that do', () => {
     const none = { id: 'r1', n: 'Chili', kcal: 400, p: 30, cat: 'protein' } as unknown as Recipe;
-    expect(view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }] }, recipes: [none] }).planLine).toBe('Planned: 400 kcal · 30 g protein');
+    expect(view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }] }, recipes: [none] }).planLine).toBe('Planned: 400 kcal · 30 g protein · fat not entered');
     const rice = { id: 'r2', n: 'Rice', kcal: 100, p: 4, cat: 'carb' } as unknown as Recipe; // no fat entered
     const chili = { id: 'r1', n: 'Chili', kcal: 400, p: 30, f: 14, cat: 'protein' } as unknown as Recipe;
     const v = view('2026-11-09', { plan: { '2026-11-09': [{ k: 'r', id: 'r1' }, { k: 'r', id: 'r2' }] }, recipes: [chili, rice] }); // fat covers 80% of the calories: partial (FAT_PARTIAL_FROM is 0.7)
@@ -357,9 +357,12 @@ describe('carbs meter', () => {
     expect(carbsMeter(false, 300, 250).over).toBe(true);
     expect(carbsMeter(false, 250, 250).over).toBe(false);
   });
-  it('a day ahead has no carbs to count: hidden with a note', () => {
-    expect(carbsMeter(true, 0, 250).hidden).toBe(true);
-    expect(carbsMeter(true, 0, 250).note).toBeUndefined();
+  it('a day ahead counts the log like any day; with neither target nor carbs it is hidden without a note', () => {
+    expect(carbsMeter(true, 0, 250).hidden).toBeUndefined();
+    expect(carbsMeter(true, 0, 250).text).toBe('0 / 250 g');
+    expect(carbsMeter(true, 40, null).text).toBe('40 g');
+    expect(carbsMeter(true, 0, null).hidden).toBe(true);
+    expect(carbsMeter(true, 0, null).note).toBeUndefined();
   });
   it('sits after protein and before fat in a day', () => {
     const v = dayView(TODAY, TODAY, { plan: {}, recipes: [], meals: [], diet: [{ ...entry(TODAY, 300, 20), c: 40 }], supp: supp(), body: [], targets: { ...targets, carbs: 250 } });

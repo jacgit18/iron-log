@@ -24,8 +24,7 @@ export default function DayMeters({ v }: { v: DayView }) {
             {supps}
             <div className="wb-bar">
               <div className="wb-barl"><span>{m.label}</span><b>{m.text}</b></div>
-              <div className={`wb-meter nb-${m.key}${m.key === 'fat' && m.note ? ' part' : ''}${m.over ? ' over' : ''}`} role="img" aria-label={meterLabel(m, v.kind)}><i style={{ width: `${pct}%` }} /></div>
-              {m.note && <p className="wb-fatnote">{m.note}</p>}
+              <div className={`wb-meter nb-${m.key}${m.over ? ' over' : ''}`} role="img" aria-label={meterLabel(m, v.kind)}><i style={{ width: `${pct}%` }} /></div>
             </div>
           </Fragment>
         );
