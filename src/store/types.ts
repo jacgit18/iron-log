@@ -321,6 +321,7 @@ export interface DietSlice {
   moveSavedMeals(): number; // copies each saved meal not yet moved into Recipes as a meal, once; the old list is left as it is (brief saved-meals-into-recipes); how many were made
   copyDietEntries(id: string, days: string[], move?: boolean): BatchResult; // one eaten food to several days in one write: days up to today get an entry, days ahead a plan card (recipe-linked foods only); a full or invalid day is skipped and named; a move takes one day and offers Undo (brief nutrition-multi-day-picker)
   copyPlanItems(day: string, index: number, days: string[]): BatchResult; // a planned item to the same meal of several days in one plan write; days that can't take it are skipped and named
+  addPlanItemToDays(kind: 'r' | 'm', id: string, days: string[], slot?: PlanSlot): BatchResult; // one recipe or saved meal on several days in one plan write; days that can't take it are skipped and named (`message` is empty on success: the caller words it)
   addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)

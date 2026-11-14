@@ -69,3 +69,12 @@ export const openDayTotals = async col => {
 // The box of the first element matching `sel`, and whether anything in the week and day card (or the page) runs past the card's edge (shared by nutritionOneCard.spec.js and weekDayCard.spec.js).
 export const box = (page, sel) => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, r: r.right, b: r.bottom, w: r.width, h: r.height }; });
 export const overflows = page => page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || [...document.querySelectorAll('.wdc, .wdc *')].some(e => { const r = e.getBoundingClientRect(), c = document.querySelector('.wdc').getBoundingClientRect(); return r.width && (r.right > c.right + 1 || r.left < c.left - 1); }));
+// A planned card's Move to (brief nutrition-multi-day-picker): opens the card in `scope` (a day column), opens its Move sheet, optionally ticks one day by its picker name ("Thu 24 · today", "Fri 25") and/or picks a meal chip, and presses the Move button.
+export const moveCard = async (page, scope, name, { day, meal } = {}) => {
+  await scope.locator('.wb-card', { hasText: name }).first().click();
+  await scope.getByRole('button', { name: `Move ${name}`, exact: true }).click();
+  const d = page.getByRole('dialog');
+  if (day) await d.getByRole('group', { name: `Move ${name} to day` }).getByRole('button', { name: day, exact: true }).click();
+  if (meal) await d.getByRole('group', { name: `Meal for ${name}` }).getByRole('button', { name: meal, exact: true }).click();
+  await d.getByRole('button', { name: /^Move to / }).click();
+};

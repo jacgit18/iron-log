@@ -83,3 +83,30 @@ export function resultText(verb: 'Copied' | 'Moved', done: readonly string[], sk
   const where = done.length === 1 ? shortDay(done[0]!) : `${done.length} days`;
   return `${verb} to ${where}.${skip}`;
 }
+
+/** The button text: "Copy to 5 days", "Copy to Sun 15" for one, "Pick a day" for none. */
+export function goLabel(verb: 'Copy' | 'Move', days: readonly string[]): string {
+  if (!days.length) return 'Pick a day';
+  return `${verb} to ${days.length === 1 ? shortDay(days[0]!) : `${days.length} days`}`;
+}
+
+/** A planned card's Move button: the label and whether it can be pressed. A day (and a changed meal) moves it there, a changed meal alone moves it within its day, neither has nothing to do. `meal` is the chip picked, `own` the card's own meal. */
+export function moveButton(days: readonly string[], meal: string | undefined, own: string | undefined, mealLabel: (m: string) => string): { label: string; enabled: boolean } {
+  const changed = !!meal && meal !== own;
+  if (days.length) return { label: `${goLabel('Move', days)}${changed ? `, ${mealLabel(meal!)}` : ''}`, enabled: true };
+  return changed ? { label: `Move to ${mealLabel(meal!)}`, enabled: true } : { label: 'Pick a day', enabled: false };
+}
+
+/** "This day on": `day` to the last plannable day, one entry per day. Empty when `day` is outside today..today + 13. */
+export function onwardDays(day: string, today: string): string[] {
+  const out: string[] = [], last = lastPlanDay(today);
+  for (let d = day < today ? today : day; d <= last; d = shiftDay(d, 1)) out.push(d);
+  return out;
+}
+
+/** The sentence after planning one food on several days: "Planned Soup for Lunch on 5 days. Skipped Tue 18: full." */
+export function plannedText(name: string, meal: string, done: readonly string[], skipped: readonly SkippedDay[]): string {
+  const skip = skipped.length ? ` Skipped ${skipped.map(s => `${shortDay(s.day)}: ${s.reason}`).join(', ')}.` : '';
+  if (!done.length) return `Nothing planned.${skip}`;
+  return `Planned ${name} for ${meal} on ${done.length === 1 ? shortDay(done[0]!) : `${done.length} days`}.${skip}`;
+}

@@ -575,4 +575,16 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
     expect(st().copyPlanItems(today, 9, [at(1)]).error).toBe('That is gone.');
     expect(st().cfg.diet!.plan).toEqual(before);
   });
+  it('addPlanItemToDays plans one recipe on several days in one write, skipping duplicates and days out of reach', () => {
+    expect(st().addPlanItem(at(2), 'r', 'rc', 'lunch')).toBeNull();
+    const r = st().addPlanItemToDays('r', 'rc', [at(1), at(2), at(3), at(20)], 'lunch');
+    expect(r.error).toBeNull();
+    expect(r.done).toEqual([at(1), at(3)]);
+    expect(r.skipped.map(x => x.reason)).toEqual(['already there', 'out of reach']);
+    expect(st().cfg.diet!.plan![at(3)]).toEqual([{ k: 'r', id: 'rc', s: 'lunch' }]);
+    const before = st().cfg.diet!.plan;
+    expect(st().addPlanItemToDays('r', 'rc', [at(1)], 'lunch').error).toBeTruthy();
+    expect(st().addPlanItemToDays('r', 'nope', [at(4)], 'lunch').error).toBe('That recipe is gone.');
+    expect(st().cfg.diet!.plan).toEqual(before);
+  });
 });

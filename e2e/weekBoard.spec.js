@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, moveCard, openAdd, todayCol } from './nutritionBoardHelpers.js';
 
 // The Nutrition board's planning (brief week-board, part 3, now on the Nutrition week board of brief nutrition-board). The rules (the day's meals and totals, the plate check and fixes, moves, the fat bar) are node tests (weekBoard.test.ts, plate.test.ts);
 // this covers the wiring: the board opens on a wide screen and one day with a stepper on a phone, planning into a meal from the add sheet, the plate check and its one-tap fix, moving a card, and the labelled meters.
@@ -19,10 +19,7 @@ const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const dinner = (c) => c.locator('.wb-slot', { hasText: 'Dinner' });
 // A day's planned card moved to today (the add sheet no longer plans on today, so a test that needs a planned card on today plans a day ahead and moves it, which is also how a person does it).
 const moveToToday = async (page, name, from) => {
-  const c = col(page, from);
-  await c.locator('.wb-card', { hasText: name }).click();
-  await c.getByRole('button', { name: `Move ${name}`, exact: true }).click();
-  await c.getByRole('group', { name: `Move ${name} to` }).getByRole('button', { name: 'Thu, Sep 24' }).click();
+  await moveCard(page, col(page, from), name, { day: 'Thu 24 · today' });
   await todayCol(page).locator('.nb-dayname').click();
 };
 // Plans a recipe into a meal of the board's selected day from the add sheet's Recipes way (a day on a wide screen is picked by its name).
@@ -73,14 +70,10 @@ test('Move to changes the meal of a card, and a card can be moved to another day
   await seed(page);
   await plan(page, 'Chili');
   const t = today(page);
-  await dinner(t).getByText('Chili', { exact: true }).click();
-  await dinner(t).getByRole('button', { name: 'Move Chili', exact: true }).click();
-  await dinner(t).getByRole('group', { name: 'Move Chili to' }).getByRole('button', { name: 'Lunch' }).click();
+  await moveCard(page, t, 'Chili', { meal: 'Lunch' });
   await expect(t.locator('.wb-slot', { hasText: 'Lunch' }).getByText('Chili', { exact: true })).toBeVisible();
   await expect(dinner(t).getByText('Chili', { exact: true })).toHaveCount(0);
-  await t.locator('.wb-slot', { hasText: 'Lunch' }).getByText('Chili', { exact: true }).click();
-  await t.getByRole('button', { name: 'Move Chili', exact: true }).click();
-  await t.getByRole('group', { name: 'Move Chili to' }).getByRole('button', { name: 'Fri, Sep 25' }).click();
+  await moveCard(page, t, 'Chili', { day: 'Fri 25' });
   await expect(t.getByText('Chili', { exact: true })).toHaveCount(0);
   await expect(col(page, TOMORROW).getByText('Chili', { exact: true })).toBeVisible();
 });

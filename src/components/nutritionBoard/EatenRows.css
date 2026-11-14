@@ -48,12 +48,6 @@
     border-color: var(--accent);
   }
 }
-.nb-eatdays {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-  margin: var(--sp-12) 0;
-}
 .nb-eatsheet-nums {
   margin: 0;
   font-variant-numeric: tabular-nums;

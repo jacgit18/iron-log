@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { onwardDays, plannedText } from '../../lib/dayPicker.js';
 import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
 import { withMicro } from '../../shared/foodMicro.js';
@@ -8,7 +9,7 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows, savedMealsNote } from '../../lib/quickMeals.js';
-import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, shortDay, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
 import { ymd } from '../../shared/dates.js';
@@ -26,7 +27,10 @@ import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
 import Icon, { type IconName } from '../Icon.jsx';
 import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
+import DayPicker from './DayPicker.js';
 
+type Scope = 'one' | 'onward' | 'pick';
+const SCOPES: readonly { id: Scope; label: string }[] = [{ id: 'one', label: 'Just this day' }, { id: 'onward', label: 'This day on' }, { id: 'pick', label: 'Pick days' }];
 const FLOW_ICON: Record<AddFlow, IconName> = { quick: 'spark', barcode: 'scan', oneoff: 'edit', find: 'search', meals: 'star', recipes: 'book', copy: 'undo', savemeal: 'plus' };
 const KEY = 'nb-last-meal';
 const lastMeal = (): PlanSlot | null => { try { const v = localStorage.getItem(KEY); return PLAN_SLOTS.find(s => s === v) ?? null; } catch { return null; } };
@@ -46,6 +50,9 @@ export default function AddFoodSheet() {
   const flow = picked && (flows as readonly string[]).includes(picked) ? picked : null; // a way that stops being offered (the day's last food went) falls back to the list
   const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return PLAN_SLOTS.find(s => s === modal?.meal) ?? startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); }); // `modal.meal`: the empty meal's Add control picked it
   const [msg, setMsg] = useState('');
+  const [scope, setScope] = useState<Scope>('one');
+  const [ticked, setTicked] = useState<string[]>([]);
+  const targets = scope === 'onward' ? onwardDays(day, today) : scope === 'pick' ? ticked : [day]; // the days a planned recipe or meal goes to
   const [fill, setFill] = useState<{ key: number; food?: FoodFill }>({ key: 0 });
   const scan = () => {
     const onScan = modal?.onScan as ((h: FoodHit) => void) | undefined;
@@ -56,7 +63,7 @@ export default function AddFoodSheet() {
   const said = (t: string) => { setMsg(t); (modal?.onMsg as ((t: string) => void) | undefined)?.(t); };
   const resume = modal?.resume as ScanResume | undefined;
   const reopen = (r: ScanResume) => useAppStore.getState().openModal({ ...(modal ?? { type: 'nbadd' }), type: 'nbadd', day, flow: 'find', resume: r });
-  const body = flow && <FlowBody flow={flow} day={day} today={today} meal={meal} fill={fill} reopen={reopen} {...(resume ? { resume } : {})} onFill={f => { setFill(o => ({ key: o.key + 1, food: f })); setFlow('oneoff'); }} onMsg={said} />;
+  const body = flow && <FlowBody flow={flow} day={day} today={today} meal={meal} scope={scope} targets={targets} fill={fill} reopen={reopen} {...(resume ? { resume } : {})} onFill={f => { setFill(o => ({ key: o.key + 1, food: f })); setFlow('oneoff'); }} onMsg={said} />;
   return (
     <Sheet className="nbsheet sheet-wide" aria-label={`Add food, ${addingTo(day, today)}`}>
       <h2 className="cond">{flow ? ADD_FLOWS[flow].label : 'Add food'}</h2>
@@ -68,6 +75,16 @@ export default function AddFoodSheet() {
             {PLAN_SLOTS.map(s => <button key={s} type="button" aria-pressed={meal === s} onClick={() => pick(s)}>{SLOT_LABEL[s]}</button>)}
           </div>
           <p className="note">Recipes and saved meals you add go into {SLOT_LABEL[meal]}.</p>
+        </div>
+      )}
+      {addMode(day, today) === 'plan' && (!flow || flow === 'recipes' || flow === 'meals') && ( // the choice only applies to planning a recipe or a saved meal
+        <div role="group" aria-label="Add to">
+          <p className="note" id="nb-scope-h">Add to</p>
+          <div className="seg" role="group" aria-labelledby="nb-scope-h">
+            {SCOPES.map(c => <button key={c.id} type="button" aria-pressed={scope === c.id} onClick={() => setScope(c.id)}>{c.label}</button>)}
+          </div>
+          {scope === 'onward' && <p className="note">Adds to {shortDay(day)} and every day after it, to {shortDay(onwardDays(day, today).at(-1) ?? day)}: one plan card per day.</p>}
+          {scope === 'pick' && <DayPicker source={{ kind: 'plan', day: '' }} today={today} picked={ticked} onPick={setTicked} start={day} label="Pick days" />}
         </div>
       )}
       {!flow && (
@@ -92,7 +109,7 @@ export default function AddFoodSheet() {
   );
 }
 
-function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; meal: PlanSlot; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: (t: string) => void; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
+function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; meal: PlanSlot; scope: Scope; targets: string[]; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: (t: string) => void; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const { held } = useLegacyMeals();
@@ -101,7 +118,12 @@ function FlowBody({ flow, day, today, meal, fill, onFill, onMsg, reopen, resume 
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
   const eat = addMode(day, today) === 'log';
   const st = () => useAppStore.getState();
-  const plan = (kind: 'r' | 'm', id: string, name: string) => { const e = st().addPlanItem(day, kind, id, meal); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[meal]}.`); };
+  const plan = (kind: 'r' | 'm', id: string, name: string) => {
+    if (scope === 'one') { const e = st().addPlanItem(day, kind, id, meal); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[meal]}.`); return; }
+    if (!targets.length) { onMsg('Pick a day first.'); return; }
+    const r = st().addPlanItemToDays(kind, id, targets, meal);
+    onMsg(r.error ?? plannedText(name, SLOT_LABEL[meal], r.done, r.skipped));
+  };
   const addFood = (f: Food) => {
     const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
     onMsg(run.error ?? run.text); // a refusal shows the store's words alone, never 'Added 0 from ...'

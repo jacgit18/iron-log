@@ -1,0 +1,64 @@
+@layer base, components;
+@layer components {
+/* The multi-day picker (brief nutrition-multi-day-picker): quick picks, a week strip with arrows, tick several days. */
+.dpick {
+  display: grid;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.dpick-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.dpick-quick .btn {
+  min-height: 44px;
+}
+.dpick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-6);
+}
+.dpick-range {
+  font-size: var(--fs-md);
+  text-align: center;
+}
+.dpick-arrow {
+  min-width: 44px;
+  min-height: 44px;
+}
+.dpick-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+.dpick-day {
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  line-height: 1.1;
+}
+.dpick-day small {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.dpick-day.today {
+  border-width: 2px;
+  border-color: var(--accent);
+}
+.dpick-day[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+}
+.dpick-day:disabled {
+  opacity: 0.45;
+}
+.dpick-why,
+.dpick-chosen {
+  margin: 0;
+}
+}

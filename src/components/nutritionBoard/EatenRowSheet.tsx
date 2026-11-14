@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
-import { instantLogText } from '../../lib/instantLog.js';
-import { eatenTargets } from '../../lib/moveCopyEaten.js';
-import { dayGroups } from '../../lib/nutritionBoard.js';
+import { goLabel, pickerDays } from '../../lib/dayPicker.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import ArmedButton from '../ArmedButton.jsx';
 import EntryForm from '../diet/EntryForm.js';
+import DayPicker from './DayPicker.js';
 import Sheet from '../Sheet.js';
 
 // The sheet an eaten row opens (brief nutrition-items-row-sheet-and-more): the food's numbers, Edit, and a two-tap Delete (ADR 023). `id` is the diet entry. Edit shows the same form the Add sheet uses; Delete goes through the same store action the old inline button did.
-// Move to and Copy to (brief nutrition-move-copy-eaten): pick a day, the same food goes there (the hour stays, so the meal rule is unchanged), one sentence says what happened. Move also removes the original and offers Undo.
+// Move to and Copy to (briefs nutrition-move-copy-eaten, nutrition-multi-day-picker): the day picker (quick picks, week strip, tick several days) and one button; the same food goes to each day (the hour stays, so the meal rule is unchanged; a recipe-linked food may also go to a day ahead as a plan card), one sentence says what happened. Move takes one day, removes the original and offers Undo.
 // If the entry is gone (deleted here, or by another device) the sheet closes itself, so nothing else changes.
 export default function EatenRowSheet({ id }: { id: string }) {
   const entry = useAppStore(s => s.diet.find(e => e.id === id));
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
+  const today = ymd(useToday(s => s.today));
   const [editing, setEditing] = useState(false);
   const [picking, setPicking] = useState<'copy' | 'move' | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
   useEffect(() => { if (!entry) closeModal(); }, [entry, closeModal]);
   if (!entry) return null;
   if (editing) {
@@ -30,13 +32,12 @@ export default function EatenRowSheet({ id }: { id: string }) {
       </Sheet>
     );
   }
-  const today = ymd(new Date());
-  const targets = eatenTargets(entry, today, dayGroups(today).flatMap(g => g.days));
+  const can = entry.d <= today && pickerDays({ kind: 'eaten', entry }, today).some(d => d.reason === null); // nothing to offer when every day is greyed
   const move = picking === 'move';
-  const go = (toDay: string) => {
-    const r = useAppStore.getState().copyDietEntry(entry.id, toDay, move);
-    const text = instantLogText(r.error ? 0 : 1, { from: entry.n, error: r.error, ...(move ? { verb: 'Moved' } : {}) });
-    (modal?.onMsg as ((t: string) => void) | undefined)?.(text);
+  const toggle = (to: 'copy' | 'move') => { setPicking(picking === to ? null : to); setPicked([]); };
+  const go = () => {
+    const r = useAppStore.getState().copyDietEntries(entry.id, picked, move);
+    (modal?.onMsg as ((t: string) => void) | undefined)?.(r.message);
     closeModal();
   };
   return (
@@ -44,13 +45,14 @@ export default function EatenRowSheet({ id }: { id: string }) {
       <h2 className="cond">{entry.n}</h2>
       <p className="nb-eatsheet-nums">{entryText(entry)}</p>
       {picking && (
-        <div className="nb-eatdays" role="group" aria-label={`${move ? 'Move' : 'Copy'} to day`}>
-          {targets.map(d => <button type="button" key={d.id} className="btn" onClick={() => go(d.id)}>{d.label}</button>)}
-        </div>
+        <>
+          <DayPicker source={{ kind: 'eaten', entry }} today={today} picked={picked} onPick={setPicked} single={move} label={`${move ? 'Move' : 'Copy'} to day`} />
+          <button type="button" className="btn primary" disabled={!picked.length} onClick={go}>{goLabel(move ? 'Move' : 'Copy', picked)}</button>
+        </>
       )}
       <div className="actions">
-        {targets.length > 0 && <button type="button" className="btn" aria-pressed={picking === 'copy'} onClick={() => setPicking(picking === 'copy' ? null : 'copy')}>Copy to…</button>}
-        {targets.length > 0 && <button type="button" className="btn" aria-pressed={move} onClick={() => setPicking(move ? null : 'move')}>Move to…</button>}
+        {can && <button type="button" className="btn" aria-pressed={picking === 'copy'} onClick={() => toggle('copy')}>Copy to…</button>}
+        {can && <button type="button" className="btn" aria-pressed={move} onClick={() => toggle('move')}>Move to…</button>}
         <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
         <ArmedButton className="btn danger" aria-label={`Delete ${entry.n}`} label="Delete" armedLabel="Tap again to delete" onConfirm={() => { useAppStore.getState().removeDietEntry(entry.id); }} />
         <button type="button" className="btn primary" onClick={closeModal}>Done</button>
