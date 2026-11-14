@@ -2,17 +2,17 @@
 // PreToolUse hook of the QA Runner agent (agent file .claude/agents/qa-scenario-runner.md, frontmatter `hooks:`). The agent's tool list says which tools it has,
 // not what they may be used for; this refuses the calls that go outside the local scratch stack and the evidence folder. Claude Code runs it before every
 // Bash, Read, Grep, Glob, Write and browser call of that agent only; exit code 2 plus a reason on stderr refuses the call (any other exit code lets the call through, so the agent file runs it as `node ... || exit 2`). It fails closed: input or state it cannot read is refused.
-// Not covered (best effort): `javascript_tool` code is checked by pattern, so a string built at run time can slip past; a symlink inside the evidence folder is not followed.
-import { tmpdir } from 'node:os';
-import { isAbsolute, join, resolve, sep } from 'node:path';
+// `javascript_tool` is not granted at all (a tool the agent does not have needs no pattern check): sign-in is a page `qa-local.mjs seed` writes into the stack, which the agent only navigates to.
+// Not covered: clicks on in-app links (the `computer` tool), a symlink in the checkout or the evidence folder, which is not followed.
+import { dirname, isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { originProblem, readStackUrl } from './qa-local.mjs';
+import { evidenceRoot, originProblem, readStackUrl } from './qa-local.mjs';
 
-export const evidenceRoot = () => join(tmpdir(), 'qa-runs');
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..'); // this checkout, whatever directory the hook is started from
 const SCENARIO_ID = /^S-\d{1,4}$/;
 const PERSONA_ID = /^[a-z0-9][a-z0-9-]{0,40}$/;
 const SHA = /^[0-9a-f]{4,40}$/;
-const SECRET_NAME = /(^|[\\/])(\.env[^\\/]*|[^\\/]*\.pem|[^\\/]*\.key|id_rsa[^\\/]*|\.npmrc|\.git[\\/]config|credentials[^\\/]*|service-account[^\\/]*\.json)$/i;
+const SECRET_NAME = /(^|[\\/])(\.env(?!\.example$)[^\\/]*|[^\\/]*\.pem|[^\\/]*\.key|id_rsa[^\\/]*|\.npmrc|\.git[\\/]config|credentials[^\\/]*|service-account[^\\/]*\.json)$/i;
 
 /** Splits a command into words the way a shell would, or returns why it cannot be trusted: no expansion, no operator, no redirect, no glob outside quotes. */
 export function words(cmd) {
@@ -74,7 +74,7 @@ export function bashProblem(cmd, root = evidenceRoot()) {
 }
 
 /** Why a file path may not be read or written, or null. `write` limits it to the evidence folder; reads also allow this checkout, never a secret file. */
-export function pathProblem(p, { write = false, root = evidenceRoot(), repo = process.cwd() } = {}) {
+export function pathProblem(p, { write = false, root = evidenceRoot(), repo = REPO } = {}) {
   if (typeof p !== 'string' || !p) return 'no path given';
   const abs = isAbsolute(p) ? resolve(p) : resolve(repo, p);
   if (SECRET_NAME.test(abs)) return `${abs} looks like a secret or credentials file`;
@@ -84,18 +84,8 @@ export function pathProblem(p, { write = false, root = evidenceRoot(), repo = pr
   return abs === rr || abs.startsWith(rr + sep) ? null : `${abs} is outside this checkout and ${root}`;
 }
 
-/** Why page code run in the browser is refused, or null. Best effort by pattern: no absolute or scheme-relative URL, no navigation, no non-relative fetch, no dynamic code. */
-export function scriptProblem(code) {
-  if (typeof code !== 'string') return 'no code given';
-  if (/(https?|wss?|ftp|file|data|blob):/i.test(code) || /(^|[^:\w])\/\/[\w[.-]+/.test(code.replace(/\/\/[^\n]*$/gm, ''))) return 'an absolute URL in page code is not allowed: only paths on the stack';
-  if (/\b(window\.open|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts|Worker|eval|Function|import)\s*\(|\bnew\s+(Worker|WebSocket|Function)\b/.test(code)) return 'that API can reach another origin or run built code';
-  if (/\b(location|href|top|parent)\s*(\.\s*(href|assign|replace|pathname|search)\s*)?=(?!=)|\blocation\s*\.\s*(assign|replace)\s*\(/.test(code)) return 'navigating from page code is not allowed: use navigate';
-  for (const m of code.matchAll(/\bfetch\s*\(\s*([^,)]*)/g)) if (!/^(['"`])\/(?!\/)[^'"`$\\\\\n\r\t]*\1$/.test(m[1].trim())) return 'fetch may only take a literal path on the stack, such as "/api/auth/sign-in/email"';
-  return null;
-}
-
 /** The decision for one hook call: a reason to refuse it, or null. `stackUrl` is the running stack's address (null when none). */
-export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(), stackUrl = null, repo = process.cwd() } = {}) {
+export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(), stackUrl = null, repo = REPO } = {}) {
   const input = tool_input && typeof tool_input === 'object' ? tool_input : {};
   switch (tool) {
     case 'Bash': return bashProblem(input.command, root);
@@ -103,14 +93,17 @@ export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(),
     case 'Read': return pathProblem(input.file_path, { root, repo });
     case 'Grep': case 'Glob': {
       for (const v of [input.path, input.glob, input.pattern]) if (typeof v === 'string' && SECRET_NAME.test(v)) return `${v} names a secret or credentials file`;
-      if (tool === 'Glob' && typeof input.pattern === 'string' && (isAbsolute(input.pattern) || input.pattern.split(/[\\/]/).includes('..'))) return pathProblem(input.pattern.replace(/[*?[{].*$/, ''), { root, repo }) ?? (input.pattern.includes('..') ? 'a Glob pattern with .. is not allowed' : null);
+      if (tool === 'Glob' && typeof input.pattern === 'string') {
+        if (input.pattern.split(/[\\/]/).includes('..')) return 'a Glob pattern with .. is not allowed';
+        const bad = isAbsolute(input.pattern) ? pathProblem(input.pattern.replace(/[*?[{].*$/, '') || '/', { root, repo }) : null;
+        if (bad) return bad;
+      }
       return input.path === undefined ? null : pathProblem(input.path, { root, repo });
     }
     case 'mcp__Claude_Browser__navigate': {
-      if (input.url === 'back' || input.url === 'forward') return null;
       return originProblem(input.url ?? '', stackUrl);
     }
-    case 'mcp__Claude_Browser__javascript_tool': return scriptProblem(input.text);
+    case 'mcp__Claude_Browser__javascript_tool': return 'javascript_tool is not a tool of the QA Runner: sign in by navigating to the page `seed` printed';
     case 'mcp__Claude_Browser__read_page': case 'mcp__Claude_Browser__find': case 'mcp__Claude_Browser__computer': case 'mcp__Claude_Browser__get_page_text': return null;
     default: return `${tool} is not a tool of the QA Runner`;
   }

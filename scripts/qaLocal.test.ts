@@ -1,6 +1,6 @@
 // The refusals of scripts/qa-local.mjs (brief: qa-runner-agent): these are what keep the QA Runner agent on this machine and on a scratch database.
 import { describe, expect, it } from 'vitest';
-import { dropProblem, dropScratch, freePort, markProblem, newScratchName, originProblem, pidIsStack, SCRATCH_MARK, serverProblem, urlProblem } from './qa-local.mjs';
+import { BROWSER_FLAGS, dropProblem, dropScratch, freePort, markProblem, newScratchName, originProblem, pidIsStack, SCRATCH_MARK, serverProblem, signInHtml, signInScript, urlProblem } from './qa-local.mjs';
 
 describe('urlProblem', () => {
   it.each(['http://127.0.0.1:41234', 'http://localhost:41234/', 'http://[::1]:41234/settings'])('allows %s', url => expect(urlProblem(url)).toBeNull());
@@ -109,5 +109,20 @@ describe('dropScratch', () => {
     const f = fake(null, false);
     expect(await dropScratch(state, f.withClient)).toBeNull();
     expect(f.queries.some(q => q.startsWith('drop database'))).toBe(false);
+  });
+});
+
+describe('the sign-in page', () => {
+  const script = signInScript(BROWSER_FLAGS, 'qa+new@example.test', 'pw"; alert(1); "');
+  it('sets every browser flag, posts to the stack\'s own sign-in path and opens /', () => {
+    for (const k of Object.keys(BROWSER_FLAGS)) expect(script).toContain(JSON.stringify(k));
+    expect(script).toContain("fetch('/api/auth/sign-in/email'");
+    expect(script).toContain("location.replace('/')");
+  });
+  it('quotes the email and password as data, never as code', () => expect(script).toContain('password: "pw\\"; alert(1); \\""'));
+  it('never names another origin', () => expect(script).not.toMatch(/https?:|\/\/\w/));
+  it('is loaded as a script file of the stack\'s own origin (the CSP forbids inline script)', () => {
+    expect(signInHtml).toContain('<script src="/qa-signin.js">');
+    expect(signInHtml).not.toMatch(/<script>/);
   });
 });

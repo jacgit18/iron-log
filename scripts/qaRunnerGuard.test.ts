@@ -1,7 +1,11 @@
 // The allow/deny decision of scripts/qa-runner-guard.mjs, the PreToolUse hook that keeps the QA Runner agent inside the local stack and the evidence folder.
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { bashProblem, decide, pathProblem, scriptProblem, underEvidence, words } from './qa-runner-guard.mjs';
+import { bashProblem, decide, pathProblem, underEvidence, words } from './qa-runner-guard.mjs';
 
 const root = '/tmp/qa-runs';
 const stackUrl = 'http://127.0.0.1:41234';
@@ -41,7 +45,7 @@ describe('underEvidence', () => {
 
 describe('pathProblem', () => {
   const repo = '/work/iron-log';
-  it.each(['/work/iron-log/server/qa/personas.ts', 'src/lib/logic.ts', '/tmp/qa-runs/S-1/evidence.txt'])('allows reading %s', p => expect(pathProblem(p, { root, repo })).toBeNull());
+  it.each(['/work/iron-log/server/qa/personas.ts', '/work/iron-log/.env.example', 'src/lib/logic.ts', '/tmp/qa-runs/S-1/evidence.txt'])('allows reading %s', p => expect(pathProblem(p, { root, repo })).toBeNull());
   it.each(['/work/iron-log/.env', '.env', '.env.production', '/work/iron-log/server/.env.local', '/home/jac/.ssh/id_rsa', '/etc/passwd', '/tmp/qa-local-abc.json', '/work/iron-log/../other/x.ts', '/work/iron-log/.git/config', 'key.pem'])('refuses reading %s', p => expect(pathProblem(p, { root, repo })).not.toBeNull());
   it('allows a write under the evidence folder only', () => {
     expect(pathProblem('/tmp/qa-runs/S-1/evidence.txt', { write: true, root, repo })).toBeNull();
@@ -49,28 +53,17 @@ describe('pathProblem', () => {
   });
 });
 
-describe('scriptProblem', () => {
-  it.each([
-    'localStorage.setItem("ironlog:flag:apiSync","true")', 'document.title', 'location.reload()', 'location.pathname',
-    'await fetch("/api/auth/sign-in/email",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"a@b.c",password:"p"})})', 'a == b', 'x // a comment',
-  ])('allows %s', code => expect(scriptProblem(code)).toBeNull());
-  it.each([
-    'fetch("https://iron-log-qa.a.run.app/api/x")', 'fetch("//evil.com/x")', 'fetch(url)', 'fetch("/a" + host)', 'fetch(`/a/${x}`)', 'window.open("/x")', 'location.href = "/x"', 'location = "/x"', 'location.assign("/x")', 'window.location.replace("/x")',
-    'new WebSocket("ws://x")', 'navigator.sendBeacon("/x")', 'eval("1")', 'import("x")', 'new Function("1")()', 'new XMLHttpRequest()', 'new Worker("x")', 'fetch("/\\\\evil.com/x")', 'fetch("/\\n/evil.com")', 'var u = "http://x"', 'var u = "data:text/html,x"',
-  ])('refuses %s', code => expect(scriptProblem(code)).not.toBeNull());
-});
-
 describe('decide', () => {
   const d = (tool_name: string, tool_input: Record<string, unknown>) => decide({ tool_name, tool_input }, { root, stackUrl, repo: '/work/iron-log' });
-  it('lets the browser open the running stack and go back', () => {
-    for (const url of ['http://127.0.0.1:41234', 'http://127.0.0.1:41234/progress', 'back']) expect(d('mcp__Claude_Browser__navigate', { url })).toBeNull();
+  it('lets the browser open the running stack', () => {
+    for (const url of ['http://127.0.0.1:41234', 'http://127.0.0.1:41234/progress']) expect(d('mcp__Claude_Browser__navigate', { url })).toBeNull();
   });
-  it.each(['https://iron-log-qa.a.run.app', 'https://loadbearer.app', 'http://127.0.0.1:4173', 'http://127.0.0.1:41235', 'http://localhost:41234', 'http://127.0.0.1:41234@evil.com', 'about:blank', 'javascript:alert(1)', 'file:///etc/passwd', ''])('refuses navigate to %j', url => {
+  it.each(['https://iron-log-qa.a.run.app', 'https://loadbearer.app', 'http://127.0.0.1:4173', 'http://127.0.0.1:41235', 'http://localhost:41234', 'http://127.0.0.1:41234@evil.com', 'about:blank', 'back', 'forward', 'javascript:alert(1)', 'file:///etc/passwd', ''])('refuses navigate to %j', url => {
     expect(d('mcp__Claude_Browser__navigate', { url })).not.toBeNull();
   });
   it('refuses every navigation when no stack is running', () => expect(decide({ tool_name: 'mcp__Claude_Browser__navigate', tool_input: { url: stackUrl } }, { root, stackUrl: null })).toMatch(/no stack/));
   it('checks browser code, Bash, Write, Read, Grep and Glob', () => {
-    expect(d('mcp__Claude_Browser__javascript_tool', { text: 'fetch("https://x.com")' })).not.toBeNull();
+    expect(d('mcp__Claude_Browser__javascript_tool', { text: '({data: 1})' })).toMatch(/not a tool of the QA Runner/);
     expect(d('Bash', { command: 'cat .env' })).not.toBeNull();
     expect(d('Write', { file_path: '/work/iron-log/src/x.ts', content: '' })).not.toBeNull();
     expect(d('Write', { file_path: '/tmp/qa-runs/S-1/evidence.txt', content: 'x' })).toBeNull();
@@ -83,6 +76,8 @@ describe('decide', () => {
     expect(d('Glob', { pattern: '/home/jac/.ssh/*' })).not.toBeNull();
     expect(d('Glob', { pattern: '../other/*.ts' })).not.toBeNull();
     expect(d('Glob', { pattern: '/work/iron-log/src/**/*.ts' })).toBeNull();
+    expect(d('Glob', { pattern: '/work/iron-log/src/**/*.ts', path: '/etc' })).not.toBeNull(); // the path is still checked
+    expect(d('Grep', { pattern: 'x', path: '/work/iron-log/.env.example' })).toBeNull();
   });
   it('refuses a tool that is not the Runner\'s', () => {
     expect(d('Edit', { file_path: '/tmp/qa-runs/x' })).not.toBeNull();
@@ -91,12 +86,31 @@ describe('decide', () => {
 });
 
 describe('the hook process', () => {
-  const run = (input: string) => spawnSync('node', ['scripts/qa-runner-guard.mjs'], { input, encoding: 'utf8' });
+  const script = fileURLToPath(new URL('./qa-runner-guard.mjs', import.meta.url));
+  const dir = mkdtempSync(join(tmpdir(), 'qa-guard-test-'));
+  const state = (text: string) => { const f = join(dir, `state-${Math.random().toString(36).slice(2)}.json`); writeFileSync(f, text); return f; };
+  // Started from another directory with a fake state file, as Claude Code starts it from wherever the session is.
+  const run = (input: string, stateFile = state(JSON.stringify({ url: stackUrl }))) => spawnSync('node', [script], { input, encoding: 'utf8', cwd: tmpdir(), env: { ...process.env, QA_LOCAL_STATE_FILE: stateFile } });
+  const call = (tool_name: string, tool_input: Record<string, unknown>) => JSON.stringify({ tool_name, tool_input });
   it('exits 2 with a reason when it refuses', () => {
-    const r = run(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .env' } }));
+    const r = run(call('Bash', { command: 'cat .env' }));
     expect(r.status).toBe(2);
     expect(r.stderr).toMatch(/refused/);
   });
-  it('exits 0 for an allowed call', () => expect(run(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git status --short' } })).status).toBe(0));
+  it('exits 0 for an allowed call', () => expect(run(call('Bash', { command: 'git status --short' })).status).toBe(0));
+  it('reads the stack address from the state file for navigate', () => {
+    expect(run(call('mcp__Claude_Browser__navigate', { url: `${stackUrl}/` })).status).toBe(0);
+    expect(run(call('mcp__Claude_Browser__navigate', { url: 'http://127.0.0.1:41999/' })).status).toBe(2);
+    expect(run(call('mcp__Claude_Browser__navigate', { url: 'https://example.com' })).status).toBe(2);
+  });
+  it('resolves a relative Read path against the checkout, not the directory it was started from', () => {
+    expect(run(call('Read', { file_path: 'package.json' })).status).toBe(0);
+    expect(run(call('Read', { file_path: '.env' })).status).toBe(2);
+  });
+  describe('with a corrupt state file', () => {
+    const bad = state('{not json');
+    it.each(['npx tsx scripts/qa-local.mjs status', 'npx tsx scripts/qa-local.mjs stop', 'git status'])('still lets %s run', command => expect(run(call('Bash', { command }), bad).status).toBe(0));
+    it('refuses navigate, as if no stack were running', () => expect(run(call('mcp__Claude_Browser__navigate', { url: stackUrl }), bad).status).toBe(2));
+  });
   it.each(['', 'not json', 'null', '[]', '{}', '{"tool_name":"Bash","tool_input":null}', '{"tool_name":"Bash"}'])('fails closed on input %j', input => expect(run(input).status).toBe(2));
 });
