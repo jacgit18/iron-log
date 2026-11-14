@@ -335,49 +335,38 @@ html:has(.wdc-foot) {
   }
 }
 @media (max-width: 699px) {
-  /* The week switcher is the only thing on the week row (Manage is in .nb-links, right-aligned, under the add-food row; the day tabs are in the joined card, WeekDayCard). */
+  /* The week row (WeekDayCard) holds the switcher at the left and Manage, the same small button as on desktop, at the right end (brief nutrition-mobile-manage); the name and dates share what is left and wrap onto a second line before anything overflows. The day tabs are in the joined card. */
   .nb-head {
     gap: var(--sp-8);
   }
-  .nb-weeksw {
-    order: 1;
-    flex: 1 1 auto;
-    gap: var(--sp-4);
-    justify-content: space-between;
+  /* The week row may wrap, so with large text Manage drops to its own line, still at the right end, instead of squeezing the name or leaving the card; the switcher keeps room for the arrows and a readable name (rem follows the text size). Scoped to the row that holds Manage: the Board and Stretches rows are untouched. */
+  .wdc-week:has(> .nb-cardmanage) {
+    flex-wrap: wrap;
   }
-  .nb-weekname {
-    min-width: 0;
+  .nb-cardmanage {
+    flex: none;
+  }
+  .wdc-week .nb-weeksw {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: var(--sp-4);
+    flex: 1 1 0;
+    min-width: min(11.5rem, 100%);
+  }
+  /* On another week "This week" takes its own line under the arrows so the name and dates keep the room. */
+  .nb-weeksw .ghost {
+    grid-column: 1 / -1;
   }
   .nb-weeksw button {
     min-height: 44px;
     min-width: 44px;
   }
-  /* Manage is a small text link in a row under the day stepper (option B, owner 2026-11-12); the visible text is small, the 44px tap area is padding. */
-  .nb-links {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    margin-bottom: 0;
-  }
-  .nb-link {
-    min-height: 44px;
-    /* a real 44px row: the tap area overlaps nothing */
-    padding: 0 var(--sp-8);
-    border: 0;
-    background: none;
-    color: var(--ink);
-    font: inherit;
-    font-size: var(--fs-sm);
-    font-weight: 600;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-  .nb-link:last-child {
-    padding-right: 0;
-  }
   /* Option B (owner 2026-11-12): the week's dates sit in the switcher row, and the status line and the "Adding to" line stay for screen readers only. The date range stays in .nb-weeklab (role=status). */
   .nb-weekname {
+    min-width: 0;
     font-size: var(--fs-lg);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
   }
   /* The empty message line takes no room on a phone; it grows back when a message arrives. */
   .nb-msg:empty {

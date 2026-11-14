@@ -70,8 +70,8 @@ test('phone: Nutrition has the week row and seven tabs in one card, Manage at th
   await page.setViewportSize({ width: 375, height: 812 });
   await openNutrition(page);
   await expect(page.locator('.wdc-tabs [role="tab"]')).toHaveCount(7);
-  const m = await box(page, '#nb-manage');
-  expect(m.x + m.w).toBeGreaterThan(375 - 20);
+  const m = await box(page, '#nb-manage'), c = await box(page, '.wdc');
+  expect(m.x + m.w).toBeGreaterThan(c.x + c.w - 12); // right end of the card
   expect(await pinnable(page)).toEqual({ position: 'sticky', blockers: [] });
 });
 
