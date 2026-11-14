@@ -1,13 +1,35 @@
+import { readdirSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { PERSONAS, personaById } from './personas.ts';
 import { SCENARIO_FEATURES, SCENARIOS, scenarioById, scenariosForPersona } from './scenarios.ts';
 
 describe('QA scenarios', () => {
-  it('has at least 35 live scenarios (the first batch was 40) with ids S-01 upward, unique and never reused', () => {
+  it('has at least 35 live scenarios (the first batch was 40) with ids S-01 upward, unique, well formed and in order', () => {
     expect(SCENARIOS.filter(s => !s.retired).length).toBeGreaterThanOrEqual(35);
     expect(new Set(SCENARIOS.map(s => s.id)).size).toBe(SCENARIOS.length);
     for (const s of SCENARIOS) expect(s.id).toMatch(/^S-\d{2,}$/);
-    SCENARIOS.forEach((s, i) => expect(s.id).toBe(`S-${String(i + 1).padStart(2, '0')}`));
+    // A gap is allowed: two branches that each add a scenario cannot both take the next number until the first merges.
+    SCENARIOS.forEach((s, i) => { if (i > 0) expect(Number(s.id.slice(2)), `${s.id} after ${SCENARIOS[i - 1]!.id}`).toBeGreaterThan(Number(SCENARIOS[i - 1]!.id.slice(2))); });
+  });
+
+  it('keeps every id from S-01 to S-300: a scenario that no longer applies is retired, never deleted', () => {
+    // The first 300 ids were merged before the split and are fixed. Above them a gap is allowed (parallel branches), so raise this number
+    // only when you want the newer ids guarded the same way.
+    const ids = new Set(SCENARIOS.map(s => s.id));
+    for (let n = 1; n <= 300; n++) expect(ids.has(`S-${String(n).padStart(2, '0')}`), `S-${String(n).padStart(2, '0')} is missing: set retired: true on the scenario instead of deleting its file`).toBe(true);
+  });
+
+  it('has one file per scenario, named after its id, and no other file in the folder', async () => {
+    const dir = fileURLToPath(new URL('./scenarios/', import.meta.url));
+    const names = readdirSync(dir);
+    expect(names.filter(name => !/^S-\d+\.ts$/.test(name)), 'files in server/qa/scenarios/ that are not S-<number>.ts').toEqual([]);
+    for (const name of names) {
+      const scenario = (await import(pathToFileURL(dir + name).href)).default as { id: string };
+      // The name is the id, so two files cannot hold the same id: a clash shows as this message, naming the file and the id inside it.
+      expect(scenario.id, `${name} holds the scenario ${scenario.id}; rename the file or give the scenario its own id (node scripts/next-scenario-id.mjs)`).toBe(name.slice(0, -3));
+    }
+    expect(names.length).toBe(SCENARIOS.length);
   });
 
   it('names an existing test account for every scenario', () => {
@@ -35,9 +57,15 @@ describe('QA scenarios', () => {
     for (const p of PERSONAS.filter(p => p.group === 'Diet')) expect(scenariosForPersona(p.id).length, p.id).toBeGreaterThan(0);
   });
 
-  it('covers every listed feature and uses no feature that is not listed', () => {
+  it('covers every feature with a live scenario and spells each feature name one way', () => {
     for (const f of SCENARIO_FEATURES) expect(SCENARIOS.some(s => s.feature === f && !s.retired), f).toBe(true);
-    for (const s of SCENARIOS) expect(SCENARIO_FEATURES, s.id).toContain(s.feature);
+    // The feature list is read from the scenario files, so a typo would start a new feature: two names that differ only in case, spacing or punctuation fail here.
+    const seen = new Map<string, string>();
+    for (const f of SCENARIO_FEATURES) {
+      const key = f.toLowerCase().replace(/[^a-z0-9]/g, '');
+      expect(seen.get(key), `"${f}" and "${seen.get(key)}" look like one feature spelled two ways`).toBeUndefined();
+      seen.set(key, f);
+    }
   });
 
   it('marks the share target and other phone-only scenarios as device', () => {

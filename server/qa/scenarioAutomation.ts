@@ -1,5 +1,5 @@
 // How each QA scenario is covered by automation (brief: qa-scenario-automation). A plain list keyed by scenario id, one line each, kept apart from
-// scenarios.ts so a PR that adds a scenario and a PR that tags one never edit the same file. A scenario with no line here is "untagged": nobody has
+// the scenario files (server/qa/scenarios/) so a PR that adds a scenario and a PR that tags one never edit the same file. A scenario with no line here is "untagged": nobody has
 // decided yet. `e2e` (e2e/), `api` (server/) and `unit` (src/) name the spec files that exercise it (checked to exist by scenarioAutomation.test.ts); `manual` has no automated cover
 // (a real phone, or a person's judgement). The tags were mapped by feature, so a spec can cover the feature without walking this exact scenario.
 

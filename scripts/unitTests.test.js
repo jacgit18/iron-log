@@ -23,6 +23,11 @@ describe('unit-tests plan', () => {
     expect(plan(['server/push/cloudTasks.ts']).related).toContain('server/legal.test.ts');
   });
 
+  it('a change to one scenario file still runs the scenario guard tests, which the computed-path loader hides from the import graph', () => {
+    const related = plan(['server/qa/scenarios/S-01.ts']).related;
+    expect(related).toEqual(expect.arrayContaining(['server/qa/scenarios.test.ts', 'server/qa/scenarioAutomation.test.ts', 'server/auth/qaPersonas.test.ts']));
+  });
+
   it('the source-reading tests exist, and every test that reads a repo source file by path is listed (or is a workflow or fixture reader)', () => {
     for (const f of TEXT_READERS) expect(existsSync(f), f).toBe(true);
     // legal.test.ts reads src/ and server/ files by path; if another test starts doing that, list it in TEXT_READERS.
