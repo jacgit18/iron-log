@@ -20,9 +20,11 @@ import CountsAsChips from './CountsAsChips.js';
 import UsedAsChips from './UsedAsChips.js';
 import { useCountsAs } from './useCountsAs.js';
 import IngredientList from './IngredientList.js';
-import { microKept } from '../../lib/foodMicroKept.js';
+import { rowsFromMicro } from '../../lib/foodAmountRows.js';
+import type { AmountRow } from '../../lib/foodAmountRows.js';
+import { ownAmounts, recipeMicroToSave } from '../../lib/recipeOwnAmounts.js';
 import { withMicro } from '../../shared/foodMicro.js';
-import type { Micro } from '../../shared/foodMicro.js';
+import FoodAmountRows from '../diet/FoodAmountRows.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 import MealMicroBars from './MealMicroBars.js';
@@ -64,8 +66,8 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
   const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
-  // Vitamins and minerals per serving (brief recipes-vitamins-minerals) are never typed: they come from the ingredient calculator, kept only while calories are still the number they came with. A meal's come from its parts at save.
-  const [micro, setMicro] = useState<Micro | undefined>(recipe?.micro);
+  // Vitamins and minerals per serving: a meal built from parts rolls them up at save; a recipe on its own numbers has typed rows (brief portion-scaled-micros, PR 2) that the ingredient calculator can fill; untouched filled rows go when calories change.
+  const [rows, setRows] = useState<AmountRow[]>(() => rowsFromMicro(recipe?.micro, true));
   const [microKcal, setMicroKcal] = useState<number | undefined>(recipe?.kcal);
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [tagText, setTagText] = useState('');
@@ -130,6 +132,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const rollText = roll && roll.counted > 0 ? macroLine(roll.per) : '';
   const breakdown = parts ? mealMicroBreakdown({ id: recipe?.id, ing: shownRows(), servings: whole(servings), ...(own ? { own: true as const } : {}) }, recipes) : null; // its vitamins and minerals, part by part, as the parts change
   const fromParts = parts && !own; // numbers shown and saved come from the parts
+  const ownLive = ownAmounts(rows, kcal, microKcal); // the amount rows a recipe on its own numbers shows and saves
 
   const inUse = useMemo(() => tagCounts(recipes).filter(c => !tags.some(t => tagKey(t) === tagKey(c.tag))), [recipes, tags]); // tags other recipes have that this one does not: offered
   const starters = useMemo(() => starterTags(recipes, tags), [recipes, tags]); // Breakfast, Lunch, Dinner, Snack until a recipe uses them
@@ -164,7 +167,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     if (listEdited && !fromList) { fail('ingredients', TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const microOut = rolled ? rolled.micro : parts ? undefined : microKept(micro && microKcal !== undefined ? { kcal: microKcal, micro } : undefined, k ?? -1); // a meal on its own numbers keeps none
+    const microOut = recipeMicroToSave({ fromParts, rolled: rolled?.micro, rows, kcalText: kcal, kcalFrom: microKcal }); // from the parts, or the typed rows of a recipe on its own numbers
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}), ...(recipe?.usual !== undefined ? { usual: recipe.usual } : {}) }); // a usual amount has no field here (ReadyMadeForm edits it): it passes through unchanged
     if (e) { fail(fieldForSaveError(e), e); return; }
     const list = useAppStore.getState().recipes;
@@ -184,7 +187,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
   };
   const adoptNumbers = (per: PerServing) => {
-    setKcal(String(per.kcal)); setProtein(String(per.p)); setMicro(per.micro); setMicroKcal(per.kcal);
+    setKcal(String(per.kcal)); setProtein(String(per.p)); setRows(rowsFromMicro(per.micro, true)); setMicroKcal(per.kcal);
     if (per.c !== undefined) setCarbs(String(per.c));
     if (per.f !== undefined) setFat(String(per.f));
     setCalc(false); setErr('');
@@ -314,6 +317,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
               <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
             </div>
           )}
+          {!fromParts && <FoodAmountRows idp="rc" perServing rows={ownLive.rows} onChange={r => { setRows(r); setErr(''); }} cleared={ownLive.cleared} />}
         </div>
       </>)}
       {section('more', <>
