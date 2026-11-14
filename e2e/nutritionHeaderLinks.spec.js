@@ -24,7 +24,8 @@ for (const width of [375, 390]) {
     expect(m.b).toBeLessThanOrEqual(card.b + 0.5); // inside the joined card
     expect(Math.abs((w.y + w.h / 2) - (m.y + m.h / 2))).toBeLessThan(1); // on the switcher's row
     expect(w.x + w.w).toBeLessThanOrEqual(m.x + 0.5); // the switcher shrinks and sits left of Manage
-    expect(m.x + m.w).toBeGreaterThan(width - 20); // right-aligned
+    expect(m.x + m.w).toBeGreaterThan(card.x + card.w - 12); // right end of the card
+    expect(card.x + card.w).toBeGreaterThan(width - 24);
     expect(m.h).toBeGreaterThanOrEqual(43.5);
     expect(await page.locator('#nb-manage').evaluate(e => e.className)).toContain('btn');
     expect(col.y).toBeGreaterThan(m.y);
