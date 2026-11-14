@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, qaWarnings, scenarioIds, shorten, touchesUi } from './pr-body.mjs';
+import { fileURLToPath } from 'node:url';
+import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, qaWarnings, readScenarioText, scenarioIds, shorten, touchesUi } from './pr-body.mjs';
 
 const projectTemplate = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const template = `## What and why
@@ -230,7 +231,7 @@ describe('QA scenarios line (the project qa config)', () => {
   it('the real config points at a scenario file that exists and defines ids, and the real template has the line', () => {
     const real = loadConfig();
     expect(projectTemplate).toMatch(/^QA scenarios:/m);
-    const ids = scenarioIds(readFileSync(new URL(`../${real.qa.scenarioFile}`, import.meta.url), 'utf8'), real.qa.idPattern);
+    const ids = scenarioIds(readScenarioText(fileURLToPath(new URL(`../${real.qa.scenarioFile}`, import.meta.url))), real.qa.idPattern);
     expect(ids.length).toBeGreaterThan(30);
   });
 });
