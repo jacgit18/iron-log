@@ -1,5 +1,5 @@
 import type { DietEntry, Recipe } from '../types.ts';
-import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { cleanGrams, cleanKcal, cleanProtein, MAX_KCAL } from '../shared/diet.js';
 import { scaleMicro, withMicro } from '../shared/foodMicro.js';
 import type { Micro } from '../shared/foodMicro.js';
 import { liveRows, microOfRows, rowsFromMicro } from './foodAmountRows.js';
@@ -59,6 +59,29 @@ export function portionMaxFor(per: { kcal: number; p: number; c: number | null; 
 
 /** The portion count one step from `x`, kept in range. */
 export const stepPortionCount = (x: number, dir: 1 | -1, max: number): number => Math.min(max, Math.max(PORTION_MIN, Math.round((x + dir * PORTION_STEP) * 100) / 100));
+
+/** A count as it is stored: two decimals, what `cleanPortion` (src/shared/diet.ts) accepts, so the totals are scaled by exactly what is kept. */
+export const roundPortion = (x: number): number => Math.round(x * 100) / 100;
+
+/** The numbers of an eaten entry at `x` portions, scaled from its one-portion basis (never the recipe: editing a recipe later does not rewrite what was eaten), with the count as stored; null when out of range.
+ *  Out of range: below 0.5, above `max` (default PORTION_CEIL; a caller passes a food's own lower limit), a total over a cap, or a micronutrient amount that would be dropped for going over its cap (refused rather than losing data).
+ *  A count at or below the entry's own is never held to `max`, so an entry above a lowered limit can still come down (Less). Calories land on 9,999 when the exact scale is under 1 kcal over it (Less then More from the cap rounds to 9,999.5: that is the cap, not a refusal); 10,000 or more is refused. */
+export function entryTotalsAt(e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'x'>, x: number, max = PORTION_CEIL): (PortionTotals & { x: number }) | null {
+  if (!Number.isFinite(x)) return null;
+  const b = portionBasis(e);
+  x = roundPortion(x);
+  if (x < PORTION_MIN || (x > b.x && x > Math.min(max, PORTION_CEIL))) return null;
+  const exact = b.per.kcal * x, kcal = exact > MAX_KCAL && exact < MAX_KCAL + 1 - 1e-6 ? MAX_KCAL / x : b.per.kcal;
+  const t = totalsAt({ kcal, p: b.per.p, c: b.per.c ?? null, f: b.per.f ?? null, micro: b.microExact ?? null }, x);
+  if (!t || Object.keys(e.micro ?? {}).length > Object.keys(t.micro ?? {}).length) return null;
+  return { ...t, x };
+}
+
+/** The count one step (half a portion) from the entry's own, or null when there is no step: Less stops at 0.5 (and is never held to `max`), More stops at `max` (default PORTION_CEIL) or where the totals stop fitting. */
+export function stepEntryCount(e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'x'>, dir: 1 | -1, max = PORTION_CEIL): number | null {
+  const cur = portionBasis(e).x, next = stepPortionCount(cur, dir, dir === -1 ? cur : Math.min(max, PORTION_CEIL));
+  return (dir === 1 ? next > cur : next < cur) && entryTotalsAt(e, next, max) ? next : null;
+}
 
 /** "You ate 2.5 portions" / "You ate 1 portion". */
 export const portionWords = (x: number): string => `${x} ${x === 1 ? 'portion' : 'portions'}`;
