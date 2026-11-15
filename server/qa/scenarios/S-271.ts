@@ -5,7 +5,7 @@ const scenario: Scenario = {
   steps: [
     'Open the Board, the Program tab, Progress, Groceries and Daily, Nutrition in turn.',
     'Open Settings and read the Delete my data panel.',
-    'Device-only: if another device still holds this account\'s old data, open the app there and read what it shows.',
+    'Device-only (a second device is needed; if you cannot do it, record that part as not checked and do not count it as a pass): if another device still holds this account\'s old data, open the app there and read what it shows.',
   ],
   expected: [
     'Every screen shows its empty or first-run state with no program, no log and no groceries, and nothing errors; the Delete my data panel is still offered.',
