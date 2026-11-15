@@ -127,14 +127,14 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   await page.getByLabel('Carbs per serving (g), optional').fill('51');
   await page.getByLabel('Fat per serving (g), optional').fill('11');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByText('Per portion: 600 kcal · P 40 · C 51 · F 11 g')).toBeVisible();
-  await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 servings: 900 kcal, 60 g
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText(/Logged .+: 1\.5 portions to today\./)).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('600 kcal', { exact: true })).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('P 40 · C 51 · F 11 g per serving')).toBeVisible();
+  await page.getByRole('button', { name: 'Add to today' }).click(); // the usual portion (1) in one tap
+  await expect(page.getByText('Logged Chili, 1 portion, for today.')).toBeVisible();
   await nutrition(page);
   await expect(eaten(page)).toContainText('Chili');
-  await expect(eaten(page)).toContainText('900 kcal');
-  await expect(eaten(page)).toContainText('C 76.5 · F 16.5 g');
+  await expect(eaten(page)).toContainText('600 kcal');
+  await expect(eaten(page)).toContainText('C 51 · F 11 g');
   // editing the recipe afterwards does not change what was logged
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
@@ -144,11 +144,11 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   await page.getByLabel('Calories per serving').fill('100');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await nutrition(page);
-  await expect(eaten(page)).toContainText('900 kcal');
+  await expect(eaten(page)).toContainText('600 kcal');
   // Undo right after logging removes just that entry
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await page.getByRole('button', { name: 'Add to today' }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await nutrition(page);
   await expect(eaten(page)).toHaveCount(1);

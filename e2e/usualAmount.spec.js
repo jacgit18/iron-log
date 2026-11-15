@@ -16,20 +16,24 @@ const make = async (page, name, extra = {}) => {
   if (extra.plural !== undefined) await page.getByLabel('Plural, only if adding s is wrong').fill(extra.plural);
   await page.getByRole('button', { name: 'Save food' }).click();
 };
-const amount = page => page.getByRole('status').filter({ hasText: /^[0-9.]+ [a-z ]+$/ });
+const amountIn = loc => loc.getByRole('status').filter({ hasText: /^[0-9.]+ [a-z ]+$/ });
+const amount = page => amountIn(page.getByRole('dialog')); // the portion sheet Plan… opens
+const plan = page => page.getByRole('button', { name: 'Plan…' }).click();
 
-test('The log control opens at the usual amount in the unit name, and logs it in those words', async ({ page }) => {
+test('The recipe page and the portion sheet use the usual amount in the unit name, and Add to today logs it in those words', async ({ page }) => {
   await make(page, 'Egg (large)', { usual: '4', unit: 'egg' });
-  await expect(page.getByText('Usual: 4 eggs')).toBeVisible();
+  await expect(page.locator('.rc-strip')).toContainText('Usual 4 eggs');
+  await plan(page);
   await expect(page.getByText('Per egg: 72 kcal · P 6 g')).toBeVisible();
   await expect(amount(page)).toHaveText('4 eggs');
-  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'More', exact: true }).click();
   await expect(amount(page)).toHaveText('4.5 eggs');
-  await page.getByRole('button', { name: 'Less' }).click();
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText(/Logged .+: 4 eggs to today\./)).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Less' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Add to today' }).click();
+  await expect(page.getByText('Logged Egg (large), 4 eggs, for today.')).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByText(/Logged .+: 4 eggs/)).toHaveCount(0);
+  await expect(page.getByText(/Logged .+, 4 eggs/)).toHaveCount(0);
 });
 
 test('the plural box appears with a unit, an odd plural is used, and the three boxes come back on edit', async ({ page }) => {
@@ -40,10 +44,13 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await expect(page.getByLabel('Plural, only if adding s is wrong')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await make(page, 'Bread', { usual: '2', unit: 'loaf', plural: 'loaves' });
+  await expect(page.locator('.rc-strip')).toContainText('Usual 2 loaves');
+  await plan(page);
   await expect(amount(page)).toHaveText('2 loaves');
-  await page.getByRole('button', { name: 'Less' }).click();
-  await page.getByRole('button', { name: 'Less' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Less' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Less' }).click();
   await expect(amount(page)).toHaveText('1 loaf');
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: /Edit/ }).first().click();
   await expect(page.getByLabel('Usual amount, optional')).toHaveValue('2');
@@ -52,8 +59,10 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await page.getByLabel('Usual amount, optional').fill('');
   await page.getByLabel('One serving is called, optional').fill('');
   await page.getByRole('button', { name: 'Save food' }).click();
+  await plan(page);
   await expect(amount(page)).toHaveText('1 portion'); // blank boxes: back to the plain wording
-  await expect(page.getByText(/^Usual:/)).toHaveCount(0);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('.rc-strip')).not.toContainText('Usual');
 });
 
 test('a usual amount off the half steps and a unit with a digit are refused in plain words', async ({ page }) => {

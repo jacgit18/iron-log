@@ -1,103 +1,161 @@
 import { test, expect } from './fixtures.js';
+import { openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
-// The recipe page's layout (brief recipe-page-layout): the log-or-plan control is fixed above the tab bar on a phone and an ordinary block under the title on a desktop; Edit and Delete sit behind More actions;
-// the servings stepper hides behind "Scale the amounts". A fixed bar's position and what it covers need a real layout, so a node test cannot check them.
+// The recipe page after the log form left (brief recipe-page-after-log): a summary strip, one action row (Add to today, Plan…, Add N missing to Shopping), "Cook for N" always in the Ingredients heading, nothing fixed over the tab bar.
+// What the strip says and which button shows are node tests (recipeSummary.test.ts); this covers the wiring and the layout, which need a real page. The fixed clock in fixtures.js is Thursday 2026-09-24.
 const long = Array.from({ length: 24 }, (_, i) => ({ amt: '1 cup', n: `ingredient ${i + 1}` }));
-const stew = { id: 'stew', n: 'Long stew', cat: 'dinner', servings: 4, kcal: 400, p: 30, ing: long, steps: ['Cook it.', 'Eat it.'] };
-const seed = async page => {
-  await page.addInitScript(l => { if (localStorage.getItem('ironlog:recipes/main') === null) localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })); }, [stew]);
+const stew = { id: 'stew', n: 'Long stew', cat: 'protein', servings: 4, kcal: 400, p: 30, ing: long, steps: ['Cook it.', 'Eat it.'] };
+const bare = { id: 'bare', n: 'No numbers stew', cat: 'protein', servings: 2, ing: [{ amt: '1 cup', n: 'flour' }], steps: ['Cook it.'] };
+const food = (id, n, extra) => ({ id, n, cat: 'ready', type: 'ingredient', ing: [], steps: [], ...extra });
+const seed = async (page, list, extra = {}) => {
+  await page.addInitScript(([l, x]) => {
+    if (localStorage.getItem('ironlog:recipes/main') === null) localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l }));
+    for (const [k, v] of Object.entries(x)) if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v));
+  }, [list, extra]);
   await page.reload(); // the fixture has already loaded the page once
 };
-const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); await page.locator('.rc-row', { hasText: 'Long stew' }).click(); await expect(page.locator('#rc-h')).toHaveText(/Long stew/); };
+const open = async (page, name = 'Long stew') => { await page.click('#tab-daily'); await page.click('#daily-recipes'); await page.locator('.rc-row', { hasText: name }).click(); await expect(page.locator('#rc-h')).toHaveText(new RegExp(name)); };
 const box = (page, sel) => page.locator(sel).first().boundingBox();
+const strip = page => page.locator('.rc-strip');
 
-test('on a phone the log control stays visible at the top and the bottom of the page and covers neither the last line nor the tab bar', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await seed(page);
+test('the strip shows the per-serving numbers and "Not eaten yet", and at-home only when there are inventory items', async ({ page }) => {
+  await seed(page, [stew]);
   await open(page);
-  const bar = page.locator('.rc-logbar');
-  await expect(bar).toBeVisible();
-  expect(await bar.evaluate(e => getComputedStyle(e).position)).toBe('fixed');
-  const inView = async () => { const b = await bar.boundingBox(); return b.y >= 0 && b.y + b.height <= 812; };
-  expect(await inView()).toBe(true);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  expect(await inView()).toBe(true);
-  const b = await bar.boundingBox(), tabs = await box(page, '#tab-daily');
-  expect(b.y + b.height).toBeLessThanOrEqual(tabs.y + 1); // above the bottom navigation
-  const last = await box(page, '.rc-steps li:last-child');
-  expect(last.y + last.height).toBeLessThanOrEqual(b.y + 1); // the last line is not under the bar
+  await expect(strip(page).locator('li')).toHaveCount(2); // per serving, last eaten: separate small boxes
+  await expect(strip(page).getByText('400 kcal', { exact: true })).toBeVisible();
+  await expect(strip(page).getByText('P 30 g per serving')).toBeVisible();
+  await expect(strip(page).getByText('Not eaten yet')).toBeVisible();
+  await expect(strip(page)).not.toContainText('at home'); // no inventory items yet
+  await expect(page.getByText('Add items under Groceries, Inventory to see what you have.')).toBeVisible();
 });
 
-test('at 1920px the control sits under the title and nothing on the page is fixed', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await seed(page);
+test('with inventory items the strip says how many ingredients are at home', async ({ page }) => {
+  await seed(page, [stew], { 'ironlog:grocery/main': { stores: ['x'], items: [{ id: 'g1', n: 'Flour', store: 'x', qty: 1, every: true, out: false }], groups: [] } });
   await open(page);
-  const bar = page.locator('.rc-logbar');
-  expect(await bar.evaluate(e => getComputedStyle(e).position)).not.toBe('fixed');
-  const title = await box(page, '#rc-h'), b = await bar.boundingBox();
-  expect(b.y).toBeGreaterThan(title.y);
+  await expect(strip(page).locator('li')).toHaveCount(3);
+  await expect(strip(page).getByText('0 of 24 at home')).toBeVisible();
+  await expect(strip(page).getByText('24 missing')).toBeVisible();
+});
+
+test('Add to today logs the usual portion in one tap, reads Added until Undo, and Undo removes only that entry', async ({ page }) => {
+  await seed(page, [{ ...stew, usual: 2 }]);
+  await open(page);
+  await page.getByRole('button', { name: 'Add to today' }).click();
+  await expect(page.getByText('Logged Long stew, 2 portions, for today.')).toBeVisible();
+  const added = page.getByRole('button', { name: 'Added', exact: true });
+  await expect(added).toBeDisabled(); // a second tap cannot log twice
+  await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(0);
+  await expect(strip(page)).toContainText('Last eaten today');
+  await expect(strip(page)).toContainText('Usual 2 portions');
+  await openNutrition(page);
+  await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1);
+  await expect(todayCol(page).locator('.nb-eat')).toContainText('800 kcal');
+  await open(page); // leaving the page resets the button
+  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await openNutrition(page);
+  await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // the first entry stays; Undo took only the second
+});
+
+test('Plan… opens the portion sheet on tomorrow, and planning from it lands on the board', async ({ page }) => {
+  await seed(page, [stew]);
+  await open(page);
+  await page.getByRole('button', { name: 'Plan…' }).click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByLabel('Day')).toHaveValue('2026-09-25');
+  await expect(dlg.getByText('Which meal?')).toBeVisible();
+  await dlg.getByRole('button', { name: 'Dinner', exact: true }).click();
+  await dlg.getByRole('button', { name: 'Plan', exact: true }).click();
+  await expect(dlg.getByText(/Planned Long stew: 1 portion for Dinner on 2026-09-25\./)).toBeVisible();
+});
+
+test('Cook for is visible without a tap, changes the amounts shown and saves nothing', async ({ page }) => {
+  await seed(page, [{ ...stew, ing: [{ amt: '1 cup', n: 'flour' }] }]);
+  await open(page);
+  const cook = page.getByRole('group', { name: 'Cook for' });
+  await expect(cook).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Scale the amounts' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'More servings' }).click();
+  await expect(cook).toContainText('5 servings');
+  await expect(page.locator('.rc-ing').first()).toContainText('1¼');
+  await page.reload();
+  await open(page);
+  await expect(cook).toContainText('4 servings');
+  await expect(page.locator('.rc-ing').first()).toContainText('1 cup');
+});
+
+test('a recipe with no calories and protein shows "Add them" in place of Add to today', async ({ page }) => {
+  await seed(page, [bare]);
+  await open(page, 'No numbers stew');
+  await expect(page.getByRole('button', { name: 'Add them' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Plan…' })).toHaveCount(0);
+});
+
+test('a ready-made food gets the strip and the action row, and no ingredients, steps or Cook for', async ({ page }) => {
+  await seed(page, [food('a', 'Oat cereal', { kcal: 150, p: 5 })]);
+  await open(page, 'Oat cereal');
+  await expect(strip(page).getByText('150 kcal', { exact: true })).toBeVisible();
+  await expect(strip(page).locator('li')).toHaveCount(2); // per serving and last eaten; no at-home box
+  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Plan…' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Cook for' })).toHaveCount(0);
+});
+
+test('on a phone nothing is fixed over the tab bar and the action row is in the page, under the strip', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await seed(page, [stew]);
+  await open(page);
+  expect(await page.locator('.rc-detail *').evaluateAll(els => els.filter(e => getComputedStyle(e).position === 'fixed').length)).toBe(0);
+  const s = await box(page, '.rc-strip'), a = await box(page, '.rc-actionrow'), ing = await box(page, '.rc-ingrow');
+  expect(a.y).toBeGreaterThanOrEqual(s.y + s.height - 1);
+  expect(ing.y).toBeGreaterThan(a.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const last = await box(page, '.rc-steps li:last-child'), tabs = await box(page, '#tab-daily');
+  expect(last.y + last.height).toBeLessThanOrEqual(tabs.y + 1);
+});
+
+test('the strip boxes stack on a narrow phone and sit side by side on a desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await seed(page, [stew], { 'ironlog:grocery/main': { stores: ['x'], items: [{ id: 'g1', n: 'Flour', store: 'x', qty: 1, every: true, out: false }], groups: [] } });
+  await open(page);
+  const boxes = async () => strip(page).locator('li').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) }; }));
+  const narrow = await boxes();
+  expect(new Set(narrow.map(b => b.x)).size).toBe(1); // one column
+  expect(narrow[1].y).toBeGreaterThan(narrow[0].y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const wide = await boxes();
+  expect(new Set(wide.map(b => b.y)).size).toBe(1); // one row
+});
+
+test('at 1280px the strip sits under the title and nothing on the page is fixed', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await seed(page, [stew]);
+  await open(page);
+  const title = await box(page, '#rc-h'), s = await box(page, '.rc-strip');
+  expect(s.y).toBeGreaterThan(title.y);
   expect(await page.locator('.rc-detail *').evaluateAll(els => els.filter(e => getComputedStyle(e).position === 'fixed').length)).toBe(0);
 });
 
 test('Edit and Delete are reached through More actions, and Delete still needs a second tap', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await seed(page);
+  await seed(page, [stew]);
   await open(page);
   await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'More actions' }).click();
-  await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Delete the recipe Long stew' }).click();
-  await expect(page.locator('.rc-row', { hasText: 'Long stew' })).toHaveCount(0); // nothing happened yet: the page is still open
-  await expect(page.getByRole('button', { name: 'Tap again to delete' })).toBeVisible();
-  await page.getByRole('button', { name: 'Tap again to delete' }).click();
-  await expect(page.locator('#rc-h')).toHaveCount(0);
-});
-
-test('the servings stepper stays hidden until Scale the amounts is tapped', async ({ page }) => {
-  await seed(page);
-  await open(page);
-  await expect(page.getByRole('group', { name: 'Scale for tonight' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Scale the amounts' }).click();
-  await expect(page.getByRole('group', { name: 'Scale for tonight' })).toBeVisible();
-  await page.getByRole('button', { name: 'More servings' }).click();
-  await expect(page.getByText('5 servings', { exact: true })).toBeVisible();
-  await expect(page.locator('.rc-ing').first()).toContainText('1¼');
-});
-
-test('a scaled recipe keeps its stepper in view, and Escape closes More actions', async ({ page }) => {
-  await seed(page);
-  await open(page);
-  await page.getByRole('button', { name: 'Scale the amounts' }).click();
-  await page.getByRole('button', { name: 'More servings' }).click();
-  await page.getByRole('button', { name: 'Scale the amounts' }).click(); // asked to hide it, but the amounts are scaled
-  await expect(page.getByRole('button', { name: 'Reset to 4' })).toBeVisible();
   await page.getByRole('button', { name: 'More actions' }).click();
   await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
-});
-
-test('on a phone the bar hides while an ingredient field has focus and comes back after', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.addInitScript(l => { localStorage.setItem('ironlog:grocery', JSON.stringify({ items: [{ id: 'g1', n: 'Flour', store: 'x' }] })); }, null);
-  await seed(page);
-  await open(page);
-  await expect(page.locator('.rc-logbar')).toBeVisible();
-  await page.locator('.rc-detail').evaluate(el => { const i = document.createElement('input'); i.id = 'probe'; el.querySelector('.rc-ings').appendChild(i); i.focus(); });
-  await expect(page.locator('.rc-logbar')).toBeHidden();
-  await page.locator('#probe').evaluate(i => i.blur());
-  await expect(page.locator('.rc-logbar')).toBeVisible();
-});
-
-test('a ready-made food with numbers gets the same bar, and one without numbers gets none', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  const rc = (id, n, extra) => ({ id, n, cat: 'ready', type: 'ingredient', ing: [], steps: [], ...extra });
-  await page.addInitScript(l => { if (localStorage.getItem('ironlog:recipes/main') === null) localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })); }, [rc('a', 'Oat cereal', { kcal: 150, p: 5 }), rc('b', 'Mystery food', {})]);
-  await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.locator('.rc-row', { hasText: 'Oat cereal' }).click();
-  await expect(page.locator('.rc-logbar')).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
-  await page.locator('.rc-row', { hasText: 'Mystery food' }).click();
-  await expect(page.locator('.rc-logbar')).toHaveCount(0);
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('button', { name: 'Delete the recipe Long stew' }).click();
+  await expect(page.locator('#rc-h')).toBeVisible(); // nothing happened yet
+  await expect(page.getByRole('button', { name: 'Tap again to delete' })).toBeVisible();
+  await page.getByRole('button', { name: 'Tap again to delete' }).click();
+  await expect(page.locator('#rc-h')).toHaveCount(0);
 });
