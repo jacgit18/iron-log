@@ -59,7 +59,7 @@ test('Add to today logs the usual portion in one tap, reads Added until Undo, an
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // the first entry stays; Undo took only the second
 });
 
-test('deleting the entry on the board and coming back shows Add to today again', async ({ page }) => {
+test('after the entry is deleted on the board, returning to the page shows Add to today again (the page remounts here; stillAdded in recipeSummary.test.ts proves the page follows the store while mounted)', async ({ page }) => {
   await seed(page, [stew]);
   await open(page);
   await page.getByRole('button', { name: 'Add to today' }).click();
