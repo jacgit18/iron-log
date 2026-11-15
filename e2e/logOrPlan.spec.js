@@ -15,19 +15,20 @@ const logBtn = page => page.getByRole('button', { name: 'Log', exact: true });
 const eaten = page => todayCol(page).locator('.nb-eat');
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 
-test('the recipe page has one log control, no Ate this, and no second Log at the bottom', async ({ page }) => {
+test('the recipe page has one Add to today, no Ate this, no Log form and no day field', async ({ page }) => {
   await seed(page);
   await openChili(page);
   await expect(page.getByRole('button', { name: 'Ate this' })).toHaveCount(0);
-  await expect(logBtn(page)).toHaveCount(1);
-  await expect(page.getByLabel('Day')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(1);
+  await expect(logBtn(page)).toHaveCount(0);
+  await expect(page.getByLabel('Day')).toHaveCount(0);
 });
 
 test('every door writes the same entry for the same recipe, portion and day', async ({ page }) => {
   await seed(page);
   await openChili(page); // 1: the recipe page
-  await logBtn(page).click();
-  await expect(page.getByText(/Logged .+: 1 portion to today\./)).toBeVisible();
+  await page.getByRole('button', { name: 'Add to today' }).click();
+  await expect(page.getByText('Logged Chili, 1 portion, for today.')).toBeVisible();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.locator('.rc-item', { hasText: 'Chili' }).getByRole('button', { name: 'Log' }).click(); // 2: a Recipes row
   await page.getByRole('dialog').getByRole('button', { name: 'Log', exact: true }).click();
@@ -51,22 +52,27 @@ test('tomorrow asks Which meal?, the button reads Plan, and the recipe lands und
   await seed(page);
   await openChili(page);
   await expect(page.getByText('Which meal?')).toHaveCount(0);
-  await page.getByLabel('Day').fill(TOMORROW);
-  await expect(page.getByText('Which meal?')).toBeVisible();
-  await expect(logBtn(page)).toHaveCount(0);
-  await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 portions
-  await page.getByRole('button', { name: 'Dinner', exact: true }).click();
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  await expect(page.getByText(new RegExp(`Planned .+: 1\\.5 portions for Dinner on ${TOMORROW}\\.`))).toBeVisible();
+  await page.getByRole('button', { name: 'Plan…' }).click(); // the portion sheet, opened on tomorrow
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByLabel('Day')).toHaveValue(TOMORROW);
+  await expect(dlg.getByText('Which meal?')).toBeVisible();
+  await expect(dlg.getByRole('button', { name: 'Log', exact: true })).toHaveCount(0);
+  await dlg.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 portions
+  await dlg.getByRole('button', { name: 'Dinner', exact: true }).click();
+  await dlg.getByRole('button', { name: 'Plan', exact: true }).click();
+  await expect(dlg.getByText(new RegExp(`Planned .+: 1\\.5 portions for Dinner on ${TOMORROW}\\.`))).toBeVisible();
+  await dlg.getByRole('button', { name: 'Done' }).click();
   await openNutrition(page);
   await col(page, TOMORROW).getByRole('button', { name: /^Fri 25/ }).click();
   await expect(col(page, TOMORROW).locator('.wb-slot', { hasText: 'Dinner' }).locator('.wb-card')).toContainText('Chili');
   await expect(eaten(page)).toHaveCount(0); // planning logs nothing
   await openChili(page);
-  await page.getByLabel('Day').fill(TOMORROW);
-  await page.getByRole('button', { name: 'Lunch', exact: true }).click();
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  await page.getByRole('button', { name: 'Undo' }).click();
+  await page.getByRole('button', { name: 'Plan…' }).click();
+  const dlg2 = page.getByRole('dialog');
+  await dlg2.getByRole('button', { name: 'Lunch', exact: true }).click();
+  await dlg2.getByRole('button', { name: 'Plan', exact: true }).click();
+  await dlg2.getByRole('button', { name: 'Undo' }).click();
+  await dlg2.getByRole('button', { name: 'Cancel' }).click();
   await openNutrition(page);
   await col(page, TOMORROW).getByRole('button', { name: /^Fri 25/ }).click();
   await expect(col(page, TOMORROW).locator('.wb-slot', { hasText: 'Dinner' }).locator('.wb-card')).toContainText('Chili'); // the Dinner plan stays
