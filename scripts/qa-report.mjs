@@ -25,7 +25,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let entries = [];
   try { entries = [...recordedResults(file ? readFileSync(file, 'utf8') : '').values()].map(r => r.entry); } catch (e) { fail(e.message); }
   const report = buildReport(SCENARIOS, automationOf, entries);
-  const body = renderReport(report, { generatedOn: new Date().toLocaleDateString('en-CA'), source: file ? basename(file) : undefined });
+  const body = renderReport(report, { generatedOn: new Date().toISOString().slice(0, 10) /* UTC, like the date `--record` stamps on a result */, source: file ? basename(file) : undefined });
   writeFileSync(`${out}.tmp`, process.argv.includes('--standalone') ? standalone(body) : body);
   renameSync(`${out}.tmp`, out);
   const t = report.totals;

@@ -59,6 +59,7 @@ describe('buildReport', () => {
     expect(r.attention.map(x => x.id)).toEqual(['S-03']);
     expect(r.attention[0].proposed).toBe(true);
     expect(r.awaitingSpotCheck).toBe(2); // the claude pass and the claude blocked
+    expect(r.recorded).toBe(4);
     expect(r.totals).toEqual({ scenarios: 4, pass: 3, fail: 0, blocked: 1, notRun: 0 });
     expect(r.device).toEqual({ total: 1, notTried: 0, ownerRecorded: 1 });
     expect(r.lastDate).toBe('2026-11-06');
@@ -88,8 +89,15 @@ describe('buildReport', () => {
     expect(r.notRun[0].rows[0].title).toBe('Sign in as [email]');
   });
 
-  it('puts no persona email in the data', () => {
-    const r = buildReport(SCENARIOS as never, automationOf as never, []);
+  it('redacts a bare test domain in a note', () => {
+    const r = buildReport(list, auto, [entry('S-01', 'pass', '2026-11-03', 'claude', 'signed in as diet-on-target (qa.invalid)')]);
+    expect(r.proposed[0].note).toBe('signed in as diet-on-target ([test domain])');
+  });
+
+  it('puts no persona email in the data, with real scenarios and a note that quotes two', () => {
+    const live = SCENARIOS.find(s => !s.retired && !s.device)!;
+    const r = buildReport(SCENARIOS as never, automationOf as never, [entry(live.id, 'pass', '2026-11-03', 'claude', 'signed in as diet-on-target@qa.invalid, shown as n***@qa.invalid')]);
+    expect(r.proposed[0].note).toBe('signed in as [email], shown as [email]');
     expect(JSON.stringify(r)).not.toMatch(/@|\.invalid/);
   });
 });

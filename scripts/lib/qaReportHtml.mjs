@@ -46,10 +46,9 @@ function bar(t) {
 
 /** The page body for the Artifact tool. `opts.generatedOn` is `YYYY-MM-DD`; `opts.source` names the results file (a file name, not a path). */
 export function renderReport(report, opts = {}) {
-  const { totals, device } = report;
+  const { totals, device, recorded } = report;
   const t = { ...totals, proposedPass: report.proposed.length, confirmedPass: report.confirmed.length };
-  const nothingRecorded = totals.pass + totals.fail + totals.blocked === 0;
-  const recorded = totals.pass + totals.fail + totals.blocked;
+  const nothingRecorded = recorded === 0;
   const agent = report.awaitingSpotCheck;
   let lead = `${agent} of ${recorded} recorded results came from an agent and wait for your spot-check.`;
   if (nothingRecorded) lead = 'No result is recorded yet, so every scenario shows as not run.';

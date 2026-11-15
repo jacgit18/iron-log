@@ -9,7 +9,7 @@ const byId = (a, b) => idNumber(a.id) - idNumber(b.id);
 const byDateThenId = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : byId(a, b));
 const OUTCOME_ORDER = { fail: 0, blocked: 1 };
 /** A note is free text written by a person or an agent and sometimes quotes a test account's address (`name@qa.invalid`, or masked `n***@qa.invalid`). The page shows none. */
-const redact = text => text.replace(/[\w.*+-]+@[\w-]+(\.[\w-]+)+/g, '[email]').replace(/\s+/g, ' ').trim();
+const redact = text => text.replace(/[\w.*+-]+@[\w-]+(\.[\w-]+)+/g, '[email]').replace(/\b(?:[\w-]+\.)+invalid\b/gi, '[test domain]').replace(/\s+/g, ' ').trim();
 
 /**
  * @param scenarios every scenario (retired ones are left out of everything)
@@ -63,6 +63,8 @@ export function buildReport(scenarios, automationOf, results) {
   const features = [...new Set(live.map(s => s.feature))].sort((a, b) => a.localeCompare(b));
   return {
     totals,
+    /** Scenarios with a recorded result (pass + fail + blocked); outside `totals` so that object keeps its shape. */
+    recorded: totals.pass + totals.fail + totals.blocked,
     /** Results an agent recorded (any outcome) that the owner has not replaced with a result of their own. */
     awaitingSpotCheck: agentRecorded,
     device,
