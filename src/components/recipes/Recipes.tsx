@@ -50,6 +50,8 @@ const FILTER_CHOICES = [{ key: 'closed', label: 'Closed' }, { key: 'open', label
 const EMPTY_CHIPS = new Map<string, ComboChip[]>();
 const openedThisVisit: string[] = []; // recipes opened in the list this visit, newest last (Recent chips; not stored)
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean; key: string } | { status: 'failed'; reason: string; key: string };
+const LIB_KEPT = 20; // library answers kept while Recipes is open: the newest 20 searches
+const keepAnswer = (cache: Map<string, Library>, key: string, answer: Library): void => { cache.delete(key); cache.set(key, answer); if (cache.size > LIB_KEPT) cache.delete(cache.keys().next().value as string); };
 const LIB_LOADING: Library = { status: 'loading' }; // one value, so the memos that read the library do not rerun on every render
 
 export default function Recipes() {
@@ -153,9 +155,9 @@ export default function Recipes() {
         asking = searchRecipes(q, cat, 0, libSort, devHeaders).then((r): Library => {
           libAsking.current.delete(key);
           const got: Library = r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key };
-          if (r.ok) libCache.current.set(key, got); // only an answer is kept, never a failure
+          if (r.ok) keepAnswer(libCache.current, key, got); // only an answer is kept, never a failure
           return got;
-        });
+        }, (): Library => { libAsking.current.delete(key); return { status: 'failed', reason: 'unreachable', key }; }); // a thrown search is a failed one, and is not reused
         libAsking.current.set(key, asking);
       }
       void asking.then(got => { if (live) setLib(got); }); // only the search the box is showing now takes the answer (`libNow` also checks the key)
@@ -166,7 +168,7 @@ export default function Recipes() {
     if (libNow.status !== 'ready') return;
     const key = asked.current, lib = libNow;
     const r = await searchRecipes(q, cat, lib.items.length, libSort, devHeaders);
-    if (r.ok && key === asked.current) { const next: Library = { status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more, key }; libCache.current.set(key, next); setLib(next); }
+    if (r.ok && key === asked.current) { const next: Library = { status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more, key }; keepAnswer(libCache.current, key, next); setLib(next); }
   };
 
   const back = () => setView({ kind: 'list' });
