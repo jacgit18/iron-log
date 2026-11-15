@@ -71,9 +71,26 @@ describe('QA personas', () => {
       expect(l.weightLb).toBeGreaterThanOrEqual(0);
       expect(l.weightLb).toBeLessThan(5000);
       expect(l.d <= '2026-10-27').toBe(true);
-      expect(new Date(`${l.wk}T00:00:00Z`).getUTCDay()).toBe(1);
+      expect(new Date(`${l.wk}T00:00:00Z`).getUTCDay()).toBe(0); // weeks run Sunday to Saturday
     }
+    for (const b of rows.body) expect(new Date(`${b.wk}T00:00:00Z`).getUTCDay()).toBe(0);
     expect(new Set(rows.body.map(b => b.wk)).size).toBe(rows.body.length);
+  });
+
+  it('seeds one past week per Sunday that has log entries, with the logged cards ticked', () => {
+    const rows = buildPersonaRows(personaById('three-year-veteran')!, EXERCISES, TODAY);
+    const logWeeks = new Set(rows.logs.map(l => l.wk));
+    const thisWk = new Date(TODAY.getTime() - TODAY.getUTCDay() * 86_400_000).toISOString().slice(0, 10);
+    expect(rows.weeks.length).toBeGreaterThan(100);
+    expect(new Set(rows.weeks.map(w => w.weekStart)).size).toBe(rows.weeks.length);
+    for (const w of rows.weeks) {
+      expect(new Date(`${w.weekStart}T00:00:00Z`).getUTCDay()).toBe(0);
+      expect(logWeeks.has(w.weekStart)).toBe(true);
+      expect(w.weekStart < thisWk).toBe(true);
+      expect(Object.keys((w.data as { done: object }).done).length).toBeGreaterThan(0);
+    }
+    expect(buildPersonaRows(personaById('three-year-veteran')!, EXERCISES, TODAY).weeks).toEqual(rows.weeks);
+    expect(buildPersonaRows(PERSONAS.find(p => p.data.logEntries === 0)!, EXERCISES, TODAY).weeks).toEqual([]);
   });
 
   it('puts the grocery-at-cap persona on the catalogue cap and the shopper under it', () => {

@@ -1,5 +1,7 @@
 import { dietPosition } from '../../src/shared/diet.ts';
+import { normWeek } from '../../src/shared/week.ts';
 import { BUILTIN_EXERCISES } from './builtinExercises.ts';
+import { BUILTIN_PROGRAMS } from './builtinPrograms.ts';
 import type { Persona } from './personas.ts';
 
 /* ---------- What the seed script writes for one persona, as plain rows ----------
@@ -7,6 +9,7 @@ import type { Persona } from './personas.ts';
    The same persona and the same day always give the same rows (a seeded generator), so a re-run puts back exactly what was there. */
 
 export interface SeedLog { clientId: string; exerciseId: string; d: string; wk: string; phase: string; weightLb: number; setsCount: number; reps: number }
+export interface SeedWeek { weekStart: string; data: Record<string, unknown> }
 export interface SeedBody { wk: string; d: string; weightLb: number }
 export interface SeedGrocery { clientId: string; position: number; data: { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean } }
 export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number; micro?: Record<string, number> } }
@@ -24,6 +27,8 @@ export interface PersonaRows {
   /** The config row's document, or null when the account has no settings. */
   config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string; url?: string }>; ingredientLimits?: Record<string, { kind: 'target' | 'cap'; amount: number; unit: string }> } | null;
   logs: SeedLog[];
+  /** Past weeks (the `weeks` table behind Weekly history), one per Sunday-start week that has log entries. */
+  weeks: SeedWeek[];
   body: SeedBody[];
   groceryItems: SeedGrocery[];
   groceryStores: { clientId: string; position: number; data: { id: string; n: string } }[];
@@ -67,8 +72,25 @@ function rng(seed: number) {
 const hash = (s: string) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
-/** The Monday of the week holding `d` (weeks start Monday in the app's `wk`). */
-const monday = (d: Date) => addDays(d, -((d.getUTCDay() + 6) % 7));
+/** The Sunday of the week holding `d`: the app's weeks run Sunday to Saturday (`weekStartOf`, src/shared/dates.ts) and `wk` is stored as that Sunday. */
+const sunday = (d: Date) => addDays(d, -d.getUTCDay());
+
+/** Program A's card ids by exercise (`A-d<day>s<slot>`, as `slotsFor` numbers them): the card a log entry for that exercise ticks. */
+const CARD_OF: Record<string, string> = {};
+BUILTIN_PROGRAMS.A.days.forEach((day, di) => day.slots.forEach((sl, si) => sl.items.forEach(it => { CARD_OF[it.ex] ??= `A-d${di + 1}s${si + 1}`; })));
+
+/** One saved week per past week with log entries, the cards of the exercises logged that week ticked (current week left to the app). */
+function buildWeeks(logs: SeedLog[], today: Date): SeedWeek[] {
+  const thisWk = iso(sunday(today));
+  const byWeek = new Map<string, Set<string>>();
+  for (const l of logs) {
+    if (l.wk >= thisWk || !CARD_OF[l.exerciseId]) continue;
+    (byWeek.get(l.wk) ?? byWeek.set(l.wk, new Set()).get(l.wk)!).add(CARD_OF[l.exerciseId]!);
+  }
+  return [...byWeek].sort(([a], [b]) => (a < b ? -1 : 1)).map(([weekStart, cards]) => ({
+    weekStart, data: { ...normWeek({ prog: 'A', done: Object.fromEntries([...cards].sort().map(c => [c, true])) }) },
+  }));
+}
 
 export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[], today: Date): PersonaRows {
   const rand = rng(hash(persona.id));
@@ -88,7 +110,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
       const ex = exerciseIds[Math.floor(rand() * exerciseIds.length)]!;
       logs.push({
         clientId: `qa-${persona.id}-${String(logs.length + 1).padStart(5, '0')}`,
-        exerciseId: ex, d: iso(d), wk: iso(monday(d)), phase: PHASES[Math.floor(rand() * PHASES.length)]!,
+        exerciseId: ex, d: iso(d), wk: iso(sunday(d)), phase: PHASES[Math.floor(rand() * PHASES.length)]!,
         weightLb: 10 + Math.round(rand() * 40) * 5, setsCount: 2 + Math.floor(rand() * 4), reps: 6 + Math.floor(rand() * 10),
       });
       const last = logs[logs.length - 1]!;
@@ -98,12 +120,12 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
     // Two strength sessions in a row (3 and 1 days back) at the same weight, every set at the full 4 x 6: the app then suggests going up.
     if (ready) for (const back of [3, 1]) {
       const d = addDays(t, -back);
-      logs.push({ clientId: `qa-${persona.id}-${String(logs.length + 1).padStart(5, '0')}`, exerciseId: ready, d: iso(d), wk: iso(monday(d)), phase: 'strength', weightLb: 100, setsCount: 4, reps: 6 });
+      logs.push({ clientId: `qa-${persona.id}-${String(logs.length + 1).padStart(5, '0')}`, exerciseId: ready, d: iso(d), wk: iso(sunday(d)), phase: 'strength', weightLb: 100, setsCount: 4, reps: 6 });
     }
   }
   const body: SeedBody[] = [];
   for (let w = 0; w < spec.bodyWeeks; w++) {
-    const d = addDays(monday(t), -7 * w);
+    const d = addDays(sunday(t), -7 * w);
     body.push({ wk: iso(d), d: iso(d), weightLb: Math.round((180 - w * 0.05 + (rand() - 0.5) * 3) * 10) / 10 });
   }
   const groceryStores = spec.groceryItems > 0 ? STORES.map((n, position) => ({ clientId: n, position, data: { id: n, n } })) : [];
@@ -117,7 +139,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
   const dietEntries = buildDiet(persona, t);
   const recipes = buildRecipes(persona);
   const { supplements, supplementDays } = buildVitamins(persona, t);
-  return { logs, body, groceryItems, groceryStores, groceryGroups, dietEntries, supplements, supplementDays, recipes, stretches: buildStretches(persona), config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
+  return { logs, weeks: buildWeeks(logs, t), body, groceryItems, groceryStores, groceryGroups, dietEntries, supplements, supplementDays, recipes, stretches: buildStretches(persona), config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
 }
 
 /** The diet log: `pastDays` full days, then today up to its share of the targets (the first foods in order, or every food scaled up when over). */
