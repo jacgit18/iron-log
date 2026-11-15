@@ -43,7 +43,7 @@ export function resolvePer(typed: PerText, shown: PerText, exact: PerPortion): {
 /** The entry numbers for `per` eaten `x` times (one cleaner for each, so the stored totals are always valid), or null when a total is out of range. Amounts over a cap are dropped by `scaleMicro`. */
 export function totalsAt(per: { kcal: number; p: number; c: number | null; f: number | null; micro?: Micro | null }, x: number): PortionTotals | null {
   if (!(x > 0)) return null;
-  const kcal = cleanKcal(per.kcal * x), p = cleanProtein(per.p * x);
+  const exact = per.kcal * x, kcal = cleanKcal(exact > MAX_KCAL && exact < MAX_KCAL + 1 - 1e-6 ? MAX_KCAL : exact), p = cleanProtein(per.p * x); // under 1 kcal over the cap is the cap (Less then More from 9,999 rounds to 9,999.5), so the Edit sheet's `portionMaxFor` and the row's More agree; 10,000 or more is still out
   const c = per.c === null ? null : cleanGrams(per.c * x), f = per.f === null ? null : cleanGrams(per.f * x);
   if (kcal === null || p === null || (per.c !== null && c === null) || (per.f !== null && f === null)) return null;
   return { kcal, p, c, f, micro: scaleMicro(per.micro ?? undefined, x) ?? null };
@@ -71,8 +71,7 @@ export function entryTotalsAt(e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'mic
   const b = portionBasis(e);
   x = roundPortion(x);
   if (x < PORTION_MIN || (x > b.x && x > Math.min(max, PORTION_CEIL))) return null;
-  const exact = b.per.kcal * x, kcal = exact > MAX_KCAL && exact < MAX_KCAL + 1 - 1e-6 ? MAX_KCAL / x : b.per.kcal;
-  const t = totalsAt({ kcal, p: b.per.p, c: b.per.c ?? null, f: b.per.f ?? null, micro: b.microExact ?? null }, x);
+  const t = totalsAt({ kcal: b.per.kcal, p: b.per.p, c: b.per.c ?? null, f: b.per.f ?? null, micro: b.microExact ?? null }, x);
   if (!t || Object.keys(e.micro ?? {}).length > Object.keys(t.micro ?? {}).length) return null;
   return { ...t, x };
 }

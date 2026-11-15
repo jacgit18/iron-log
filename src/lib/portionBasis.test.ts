@@ -269,3 +269,40 @@ describe('one source for Less and More (PR 995 review)', () => {
     expect(entryTotalsAt(eat({ kcal: 780, p: 63, c: 90, f: 18, x: 1.5 }), 3)).toMatchObject({ kcal: 1560, p: 126, c: 180, f: 36, x: 3 });
   });
 });
+
+describe('Less then More (review of PR 999)', () => {
+  it('Less then More is exact whenever whole kcal can come back, and off by at most 1 when they cannot (521 at 1 portion)', () => {
+    let impossible = 0;
+    for (let kcal = 1; kcal <= 400; kcal++) {
+      for (const [x, to] of [[1, 0.5], [1.5, 1], [2, 1.5], [3, 2.5], [1.5, 0.5], [2, 1]] as const) {
+        const less = at(eat({ kcal, p: 10, c: undefined, f: undefined, x }), to);
+        if (!less) continue; // under 1 kcal: refused
+        const gap = Math.abs(at(less, x)!.kcal - kcal), exact = (kcal / x) * to;
+        const possible = [Math.floor(exact), Math.ceil(exact)].some(v => v >= 1 && Math.round((v / to) * x) === kcal);
+        if (possible) expect(gap).toBe(0); else { impossible++; expect(gap).toBe(1); }
+      }
+    }
+    expect(impossible).toBeGreaterThan(0);
+  });
+  it('More then Less always returns the starting numbers', () => {
+    for (let kcal = 1; kcal <= 600; kcal++) for (const [x, to] of [[0.5, 1], [1, 1.5], [1, 2], [2.5, 3]] as const) {
+      const start = eat({ kcal, p: 10, c: undefined, f: undefined, x });
+      if (!at(start, to)) continue;
+      expect(at(at(start, to)!, x)!.kcal).toBe(kcal);
+    }
+  });
+  it('grams come back the same way (one decimal)', () => {
+    for (let p = 1; p <= 200; p++) {
+      const start = eat({ kcal: 500, p: p / 10, c: undefined, f: undefined, x: 3 });
+      const back = at(at(start, 2.5)!, 3)!;
+      expect(Math.abs(back.p - start.p)).toBeLessThanOrEqual(0.1 + 1e-9);
+    }
+  });
+  it('the sheet\'s most portions agrees with the row at the 9,999 kcal cap', () => {
+    const per = { kcal: 9999.4 / 9, p: 10, c: null, f: null }; // 9 portions is 9,999.4 kcal, 9.5 is over
+    expect(portionMaxFor(per)).toBe(9);
+    const exactCap = { kcal: 9999.5 / 9, p: 10, c: null, f: null }; // 9,999.5 kcal at 9 portions is the cap, not a refusal
+    expect(totalsAt(exactCap, 9)!.kcal).toBe(9999);
+    expect(totalsAt({ kcal: 10000 / 9, p: 10, c: null, f: null }, 9)).toBeNull();
+  });
+});
