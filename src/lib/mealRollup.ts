@@ -143,7 +143,7 @@ export function settleMeals(recipes: Recipe[]): Recipe[] {
         if (order(set) !== order(out)) { out = set; changed = true; }
       }
     }
-    else if (out.own && out.micro && hasParts(out)) { const { micro: _m, ...rest } = out; out = rest; changed = true; } // its calories are the person's own: amounts rolled up from the parts would disagree with them
+    // A meal on its own numbers keeps whatever amounts it has: the Recipe form saves only typed rows that still match its calories (recipeOwnAmounts.ts), so nothing is dropped here.
     return out;
   });
   return changed ? next : recipes;

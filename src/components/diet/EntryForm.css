@@ -1,0 +1,34 @@
+@layer base, components;
+@layer components {
+/* The per-portion mode of the entry form (brief portion-scaled-micros): a stepper for how many portions were eaten, the live total under it, and the "also save to the recipe" tick. */
+.pf-portion {
+  display: grid;
+  gap: var(--sp-8);
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-8);
+  margin-top: var(--sp-10);
+}
+.pf-step {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.pf-step .btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+.pf-x {
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--fs-xl);
+}
+.pf-tick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  margin-top: var(--sp-8);
+}
+}

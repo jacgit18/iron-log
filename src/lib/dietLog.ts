@@ -1,6 +1,6 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { fmtNum, macroLine } from './macroLine.js';
-import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanPortion, cleanProtein } from '../shared/diet.js';
 import { parseDate, ymd } from '../shared/dates.js';
 import { scaleMicro, withMicro } from '../shared/foodMicro.js';
 import type { Micro } from '../shared/foodMicro.js';
@@ -64,12 +64,12 @@ export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' |
   if (!nums) return { error: 'Those numbers are out of range.' };
   const bad = ateDayError(day, today);
   if (bad) return { error: bad };
-  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro) } };
+  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro), ...(cleanPortion(servings) !== null ? { x: cleanPortion(servings)! } : {}) } };
 }
 
 /** The entry to add for a food on `day`: its numbers, the recipe it came from, and its vitamins and minerals when it has them (one place, so a copied or re-logged food keeps them). */
-export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): Omit<DietEntry, 'id'> =>
-  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro) });
+export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; x?: number }): Omit<DietEntry, 'id'> =>
+  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro), ...(f.x !== undefined ? { x: f.x } : {}) });
 
 /** The most portions the log control, the planner and Find food offer. */
 export const PORTION_MAX = 10;

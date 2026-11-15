@@ -87,6 +87,29 @@ describe('carbs and fat', () => {
   });
 });
 
+describe('the stored portion x (brief portion-scaled-micros)', () => {
+  it('is kept on an entry, and updated with an explicit micro: a portion change never drops amounts', () => {
+    const { id } = st().addDietEntry({ ...rice, x: 1, micro: { calcium: 100 } });
+    expect(st().diet[0]).toMatchObject({ x: 1, micro: { calcium: 100 } });
+    expect(st().updateDietEntry(id!, { kcal: 400, p: 8, micro: { calcium: 200 }, x: 2 })).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: 400, x: 2, micro: { calcium: 200 } });
+  });
+  it('changed calories with no micro in the patch still drop the amounts (the old rule), x stays', () => {
+    const { id } = st().addDietEntry({ ...rice, x: 2, micro: { calcium: 100 } });
+    st().updateDietEntry(id!, { kcal: 250 });
+    expect(st().diet[0]).toMatchObject({ x: 2 }); expect(st().diet[0]!.micro).toBeUndefined();
+  });
+  it('setRecipeMicro writes amounts to a recipe with none and never overwrites', () => {
+    useAppStore.setState({ recipes: [{ id: 'r1', n: 'Oats', cat: 'meal', ing: [{ n: 'oats' }], steps: [] }, { id: 'r2', n: 'Eggs', cat: 'meal', ing: [{ n: 'egg' }], steps: [], micro: { iron: 1 } }] as never });
+    expect(st().setRecipeMicro('r1', { calcium: 120 })).toBeNull();
+    expect(st().recipes.find(r => r.id === 'r1')?.micro).toEqual({ calcium: 120 });
+    expect(st().setRecipeMicro('r1', { calcium: 999 })).toMatch(/already/);
+    expect(st().setRecipeMicro('r2', { calcium: 5 })).toMatch(/already/);
+    expect(st().recipes.find(r => r.id === 'r2')?.micro).toEqual({ iron: 1 });
+    expect(st().setRecipeMicro('gone', { calcium: 1 })).toMatch(/gone/);
+  });
+});
+
 describe('updateDietEntry and removeDietEntry', () => {
   it('fixes the numbers and keeps the day and the recipe link', () => {
     const id = st().addDietEntry({ ...rice, from: 'chili-1' }).id!;
