@@ -68,11 +68,40 @@ function toGrams(m: RegExpExecArray | null): number | null {
   return g >= MIN_GRAMS && g <= MAX_GRAMS ? g : null;
 }
 
-/** Grams written in brackets after the amount ("½ cup (100 g) flour", "1 cup [120 g, sifted]"), read by code before any model call. Null when there is none or it is not one clear weight. */
-export const bracketGrams = (line: string): number | null => toGrams(BRACKET.exec(line));
+// A measure the bracketed weight is the total of ("2 cups (240 g) milk"); any other word after a count ("2 (14 oz) cans", "3 cans (14 oz)") makes the bracket the weight of each one.
+const MEASURE = new Set(['cup', 'cups', 'c', 'tbsp', 'tbsps', 'tsp', 'tsps', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ml', 'l', 'litre', 'litres', 'liter', 'liters', 'pint', 'pints', 'quart', 'quarts', 'gallon', 'gallons', 'fl', 'dl', 'cl']);
+const COUNT_BEFORE = new RegExp(`^\\s*${QTY}\\s*([^()\\[\\]]*)$`);
+
+/** Grams written in brackets after the amount ("½ cup (100 g) flour", "1 cup [120 g, sifted] flour"), read by code before any model call. A count before the bracket multiplies it ("2 (14 oz) cans" is 794 g, not 397). Null when there is none, it is not one clear weight, or the count is a range. */
+export function bracketGrams(line: string): number | null {
+  const m = BRACKET.exec(line);
+  const g = toGrams(m);
+  if (!m || g === null) return null;
+  const before = COUNT_BEFORE.exec(line.slice(0, m.index));
+  if (!before) return g;
+  const count = quantity(before);
+  const rest = (before[10] ?? '').trim();
+  if (count === null || (rest !== '' && !/^[A-Za-z]/.test(rest))) return null;
+  const word = rest.split(/[\s.]+/)[0]!.toLowerCase();
+  if (rest !== '' && MEASURE.has(word)) return g;
+  const total = Math.round(g * count * 10) / 10;
+  return total >= MIN_GRAMS && total <= MAX_GRAMS ? total : null;
+}
 
 /** Grams when the line starts with a weight ("200 g flour", "½ lb butter", "1 1/2 kg"). Null for "2-3 oz" and anything not written in g, kg, oz or lb. */
-export const leadingGrams = (line: string): number | null => toGrams(LEAD.exec(line));
+export function leadingGrams(line: string): number | null {
+  const m = LEAD.exec(line);
+  const g = toGrams(m);
+  if (!m || g === null) return null;
+  // "1 lb 4 oz", "1 kg 200 g": the smaller unit is added; any other second weight is not one clear amount.
+  const more = /^\s*(?:and\s+)?(\d+(?:\.\d+)?)\s*(oz|ounces?|g|grams?)\b/i.exec(line.slice(m[0].length));
+  if (!more) return g;
+  const big = m[10]!.toLowerCase(), small = more[2]!.toLowerCase();
+  const ok = (/^(lbs?|pounds?)$/.test(big) && /^(oz|ounces?)$/.test(small)) || (/^(kg|kilograms?)$/.test(big) && /^(g|grams?)$/.test(small));
+  if (!ok) return null;
+  const total = Math.round((g + Number(more[1]) * UNIT_G[small]!) * 10) / 10;
+  return total >= MIN_GRAMS && total <= MAX_GRAMS ? total : null;
+}
 
 /** The grams the text itself states, leading weight first, else grams in brackets. */
 export const textGrams = (line: string): number | null => leadingGrams(line) ?? bracketGrams(line);

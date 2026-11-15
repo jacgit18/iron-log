@@ -30,10 +30,16 @@ describe('grams from the text', () => {
     ['1 cup (about 100 g) flour', null],
     ['1 cup (100-120 g) flour', null],
     ['2 cups flour', null],
+    ['2 (14 oz) cans tomatoes', 793.8],
+    ['3 cans (14 oz) beans', 1190.7],
+    ['1 (8 oz) package cream cheese', 226.8],
+    ['2 cups (240 g) milk', 240],
+    ['2-3 (14 oz) cans tomatoes', null],
+    ['100 (100 oz) cans', null],
   ])('bracket: %s', (line, g) => expect(bracketGrams(line)).toBe(g));
   it.each([
     ['200 g flour', 200], ['½ lb butter', 226.8], ['1 1/2 kg potatoes', 1500], ['8 oz cream cheese', 226.8], ['1.5 lb beef', 680.4],
-    ['2-3 oz ham', null], ['2 cups flour', null], ['100 grams', 100], ['6000 g water', null], ['0 g salt', null],
+    ['2-3 oz ham', null], ['2 cups flour', null], ['100 grams', 100], ['6000 g water', null], ['0 g salt', null], ['1 lb 4 oz beef', 567], ['1 kg 200 g flour', 1200], ['1 lb 2 cups', 453.6], ['1 lb 4 g beef', null],
   ])('leading: %s', (line, g) => expect(leadingGrams(line)).toBe(g));
   it('leading weight wins over brackets', () => expect(textGrams('200 g flour (1 lb)')).toBe(200));
 });
