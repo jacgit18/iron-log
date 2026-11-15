@@ -123,6 +123,7 @@ describe('the sign-in page', () => {
   it('never names another origin', () => expect(script).not.toMatch(/https?:|\/\/\w/));
   it('is loaded as a script file of the stack\'s own origin (the CSP forbids inline script)', () => {
     expect(signInHtml).toContain('<script src="/qa-signin.js">');
-    expect(signInHtml).not.toMatch(/<script>/);
+    expect(signInHtml.split('<script').length - 1).toBe(1); // the one script tag is the one with the src: no inline script
+    expect(signInHtml).not.toContain('<script>');
   });
 });
