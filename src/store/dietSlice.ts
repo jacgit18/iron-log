@@ -125,8 +125,9 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (merged.c === null) delete merged.c; // null clears an optional number
     if (merged.f === null) delete merged.f;
     // An explicit `micro` (the typed rows of brief type-food-amounts; null clears) is the person's say. Without one, changed calories mean a changed portion: the amounts would no longer match (the One-off form's rule).
-    if (patch.micro !== undefined) { if (patch.micro === null) delete merged.micro; }
-    else if (patch.kcal !== undefined && patch.kcal !== cur.kcal) delete merged.micro;
+    // The `est` mark says the amounts were estimated from recipe lines; a hand edit of them (or their going away with a changed portion) makes them the person's own (PR 1009 review).
+    if (patch.micro !== undefined) { delete merged.est; if (patch.micro === null) delete merged.micro; }
+    else if (patch.kcal !== undefined && patch.kcal !== cur.kcal) { delete merged.micro; delete merged.est; }
     const e = normDietEntry(merged);
     if (!e) return bad();
     set({ diet: list.map(x => (x.id === id ? e : x)) });
