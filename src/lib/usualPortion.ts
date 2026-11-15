@@ -29,3 +29,7 @@ export function withUsual<T extends { usual?: number }>(recipe: T, usual: number
   const { usual: _old, ...rest } = recipe;
   return (usual === undefined ? rest : { ...rest, usual }) as T;
 }
+
+/** The usual a Less or More on an eaten row saves (brief nutrition-log-first-portion-row): only for a food logged today from a recipe that still exists (`recipe` given, `entryDay` is `today`); an earlier day leaves it alone. Same rule as the portion sheet's `usualChange`. */
+export const usualAfterStep = (entryDay: string, today: string, recipe: Basis | undefined, count: number): UsualChange | null =>
+  recipe && entryDay === today ? usualChange(recipe, count) : null;
