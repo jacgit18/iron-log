@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { onwardDays, plannedText } from '../../lib/dayPicker.js';
-import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
+import { entriesOn, entryFromFood, fmtNum, hasMacros, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
 import { withMicro } from '../../shared/foodMicro.js';
 import { runInstantLog } from '../../lib/instantLog.js';
@@ -28,7 +28,8 @@ import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
 import Icon, { type IconName } from '../Icon.jsx';
 import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
-import type { Say } from './EatenRows.js';
+import UndoButton from '../UndoButton.js';
+import type { Say } from '../../lib/eatenStep.js';
 import DayPicker from './DayPicker.js';
 
 type Scope = 'one' | 'onward' | 'pick';
@@ -103,7 +104,7 @@ export default function AddFoodSheet() {
         </div>
       )}
       {body}
-      <p className="note" role="status">{msg}{undo && <> <button type="button" className="btn sm ghost" onClick={() => { undo(); said('Undone.'); }}>Undo</button></>}</p>
+      <p className="note" role="status">{msg}{undo && <UndoButton onUndo={() => { undo(); said('Undone.'); }} />}</p>
       <div className="actions">
         {flow && <button type="button" className="btn" onClick={() => { setFlow(null); setMsg(''); setUndo(null); }}>Back to ways of adding</button>}
         <button type="button" className="btn primary" onClick={closeModal}>Done</button>
@@ -131,7 +132,7 @@ function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg,
     const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
     onMsg(run.error ?? run.text); // a refusal shows the store's words alone, never 'Added 0 from ...'
   };
-  const logNow = (r: Recipe) => { const m = logRecipeAtUsual(st(), r, day, today); if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error); }; // one tap logs at the usual portion and the sheet stays open; a day ahead plans through the portion sheet (below)
+  const logNow = (r: Recipe) => { if (!hasMacros(r)) { st().openModal({ type: 'portion', id: r.id, day }); return; } const m = logRecipeAtUsual(st(), r, day, today); if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error); }; // one tap logs at the usual portion and the sheet stays open; a day ahead plans through the portion sheet (below)
   if (flow === 'quick') {
     const items = quickItems(diet, recipes);
     const suggested = day === today ? suggestNow(diet, hour, today) : []; // 'now' means today's clock: an earlier day gets no suggestions built from it

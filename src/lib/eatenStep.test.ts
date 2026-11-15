@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import { entryTotalsAt } from './portionBasis.js';
-import { eatenAmount, eatenMax, loggedEntry, plannedStep, rowStepper } from './eatenStep.js';
+import { eatenAmount, eatenMax, loggedEntry, plannedEntryStep, plannedStep, rowStepper } from './eatenStep.js';
 
 const entry = (o: Partial<DietEntry> = {}): DietEntry => ({ id: 'e1', d: '2026-11-15', n: 'Oats', kcal: 300, p: 10, ...o });
 const oats = { cat: 'other' as const, kcal: 300, p: 10 };
@@ -69,8 +69,22 @@ describe('plannedStep', () => {
     expect(plannedStep(0.5, -1)).toBeNull();
     expect(plannedStep(10, 1)).toBeNull();
   });
-  it('a ticked card also stops where its logged entry cannot take the new count', () => {
-    expect(plannedStep(1, 1, entry({ x: 1 }))).toBe(1.5);
-    expect(plannedStep(1.5, 1, entry({ x: 1.5, kcal: 9000 }))).toBeNull();
+});
+
+describe('plannedEntryStep (a ticked card)', () => {
+  it('steps the logged entry\'s own count and the plan follows on a half step', () => {
+    expect(plannedEntryStep(entry({ x: 1, kcal: 300 }), 1)).toEqual({ count: 1.5, plan: 1.5 });
+    expect(plannedEntryStep(entry({ x: 1, kcal: 300 }), -1)).toEqual({ count: 0.5, plan: 0.5 });
+  });
+  it('keeps an edit made to the entry: an entry edited to 3 portions steps to 3.5, whatever the plan said', () => {
+    expect(plannedEntryStep(entry({ x: 3, kcal: 900 }), 1)).toEqual({ count: 3.5, plan: 3.5 });
+  });
+  it('an entry on a count the plan cannot hold leaves the plan alone', () => {
+    expect(plannedEntryStep(entry({ x: 1.25, kcal: 375 }), 1)).toEqual({ count: 1.75, plan: null });
+    expect(plannedEntryStep(entry({ x: 12, kcal: 3600 }), -1)).toEqual({ count: 11.5, plan: null });
+  });
+  it('has no step where the entry has none (half a portion, or totals that stop fitting)', () => {
+    expect(plannedEntryStep(entry({ x: 0.5, kcal: 150 }), -1)).toBeNull();
+    expect(plannedEntryStep(entry({ x: 1.5, kcal: 9000 }), 1)).toBeNull();
   });
 });

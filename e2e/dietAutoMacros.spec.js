@@ -42,4 +42,8 @@ test('Search brings back what you logged and logs it at once (log only)', async 
   await expect(eaten(page)).toHaveCount(2);
   await eaten(page).filter({ hasText: 'Rice' }).last().getByRole('button', { name: 'More Rice' }).click();
   await expect(eaten(page).filter({ hasText: '300 kcal' })).toHaveCount(1);
+  // log only: a food with no recipe has no plan, so Find food is not offered on a day ahead at all
+  await page.locator('.nb-col[data-day="2026-09-26"] .nb-dayname').click();
+  await page.locator('#nb-add').click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^Find food/ })).toHaveCount(0);
 });

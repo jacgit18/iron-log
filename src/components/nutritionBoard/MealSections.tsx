@@ -6,7 +6,8 @@ import { planItemKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { PlanSlot } from '../../types.ts';
 import BoardCard from '../diet/board/BoardCard.js';
-import { EatenRows, type Say } from './EatenRows.js';
+import type { Say } from '../../lib/eatenStep.js';
+import { EatenRows } from './EatenRows.js';
 import type { Resolved } from '../../lib/dietPlan.js';
 
 const ORDER = ['breakfast', 'lunch', 'snack', 'dinner'] as const;

@@ -4,7 +4,8 @@ import type { PlanSlot } from '../../types.ts';
 import DayMeters from './DayMeters.js';
 import HydrationSection from './HydrationSection.js';
 import MealSections from './MealSections.js';
-import NotInMeal, { type Say } from './EatenRows.js';
+import type { Say } from '../../lib/eatenStep.js';
+import NotInMeal from './EatenRows.js';
 import SupplementsSection from './SupplementsSection.js';
 
 // One day of the board: its name (tap to pick it as the day the toolbar adds to), meters, its meals with the food eaten in them, a "Not in a meal" group for food with no meal, Supplements and Hydration.

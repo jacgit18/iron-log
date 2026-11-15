@@ -1,9 +1,9 @@
 import { isEaten } from '../../../lib/dietPlan.js';
-import { loggedEntry, plannedStep } from '../../../lib/eatenStep.js';
+import { eatenMax, loggedEntry, plannedEntryStep, plannedStep } from '../../../lib/eatenStep.js';
+import { amountText } from '../../../lib/foodUnit.js';
 import { macroLine } from '../../../lib/macroLine.js';
 import type { BoardItem } from '../../../lib/weekBoard.js';
 import { useAppStore } from '../../../store/useAppStore.js';
-import { amountText } from '../../../lib/foodUnit.js';
 import ArmedButton from '../../ArmedButton.jsx';
 import PortionStepper from '../../PortionStepper.js';
 
@@ -17,7 +17,8 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   const st = () => useAppStore.getState();
   const eaten = useAppStore(s => isEaten(r.item, s.diet));
   const entry = useAppStore(s => (isEaten(r.item, s.diet) && r.item.k === 'r' ? loggedEntry(r.item.e, s.diet) : undefined)); // the one entry a ticked recipe card logged: Less and More change it together with the plan
-  const less = plannedStep(r.portion, -1, entry), more = plannedStep(r.portion, 1, entry);
+  const lessT = entry ? plannedEntryStep(entry, -1, eatenMax(r.recipe)) : null, moreT = entry ? plannedEntryStep(entry, 1, eatenMax(r.recipe)) : null; // a ticked card steps its entry's own count (an edit to the entry is kept) and the plan follows
+  const less = entry ? lessT?.count ?? null : plannedStep(r.portion, -1), more = entry ? moreT?.count ?? null : plannedStep(r.portion, 1);
   const checkable = day === today && !r.gone;
   const name = r.item.k === 'm' ? `${r.name} (meal)` : r.name;
   // The item's place in the stored plan: a shown daily snack is stored now (never refused for a full day: snacks do not count toward the 8).
@@ -37,11 +38,14 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   };
   // Copy to and Move to open the picker sheet; a shown daily snack is stored only when the sheet's button is pressed (`prepare`), so closing the sheet leaves nothing behind.
   const pick = (mode: 'copy' | 'move') => { st().openModal({ type: 'nbplanmove', mode, day, name: r.name, slot: r.item.s, prepare: stillHere, onMsg }); onOpen(); }; // the card folds as the sheet opens
-  const portion = (to: number) => {
+  const portion = (to: number) => { const at = real(); if (at >= 0) st().setPlanPortion(day, at, to); };
+  const tickedStep = (step: { count: number; plan: number | null } | null) => {
+    if (!entry || !step) return;
     const at = real();
     if (at < 0) return;
-    if (entry) { const err = st().setDietPortion(entry.id, to); if (err) { onMsg(err); return; } } // a ticked card: the logged entry first, so a refusal leaves the plan unchanged
-    st().setPlanPortion(day, at, to);
+    const err = st().setDietPortion(entry.id, step.count, eatenMax(r.recipe)); // the entry first, so a refusal leaves the plan unchanged
+    if (err) { onMsg(err); return; }
+    if (step.plan !== null) st().setPlanPortion(day, at, step.plan);
   };
   const tick = () => {
     if (eaten) { st().uncheckPlanItem(day, index); return; }
@@ -61,7 +65,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
       </button>
       </div>
       {entry && r.recipe && ( // a ticked recipe card: the same stepper line as an eaten row (brief nutrition-log-first-portion-row); it steps the plan's portion and the logged entry together
-        <PortionStepper name={r.name} text={amountText(r.portion, r.recipe)} less={less} more={more} onLess={portion} onMore={portion} />
+        <PortionStepper name={r.name} text={amountText(entry.x ?? 1, r.recipe)} less={less} more={more} onLess={() => tickedStep(lessT)} onMore={() => tickedStep(moreT)} />
       )}
       {open && (
         <div className="wb-acts">

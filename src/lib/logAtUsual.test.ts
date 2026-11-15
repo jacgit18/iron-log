@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import { logFoodAtUsual, logRecipeAtUsual } from './logAtUsual.js';
+import { entryTotalsAt, stepEntryCount } from './portionBasis.js';
 
 const TODAY = '2026-11-15';
 const oats = { id: 'r1', n: 'Oats', cat: 'other' as const, kcal: 300, p: 10, c: 50, f: 5 };
@@ -54,6 +55,14 @@ describe('logFoodAtUsual', () => {
     expect(made.ok && made.text).toBe('Logged Chili, 1 portion.');
     expect(s.entries[0]).toMatchObject({ n: 'Chili', kcal: 400, x: 1 });
     expect(s.entries[0]).not.toHaveProperty('from');
+  });
+  it('keeps the portion count of the entry it came from: three portions stay three, and Less then steps one portion down', () => {
+    const { s, ports } = fake();
+    const made = logFoodAtUsual(ports, { n: 'Chili', kcal: 1200, p: 90, x: 3 }, TODAY, TODAY);
+    expect(made.ok && made.text).toBe('Logged Chili, 3 portions.');
+    expect(s.entries[0]).toMatchObject({ kcal: 1200, p: 90, x: 3 });
+    const down = entryTotalsAt(s.entries[0]!, stepEntryCount(s.entries[0]!, -1)!)!;
+    expect([down.x, down.kcal]).toEqual([2.5, 1000]); // not 600, which halving the three-portion totals as "one portion" would give
   });
   it('Undo removes exactly that entry', () => {
     const { s, ports } = fake();

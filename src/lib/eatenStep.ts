@@ -1,9 +1,12 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { ateMax } from './dietLog.js';
 import { amountText } from './foodUnit.js';
-import { entryTotalsAt, PORTION_CEIL, PORTION_MIN, PORTION_STEP, stepEntryCount } from './portionBasis.js';
+import { PORTION_CEIL, PORTION_MIN, PORTION_STEP, stepEntryCount } from './portionBasis.js';
 
 /* ---------- Less and More on an eaten row (brief nutrition-log-first-portion-row, PR b). Pure: which rows get a stepper, what the amount reads, where a step lands. The store writes (`setDietPortion`, `setPlanPortion`) stay in the components. ---------- */
+
+/** The board's status line: a sentence and, when the change can be taken back, its Undo. */
+export type Say = (t: string, undo?: () => void) => void;
 
 type Stepped = Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'x'>;
 type Unit = Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual' | 'unit' | 'plural'>;
@@ -29,10 +32,15 @@ export function loggedEntry(ids: readonly string[] | undefined, entries: readonl
   return found.length === 1 ? found[0] : undefined;
 }
 
-/** The plan portion one step from `portion` for a recipe card, or null: Less stops at 0.5, More at 10, and a ticked card (`entry` given) also stops where the logged entry could not take the new count, so the plan and the entry never disagree. */
-export function plannedStep(portion: number, dir: 1 | -1, entry?: Stepped): number | null {
+/** The plan portion one step from `portion` for a recipe card that is not ticked, or null: Less stops at 0.5, More at 10. */
+export function plannedStep(portion: number, dir: 1 | -1): number | null {
   const next = Math.round((portion + dir * PORTION_STEP) * 100) / 100;
-  if (next < PORTION_MIN || next > PORTION_CEIL) return null;
-  if (entry && !entryTotalsAt(entry, next)) return null;
-  return next;
+  return next < PORTION_MIN || next > PORTION_CEIL ? null : next;
+}
+
+/** One step of a ticked card, from the logged entry's own count (never the plan's, so an edit made to the entry is kept): the entry's new count, and the plan's portion to match when that count is one the plan can hold (a half step from 0.5 to 10; otherwise the plan is left alone). Null when the entry has no step. */
+export function plannedEntryStep(entry: Stepped, dir: 1 | -1, max?: number): { count: number; plan: number | null } | null {
+  const count = stepEntryCount(entry, dir, max);
+  if (count === null) return null;
+  return { count, plan: count >= PORTION_MIN && count <= PORTION_CEIL && count * 2 === Math.round(count * 2) ? count : null };
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { entryText } from '../../lib/dietLog.js';
-import { rowStepper } from '../../lib/eatenStep.js';
+import { rowStepper, type Say } from '../../lib/eatenStep.js';
 import { shortDay } from '../../lib/nutritionBoard.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -14,9 +14,6 @@ import './EatenRows.css';
 // Eaten food that no planned item's check added (brief nutrition-items-row-sheet-and-more). Today it sits in its meal (MealSections) or in "Not in a meal"; each row is one button that opens the row sheet (EatenRowSheet), so a row carries no inline Edit or Delete.
 // Less, the amount and More sit on the row itself (brief nutrition-log-first-portion-row, option A): a tap steps the entry's portion by half through `setDietPortion`; on a food logged today from a recipe the new amount also becomes its usual (notice with Undo, on `onMsg`'s second argument).
 // An earlier day's rows open the row sheet too (brief nutrition-any-day-add), and every row has Move to and Copy to (brief nutrition-move-copy-eaten). `onMsg` is the board's status line, for the sentence after a move or copy.
-/** The board's status line: a sentence and, when the change can be taken back, its Undo. */
-export type Say = (t: string, undo?: () => void) => void;
-
 export function EatenRow({ e, recipe, onMsg }: { e: DietEntry; recipe?: Recipe; onMsg: Say }) {
   const today = ymd(useToday(s => s.today));
   const step = rowStepper(e, recipe);

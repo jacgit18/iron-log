@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { usualStart } from './foodUnit.js';
-import { undoUsual, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
+import { undoUsual, undoUsualOutcome, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
 
 const rice = { cat: 'ready' as const, servings: 4, kcal: 200, p: 4 };
 
@@ -56,6 +56,16 @@ describe('withUsual', () => {
     expect('usual' in withUsual(plain, undefined)).toBe(false);
     expect(r).toEqual({ n: 'Rice', usual: 3 });
   });
+});
+
+describe('undoUsualOutcome', () => {
+  const change = { previous: 3, next: 1.5 };
+  it('writes the previous usual back while the stored one is still what the step wrote', () => {
+    expect(undoUsualOutcome({ usual: 1.5 }, change)).toEqual({ kind: 'write', usual: 3 });
+    expect(undoUsualOutcome({ usual: 1.5 }, { previous: undefined, next: 1.5 })).toEqual({ kind: 'write', usual: undefined });
+  });
+  it('leaves it alone when it was changed since', () => expect(undoUsualOutcome({ usual: 2 }, change)).toEqual({ kind: 'changed' }));
+  it('says the food is gone when the recipe was removed', () => expect(undoUsualOutcome(undefined, change)).toEqual({ kind: 'gone' }));
 });
 
 describe('usualAfterStep (Less or More on an eaten row)', () => {

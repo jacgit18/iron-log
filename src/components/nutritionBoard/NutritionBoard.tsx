@@ -15,11 +15,12 @@ import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
 import type { PlanSlot } from '../../types.ts';
 import Icon from '../Icon.jsx';
+import UndoButton from '../UndoButton.js';
 import WeekDayCard from '../WeekDayCard.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
-import type { Say } from './EatenRows.js';
+import type { Say } from '../../lib/eatenStep.js';
 import ShoppingButton from './ShoppingButton.js';
 import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
@@ -105,7 +106,7 @@ export default function NutritionBoard() {
       {phone && toolbar}
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
-      <p className="note nb-msg" role="status">{msg}{undo && <> <button type="button" className="btn sm ghost" onClick={() => { setMsg('Undone.'); undo(); }}>Undo</button></>}</p>
+      <p className="note nb-msg" role="status">{msg}{undo && <UndoButton onUndo={() => { setMsg('Undone.'); undo(); }} />}</p>
       {shown === 7 ? (
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (
