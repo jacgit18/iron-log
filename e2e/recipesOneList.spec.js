@@ -156,3 +156,30 @@ test('going back to an earlier search, or reopening the box, reuses its result w
   await page.waitForTimeout(500); // longer than the typing delay, so a request that was going to be made has been
   expect(asked).toHaveLength(2);
 });
+
+test('typing apple, pear, apple before the first answer arrives sends one apple request, and the answer is not shown for pear', async ({ page }) => {
+  await signedIn(page, [item(1, 'Apple pie')]);
+  const asked = [];
+  let release = () => {};
+  const held = new Promise(r => { release = r; });
+  await page.route('**/api/catalog/search?*', async route => { // registered last, so it answers instead of signedIn's route
+    const q = new URL(route.request().url()).searchParams.get('q');
+    asked.push(q);
+    if (q === 'apple') await held; // the first answer is slow
+    return json(200, { ok: true, items: q === 'apple' ? [item(1, 'Apple pie')] : [item(2, 'Pear tart')], more: false })(route);
+  });
+  await page.goto('/');
+  await openRecipes(page);
+  const search = page.getByRole('searchbox', { name: 'Search recipes' });
+  await search.fill('apple');
+  await expect.poll(() => asked.length).toBe(1);
+  await search.fill('pear');
+  await expect.poll(() => asked.length).toBe(2);
+  await expect(boxRows(page)).toHaveText(['Pear tart']);
+  await search.fill('apple'); // the apple request is still in flight: wait for it, no second one
+  await page.waitForTimeout(500);
+  expect(asked.filter(q => q === 'apple')).toHaveLength(1);
+  release();
+  await expect(boxRows(page)).toHaveText(['Apple pie']);
+  expect(asked).toEqual(['apple', 'pear']);
+});

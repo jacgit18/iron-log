@@ -101,6 +101,7 @@ export default function Recipes() {
   asked.current = `${q}|${cat}|${libSort}|${tries}`;
   const libRef = useRef(lib); // the page the effect below checks, so hiding and re-showing the box does not ask for the same search again
   libRef.current = lib;
+  const libAsking = useRef(new Map<string, Promise<Library>>()); // searches sent and not yet answered: coming back to one of them (apple, pear, apple) waits for that request instead of sending another; a search's answer is kept even when the box has moved on to another search
   const libCache = useRef(new Map<string, Library>()); // answers kept while Recipes stays open: going back to an earlier search (or reopening the box) shows its result with no request; Retry (`tries`) is part of the key, so it asks again
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
@@ -147,12 +148,17 @@ export default function Recipes() {
     let live = true;
     const t = setTimeout(() => {
       setLib({ status: 'loading' });
-      void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => {
-        if (!live) return;
-        const got: Library = r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key };
-        if (r.ok) libCache.current.set(key, got); // only an answer is kept, never a failure
-        setLib(got);
-      });
+      let asking = libAsking.current.get(key);
+      if (!asking) {
+        asking = searchRecipes(q, cat, 0, libSort, devHeaders).then((r): Library => {
+          libAsking.current.delete(key);
+          const got: Library = r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key };
+          if (r.ok) libCache.current.set(key, got); // only an answer is kept, never a failure
+          return got;
+        });
+        libAsking.current.set(key, asking);
+      }
+      void asking.then(got => { if (live) setLib(got); }); // only the search the box is showing now takes the answer (`libNow` also checks the key)
     }, q ? 300 : 0);
     return () => { live = false; clearTimeout(t); };
   }, [boxOn, syncing, q, cat, libSort, tries]);
