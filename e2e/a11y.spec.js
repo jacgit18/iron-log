@@ -51,6 +51,18 @@ test('training minutes for the water goal are kept after leaving the box and sho
   await expect(page.locator('#water-train')).toHaveValue('45');
 });
 
+test('nutrition with eaten rows (Less and More) has no accessibility violations', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'o1', n: 'Oats', cat: 'other', ing: [{ n: 'x' }], steps: ['Cook.'], kcal: 300, p: 10 }] }));
+    localStorage.setItem('ironlog:diet/main', JSON.stringify({ items: [{ id: 'a', d: '2026-09-24', n: 'Oats', kcal: 450, p: 15, from: 'o1', x: 1.5 }, { id: 'b', d: '2026-09-24', n: 'Toast', kcal: 90, p: 3 }] }));
+  });
+  await page.reload();
+  await openNutrition(page);
+  await expect(page.getByRole('button', { name: 'Less Oats' })).toBeVisible();
+  const { violations } = await scan(page);
+  expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
+});
+
 test('supplement library has no accessibility violations', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-supplements');

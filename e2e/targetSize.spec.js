@@ -50,6 +50,27 @@ for (const [name, clicks] of [
   });
 }
 
+// Less and More on an eaten row (brief nutrition-log-first-portion-row) are at least 44x44 at 375 px, named for their food.
+test('phone 375x812: an eaten row on Nutrition (name, Less, amount, More) has no target under 44px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.evaluate(() => {
+    localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'o1', n: 'Oats with a long name that wraps above the stepper', cat: 'other', ing: [{ n: 'x' }], steps: ['Cook.'], kcal: 300, p: 10 }] }));
+    localStorage.setItem('ironlog:diet/main', JSON.stringify({ items: [{ id: 'a', d: '2026-09-24', n: 'Oats with a long name that wraps above the stepper', kcal: 450, p: 15, from: 'o1', x: 1.5 }, { id: 'b', d: '2026-09-24', n: 'Toast', kcal: 90, p: 3 }] }));
+  });
+  await page.reload();
+  await page.getByRole('tab', { name: 'Daily', exact: true }).click();
+  await page.getByRole('button', { name: 'Nutrition', exact: true }).click();
+  const less = page.getByRole('button', { name: /^Less Oats/ });
+  await expect(less).toBeVisible();
+  for (const b of [less, page.getByRole('button', { name: /^More Oats/ }), page.getByRole('button', { name: 'Less Toast' }), page.getByRole('button', { name: 'More Toast' })]) {
+    const box = await b.boundingBox();
+    expect(box.width, 'width').toBeGreaterThanOrEqual(43.5);
+    expect(box.height, 'height').toBeGreaterThanOrEqual(43.5);
+  }
+  expect(await small(page), 'Nutrition with eaten rows has targets under 44px').toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll').toBe(true);
+});
+
 test('phone 390x844: the Log sheet has no target under 44px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: /^Log /i }).first().click();

@@ -43,6 +43,28 @@
   width: 16px;
   height: 16px;
 }
+/* Less, the amount and More on their own line under the row (brief nutrition-log-first-portion-row, option A): full width at every width, Less at the left, the amount centred, More at the right. */
+.nb-eat .nb-eatrow {
+  flex: 1 1 100%;
+  width: auto;
+  min-width: 0;
+}
+.nb-step {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.nb-step .btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.nb-stepamt {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
 @media (hover: hover) {
   .nb-eatrow:hover {
     border-color: var(--accent);

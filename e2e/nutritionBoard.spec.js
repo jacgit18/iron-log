@@ -116,7 +116,7 @@ test('editing an eaten food keeps its carbs and fat', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   await expect(meter(todayCol(page), 'Fat')).toHaveAttribute('aria-label', /: 5 /);
-  await todayCol(page).locator('.nb-eat', { hasText: 'Rice' }).getByRole('button').click(); // the row opens its sheet (brief nutrition-items-row-sheet-and-more)
+  await todayCol(page).locator('.nb-eatrow', { hasText: 'Rice' }).click(); // the row opens its sheet (brief nutrition-items-row-sheet-and-more)
   await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByRole('dialog').locator('input[id$="-n"]').fill('Brown rice');
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();

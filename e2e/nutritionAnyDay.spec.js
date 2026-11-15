@@ -58,7 +58,7 @@ test('a day ahead still offers only Saved meals and Recipes (plan items)', async
 test('food added to a past day can be corrected: its row opens the row sheet, and Delete removes it', async ({ page }) => {
   await seedDiet(page, [{ id: 'p1', d: MON, n: 'Pasta', kcal: 500, p: 20 }]);
   await openNutrition(page);
-  await col(page, MON).locator('.nb-eat').getByRole('button').click();
+  await col(page, MON).locator('.nb-eatrow').click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete Pasta' }).click();
   await page.getByRole('dialog').getByRole('button', { name: /Tap again to delete/ }).click();
   await expect(col(page, MON).locator('.nb-eat')).toHaveCount(0);
