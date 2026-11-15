@@ -9,7 +9,7 @@ import type { Persona } from './personas.ts';
    The same persona and the same day always give the same rows (a seeded generator), so a re-run puts back exactly what was there. */
 
 export interface SeedLog { clientId: string; exerciseId: string; d: string; wk: string; phase: string; weightLb: number; setsCount: number; reps: number }
-export interface SeedWeek { weekStart: string; data: Record<string, unknown> }
+export interface SeedWeek { weekStart: string; data: ReturnType<typeof normWeek> }
 export interface SeedBody { wk: string; d: string; weightLb: number }
 export interface SeedGrocery { clientId: string; position: number; data: { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean } }
 export interface SeedDiet { clientId: string; position: number; data: { id: string; d: string; n: string; kcal: number; p: number; c: number; f: number; t: number; micro?: Record<string, number> } }
@@ -88,13 +88,14 @@ function buildWeeks(logs: SeedLog[], today: Date): SeedWeek[] {
     (byWeek.get(l.wk) ?? byWeek.set(l.wk, new Set()).get(l.wk)!).add(CARD_OF[l.exerciseId]!);
   }
   return [...byWeek].sort(([a], [b]) => (a < b ? -1 : 1)).map(([weekStart, cards]) => ({
-    weekStart, data: { ...normWeek({ prog: 'A', done: Object.fromEntries([...cards].sort().map(c => [c, true])) }) },
+    weekStart, data: normWeek({ prog: 'A', done: Object.fromEntries([...cards].sort().map(c => [c, true])) }),
   }));
 }
 
 export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[], today: Date): PersonaRows {
   const rand = rng(hash(persona.id));
-  const t = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  // The calendar date on the machine that seeds, not its UTC date: the app's weeks start on the local Sunday (`weekStartOf`), so on a Saturday evening west of UTC the UTC date is already Sunday and every week key would be a week ahead. (The in-app reset route runs on the server, whose clock is UTC.)
+  const t = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
   const spec = persona.data;
   const logs: SeedLog[] = [];
   if (spec.logEntries > 0 && exerciseIds.length) {

@@ -2,7 +2,7 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PiiCrypto } from '../auth/piiCrypto.ts';
 import { startTestDatabase } from '../test/postgres.ts';
-import { personaById } from './personas.ts';
+import { personaAuthId, personaById } from './personas.ts';
 import { buildPersonaRows } from './seedPlan.ts';
 import { SEED_EXERCISE_IDS, seedPersona } from './seedPersona.ts';
 
@@ -43,4 +43,23 @@ describe('seeding the vitamin tracker', () => {
     expect(days[0].day).toBe('2026-11-09');
     for (const d of days) for (const id of Object.keys(d.taken)) expect(ids.has(id), id).toBe(true);
   }, 60_000);
+});
+
+describe('seeding the three-year veteran', () => {
+  const p = personaById('three-year-veteran')!;
+  const rows = buildPersonaRows(p, SEED_EXERCISE_IDS, TODAY);
+  const run = () => seedPersona(client, CLEAR, p, rows, TODAY);
+  const n = async (text: string) => Number((await client.query(text, [personaAuthId(p.id)])).rows[0].n);
+  const mine = `user_id = (select id from users where auth_user_id = $1)`; // the other persona seeded in this file has weeks too
+
+  it('writes the past weeks in one statement, every week and log and body key on a Sunday, and the same again on a re-run', async () => {
+    await run();
+    expect(rows.weeks.length).toBeGreaterThan(100);
+    expect(await n(`select count(*) n from weeks where ${mine}`)).toBe(rows.weeks.length);
+    expect(await n(`select count(*) n from weeks where ${mine} and extract(dow from week_start) <> 0`)).toBe(0);
+    expect(await n(`select count(*) n from log_entries where ${mine} and extract(dow from wk) <> 0`)).toBe(0);
+    expect(await n(`select count(*) n from body_entries where ${mine} and extract(dow from wk) <> 0`)).toBe(0);
+    await run();
+    expect(await n(`select count(*) n from weeks where ${mine}`)).toBe(rows.weeks.length);
+  }, 120_000);
 });
