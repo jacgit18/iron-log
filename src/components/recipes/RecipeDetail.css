@@ -74,6 +74,9 @@
 .rc-actionrow .note {
   margin: var(--sp-4) 0;
 }
+.rc-actionrow .note:empty {
+  margin: 0;
+}
 /* Missing (and Have, Have some, On your list) sit beside the ingredient's name, in its own cell, instead of a column of their own. `.rc-detail` out-ranks the list's own `.rc-ing` grid in Recipes.css. */
 @media (min-width: 641px) {
   .rc-detail .rc-ing {

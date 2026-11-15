@@ -11,7 +11,7 @@ import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
-import { macroLine, macroWords } from '../../lib/macroLine.js';
+import { macroLine } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
 import { addState, addToToday, planDay, summaryCells, type StripCell } from '../../lib/recipeSummary.js';
 import { scaleAmount } from '../../lib/recipeScale.js';
@@ -148,7 +148,7 @@ const ActionRow = ({ recipe, mine, state, msg, canUndo, onAddToday, onUndo, onPl
       {children}
     </div>
     {state === 'needs-numbers' && <p className="note">Add calories and protein per serving to log this {recipe.cat === 'ready' ? 'food' : 'recipe'}.</p>}
-    {mine && (msg || canUndo) && <p className="note" role="status">{msg}{canUndo && <> <button type="button" className="btn sm ghost" onClick={onUndo}>Undo</button></>}</p>}
+    {mine && <p className="note" role="status">{msg}{canUndo && <> <button type="button" className="btn sm ghost" onClick={onUndo}>Undo</button></>}</p>}
   </div>
 );
 

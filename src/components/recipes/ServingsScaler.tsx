@@ -1,4 +1,4 @@
-// "Cook for N" (briefs recipe-servings-scaling, recipe-page-after-log): always shown in the Ingredients heading;: fewer or more servings, shown on the recipe's amounts only. Nothing is saved.
+// "Cook for N" (briefs recipe-servings-scaling, recipe-page-after-log): always shown in the Ingredients heading: fewer or more servings, shown on the recipe's amounts only. Nothing is saved.
 export default function ServingsScaler({ base, value, onChange }: { base: number; value: number; onChange: (n: number) => void }) {
   return (
     <div className="rc-scale" role="group" aria-label="Cook for">
