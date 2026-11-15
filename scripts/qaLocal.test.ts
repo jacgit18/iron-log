@@ -1,6 +1,6 @@
 // The refusals of scripts/qa-local.mjs (brief: qa-runner-agent): these are what keep the QA Runner agent on this machine and on a scratch database.
 import { describe, expect, it } from 'vitest';
-import { BROWSER_FLAGS, dropProblem, dropScratch, freePort, markProblem, newScratchName, originProblem, pidIsStack, SCRATCH_MARK, serverProblem, signInHtml, signInScript, urlProblem } from './qa-local.mjs';
+import { BROWSER_FLAGS, dropProblem, dropScratch, freePort, markProblem, newScratchName, originProblem, pidIsStack, SCRATCH_MARK, serverProblem, signInHtml, signInNames, signInScript, urlProblem } from './qa-local.mjs';
 
 describe('urlProblem', () => {
   it.each(['http://127.0.0.1:41234', 'http://localhost:41234/', 'http://[::1]:41234/settings'])('allows %s', url => expect(urlProblem(url)).toBeNull());
@@ -122,8 +122,13 @@ describe('the sign-in page', () => {
   it('quotes the email and password as data, never as code', () => expect(script).toContain('password: "pw\\"; alert(1); \\""'));
   it('never names another origin', () => expect(script).not.toMatch(/https?:|\/\/\w/));
   it('is loaded as a script file of the stack\'s own origin (the CSP forbids inline script)', () => {
-    expect(signInHtml).toContain('<script src="/qa-signin.js">');
-    expect(signInHtml.split('<script').length - 1).toBe(1); // the one script tag is the one with the src: no inline script
-    expect(signInHtml).not.toContain('<script>');
+    const html = signInHtml(signInNames('erased-account').script);
+    expect(html).toContain('<script src="/qa-signin-erased-account.js">');
+    expect(html.split('<script').length - 1).toBe(1); // the one script tag is the one with the src: no inline script
+    expect(html).not.toContain('<script>');
+  });
+  it('names the page and script per persona, so a browser cache of one persona never signs in another (the server caches static files for an hour)', () => {
+    expect(signInNames('erased-account')).toEqual({ page: 'qa-signin-erased-account.html', script: 'qa-signin-erased-account.js' });
+    expect(signInNames('grocery-at-cap').script).not.toBe(signInNames('erased-account').script);
   });
 });

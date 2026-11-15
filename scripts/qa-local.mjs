@@ -13,7 +13,7 @@
 // (the `npm run db:start` container). The database named in it is never written to: only a new database next to it is.
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, openSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, openSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -25,8 +25,10 @@ export const SCRATCH_MARK = 'iron-log qa-local scratch';
 export const TEST_PASSWORD = 'correct horse battery staple'; // a test value the server stores only for seeded accounts on the scratch database
 // What e2e-qa/persona.js sets before sign-in: without apiSync the app shows this browser's own (empty) data, not the seeded account's.
 export const BROWSER_FLAGS = { 'ironlog:hidetip': '1', 'ironlog:hidelocal': '1', 'ironlog:flag:apiSync': 'true', 'ironlog:session/known': '1' };
-export const SIGNIN_PAGE = 'qa-signin.html';
-const SIGNIN_SCRIPT = 'qa-signin.js';
+// One page and one script per persona: the server sends static files with `Cache-Control: max-age=3600`, so a shared name made the browser reuse the previous persona's
+// script and sign in as the wrong account (found in the S-271 run, 2026-11-14). A name per persona has the same content every time, so a cached copy is always right.
+export const signInNames = personaId => ({ page: `qa-signin-${personaId}.html`, script: `qa-signin-${personaId}.js` });
+const SIGNIN_FILE = /^qa-signin-[a-z0-9-]+\.(html|js)$/;
 
 /** The script of the sign-in page: sets the flags the app needs to load the account from the server (without ironlog:flag:apiSync it shows an empty, browser-only account), signs in on the stack's own origin, opens /. The page is written by this script so the QA Runner needs no page code (javascript_tool) of its own. */
 export function signInScript(flags, email, password) {
@@ -37,12 +39,14 @@ fetch('/api/auth/sign-in/email', { method: 'POST', headers: { 'content-type': 'a
   .catch(() => { document.title = 'sign-in failed (no answer)'; });
 `;
 }
-export const signInHtml = `<!doctype html><meta charset="utf-8"><title>QA sign-in</title><script src="/${SIGNIN_SCRIPT}"></script>\n`;
+export const signInHtml = scriptName => `<!doctype html><meta charset="utf-8"><title>QA sign-in</title><script src="/${scriptName}"></script>\n`;
 
 /** Writes the sign-in page into the built app (the server serves it; the CSP allows a script file of its own origin, not an inline one). */
-function writeSignInPage(distDir, email) {
-  writeFileSync(join(distDir, SIGNIN_SCRIPT), signInScript(BROWSER_FLAGS, email, TEST_PASSWORD));
-  writeFileSync(join(distDir, SIGNIN_PAGE), signInHtml);
+function writeSignInPage(distDir, personaId, email) {
+  const { page, script } = signInNames(personaId);
+  writeFileSync(join(distDir, script), signInScript(BROWSER_FLAGS, email, TEST_PASSWORD));
+  writeFileSync(join(distDir, page), signInHtml(script));
+  return page;
 }
 const SCRATCH_NAME = /^iron_qa_run_[0-9a-f]{8}$/;
 const RESERVED_PORTS = new Set([4173, 3103, 3104, 5433]); // other sessions' preview server, the two e2e-qa servers, the shared Postgres
@@ -207,8 +211,8 @@ async function main() {
       await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
         on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), await hashPassword(TEST_PASSWORD)]);
     });
-    writeSignInPage(join(root, 'dist'), personaEmail(persona.id));
-    console.log(JSON.stringify({ url: state.url, persona: persona.id, email: personaEmail(persona.id), signInUrl: `${state.url}/${SIGNIN_PAGE}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
+    const page = writeSignInPage(join(root, 'dist'), persona.id, personaEmail(persona.id));
+    console.log(JSON.stringify({ url: state.url, persona: persona.id, email: personaEmail(persona.id), signInUrl: `${state.url}/${page}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
     return;
   }
 
@@ -235,7 +239,7 @@ async function main() {
     const why = await dropScratch(state, withClient);
     if (why) { console.error(`qa-local: not dropped: ${why}`); process.exitCode = 1; return; }
     rmSync(stateFile, { force: true });
-    for (const f of [SIGNIN_PAGE, SIGNIN_SCRIPT]) rmSync(join(root, 'dist', f), { force: true });
+    for (const f of readdirSync(join(root, 'dist')).filter(n => SIGNIN_FILE.test(n))) rmSync(join(root, 'dist', f), { force: true });
     console.error(`qa-local: stopped; dropped ${state.db} and ${state.login}`);
   }
 }
