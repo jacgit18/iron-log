@@ -14,7 +14,7 @@ const no = (cmd: string) => expect(bashProblem(cmd, root)).not.toBeNull();
 
 describe('bashProblem', () => {
   it.each([
-    'npx tsx scripts/qa-local.mjs start', 'npx tsx scripts/qa-local.mjs start --no-build', 'npx tsx scripts/qa-local.mjs seed qa-new', 'npx tsx scripts/qa-local.mjs status',
+    'npx tsx scripts/qa-local.mjs start', 'npx tsx scripts/qa-local.mjs start --no-build', 'npx tsx scripts/qa-local.mjs seed qa-new', 'npx tsx scripts/qa-local.mjs seed qa-local-admin', 'npx tsx scripts/qa-local.mjs status',
     'npx tsx scripts/qa-local.mjs stop', 'npx tsx scripts/qa-local.mjs check-url http://127.0.0.1:41234', 'npx tsx scripts/qa-local.mjs check-url "http://127.0.0.1:41234/a?b=1&c=2"',
     'git rev-parse --short HEAD', 'git rev-parse HEAD', 'git status', 'git status --short', 'mkdir -p /tmp/qa-runs/S-270',
     'node scripts/qa-scenarios-doc.mjs --record S-270 pass "saw it; all; fine" --by claude --build abc1234 --results /tmp/qa-runs/S-270/results.json',

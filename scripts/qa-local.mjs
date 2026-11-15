@@ -6,7 +6,7 @@
 //   - stop drops only what the state file says this script made, and only if the name and the mark still match.
 // Usage (run with tsx, because seeding reads the TypeScript seed code):
 //   npx tsx scripts/qa-local.mjs start                 builds the app (skip with --no-build), makes the scratch database, starts the server, prints the URL as JSON
-//   npx tsx scripts/qa-local.mjs seed <persona-id>     seeds one test account from server/qa/personas.ts and prints its email, test password and the URL
+//   npx tsx scripts/qa-local.mjs seed <persona-id>     seeds one test account from server/qa/personas.ts (or `qa-local-admin`, the stack's one test admin, for the picker) and prints its email and the URL
 //   npx tsx scripts/qa-local.mjs check-url <url>       exits 1 unless the URL is on this machine (the agent runs this before opening any address)
 //   npx tsx scripts/qa-local.mjs status | stop         stop kills the server and drops the scratch database and login (safe to run twice)
 // DATABASE_URL (or QA_LOCAL_PG) names the local Postgres server to make the scratch database on; default postgres://ironlog:ironlog@127.0.0.1:5433/ironlog
@@ -22,6 +22,12 @@ import { fileURLToPath } from 'node:url';
 const LOCAL_HOSTS = ['127.0.0.1', 'localhost', '[::1]'];
 export const SCRATCH_PREFIX = 'iron_qa_run_';
 export const SCRATCH_MARK = 'iron-log qa-local scratch';
+// The one admin of the scratch stack (brief: qa-runner-test-admin): the QA test-accounts picker is admin-only, so S-35 needs one. It exists only in the scratch database
+// and only this address is in the spawned server's ADMIN_EMAILS; .invalid can never be a real address.
+export const LOCAL_ADMIN_ID = 'qa-local-admin';
+export const LOCAL_ADMIN_EMAIL = 'qa-local-admin@qa.invalid';
+/** What the spawned server needs for the picker (Switch and Reset): the setting, the one test admin, and the scratch database as the owner URL Reset seeds through. */
+export const pickerEnv = scratchUrl => ({ QA_PERSONAS: 'true', ADMIN_EMAILS: LOCAL_ADMIN_EMAIL, QA_OWNER_DATABASE_URL: scratchUrl });
 export const TEST_PASSWORD = 'correct horse battery staple'; // a test value the server stores only for seeded accounts on the scratch database
 // What e2e-qa/persona.js sets before sign-in: without apiSync the app shows this browser's own (empty) data, not the seeded account's.
 export const BROWSER_FLAGS = { 'ironlog:hidetip': '1', 'ironlog:hidelocal': '1', 'ironlog:flag:apiSync': 'true', 'ironlog:session/known': '1' };
@@ -190,7 +196,7 @@ async function main() {
       const child = spawn('npx', ['tsx', 'server/index.ts'], { cwd: root, detached: true, stdio: ['ignore', out, out], env: {
         ...process.env, NODE_ENV: 'test', HOST: '127.0.0.1', PORT: String(port), BASE_URL: url, STATIC_DIR: 'dist', AUTH_TEST_SIGNIN: 'true',
         BETTER_AUTH_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only-secret', GOOGLE_CLIENT_ID: 'e2e-client.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'e2e-client-secret',
-        DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href } });
+        DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href, ...pickerEnv(scratch.href) } });
       child.unref();
       writeFileSync(stateFile, JSON.stringify({ ...readState(), pid: child.pid }), { mode: 0o600 });
       for (let i = 0; i < 90; i++) {
@@ -215,7 +221,8 @@ async function main() {
     const { buildPersonaRows } = await import('../server/qa/seedPlan.ts');
     const { localSeedDay } = await import('../server/qa/seedDay.ts');
     const { hashPassword } = await import('better-auth/crypto');
-    const persona = personaById(arg ?? '');
+    const admin = arg === LOCAL_ADMIN_ID;
+    const persona = admin ? { id: LOCAL_ADMIN_ID } : personaById(arg ?? '');
     if (!persona) fail(`no test account ${JSON.stringify(arg)} in server/qa/personas.ts`, 2);
     const now = new Date();
     const plain = { seal: s => s, sealStable: s => s, open: s => s, isSealed: () => false }; // the scratch server has no PII key
@@ -223,13 +230,16 @@ async function main() {
       const { rows: [{ comment }] } = await c.query(`select shobj_description(oid, 'pg_database') as comment from pg_database where datname = current_database()`);
       const m = markProblem(comment);
       if (m) throw new Error(m);
-      await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
+      const authId = admin ? LOCAL_ADMIN_ID : personaAuthId(persona.id);
+      if (admin) await c.query(`insert into auth."user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt") values ($1, 'QA test admin', $2, true, null, now(), now()) on conflict (id) do nothing`, [authId, LOCAL_ADMIN_EMAIL]);
+      else await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
       await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
-        on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), await hashPassword(TEST_PASSWORD)]);
+        on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, authId, await hashPassword(TEST_PASSWORD)]);
     });
     const token = seedToken();
-    const page = writeSignInPage(join(root, 'dist'), persona.id, personaEmail(persona.id), token);
-    console.log(JSON.stringify({ url: state.url, persona: persona.id, email: personaEmail(persona.id), signInUrl: `${state.url}/${page}?s=${token}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
+    const email = admin ? LOCAL_ADMIN_EMAIL : personaEmail(persona.id);
+    const page = writeSignInPage(join(root, 'dist'), persona.id, email, token);
+    console.log(JSON.stringify({ url: state.url, persona: persona.id, email, signInUrl: `${state.url}/${page}?s=${token}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
     return;
   }
 
