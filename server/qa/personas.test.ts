@@ -7,7 +7,6 @@ import { normRecipes } from '../../src/shared/recipes.ts';
 import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import { SEED_EXERCISE_IDS } from './seedPersona.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from './personas.ts';
-import { BUILTIN_PROGRAMS } from './builtinPrograms.ts';
 import { BUILTIN, slotsFor } from '../../src/lib/data.ts';
 import { buildPersonaRows, cardsByExercise, DIET_TARGETS } from './seedPlan.ts';
 
