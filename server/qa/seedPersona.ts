@@ -40,6 +40,10 @@ export async function seedPersona(client: Pick<pg.PoolClient, 'query'>, crypto: 
            from jsonb_to_recordset($2::jsonb) as r(client_id text, seq bigint, exercise_id text, d date, phase text, weight_lb numeric, sets_count int, reps numeric, wk date)`,
         [u.id, JSON.stringify(chunk.map(l => ({ client_id: l.clientId, seq: l.seq, exercise_id: l.exerciseId, d: l.d, phase: l.phase, weight_lb: l.weightLb, sets_count: l.setsCount, reps: l.reps, wk: l.wk })))]);
     }
+    if (rows.weeks.length) await client.query(
+      `insert into weeks (user_id, seq, week_start, data)
+       select $1, r.seq, r.week_start, r.data from jsonb_to_recordset($2::jsonb) as r(seq bigint, week_start date, data jsonb)`,
+      [u.id, JSON.stringify(rows.weeks.map(w => ({ seq: ++seq, week_start: w.weekStart, data: w.data })))]);
     for (const b of rows.body) await client.query('insert into body_entries (user_id, seq, wk, d, weight_lb) values ($1, $2, $3, $4, $5)', [u.id, ++seq, b.wk, b.d, b.weightLb]);
     for (const s of rows.groceryStores) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'grocery_store', $4, $5)`, [u.id, ++seq, s.clientId, s.position, JSON.stringify(s.data)]);
     for (const x of rows.groceryGroups) await client.query(`insert into list_items (user_id, seq, client_id, list, position, data) values ($1, $2, $3, 'grocery_group', $4, $5)`, [u.id, ++seq, x.clientId, x.position, JSON.stringify(x.data)]);
