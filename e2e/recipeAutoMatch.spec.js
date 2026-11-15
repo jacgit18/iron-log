@@ -28,7 +28,7 @@ test('water is Have with nothing in Groceries and is not added to Shopping', asy
   await newRecipe(page, 'Broth', ['boiling water', 'rice']);
   await expect(state(page, 'boiling water')).toHaveText('Have');
   await expect(state(page, 'rice')).toHaveText('Missing');
-  await expect(page.getByText('1 of 2 at home')).toBeVisible();
+  await expect(page.getByText('1 of 2 at home')).toHaveCount(0); // with no inventory items the strip leaves the at-home cell out (brief recipe-page-after-log)
   await expect(page.getByRole('button', { name: 'Add 1 missing to Shopping' })).toBeVisible();
 });
 

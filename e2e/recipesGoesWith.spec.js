@@ -38,7 +38,8 @@ test('Make a meal builds a linked meal whose numbers are the two parts added up'
   await goes(page).getByLabel('Add a recipe it goes with').selectOption({ label: 'Rice' });
   await goes(page).getByRole('button', { name: 'Make a meal of Chili with Rice' }).click();
   await expect(page.getByRole('heading', { name: /Chili with Rice/ })).toBeVisible();
-  await expect(page.getByText('Per portion: 600 kcal · P 34 g')).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('600 kcal', { exact: true })).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('P 34 g per serving')).toBeVisible();
 });
 
 test('a recipe goes with at most three, then asks to remove one', async ({ page }) => {

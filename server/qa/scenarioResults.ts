@@ -10,13 +10,15 @@ export interface ResultEntry {
   /** `YYYY-MM-DD`. */
   date: string;
   by: 'owner' | 'claude';
+  /** An agent walked a phone-only scenario in an emulated phone view. It is never the owner's phone check: see `latestById`. Only `true`, only with `by: claude`, only on a `device` scenario. */
+  emulated?: true;
   build?: string;
   note?: string;
 }
 
 const OUTCOMES: readonly string[] = ['pass', 'fail', 'blocked'];
 
-/** Why an entry cannot be stored, or null. `known` is every scenario id; `devices` the ids that need a real phone (only the owner can record those). */
+/** Why an entry cannot be stored, or null. `known` is every scenario id; `devices` the ids that need a real phone (only the owner can record those; an agent can record one only as `emulated`). */
 export function entryProblem(e: unknown, known: ReadonlySet<string>, devices: ReadonlySet<string>): string | null {
   if (!e || typeof e !== 'object') return 'is not an object';
   const r = e as Record<string, unknown>;
@@ -26,7 +28,10 @@ export function entryProblem(e: unknown, known: ReadonlySet<string>, devices: Re
   if (r.by !== 'owner' && r.by !== 'claude') return `has by ${JSON.stringify(r.by)}, not owner or claude`;
   if (r.build !== undefined && typeof r.build !== 'string') return 'has a build that is not text';
   if (r.note !== undefined && typeof r.note !== 'string') return 'has a note that is not text';
-  if (r.by === 'claude' && devices.has(r.id)) return `${r.id} needs a real phone, so only the owner can record it`;
+  if (r.emulated !== undefined && r.emulated !== true) return 'has emulated that is not true';
+  if (r.emulated === true && r.by !== 'claude') return 'is marked emulated, but only an agent records an emulated run';
+  if (r.emulated === true && !devices.has(r.id)) return `${r.id} does not need a phone, so it cannot be an emulated run`;
+  if (r.by === 'claude' && devices.has(r.id) && r.emulated !== true) return `${r.id} needs a real phone, so an agent can only record it as emulated (emulated: true); the owner records the real result`;
   return null;
 }
 
@@ -43,8 +48,17 @@ export function parseResults(text: string, known: ReadonlySet<string>, devices: 
   return data as ResultEntry[];
 }
 
-/** The latest entry per scenario: the later date wins, and for the same date the later line. */
+/** The latest entry per scenario: the later date wins, and for the same date the later line. An emulated entry is left out whatever its date, so it can never stand in for (or replace) a real result, the owner's phone check above all. */
 export function latestById(entries: readonly ResultEntry[]): Map<string, ResultEntry> {
+  return latestOf(entries.filter(e => !e.emulated));
+}
+
+/** The latest emulated entry per phone scenario, by the same rule. */
+export function latestEmulatedById(entries: readonly ResultEntry[]): Map<string, ResultEntry> {
+  return latestOf(entries.filter(e => e.emulated));
+}
+
+function latestOf(entries: readonly ResultEntry[]): Map<string, ResultEntry> {
   const out = new Map<string, ResultEntry>();
   for (const e of entries) {
     const prev = out.get(e.id);
@@ -55,7 +69,7 @@ export function latestById(entries: readonly ResultEntry[]): Map<string, ResultE
 
 /** The Result cell text for an entry: `2026-11-06 pass (claude, abc123): note`. */
 export function formatResult(e: ResultEntry): string {
-  const who = [e.by === 'claude' ? 'claude' : '', e.build ?? ''].filter(Boolean).join(', ');
+  const who = [e.by === 'claude' ? 'claude' : '', e.emulated ? 'emulated' : '', e.build ?? ''].filter(Boolean).join(', ');
   const note = e.note?.replace(/\s+/g, ' ').trim(); // one line, so it cannot split the Result line or a table row
   return `${e.date} ${e.outcome}${who ? ` (${who})` : ''}${note ? `: ${note}` : ''}`;
 }
@@ -66,10 +80,12 @@ export function appendEntry(text: string, entry: ResultEntry, known: ReadonlySet
   return `${JSON.stringify(entries, null, 2)}\n`;
 }
 
-export type DeviceState = 'not tried' | 'passed' | 'failed' | 'blocked' | 'noted by hand';
+export type DeviceState = 'not tried' | 'passed' | 'failed' | 'blocked' | 'noted by hand' | 'emulated pass' | 'emulated fail' | 'emulated blocked';
 
-/** Where a phone scenario stands: its latest recorded entry decides; with none, a Result written by hand only says it was noted. */
-export function deviceState(latest: ResultEntry | undefined, handWritten: boolean): DeviceState {
+/** Where a phone scenario stands: the latest real entry decides (`latest`, from `latestById`); with none, a Result the owner wrote by hand says it was noted (an agent's emulated run never replaces it), then an emulated run shows as `emulated ...` (never `passed`). */
+export function deviceState(latest: ResultEntry | undefined, handWritten: boolean, emulated?: ResultEntry): DeviceState {
   if (latest) return latest.outcome === 'pass' ? 'passed' : latest.outcome === 'fail' ? 'failed' : 'blocked';
+  if (handWritten) return 'noted by hand';
+  if (emulated) return `emulated ${emulated.outcome === 'pass' ? 'pass' : emulated.outcome === 'fail' ? 'fail' : 'blocked'}`;
   return handWritten ? 'noted by hand' : 'not tried';
 }

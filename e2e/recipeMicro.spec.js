@@ -22,7 +22,7 @@ async function lookUpAndFill(page) {
   await expect(page.getByLabel('Calories per serving')).toHaveValue('100');
 }
 
-test('a looked-up food saved on the Ready-made form keeps its amounts, and logging it twice from the board puts twice the amounts on the entry', async ({ page }) => {
+test('a looked-up food saved on the Ready-made form keeps its amounts, and logging it at two servings from the board puts twice the amounts on the entry', async ({ page }) => {
   await lookUpAndFill(page);
   await expect(page.getByLabel('Amount 1')).toHaveValue('100'); // the amounts show as rows (brief type-food-amounts), each one to check against the label
   await expect(page.getByLabel('Amount 2')).toHaveValue('2');
@@ -31,12 +31,13 @@ test('a looked-up food saved on the Ready-made form keeps its amounts, and loggi
   expect((await recipes(page))[0].micro).toEqual({ calcium: 100, iron: 2 });
   await openNutrition(page);
   const sheet = await openAdd(page, 'Recipes');
-  await sheet.getByRole('button', { name: 'Log Spinach' }).click();
-  const portion = page.getByRole('dialog').last();
-  await portion.getByRole('button', { name: 'More' }).click(); // 1 serving, then 1.5
-  await portion.getByRole('button', { name: 'More' }).click(); // 2
-  await portion.getByRole('button', { name: 'Log', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Log Spinach' }).click(); // one tap logs one serving (brief nutrition-log-first-portion-row)
   await expect.poll(async () => (await eaten(page)).length).toBe(1);
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  const row = page.locator('.nb-col.today .nb-eat', { hasText: 'Spinach' });
+  await row.getByRole('button', { name: 'More Spinach' }).click(); // 1.5 servings
+  await row.getByRole('button', { name: 'More Spinach' }).click(); // 2
+  await expect(row.locator('.nb-stepamt')).toHaveText('2 portions');
   const [e] = await eaten(page);
   expect(e.kcal).toBe(200);
   expect(e.micro).toEqual({ calcium: 200, iron: 4 });

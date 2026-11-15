@@ -104,7 +104,7 @@ export function planLog(r: Resolved, entries: DietEntry[], day: string, recipes:
   const nums = r.recipe && hasMacros(r.recipe) ? servingNumbers(r.recipe, r.portion) : null;
   if (!r.recipe || !nums) return { error: 'Add calories and protein to this recipe to log it.' };
   const room = entries.filter(e => e.d === day).length < MAX_DIET_PER_DAY;
-  return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id, ...withMicro(nums.micro), x: r.portion }], left: 0 } : { add: [], left: 1 };
+  return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id, ...withMicro(nums.micro), ...(nums.micro && r.recipe.est ? { est: true as const } : {}), x: r.portion }], left: 0 } : { add: [], left: 1 };
 }
 
 export const MAX_FIND_MATCHES = 8;

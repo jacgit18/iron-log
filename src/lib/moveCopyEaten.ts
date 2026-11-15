@@ -62,7 +62,7 @@ export function copyEatenMany(list: readonly DietEntry[], id: string, days: read
       if (bad) { skipped.push({ day, reason: bad === ONE_OFF_REASON ? 'one-off food' : bad === WINDOW_REASON ? 'out of reach' : shortReason(bad) }); continue; }
       const recipe = recipes.find(r => r.id === src.from);
       if (!recipe) { skipped.push({ day, reason: 'recipe is gone' }); continue; } // addPlanItem refuses a missing recipe the same way
-      const x = recipe.kcal ? Math.min(10, Math.max(0.5, Math.round((src.kcal / recipe.kcal) * 2) / 2)) : 1;
+      const x = src.x !== undefined ? Math.min(10, Math.max(0.5, Math.round(src.x * 2) / 2)) : recipe.kcal ? Math.min(10, Math.max(0.5, Math.round((src.kcal / recipe.kcal) * 2) / 2)) : 1; // the stored portion when the entry has one; the calorie guess only for an old entry
       planAdds.push({ day, item: { k: 'r', id: recipe.id, ...(x !== 1 ? { x } : {}) } });
       continue;
     }

@@ -240,6 +240,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-269': { auto: 'manual' },
   'S-270': { auto: 'manual' },
   'S-271': { auto: 'manual' },
+  'S-301': { auto: 'manual' }, // a second device that holds the old data; S-271 walks the one-device part
   'S-272': { auto: 'manual' },
   'S-273': { auto: 'e2e', specs: ['e2e/issuesFilter.spec.js', 'e2e/adminIssues.spec.js'], partial: 'the specs stub the issues API with their own four issues, and check each status option in turn only through Fixed and All' },
   'S-274': { auto: 'manual' }, // the day rule has an e2e in nutritionQuickLog.spec.js; the camera scan itself is phone-only

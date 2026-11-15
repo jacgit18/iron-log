@@ -17,7 +17,8 @@ import './Recipes.css';
 import './RecipeFind.css';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
-import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
+import { inLibraryTab, libraryEmptyNote, libraryHave } from '../../lib/libraryRows.js';
+import { SOURCES, countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts, yourHeadingShown } from '../../lib/recipeMerged.js';
 import { comboIds, comboTabCounts, expandedRows, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
@@ -48,7 +49,10 @@ const PANE_CHOICES = [{ key: 'auto', label: 'Beside the list' }, { key: 'closed'
 const FILTER_CHOICES = [{ key: 'closed', label: 'Closed' }, { key: 'open', label: 'Open' }] as const;
 const EMPTY_CHIPS = new Map<string, ComboChip[]>();
 const openedThisVisit: string[] = []; // recipes opened in the list this visit, newest last (Recent chips; not stored)
-type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
+type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean; key: string } | { status: 'failed'; reason: string; key: string };
+const LIB_KEPT = 20; // library answers kept while Recipes is open: the newest 20 searches
+const keepAnswer = (cache: Map<string, Library>, key: string, answer: Library): void => { cache.delete(key); cache.set(key, answer); if (cache.size > LIB_KEPT) cache.delete(cache.keys().next().value as string); };
+const LIB_LOADING: Library = { status: 'loading' }; // one value, so the memos that read the library do not rerun on every render
 
 export default function Recipes() {
   const recipes = useAppStore(s => s.recipes);
@@ -84,7 +88,7 @@ export default function Recipes() {
   const [selId, setSelId] = useKept('selId'); // the recipe in the detail pane (wide screens)
   const [paneChoice] = useSortChoice('recipes-detail', PANE_CHOICES, 'auto');
   const pane = useDetailPaneWidth() && paneChoice === 'auto';
-  const libSignedOut = src === 'library' && !syncing; // the Library needs the account: a prompt replaces the search box, tabs and filters
+  const [browse, setBrowse] = useState(false); // "Browse the library" pressed: the box is open with no search text (not kept: the box is folded again on the next visit)
   const [cat, setCat] = useKept('cat');
   const [canMake, setCanMake] = useKept('canMake');
   const [tagSel, setTagSel] = useKept('tagSel');
@@ -92,15 +96,18 @@ export default function Recipes() {
   const [mineSort, setMineSort] = useSortChoice('recipes', RECIPE_SORTS, DEFAULT_RECIPE_SORT);
   const [libSort, setLibSort] = useSortChoice('recipes-library', LIBRARY_SORTS, DEFAULT_LIBRARY_SORT);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
-  const [libTab, setLibTab] = useKept('libTab');
   const [added, setAdded] = useState<{ id: string; name: string } | { error: string } | null>(null); // the last one-tap Add from the Library, for its Undo
   const [tries, setTries] = useState(0);
   const month = monthKey(new Date());
   const asked = useRef(''); // the search the library list shows; a page that arrives for an older one is dropped
   asked.current = `${q}|${cat}|${libSort}|${tries}`;
+  const libRef = useRef(lib); // the page the effect below checks, so hiding and re-showing the box does not ask for the same search again
+  libRef.current = lib;
+  const libAsking = useRef(new Map<string, Promise<Library>>()); // searches sent and not yet answered: coming back to one of them (apple, pear, apple) waits for that request instead of sending another; a search's answer is kept even when the box has moved on to another search
+  const libCache = useRef(new Map<string, Library>()); // answers kept while Recipes stays open: going back to an earlier search (or reopening the box) shows its result with no request; Retry (`tries`) is part of the key, so it asks again
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
-  const chips = visibleChips(chipCfg, src === 'mine');
+  const chips = visibleChips(chipCfg, src !== 'library');
   const tags = useMemo(() => tagCounts(recipes), [recipes]);
   const activeTags = useMemo(() => liveTags(recipes, tagSel), [recipes, tagSel]); // a renamed or deleted tag leaves the selection
   useEffect(() => { if (activeTags.length !== tagSel.length) setTagSel(activeTags); }, [activeTags, tagSel]); // drop a renamed or deleted tag so it cannot come back selected
@@ -109,14 +116,22 @@ export default function Recipes() {
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
   const counts = useMemo(() => comboTabCounts(narrowed, recipes), [narrowed, recipes]); // the rows each tab shows: a combo is a chip on its parts, a row only in Meals (brief recipes-combo-chips)
-  const libShown = useMemo(() => (lib.status === 'ready' ? lib.items.filter(it => inLibraryTab(it, libTab)) : []), [lib, libTab]);
-  const libHave = useMemo(() => new Map(libShown.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libShown, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
   const recentOn = recent && picks.length > 0; // the pill is hidden, and Recent off, when nothing was starred, logged or opened
   const combos = useMemo(() => comboIds(recipes), [recipes]);
   const mineList = useMemo(() => mineRows(narrowed, recipes, tab), [narrowed, recipes, tab]);
   const shown = recentOn ? recentRows(narrowed, picks) : sortRecipes(mineList.rows, mineSort, recipes, makeable);
   const chipRows = recentOn ? EMPTY_CHIPS : mineList.chips; // Recent lists recipes as they are
+  // The library box (lib/recipeMerged.ts): yours first, then library recipes you do not have yet. A library page for an older search is not shown.
+  const boxOn = libraryBoxShown({ source: src, q, browse, tab, recent: recentOn && src !== 'library', cat }); // the Library filter is not the Recent list
+  const boxAllowed = libraryBoxShown({ source: src, q, browse: true, tab, recent: recentOn && src !== 'library', cat }); // the box could open here: the Browse button is offered
+  const libNow: Library = lib.status !== 'loading' && lib.key !== asked.current ? LIB_LOADING : lib; // an answer, or a failure, for an older search is not shown
+  const libReady = boxOn && syncing && libNow.status === 'ready';
+  const libItems = useMemo(() => (libNow.status === 'ready' ? libNow.items.filter(it => inLibraryTab(it, tab)) : []), [libNow, tab]);
+  const libGroup = useMemo(() => mergedGroups([], recipes, libItems).library, [recipes, libItems]); // not rebuilt on every keystroke
+  const groups = { mine: shown, library: libGroup };
+  const srcCounts = sourceCounts(groups, libReady, libNow.status === 'ready' && libNow.more);
+  const libHave = useMemo(() => new Map(libGroup.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libGroup, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   // The rows with "+N more" pressed. Held here, not in the chip line, so they stay open while a combo's page replaces the list on a phone;
   // folded when the tab changes (owner rule, 2026-11-14) or the row has nothing more to show. No search text, tab or filter is touched.
   const [openChips, setOpenChips] = useState<{ tab: typeof tab; ids: readonly string[] }>({ tab, ids: [] });
@@ -127,19 +142,33 @@ export default function Recipes() {
   const selected = shown.find(r => r.id === selId) ?? chipped ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
   useEffect(() => {
-    if (src !== 'library' || !syncing) return;
+    if (!boxOn || !syncing) return;
+    const key = `${q}|${cat}|${libSort}|${tries}`;
+    if (libRef.current.status !== 'loading' && libRef.current.key === key) return; // already answered for this search
+    const kept = libCache.current.get(key);
+    if (kept) { setLib(kept); return; } // asked before while Recipes stayed open
     let live = true;
     const t = setTimeout(() => {
       setLib({ status: 'loading' });
-      void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more } : { status: 'failed', reason: r.reason }); });
+      let asking = libAsking.current.get(key);
+      if (!asking) {
+        asking = searchRecipes(q, cat, 0, libSort, devHeaders).then((r): Library => {
+          libAsking.current.delete(key);
+          const got: Library = r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key };
+          if (r.ok) keepAnswer(libCache.current, key, got); // only an answer is kept, never a failure
+          return got;
+        }, (): Library => { libAsking.current.delete(key); return { status: 'failed', reason: 'unreachable', key }; }); // a thrown search is a failed one, and is not reused
+        libAsking.current.set(key, asking);
+      }
+      void asking.then(got => { if (live) setLib(got); }); // only the search the box is showing now takes the answer (`libNow` also checks the key)
     }, q ? 300 : 0);
     return () => { live = false; clearTimeout(t); };
-  }, [src, syncing, q, cat, libSort, tries]);
+  }, [boxOn, syncing, q, cat, libSort, tries]);
   const more = async () => {
-    if (lib.status !== 'ready') return;
-    const key = asked.current;
+    if (libNow.status !== 'ready') return;
+    const key = asked.current, lib = libNow;
     const r = await searchRecipes(q, cat, lib.items.length, libSort, devHeaders);
-    if (r.ok && key === asked.current) setLib({ status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more });
+    if (r.ok && key === asked.current) { const next: Library = { status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more, key }; keepAnswer(libCache.current, key, next); setLib(next); }
   };
 
   const back = () => setView({ kind: 'list' });
@@ -175,7 +204,7 @@ export default function Recipes() {
     if (libCopy) return <RecipeDetail key={libCopy.id} recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
       useAppStore.getState().copyCatalogRecipe(view.item, servings); // an error here means it is already in Mine, which is where it opens
       const added = useAppStore.getState().recipes.find(r => r.from === view.item.id);
-      if (added) { setSrc('mine'); setView({ kind: 'mine', id: added.id }); }
+      if (added) setView({ kind: 'mine', id: added.id });
     }} />;
   }
 
@@ -186,47 +215,78 @@ export default function Recipes() {
   };
 
   // One compact row (brief recipes-list-compact): name and star, then the type and the macro line; the same right-hand slot holds Log or + Add, or an arrow that opens the item.
-  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; mine?: boolean; open: () => void }) => (
-    <li key={o.key} className={`rc-item${o.current ? ' current' : ''}${o.chips?.length ? ' hascombos' : ''}`}>
+  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
+    <li key={o.key} className={`rc-item${o.lib ? ' rc-libitem' : ''}${o.current ? ' current' : ''}${o.chips?.length ? ' hascombos' : ''}`}>
       <button type="button" className="rc-row" onClick={o.open} aria-current={o.current ? 'true' : undefined}>
         <span className="rc-main">
-          <span className="rc-title"><b id={`rc-t-${o.key}`}>{o.title}</b>{o.fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{o.mine && <span className="rc-inmine" role="img" aria-label="In Mine"><Icon name="check" /></span>}{o.edited && <span className="rc-edited">Edited</span>}</span>
+          <span className="rc-title"><b id={`rc-t-${o.key}`}>{o.title}</b>{o.fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{o.edited && <span className="rc-edited">Edited</span>}</span>
           <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}</span>
         </span>
         {!o.logId && !o.addIt && <span className="rc-go" aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
       {o.logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${o.key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: o.logId! })}>Log</button>}
-      {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add ${o.title}`} onClick={o.addIt}>+ Add</button>}
+      {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add to mine ${o.title}`} onClick={o.addIt}>+ Add to mine</button>}
       {o.chips?.length ? <ComboChips food={o.title} chips={o.chips} expanded={openIds.includes(o.key)} onToggle={() => toggleChips(o.key)} onOpen={openCombo} /> : null}
     </li>
   );
+
+
+  const yours = src !== 'library'; // the Library filter hides your group
+  const libBox = boxOn ? (
+    <section className="rc-libbox" id="recipes-library-box" aria-labelledby="rc-libbox-h">
+      <h3 id="rc-libbox-h" className="rc-libhd">Library · not in your recipes yet{libReady ? ` (${countText('library', srcCounts)})` : ''}</h3>
+      <p className="note rc-libnote">Ready recipes from the Wikibooks Cookbook. + Add to mine copies one into your recipes.{filtersSkipLibrary(nutSel, activeTags) ? ' Your nutrition and tag filters do not apply here.' : ''}</p>
+      {!syncing && <LibrarySignIn />}
+      {syncing && <div className="rc-sort"><SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} /><span className="rc-sortedby">{librarySortedBy(libSort, q)}</span></div>}
+      {syncing && libNow.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
+      {syncing && libNow.status === 'failed' && <p className="note gerr" role="alert">{libNow.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
+      {syncing && libNow.status === 'ready' && !libNow.items.length && <p className="note">No library recipe matches.</p>}
+      {syncing && libNow.status === 'ready' && libNow.items.length > 0 && !libItems.length && <p className="note">{libraryEmptyNote(tab, libNow.more)}</p>}
+      {syncing && libNow.status === 'ready' && libItems.length > 0 && !groups.library.length && <p className="note">Everything here is already in your recipes.</p>}
+      {syncing && libNow.status === 'ready' && (
+        <>
+          <ul className="rc-list rc-cards">
+            {groups.library.map(it => {
+              const have = libHave.get(it.id) ?? null;
+              return row({ key: it.id, title: it.name, meta: recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), have: have ? `${have.text} at home` : null, haveAll: !!have?.all, lib: true, addIt: () => addFromLibrary(it), open: () => setView({ kind: 'library', item: it }) });
+            })}
+          </ul>
+          {libNow.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}
+          <p className="rc-attrib">Library recipes are from the Wikibooks Cookbook, CC BY-SA 4.0.</p>
+        </>
+      )}
+    </section>
+  ) : yours && boxAllowed && recipes.length > 0 ? (
+    <button type="button" className="btn rc-browse" id="recipes-browse" onClick={() => setBrowse(true)}>Browse the library</button>
+  ) : null;
 
   return (
     <section className="panel" aria-labelledby="recipes-h">
       <div className="rc-titlebar">
         <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
-        <div className="rc-src" role="group" aria-label="Recipe source">
-          <button type="button" id="recipes-mine" className="pillbtn" aria-pressed={src === 'mine'} onClick={() => setSrc('mine')}>Mine</button>
-          <button type="button" id="recipes-library" className="pillbtn" aria-pressed={src === 'library'} onClick={() => { setSrc('library'); setNutSel([]); setRecent(false); if (cat === 'ready') setCat(null); }}>Library</button>
-        </div>
-        {src === 'mine' && <RecipeNewMenu onChoose={choose} />}
+        <RecipeNewMenu onChoose={choose} />
       </div>
-      {!libSignedOut && <div className="rc-top">
+      <div className="rc-top">
         <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
         <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
-      </div>}
-      {src === 'mine' && <RecipeTypeTabs value={recentOn ? null : tab} counts={counts} onChange={t => { setRecent(false); setTab(t); }} {...(picks.length ? { recent: { on: recentOn, onToggle: () => setRecent(!recentOn) } } : {})} />}
-      {src === 'library' && !libSignedOut && <RecipeTypeTabs value={libTab} onChange={t => setLibTab(t as LibraryTab)} tabs={LIBRARY_TABS} />}
-      {!libSignedOut && <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
+      </div>
+      <div className="rc-src" role="group" aria-label="Recipe source">
+        {SOURCES.map(o => {
+          const n = countText(o.key, srcCounts);
+          return <button type="button" key={o.key} id={`recipes-${o.key}`} className="pillbtn" aria-pressed={src === o.key} onClick={() => { setSrc(o.key); if (o.key === 'library') { setRecent(false); if (cat === 'ready') setCat(null); } }}>{o.label}{n && <span className="rc-count">{n}</span>}</button>;
+        })}
+      </div>
+      <RecipeTypeTabs value={recentOn && yours ? null : tab} {...(yours ? { counts } : {})} onChange={t => { setRecent(false); setTab(t); }} {...(picks.length && yours ? { recent: { on: recentOn, onToggle: () => setRecent(!recentOn) } } : {})} />
+      <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
         <FilterSelect label="Category" value={cat ?? ''} onChange={v => setCat(v === '' ? null : v as RecipeCategory)}>
           <option value="">All categories</option>
           {chips.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
         </FilterSelect>
         <div className="rc-chips">
-          {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
+          {yours && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
           <button type="button" className="rc-manage" onClick={() => useAppStore.getState().openModal({ type: 'recipefilters' })}>Manage filters</button>
         </div>
-        {src === 'mine' && tags.length > 0 && (
+        {yours && tags.length > 0 && (
           <div className="rc-chips" role="group" aria-label="Tags">
             {tags.map(t => {
               const on = activeTags.some(a => a.toLowerCase() === t.tag.toLowerCase());
@@ -234,7 +294,7 @@ export default function Recipes() {
             })}
           </div>
         )}
-        {src === 'mine' && (
+        {yours && (
           <div className="rc-chips" role="group" aria-label="Nutrition">
             {NUTRITION_FILTERS.map(f => {
               const on = nutSel.includes(f.key);
@@ -242,69 +302,47 @@ export default function Recipes() {
             })}
           </div>
         )}
-        <div className="rc-sort">
-          {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
-          {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
-        </div>
-      </div>}
+        {yours && <div className="rc-sort"><SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /></div>}
+      </div>
       <RemovedNotice scope="recipes" />
       {typesUndo && (
         <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setTypesUndo(null) }} actions={[{ label: 'Undo', onClick: () => { typesUndo(); setTypesUndo(null); } }, { label: 'Dismiss', onClick: () => setTypesUndo(null), ghost: true }]}>
           Food types saved.
         </Notice>
       )}
-      {src === 'library' && added && ('error' in added ? (
+      {added && ('error' in added ? (
         <p className="note gerr" role="alert">{added.error} <button type="button" className="btn sm" onClick={() => setAdded(null)}>Dismiss</button></p>
       ) : (
-        <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setAdded(null) }} actions={[{ label: 'Open', onClick: () => { setSrc('mine'); setView({ kind: 'mine', id: added.id }); setAdded(null); } }, { label: 'Undo', onClick: () => { useAppStore.getState().undoCatalogCopy(added.id); setAdded(null); } }, { label: 'Dismiss', onClick: () => setAdded(null), ghost: true }]}>
+        <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setAdded(null) }} actions={[{ label: 'Open', onClick: () => { setView({ kind: 'mine', id: added.id }); setAdded(null); } }, { label: 'Undo', onClick: () => { useAppStore.getState().undoCatalogCopy(added.id); setAdded(null); } }, { label: 'Dismiss', onClick: () => setAdded(null), ghost: true }]}>
           {added.name} added to Mine.
         </Notice>
       ))}
-      {src === 'mine' && banner && (
+      {yours && banner && (
         <Notice kind="suggestion" actions={[{ label: 'Review types', onClick: () => setView({ kind: 'types' }) }]}>{banner}</Notice>
       )}
 
-      {src === 'mine' && (
-        <>
-          {!recipes.length && (
-            <EmptyTiles heading="Add your first recipe" tiles={[
-              { id: 'rc-tile-new', label: 'Write a recipe', hint: 'Your own, ingredient by ingredient', onClick: () => setView({ kind: 'form' }) },
-              { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setSrc('library') },
-            ]} />
-          )}
-          {recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
-          <div className={pane ? 'rc-split' : undefined}>
+      {yours && !recipes.length && (
+        <EmptyTiles heading="Add your first recipe" tiles={[
+          { id: 'rc-tile-new', label: 'Write a recipe', hint: 'Your own, ingredient by ingredient', onClick: () => setView({ kind: 'form' }) },
+          { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setBrowse(true) },
+        ]} />
+      )}
+      {yours && recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{libReady && groups.library.length > 0 ? 'None of yours match.' : recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
+      {!yours && !boxOn && <p className="note">The library has nothing for this tab or category.</p>}
+      <div className={pane && yours ? 'rc-split' : undefined}>
+        <div className="rc-merged">
+          {yourHeadingShown(boxOn, yours, recipes.length > 0) && <h3 className="rc-grp">Your recipes ({shown.length})</h3>}
+          {yours && (
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
                 return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
-            {pane && recipes.length > 0 && <RecipeDetailPane recipe={selected} onEdit={id => setView({ kind: 'form', id })} onGone={() => setSelId(null)} onOpen={setSelId} />}
-          </div>
-        </>
-      )}
-
-      {src === 'library' && (
-        <>
-          {libSignedOut && <LibrarySignIn />}
-          {syncing && lib.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
-          {syncing && lib.status === 'failed' && <p className="note gerr" role="alert">{lib.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
-          {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
-          {syncing && lib.status === 'ready' && lib.items.length > 0 && !libShown.length && <p className="note">{libraryEmptyNote(libTab, lib.more)}</p>}
-          {syncing && lib.status === 'ready' && (
-            <>
-              <ul className="rc-list rc-cards">
-                {libShown.map(it => {
-                  const have = libHave.get(it.id) ?? null, mine = inMine(it, recipes);
-                  return row({ key: it.id, title: it.name, meta: recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), have: have ? `${have.text} at home` : null, haveAll: !!have?.all, mine, ...(mine ? {} : { addIt: () => addFromLibrary(it) }), open: () => setView({ kind: 'library', item: it }) });
-                })}
-              </ul>
-              {lib.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}
-              <p className="rc-attrib">Library recipes are from the Wikibooks Cookbook, CC BY-SA 4.0.</p>
-            </>
           )}
-        </>
-      )}
+          {libBox}
+        </div>
+        {pane && yours && recipes.length > 0 && <RecipeDetailPane recipe={selected} onEdit={id => setView({ kind: 'form', id })} onGone={() => setSelId(null)} onOpen={setSelId} />}
+      </div>
     </section>
   );
 }

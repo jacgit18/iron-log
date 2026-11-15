@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+// Writes the QA results page (brief: qa-reporter-page) as one self-contained HTML file. Read-only: it never edits a result or a scenario.
+//   npx tsx scripts/qa-report.mjs --results "<project docs>/ops/qa-results.json" --out <file.html> [--standalone]
+// `--results` is the file `qa-scenarios-doc.mjs --record` writes; without it the page shows every scenario as not run. `--out` is required (there is no default
+// place); the page is a generated file, so give a path outside the repository and never commit it. The default output is an Artifact page body (no <!doctype>; the Artifact tool wraps it); `--standalone`
+// wraps it so the file opens straight in a browser. Reading and validating the results reuses `allResults` (every entry, emulated ones included) from qa-scenarios-doc.mjs, and the
+// counting is `buildReport` (scripts/lib/qaReport.mjs); this file only loads the real data and writes the output.
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { automationOf } from '../server/qa/scenarioAutomation.ts';
+import { SCENARIOS } from '../server/qa/scenarios.ts';
+import { allResults } from './qa-scenarios-doc.mjs';
+import { buildReport } from './lib/qaReport.mjs';
+import { renderReport, standalone } from './lib/qaReportHtml.mjs';
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const arg = name => { const i = process.argv.indexOf(name); return i < 0 ? null : (process.argv[i + 1] ?? ''); };
+  const fail = msg => { console.error(`qa-report: ${msg}`); process.exit(2); };
+  const out = arg('--out');
+  const file = arg('--results');
+  if (!out) fail('usage: qa-report.mjs --results "<qa-results.json>" --out <file.html> [--standalone]');
+  if (process.argv.includes('--results') && (!file || file.startsWith('--'))) fail('--results needs the path of the results file (an empty value would show every scenario as not run).');
+  if (file && !existsSync(file)) fail(`${file} does not exist. Record a run first, or leave out --results to see every scenario as not run.`);
+  let entries = [];
+  try { entries = allResults(file ? readFileSync(file, 'utf8') : ''); } catch (e) { fail(e.message); }
+  const report = buildReport(SCENARIOS, automationOf, entries);
+  const body = renderReport(report, { generatedOn: new Date().toISOString().slice(0, 10) /* UTC, like the date `--record` stamps on a result */, source: file ? basename(file) : undefined });
+  writeFileSync(`${out}.tmp`, process.argv.includes('--standalone') ? standalone(body) : body);
+  renameSync(`${out}.tmp`, out);
+  const t = report.totals;
+  console.error(`qa-report: wrote ${out}: ${t.scenarios} live scenarios, ${t.pass} pass (${report.proposed.length} proposed, ${report.confirmed.length} confirmed), ${t.fail} fail, ${t.blocked} blocked, ${t.notRun} not run.`);
+}

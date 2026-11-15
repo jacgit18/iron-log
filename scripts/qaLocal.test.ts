@@ -1,6 +1,9 @@
 // The refusals of scripts/qa-local.mjs (brief: qa-runner-agent): these are what keep the QA Runner agent on this machine and on a scratch database.
 import { describe, expect, it } from 'vitest';
-import { dropProblem, dropScratch, freePort, markProblem, newScratchName, originProblem, pidIsStack, SCRATCH_MARK, serverProblem, urlProblem } from './qa-local.mjs';
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { BROWSER_FLAGS, dropProblem, dropScratch, finishStop, freePort, markProblem, newScratchName, originProblem, pidIsStack, removeSignInFiles, SCRATCH_MARK, seedToken, serverProblem, signInFilesIn, signInHtml, signInNames, signInScript, urlProblem } from './qa-local.mjs';
 
 describe('urlProblem', () => {
   it.each(['http://127.0.0.1:41234', 'http://localhost:41234/', 'http://[::1]:41234/settings'])('allows %s', url => expect(urlProblem(url)).toBeNull());
@@ -109,5 +112,52 @@ describe('dropScratch', () => {
     const f = fake(null, false);
     expect(await dropScratch(state, f.withClient)).toBeNull();
     expect(f.queries.some(q => q.startsWith('drop database'))).toBe(false);
+  });
+});
+
+describe('the sign-in page', () => {
+  const script = signInScript(BROWSER_FLAGS, 'qa+new@example.test', 'pw"; alert(1); "');
+  it('sets every browser flag, posts to the stack\'s own sign-in path and opens /', () => {
+    for (const k of Object.keys(BROWSER_FLAGS)) expect(script).toContain(JSON.stringify(k));
+    expect(script).toContain("fetch('/api/auth/sign-in/email'");
+    expect(script).toContain("location.replace('/')");
+  });
+  it('quotes the email and password as data, never as code', () => expect(script).toContain('password: "pw\\"; alert(1); \\""'));
+  it('never names another origin', () => expect(script).not.toMatch(/https?:|\/\/\w/));
+  it('is loaded as a script file of the stack\'s own origin (the CSP forbids inline script)', () => {
+    const html = signInHtml(signInNames('erased-account').script, 'abc123');
+    expect(html).toContain('<script src="/qa-signin-erased-account.js?s=abc123">');
+    expect(html.split('<script').length - 1).toBe(1); // the one script tag is the one with the src: no inline script
+    expect(html).not.toContain('<script>');
+  });
+  it('names the page and script per persona, so a browser cache of one persona never signs in another (the server caches static files for an hour)', () => {
+    expect(signInNames('erased-account')).toEqual({ page: 'qa-signin-erased-account.html', script: 'qa-signin-erased-account.js' });
+    expect(signInNames('grocery-at-cap').script).not.toBe(signInNames('erased-account').script);
+  });
+});
+
+describe('the sign-in cache and clean-up', () => {
+  it('makes a new token for each seed, so a cached copy of an earlier seed is never used', () => {
+    expect(seedToken()).toMatch(/^[0-9a-f]{12}$/);
+    expect(seedToken(Buffer.from('aaaaaa'))).not.toBe(seedToken(Buffer.from('bbbbbb')));
+  });
+  it('picks only qa-signin-<persona>.html and .js out of a folder, and nothing from a missing one', () => {
+    expect(signInFilesIn(['index.html', 'qa-signin-erased-account.js', 'qa-signin-grocery-at-cap.html', 'qa-signin.js', 'qa-signin-x.css', 'qa-signin-X.js', 'assets'])).toEqual(['qa-signin-erased-account.js', 'qa-signin-grocery-at-cap.html']);
+    expect(signInFilesIn(null)).toEqual([]);
+  });
+  it('removes the sign-in files and leaves every other file; a missing folder is not an error', () => {
+    const dist = mkdtempSync(join(tmpdir(), 'qa-local-test-'));
+    for (const n of ['index.html', 'qa-signin-erased-account.js', 'qa-signin-erased-account.html', 'qa-signin.js', 'notes.txt']) writeFileSync(join(dist, n), 'x');
+    mkdirSync(join(dist, 'assets'));
+    removeSignInFiles(dist);
+    expect(readdirSync(dist).sort()).toEqual(['assets', 'index.html', 'notes.txt', 'qa-signin.js']);
+    expect(() => removeSignInFiles(join(dist, 'no-such-folder'))).not.toThrow();
+  });
+  it('removes the sign-in files before the drop, so a failed drop never leaves the scratch password served', async () => {
+    const order: string[] = [];
+    const state = { db: 'iron_qa_run_0123abcd', login: 'iron_qa_run_0123abcd_app', base: 'postgres://u:p@127.0.0.1:5433/ironlog' };
+    const why = await finishStop(state, async () => { order.push('drop'); throw new Error('connection refused'); }, () => order.push('files'));
+    expect(order).toEqual(['files', 'drop']);
+    expect(why).toMatch(/could not drop.*connection refused/);
   });
 });

@@ -84,12 +84,11 @@ test('typing a two-digit Servings key by key does not scale the amounts by the f
   await expectAmount(page, 0, '4 cups');
 });
 
-test('Scale for tonight changes the amounts shown and saves nothing', async ({ page }) => {
+test('Cook for changes the amounts shown and saves nothing', async ({ page }) => {
   await make(page);
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'More servings' })).toHaveCount(0); // the stepper stays hidden behind the link
-  await page.getByRole('button', { name: 'Scale the amounts' }).click();
+  await expect(page.getByRole('group', { name: 'Cook for' })).toBeVisible(); // always shown, no link to tap first
   await page.getByRole('button', { name: 'More servings' }).click();
   await expect(page.getByText('5 servings', { exact: true })).toBeVisible();
   await expect(page.getByText('2½ cups flour')).toBeVisible();

@@ -151,10 +151,64 @@
   max-width: 32rem;
   padding-block: var(--sp-16);
 }
-.rc-inmine {
-  display: inline-block;
-  margin-inline: var(--sp-4);
-  color: var(--accent);
-  vertical-align: -0.1em;
+/* Recipes as one list (brief recipes-mine-library-merge): the All / Mine / Library filter row, the "Your recipes" heading and the library's own box.
+   The box differs from your rows by its heading, its dashed outline and its "+ Add to mine" button, not by colour alone. */
+.rc-src {
+  flex-wrap: wrap;
+}
+.rc-src .rc-count {
+  margin-inline-start: var(--sp-6);
+}
+.rc-src [aria-pressed='true'] .rc-count {
+  color: inherit;
+}
+.rc-merged {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.rc-grp {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rc-libbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  min-width: 0;
+  padding: var(--sp-12);
+  border: 2px dashed var(--accent);
+  border-radius: var(--r-lg);
+  background: var(--sunk);
+}
+.rc-libhd {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+.rc-libnote {
+  margin: 0;
+}
+.rc-libbox .rc-sort {
+  margin: 0;
+}
+.rc-libbox .rc-list {
+  margin: 0;
+}
+.rc-list.rc-cards li.rc-libitem {
+  flex-wrap: wrap;
+  border: 1px dashed var(--accent);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.rc-libitem .rc-row {
+  flex: 1 1 12rem;
+}
+.rc-browse {
+  align-self: flex-start;
+  min-height: 44px;
 }
 }

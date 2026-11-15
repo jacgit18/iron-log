@@ -42,6 +42,19 @@ const content = (r: Recipe) => JSON.stringify([r.n.replace(/\s+/g, ' ').trim(), 
 /** `next` with the Edited mark: set when it has a library source and its content differs from `prev`, kept once set. A recipe written from
  *  scratch (no `from`) never gets it; saving without a change leaves the mark as it was. */
 export function withEditedMark(prev: Recipe | undefined, next: Recipe): Recipe {
+  return markEdited(prev, keepEstMark(prev, next));
+}
+
+/** What a hand edit of the numbers changes: the four macros and the vitamins and minerals. */
+const numbersKey = (r: Recipe) => JSON.stringify([r.kcal ?? null, r.p ?? null, r.c ?? null, r.f ?? null, r.micro ?? null]);
+
+/** `next` with the estimate mark (brief recipe-auto-nutrition): the form never carries it, so it is kept from `prev` while kcal, protein, carbs, fat and vitamins are exactly as they were, and gone after a hand edit of any of them. A mark `next` brings itself (a Fill) stays. */
+export function keepEstMark(prev: Recipe | undefined, next: Recipe): Recipe {
+  if (next.est || !prev?.est || numbersKey(prev) !== numbersKey(next)) return next;
+  return { ...next, est: prev.est };
+}
+
+function markEdited(prev: Recipe | undefined, next: Recipe): Recipe {
   if (!next.from) return next;
   const { edited: _drop, ...rest } = next;
   return prev && (prev.edited || content(prev) !== content(next)) ? { ...rest, edited: true } : rest;

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { onwardDays, plannedText } from '../../lib/dayPicker.js';
-import { entriesOn, entryFromFood, fmtNum, roomOn } from '../../lib/dietLog.js';
+import { entriesOn, entryFromFood, fmtNum, hasMacros, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
 import { withMicro } from '../../shared/foodMicro.js';
 import { runInstantLog } from '../../lib/instantLog.js';
 import { findMatches } from '../../lib/dietPlan.js';
+import { logRecipeAtUsual } from '../../lib/logAtUsual.js';
 import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
@@ -17,7 +18,7 @@ import type { FoodHit } from '../../shared/foods.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useLegacyMeals } from '../../store/useLegacyMeals.js';
 import { useToday } from '../../store/useToday.js';
-import type { PlanSlot } from '../../types.ts';
+import type { PlanSlot, Recipe } from '../../types.ts';
 import CopyDay from '../diet/CopyDay.js';
 import EntryForm from '../diet/EntryForm.js';
 import FindFood from '../diet/FindFood.js';
@@ -27,6 +28,8 @@ import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
 import Icon, { type IconName } from '../Icon.jsx';
 import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
+import UndoButton from '../UndoButton.js';
+import type { Say } from '../../lib/eatenStep.js';
 import DayPicker from './DayPicker.js';
 
 type Scope = 'one' | 'onward' | 'pick';
@@ -50,6 +53,7 @@ export default function AddFoodSheet() {
   const flow = picked && (flows as readonly string[]).includes(picked) ? picked : null; // a way that stops being offered (the day's last food went) falls back to the list
   const [meal, setMeal] = useState<PlanSlot>(() => { const n = new Date(); return PLAN_SLOTS.find(s => s === modal?.meal) ?? startMeal(lastMeal(), n.getHours() * 60 + n.getMinutes()); }); // `modal.meal`: the empty meal's Add control picked it
   const [msg, setMsg] = useState('');
+  const [undo, setUndo] = useState<(() => void) | null>(null); // Undo for the last log in this sheet: removes exactly that entry
   const [scope, setScope] = useState<Scope>('one');
   const [ticked, setTicked] = useState<string[]>([]);
   const targets = scope === 'onward' ? onwardDays(day, today) : scope === 'pick' ? ticked : [day]; // the days a planned recipe or meal goes to
@@ -59,8 +63,8 @@ export default function AddFoodSheet() {
     useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => onScan?.(h) });
   };
   const pick = (s: PlanSlot) => { setMeal(s); remember(s); };
-  const choose = (f: AddFlow) => { if (f === 'barcode') { scan(); return; } setFlow(f); setMsg(''); };
-  const said = (t: string) => { setMsg(t); (modal?.onMsg as ((t: string) => void) | undefined)?.(t); };
+  const choose = (f: AddFlow) => { if (f === 'barcode') { scan(); return; } setFlow(f); setMsg(''); setUndo(null); };
+  const said: Say = (t, u) => { setMsg(t); setUndo(u ? () => u : null); (modal?.onMsg as Say | undefined)?.(t, u); };
   const resume = modal?.resume as ScanResume | undefined;
   const reopen = (r: ScanResume) => useAppStore.getState().openModal({ ...(modal ?? { type: 'nbadd' }), type: 'nbadd', day, flow: 'find', resume: r });
   const body = flow && <FlowBody flow={flow} day={day} today={today} meal={meal} scope={scope} targets={targets} fill={fill} reopen={reopen} {...(resume ? { resume } : {})} onFill={f => { setFill(o => ({ key: o.key + 1, food: f })); setFlow('oneoff'); }} onMsg={said} />;
@@ -100,16 +104,16 @@ export default function AddFoodSheet() {
         </div>
       )}
       {body}
-      <p className="note" role="status">{msg}</p>
+      <p className="note" role="status">{msg}{undo && <UndoButton onUndo={() => { undo(); said('Undone.'); }} />}</p>
       <div className="actions">
-        {flow && <button type="button" className="btn" onClick={() => { setFlow(null); setMsg(''); }}>Back to ways of adding</button>}
+        {flow && <button type="button" className="btn" onClick={() => { setFlow(null); setMsg(''); setUndo(null); }}>Back to ways of adding</button>}
         <button type="button" className="btn primary" onClick={closeModal}>Done</button>
       </div>
     </Sheet>
   );
 }
 
-function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; meal: PlanSlot; scope: Scope; targets: string[]; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: (t: string) => void; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
+function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; meal: PlanSlot; scope: Scope; targets: string[]; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: Say; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const { held } = useLegacyMeals();
@@ -128,13 +132,14 @@ function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg,
     const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
     onMsg(run.error ?? run.text); // a refusal shows the store's words alone, never 'Added 0 from ...'
   };
+  const logNow = (r: Recipe) => { if (!hasMacros(r)) { st().openModal({ type: 'portion', id: r.id, day }); return; } const m = logRecipeAtUsual(st(), r, day, today); if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error); }; // one tap logs at the usual portion and the sheet stays open; a day ahead plans through the portion sheet (below)
   if (flow === 'quick') {
     const items = quickItems(diet, recipes);
     const suggested = day === today ? suggestNow(diet, hour, today) : []; // 'now' means today's clock: an earlier day gets no suggestions built from it
     return !roomOn(diet, day) ? <p className="note">That’s 20 things for the day. Delete one to add another.</p> : (
       <div>
         {suggested.length > 0 && (<><p className="note" id="nb-sugg-h">Suggested now</p><ul className="dt-recents" aria-labelledby="nb-sugg-h">{suggested.map(f => <li key={f.n}><button type="button" className="btn sm" onClick={() => addFood(f)}>{f.n} · {fmtNum(f.kcal)} kcal</button></li>)}</ul></>)}
-        {items.length > 0 && (<><p className="note" id="nb-quick-h">Recent and favorites</p><ul className="dt-recents" aria-labelledby="nb-quick-h">{items.map(i => <li key={i.id}><button type="button" className={i.fav ? 'btn sm dt-fav' : 'btn sm'} aria-label={i.fav ? `${i.n}, favorite` : undefined} onClick={() => st().openModal({ type: 'portion', id: i.id, day })}>{i.n}</button></li>)}</ul></>)}
+        {items.length > 0 && (<><p className="note" id="nb-quick-h">Recent and favorites</p><ul className="dt-recents" aria-labelledby="nb-quick-h">{items.map(i => <li key={i.id}><button type="button" className={i.fav ? 'btn sm dt-fav' : 'btn sm'} aria-label={i.fav ? `${i.n}, favorite` : undefined} onClick={() => { const r = recipes.find(x => x.id === i.id); if (eat && r) logNow(r); else st().openModal({ type: 'portion', id: i.id, day }); }}>{i.n}</button></li>)}</ul></>)}
         {suggested.length === 0 && items.length === 0 && <p className="note">Nothing here yet. Log a few foods and the ones you use most appear.</p>}
       </div>
     );
@@ -144,7 +149,7 @@ function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg,
       amounts={{ ...(fill.food?.micro ? { micro: fill.food.micro } : {}), ...(fill.food ? { kcal: fill.food.kcal } : {}) }}
       onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(v.micro ?? undefined) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
   }
-  if (flow === 'find') return <FindFood day={day} onFood={onFill} reopen={reopen} {...(resume ? { resume } : {})} />;
+  if (flow === 'find') return <FindFood day={day} today={today} onFood={onFill} onMsg={onMsg} reopen={reopen} {...(resume ? { resume } : {})} />;
   if (flow === 'copy') return <CopyDay key={day} day={day} onAdded={onMsg} />;
   if (flow === 'savemeal') return <SaveMeal key={day} day={day} onSaved={onMsg} />;
   if (flow === 'meals') {
@@ -170,7 +175,7 @@ function FlowBody({ flow, day, today, meal, scope, targets, fill, onFill, onMsg,
           {list.map(r => (
             <li key={r.id}>
               <span className="nb-eatn">{r.n}</span>
-              {eat && <button type="button" className="btn sm" aria-label={`Log ${r.n}`} onClick={() => st().openModal({ type: 'portion', id: r.id, day })}>Log</button>}
+              {eat && <button type="button" className="btn sm" aria-label={`Log ${r.n}`} onClick={() => logNow(r)}>Log</button>}
               {!eat && <button type="button" className="btn sm" aria-label={`Plan ${r.n} for ${SLOT_LABEL[meal]}`} onClick={() => plan('r', r.id, r.n)}>Plan</button>}
             </li>
           ))}

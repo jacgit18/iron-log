@@ -50,6 +50,57 @@ for (const [name, clicks] of [
   });
 }
 
+// Less and More on an eaten row (brief nutrition-log-first-portion-row) are at least 44x44 at 375 px, named for their food.
+test('phone 375x812: an eaten row on Nutrition (name, Less, amount, More) has no target under 44px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.evaluate(() => {
+    localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'o1', n: 'Oats with a long name that wraps above the stepper', cat: 'other', ing: [{ n: 'x' }], steps: ['Cook.'], kcal: 300, p: 10 }] }));
+    localStorage.setItem('ironlog:diet/main', JSON.stringify({ items: [{ id: 'a', d: '2026-09-24', n: 'Oats with a long name that wraps above the stepper', kcal: 450, p: 15, from: 'o1', x: 1.5 }, { id: 'b', d: '2026-09-24', n: 'Toast', kcal: 90, p: 3 }] }));
+  });
+  await page.reload();
+  await page.getByRole('tab', { name: 'Daily', exact: true }).click();
+  await page.getByRole('button', { name: 'Nutrition', exact: true }).click();
+  const less = page.getByRole('button', { name: /^Less Oats/ });
+  await expect(less).toBeVisible();
+  for (const b of [less, page.getByRole('button', { name: /^More Oats/ }), page.getByRole('button', { name: 'Less Toast' }), page.getByRole('button', { name: 'More Toast' })]) {
+    const box = await b.boundingBox();
+    expect(box.width, 'width').toBeGreaterThanOrEqual(43.5);
+    expect(box.height, 'height').toBeGreaterThanOrEqual(43.5);
+  }
+  expect(await small(page), 'Nutrition with eaten rows has targets under 44px').toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll').toBe(true);
+});
+
+test('phone 375x812: a ticked planned card\'s stepper line (Less, amount, More) is at least 44x44 and under the card', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.evaluate(() => localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'c1', n: 'Chili', cat: 'protein', ing: [{ n: 'x' }], steps: ['Cook.'], kcal: 400, p: 30 }] })));
+  await page.reload();
+  await page.getByRole('tab', { name: 'Daily', exact: true }).click();
+  await page.getByRole('button', { name: 'Nutrition', exact: true }).click();
+  await page.getByRole('tab', { name: /^Fri/ }).click();
+  await page.locator('#nb-add').click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: /^Recipes/ }).click();
+  await sheet.getByRole('button', { name: 'Plan Chili for Dinner' }).click();
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await page.locator('.wb-card', { hasText: 'Chili' }).click();
+  await page.getByRole('button', { name: 'Move Chili', exact: true }).click();
+  await page.getByRole('dialog').getByRole('group', { name: 'Move Chili to day' }).getByRole('button', { name: 'Thu 24 · today', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^Move to / }).click();
+  await page.getByRole('tab', { name: /^Thu/ }).click();
+  await page.getByRole('checkbox', { name: 'Check Chili as eaten' }).click();
+  const less = page.getByRole('button', { name: 'Less Chili' });
+  await expect(less).toBeVisible();
+  const card = await page.locator('.wb-card', { hasText: 'Chili' }).boundingBox();
+  for (const b of [less, page.getByRole('button', { name: 'More Chili' })]) {
+    const box = await b.boundingBox();
+    expect(box.width, 'width').toBeGreaterThanOrEqual(43.5);
+    expect(box.height, 'height').toBeGreaterThanOrEqual(43.5);
+    expect(box.y, 'under the card').toBeGreaterThanOrEqual(card.y + card.height - 1);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll').toBe(true);
+});
+
 test('phone 390x844: the Log sheet has no target under 44px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: /^Log /i }).first().click();

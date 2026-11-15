@@ -11,7 +11,7 @@ describe('recipesViewState', () => {
     setRecipesViewState('q', 'soup');
     setRecipesViewState('tab', 'meals');
     setRecipesViewState('tagSel', ['quick']);
-    expect(getRecipesViewState()).toMatchObject({ q: 'soup', tab: 'meals', tagSel: ['quick'], src: 'mine' });
+    expect(getRecipesViewState()).toMatchObject({ q: 'soup', tab: 'meals', tagSel: ['quick'], src: 'all' });
     resetRecipesViewState();
     expect(getRecipesViewState()).toEqual(INITIAL_VIEW_STATE);
   });
@@ -34,6 +34,11 @@ describe('recipesViewState', () => {
     setRecipesViewState('src', 'library');
     showSavedRecipe('r1');
     expect(getRecipesViewState()).toEqual({ ...INITIAL_VIEW_STATE, selId: 'r1' });
+  });
+  it('keeps the All / Mine / Library filter, starting at All', () => {
+    expect(getRecipesViewState().src).toBe('all');
+    setRecipesViewState('src', 'library');
+    expect(getRecipesViewState().src).toBe('library');
   });
   it('does not share its arrays with the defaults', () => {
     setRecipesViewState('tagSel', ['a']);

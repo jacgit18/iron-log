@@ -1,0 +1,26 @@
+import { eatenMax, type Say } from '../../lib/eatenStep.js';
+import { amountText } from '../../lib/foodUnit.js';
+import { undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
+import { useAppStore } from '../../store/useAppStore.js';
+import type { DietEntry, Recipe } from '../../types.ts';
+
+/** One tap of Less or More on an eaten row (brief nutrition-log-first-portion-row): the entry takes `to` portions through `setDietPortion`; a food logged today from a recipe also saves `to` as that recipe's usual, said on the status line with an Undo that puts the usual back. The decisions are pure in `src/lib` (`stepEntryCount`, `usualAfterStep`, `undoUsualOutcome`); this only makes the store writes and says the sentence. */
+export function stepEatenRow(e: DietEntry, to: number, recipe: Recipe | undefined, today: string, say: Say): void {
+  const st = useAppStore.getState();
+  const err = st.setDietPortion(e.id, to, eatenMax(recipe));
+  if (err) { say(err); return; }
+  const now = recipe ? useAppStore.getState().recipes.find(r => r.id === recipe.id) : undefined; // the recipe as it is now
+  const change = usualAfterStep(e.d, today, now, to);
+  if (!now || !change) return;
+  if (st.setRecipeUsual(now.id, change.next)) return; // refused: keep the old usual and say nothing, as the portion sheet does
+  say(`Usual portion saved: ${now.n}, ${amountText(to, now)}.`, () => undoStep(now.id, change, say));
+}
+
+export function undoStep(id: string, change: UsualChange, say: Say): void {
+  const st = useAppStore.getState();
+  const out = undoUsualOutcome(st.recipes.find(r => r.id === id), change);
+  if (out.kind === 'gone') { say('This food was removed, so there is no usual to restore.'); return; }
+  if (out.kind === 'changed') { say('The usual portion was changed since, so it was left as it is.'); return; }
+  const err = st.setRecipeUsual(id, out.usual);
+  say(err ? `${err} The usual was left as it is.` : 'Usual portion restored.');
+}

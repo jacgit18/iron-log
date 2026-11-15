@@ -35,7 +35,8 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await page.getByRole('button', { name: 'Cancel' }).click();
   await make(page);
   await expect(page.getByRole('heading', { name: /Frozen lasagna/ })).toBeVisible();
-  await expect(page.getByText('Per portion: 420 kcal · P 22 · C 48 · F 15 g')).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('420 kcal', { exact: true })).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('P 22 · C 48 · F 15 g per serving')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /missing to Shopping/ })).toHaveCount(0);
@@ -52,16 +53,19 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
 
 test('The log control logs a ready-made food as a snapshot, to today or to a chosen day, and offers a future day as a plan', async ({ page }) => {
   await make(page);
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText(/Logged .+: 1 portion to today\./)).toBeVisible();
-  await page.getByRole('button', { name: 'Log another' }).click(); // the control locks after a log until Undo or Log another
+  await page.getByRole('button', { name: 'Add to today' }).click();
+  await expect(page.getByText('Logged Frozen lasagna, 1 portion, for today.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled(); // a second tap cannot log twice
+  await page.getByRole('button', { name: 'Plan…' }).click(); // the portion sheet, for a chosen day
+  const dlg = page.getByRole('dialog');
   const yesterday = await page.evaluate(() => { const d = new Date(Date.now() - 86400000); return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); });
   const tomorrow = await page.evaluate(() => { const d = new Date(Date.now() + 86400000); return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); });
-  await page.getByLabel('Day').fill(tomorrow);
-  await expect(page.getByText('Which meal?')).toBeVisible();
-  await page.getByLabel('Day').fill(yesterday);
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(page.getByText(new RegExp(`Logged .+: 1 portion to ${yesterday}\\.`))).toBeVisible();
+  await expect(dlg.getByLabel('Day')).toHaveValue(tomorrow);
+  await expect(dlg.getByText('Which meal?')).toBeVisible();
+  await dlg.getByLabel('Day').fill(yesterday);
+  await dlg.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(dlg.getByText(new RegExp(`Logged .+: 1 portion to ${yesterday}\\.`))).toBeVisible();
+  await dlg.getByRole('button', { name: 'Done' }).click();
   await openDiet(page);
   await expect(eaten(page)).toHaveCount(1); // today's column only; yesterday's is in the other day's column
   await expect(eaten(page)).toContainText('Frozen lasagna');
@@ -80,7 +84,8 @@ test('the food lookup in the ready-made form fills the numbers, still editable',
   await expect(page.getByLabel('Protein per serving (g)')).toHaveValue('6.6');
   await page.getByLabel('Calories per serving').fill('185');
   await page.getByRole('button', { name: 'Save food' }).click();
-  await expect(page.getByText('Per portion: 185 kcal · P 6.6 · C ')).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('185 kcal', { exact: true })).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('P 6.6 · C ')).toBeVisible();
 });
 
 test('the add sheet has no separate lookup box, the One-off food form is open, and a Find food pick fills it', async ({ page }) => {
@@ -109,9 +114,9 @@ test('Enter in the lookup box does not save the form, and the Ready-made filter 
   await expect(page.getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Food' });
-  await page.getByRole('button', { name: 'Library', exact: true }).click();
-  await expect(page.locator('#recipes-library-signin')).toBeVisible(); // signed out: the Library has no filters, so the dropped filter is checked back on Mine
-  await page.getByRole('button', { name: 'Mine', exact: true }).click();
+  await page.locator('#recipes-library').click(); // the buttons carry counts now, so they are found by id
+  await expect(page.locator('#recipes-library-signin')).toBeVisible(); // signed out: the library box is the sign-in line, and the dropped filter is checked back on Mine
+  await page.locator('#recipes-mine').click();
   await expect(page.getByLabel('Category', { exact: true })).toHaveValue('');
 });
 

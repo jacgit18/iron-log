@@ -20,6 +20,7 @@ describe('Library tabs', () => {
     const none = { id: 'c:9', name: 'Oats', data: {} } as unknown as CatalogItem;
     expect(inLibraryTab(none, 'meals')).toBe(false);
     expect(inLibraryTab(none, 'all')).toBe(true);
+    expect(inLibraryTab(none, 'foods')).toBe(false);
   });
 });
 

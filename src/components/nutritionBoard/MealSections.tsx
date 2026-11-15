@@ -6,6 +6,7 @@ import { planItemKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { PlanSlot } from '../../types.ts';
 import BoardCard from '../diet/board/BoardCard.js';
+import type { Say } from '../../lib/eatenStep.js';
 import { EatenRows } from './EatenRows.js';
 import type { Resolved } from '../../lib/dietPlan.js';
 
@@ -14,7 +15,7 @@ const SLOT_KEY = ['', ...ORDER];
 
 // A day's meals (brief nutrition-board): Breakfast, Lunch, Snack and Dinner always (brief daily-snacks), with "Nothing planned" and no button when empty. Snack also lists the saved daily snacks (shown, not stored) and has the Daily snacks control; with no list it says "No daily snacks yet" and offers to set one up. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to and Remove (today it also has a check box that logs it as eaten);
 // drag moves it to another meal or day. Today's food that nobody planned sits in the meal for the hour it was logged, with an eaten mark; tapping it opens the row sheet (brief nutrition-items-row-sheet-and-more). An empty meal on a day ahead has an Add control (today logs eaten food, which has no meal) that opens the Add sheet on that day with that meal picked (brief nutrition-header-sheet-wording). Meals are the plan, so last week has none.
-export default function MealSections({ view, placed, today, editable, onLog, onMsg, onAdd }: { view: BoardDay; placed: EatenPlacement['meals']; today: string; editable: boolean; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void; onAdd: (meal: PlanSlot) => void }) {
+export default function MealSections({ view, placed, today, editable, onLog, onMsg, onAdd }: { view: BoardDay; placed: EatenPlacement['meals']; today: string; editable: boolean; onLog: (r: Resolved, index: number) => void; onMsg: Say; onAdd: (meal: PlanSlot) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const st = () => useAppStore.getState();
   const diet = useAppStore(x => x.diet);

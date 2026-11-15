@@ -59,17 +59,17 @@ export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro
 }
 
 /** What the log control and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
-export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
+export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'est'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
   const nums = servingNumbers(r, servings);
   if (!nums) return { error: 'Those numbers are out of range.' };
   const bad = ateDayError(day, today);
   if (bad) return { error: bad };
-  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro), ...(cleanPortion(servings) !== null ? { x: cleanPortion(servings)! } : {}) } };
+  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro), ...(nums.micro && r.est ? { est: true as const } : {}), ...(cleanPortion(servings) !== null ? { x: cleanPortion(servings)! } : {}) } };
 }
 
 /** The entry to add for a food on `day`: its numbers, the recipe it came from, and its vitamins and minerals when it has them (one place, so a copied or re-logged food keeps them). */
-export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; x?: number }): Omit<DietEntry, 'id'> =>
-  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro), ...(f.x !== undefined ? { x: f.x } : {}) });
+export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; est?: true; x?: number }): Omit<DietEntry, 'id'> =>
+  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro), ...(f.micro && f.est ? { est: true as const } : {}), ...(f.x !== undefined ? { x: f.x } : {}) });
 
 /** The most portions the log control, the planner and Find food offer. */
 export const PORTION_MAX = 10;

@@ -1,0 +1,66 @@
+@layer base, components;
+@layer components {
+/* A recipe's or ready-made food's own vitamins and minerals (brief recipe-auto-nutrition): one bar per nutrient against a day's recommended amount, laid out like the meal bars. */
+.rmi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.rmi-toggle {
+  align-self: flex-start;
+}
+.rmi-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.rmi-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rmi-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.rmi-row:last-child {
+  border-bottom: 0;
+}
+.rmi-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-8);
+  font-size: var(--fs-md);
+}
+.rmi-val {
+  font-weight: 700;
+  font-size: var(--fs-base);
+  font-variant-numeric: tabular-nums;
+}
+.rmi-pct {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rmi-track {
+  height: var(--sp-8);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--sunk);
+}
+.rmi-track i {
+  display: block;
+  height: 100%;
+  background: var(--seg-1);
+}
+}

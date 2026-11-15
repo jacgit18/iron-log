@@ -165,7 +165,7 @@ export function normDietEntry(x: unknown): DietEntry | null {
   const t = cleanHour(o.t); // optional too
   const micro = cleanMicro(o.micro); // vitamins and minerals as eaten; unusable keys are dropped, none left means no field
   const xp = cleanPortion(o.x); // the portions the totals are for; optional
-  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}), ...(xp !== null ? { x: xp } : {}) };
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}), ...(micro && o.est === true ? { est: true as const } : {}), ...(xp !== null ? { x: xp } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */

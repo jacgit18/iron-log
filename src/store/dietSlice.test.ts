@@ -87,6 +87,51 @@ describe('carbs and fat', () => {
   });
 });
 
+describe('setDietPortion (Less and More)', () => {
+  it('scales the entry\'s own numbers and records the count', () => {
+    const { id } = st().addDietEntry({ ...rice, c: 40, f: 2, x: 2, micro: { calcium: 100 } });
+    expect(st().setDietPortion(id!, 3)).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: 300, p: 6, c: 60, f: 3, x: 3, micro: { calcium: 150 } });
+  });
+  it('an entry with no count reads as 1', () => {
+    const { id } = st().addDietEntry(rice);
+    st().setDietPortion(id!, 1.5);
+    expect(st().diet[0]).toMatchObject({ kcal: 300, p: 6, x: 1.5 });
+  });
+  it('the same count writes nothing', () => {
+    const { id } = st().addDietEntry({ ...rice, x: 2 });
+    const before = st().diet;
+    expect(st().setDietPortion(id!, 2)).toBeNull();
+    expect(st().setDietPortion(id!, 2.001)).toBeNull();
+    expect(st().diet).toBe(before);
+    const { id: id2 } = st().addDietEntry(rice); const b2 = st().diet;
+    expect(st().setDietPortion(id2!, 1)).toBeNull(); // no count reads as 1
+    expect(st().diet).toBe(b2);
+  });
+  it('Less works on an entry above the food\'s limit; More does not', () => {
+    const { id } = st().addDietEntry({ ...rice, kcal: 1200, x: 8 });
+    expect(st().setDietPortion(id!, 8.5, 5)).toMatch(/range/);
+    expect(st().setDietPortion(id!, 7.5, 5)).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: 1125, x: 7.5 });
+  });
+  it('Less then More keeps amounts and lands on a count the cleaner accepts', () => {
+    const { id } = st().addDietEntry({ ...rice, kcal: 300, x: 3, micro: { calcium: 100 } });
+    st().setDietPortion(id!, 1.333);
+    expect(st().diet[0]).toMatchObject({ x: 1.33 });
+    st().setDietPortion(id!, 2.5);
+    st().setDietPortion(id!, 3);
+    expect(st().diet[0]).toMatchObject({ x: 3, micro: { calcium: 100 } });
+  });
+  it('refuses a gone entry, half a portion down, the limit and 9,999 kcal; changes nothing', () => {
+    const { id } = st().addDietEntry({ ...rice, kcal: 4000 });
+    expect(st().setDietPortion('nope', 2)).toMatch(/gone/);
+    expect(st().setDietPortion(id!, 0.25)).toMatch(/range/);
+    expect(st().setDietPortion(id!, 3)).toMatch(/range/);
+    expect(st().setDietPortion(id!, 2, 1.5)).toMatch(/range/);
+    expect(st().diet[0]).toEqual({ id, d: day, n: 'Rice', kcal: 4000, p: 4 });
+  });
+});
+
 describe('the stored portion x (brief portion-scaled-micros)', () => {
   it('is kept on an entry, and updated with an explicit micro: a portion change never drops amounts', () => {
     const { id } = st().addDietEntry({ ...rice, x: 1, micro: { calcium: 100 } });
