@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
-import { ateDayError, ateEntry, ateMax, barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, packServings, PORTION_MAX, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
+import { ateDayError, ateEntry, ateMax, barPercent, entriesOn, entryFromFood, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, packServings, PORTION_MAX, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
 
 const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string, cf?: [number, number]): DietEntry => ({ id, d, n, kcal, p, ...(cf ? { c: cf[0], f: cf[1] } : {}), ...(from ? { from } : {}) });
 const list = [e('a', '2026-10-29', 'Rice', 200, 4), e('b', '2026-10-29', 'Chili', 600, 40.5, 'r1'), e('c', '2026-10-28', 'Eggs', 150, 12)];
@@ -156,5 +156,22 @@ describe('ateEntry (shared by the log control and the portion sheet)', () => {
   it('refuses numbers out of range and food without numbers', () => {
     expect(ateEntry({ ...r, kcal: 9000 }, 10, today, today)).toEqual({ error: 'Those numbers are out of range.' });
     expect(ateEntry({ id: 'x', n: 'Nothing' }, 1, today, today)).toEqual({ error: 'Those numbers are out of range.' });
+  });
+});
+
+describe('ateEntry copies the estimate mark (brief recipe-auto-nutrition)', () => {
+  const today = '2026-11-07';
+  const r = { id: 'r1', n: 'Stew', kcal: 400, p: 30, micro: { zinc: 4 } };
+  it('marks an entry eaten from a recipe with est and micro', () => {
+    const out = ateEntry({ ...r, est: { of: 3, n: 4 } }, 2, today, today);
+    expect(out).toMatchObject({ entry: { micro: { zinc: 8 }, est: true } });
+  });
+  it('does not mark without est, or when the recipe has no micro', () => {
+    expect((ateEntry(r, 1, today, today) as { entry: object }).entry).not.toHaveProperty('est');
+    expect((ateEntry({ id: 'r1', n: 'Stew', kcal: 400, p: 30, est: { of: 1, n: 1 } }, 1, today, today) as { entry: object }).entry).not.toHaveProperty('est');
+  });
+  it('entryFromFood keeps it too (a copied or re-logged food)', () => {
+    expect(entryFromFood('2026-11-07', { n: 'Stew', kcal: 1, p: 1, micro: { zinc: 1 }, est: true })).toMatchObject({ est: true });
+    expect(entryFromFood('2026-11-07', { n: 'Stew', kcal: 1, p: 1, est: true })).not.toHaveProperty('est');
   });
 });

@@ -9,6 +9,7 @@ import type { DietEntry, Recipe } from '../../types.ts';
 import Icon from '../Icon.jsx';
 import PortionStepper from '../PortionStepper.js';
 import { stepEatenRow } from './stepEatenRow.js';
+import { MicroLine } from './MicroLine.js';
 import './EatenRows.css';
 
 // Eaten food that no planned item's check added (brief nutrition-items-row-sheet-and-more). Today it sits in its meal (MealSections) or in "Not in a meal"; each row is one button that opens the row sheet (EatenRowSheet), so a row carries no inline Edit or Delete.
@@ -22,6 +23,7 @@ export function EatenRow({ e, recipe, onMsg }: { e: DietEntry; recipe?: Recipe; 
       <span className="nb-eatn">{e.n}</span>
       <span className="wb-cm">{entryText(e)}</span>
       <span className="nb-eatmark"><Icon name="check" />Eaten</span>
+      <MicroLine micro={e.micro} est={e.est === true} />
     </>
   );
   return (

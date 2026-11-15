@@ -25,6 +25,8 @@ export interface NutrientTotal {
   unit: 'mg' | 'mcg';
   fromSupplements: number;
   fromFood: number;
+  /** The part of `fromFood` that comes from entries marked estimated (eaten from a recipe whose vitamins were estimated; brief recipe-auto-nutrition). */
+  fromFoodEst: number;
   /** Whether `fromFood` is part of `total` (the limit counts food), or only shown beside it. */
   foodCounted: boolean;
   total: number;
@@ -60,7 +62,7 @@ export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, 
   const by = new Map<NutrientKey, NutrientTotal>();
   const entryFor = (key: NutrientKey): NutrientTotal => {
     let t = by.get(key);
-    if (!t) { const limit = limitOf(key)!; t = { key, unit: limit.unit, fromSupplements: 0, fromFood: 0, foodCounted: limit.scope === 'total', total: 0, products: [], notAdded: [] }; by.set(key, t); }
+    if (!t) { const limit = limitOf(key)!; t = { key, unit: limit.unit, fromSupplements: 0, fromFood: 0, fromFoodEst: 0, foodCounted: limit.scope === 'total', total: 0, products: [], notAdded: [] }; by.set(key, t); }
     return t;
   };
   for (const item of countedItems(items, taken, date, basis)) {
@@ -81,6 +83,7 @@ export function supplementNutrientTotals(items: SupplementItem[], taken: Taken, 
       if (a === undefined || !limitOf(k)) continue; // a food's amounts are already in the limit's unit (MICRO_UNIT)
       const t = entryFor(k);
       t.fromFood = round3(t.fromFood + a);
+      if (e.est) t.fromFoodEst = round3(t.fromFoodEst + a);
     }
   }
   const order = (k: NutrientKey) => NUTRIENT_KEYS.indexOf(k);
@@ -111,6 +114,8 @@ export interface TargetTotal {
   unit: 'mg' | 'mcg' | 'g';
   fromSupplements: number;
   fromFood: number;
+  /** The part of `fromFood` from estimated entries. */
+  fromFoodEst: number;
   total: number;
   products: { itemId: string; name: string; amount: number }[];
   notAdded: NotAdded[];
@@ -121,7 +126,7 @@ export function targetTotals(items: SupplementItem[], taken: Taken, date: string
   const by = new Map<TargetKey, TargetTotal>();
   const entryFor = (key: TargetKey): TargetTotal => {
     let t = by.get(key);
-    if (!t) { t = { key, unit: targetOf(key)!.unit, fromSupplements: 0, fromFood: 0, total: 0, products: [], notAdded: [] }; by.set(key, t); }
+    if (!t) { t = { key, unit: targetOf(key)!.unit, fromSupplements: 0, fromFood: 0, fromFoodEst: 0, total: 0, products: [], notAdded: [] }; by.set(key, t); }
     return t;
   };
   for (const item of countedItems(items, taken, date, basis)) {
@@ -139,7 +144,7 @@ export function targetTotals(items: SupplementItem[], taken: Taken, date: string
   for (const e of eaten) {
     for (const k of TARGET_KEYS) {
       const a = e.micro?.[k];
-      if (a !== undefined) { const t = entryFor(k); t.fromFood = round3(t.fromFood + a); }
+      if (a !== undefined) { const t = entryFor(k); t.fromFood = round3(t.fromFood + a); if (e.est) t.fromFoodEst = round3(t.fromFoodEst + a); }
     }
   }
   const order = (k: TargetKey) => TARGET_KEYS.indexOf(k);

@@ -26,9 +26,10 @@ export default function DayVitMeter({ day }: { day: string }) {
           {m.subs.map(s => (
             <div key={s.key} className={`nb-vit-sub ${s.status}`}>
               <div className="wb-barl"><span>{s.label}</span><b className={`nb-vit-${s.status}`}>{s.text}</b></div>
-              <div className={`wb-meter nb-vit-meter${s.status === 'over' ? ' over' : ''}`} role="img" aria-label={s.name}><i style={{ width: `${s.percent}%` }} /></div>
+              <div className={`wb-meter nb-vit-meter${s.status === 'over' ? ' over' : ''}`} role="img" aria-label={s.name}><i style={{ width: `${s.percent}%` }} />{s.estShare > 0 && <i className="nb-vit-est" style={{ left: `${Math.max(0, s.percent - Math.min(s.estShare, s.percent))}%`, width: `${Math.min(s.estShare, s.percent)}%` }} />}</div>
             </div>
           ))}
+          {m.estimated && <p className="note nb-vit-estnote">Part of this is estimated from recipes (the hatched part of a bar).</p>}
           <button type="button" className="nb-vit-all" onClick={() => useAppStore.getState().openModal({ type: 'nbsupptotals', day })}>{m.hidden > 0 ? `All ${m.tracked} in Totals` : 'Open Totals'}</button>
         </div>
       )}

@@ -196,3 +196,15 @@ describe('the plan in cfg.diet', () => {
     expect(normConfig({ diet: { plan: { '2026-10-30': [{ k: 'm', id: 'm1' }] } } }).diet).toEqual({ plan: { '2026-10-30': [{ k: 'm', id: 'm1' }] } });
   });
 });
+
+describe('est on an entry (brief recipe-auto-nutrition)', () => {
+  const withMicro = { ...ok, micro: { manganese: 1.2 } };
+  it('keeps the mark with vitamins and minerals, and round-trips', () => {
+    expect(normDietEntry({ ...withMicro, est: true })).toEqual({ ...withMicro, est: true });
+    expect(validDietEntry({ ...withMicro, est: true })).toBe(true);
+  });
+  it('drops it without vitamins, or when it is not exactly true', () => {
+    expect(normDietEntry({ ...ok, est: true })).toEqual(ok);
+    expect(normDietEntry({ ...withMicro, est: 'yes' })).toEqual(withMicro);
+  });
+});
