@@ -12,7 +12,7 @@ const whole = (v: unknown, max: number) => (typeof v === 'number' && Number.isIn
 
 const amount = (v: unknown, max: number) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max ? v : undefined);
 
-/** The estimated numbers the API may add to a recipe (ADR 131): all or nothing, so a half-formed set is dropped. A recipe from an older API has none. */
+/** The estimated numbers the API may add to a recipe (ADR 134): all or nothing, so a half-formed set is dropped. A recipe from an older API has none. */
 function cleanEstimate(d: Record<string, unknown>): Pick<NonNullable<CatalogItem['data']['recipe']>, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'est'> {
   const e = isObj(d.est) ? d.est : null;
   const kcal = amount(d.kcal, 5000), p = amount(d.p, 500), c = amount(d.c, 500), f = amount(d.f, 500);

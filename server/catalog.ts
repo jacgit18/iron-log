@@ -80,7 +80,7 @@ const escapeLike = (w: string) => w.replace(/[\\%_]/g, c => `\\${c}`);
 const normalized = (expr: RawBuilder<string>) =>
   sql<string>`lower(regexp_replace(regexp_replace(${expr}, ${sql.lit("['’]")}, '', 'g'), ${sql.lit('[^[:alnum:]]+')}, ' ', 'g'))`;
 
-/** A Library recipe row with its stored estimate merged in (ADR 131): kcal, protein, carbs, fat, `micro`, the servings they are per and the `est` mark, inside
+/** A Library recipe row with its stored estimate merged in (ADR 134): kcal, protein, carbs, fat, `micro`, the servings they are per and the `est` mark, inside
  *  `data.recipe`. Only while the stored record still matches the ingredient lines and clears the half floor; otherwise the row is served as it is. */
 export function withNutrition(data: CatalogData, nutrition: unknown): CatalogData {
   const r = data.recipe;

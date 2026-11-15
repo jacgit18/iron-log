@@ -1,6 +1,6 @@
 -- migrate:up
 
--- Library recipe nutrition (brief library-recipe-nutrition, ADR 131): estimated per-serving numbers for a Library recipe, worked out from its ingredient lines by an
+-- Library recipe nutrition (brief library-recipe-nutrition, ADR 134): estimated per-serving numbers for a Library recipe, worked out from its ingredient lines by an
 -- owner-run batch (`npm run catalog:nutrition`) and applied by hand, like catalog:import. Expand only: one nullable column, nothing existing changes; null means "no numbers".
 -- It is a column of its own, not a key inside `data`, because catalog:import compares and overwrites `data` on every run: numbers inside it would be wiped or would mark
 -- every row changed. Shape (checked in src/shared/libraryNutrition.ts, not here): kcal, p, c, f, micro, servings, sEst, of, n, hash, v.

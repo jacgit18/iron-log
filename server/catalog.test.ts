@@ -191,7 +191,7 @@ describe('GET /api/catalog/search (recipes)', () => {
     expect(one.body.more).toBe(true);
     expect([...ids(one), ...ids(two)]).toEqual(Array.from({ length: 40 }, (_, i) => `c:wbc:r${100 + i}`));
   });
-  describe('estimated nutrition (ADR 131)', () => {
+  describe('estimated nutrition (ADR 134)', () => {
     const rec9 = (n: number, ing: string[], nutrition: object | null, extra: object = {}) => ({ ...rec(n, `Numbered ${n}`, 'protein', ing), nutrition: nutrition === null ? null : JSON.stringify(nutrition), ...extra });
     const nums = (ing: string[], over: object = {}) => ({ kcal: 310, p: 20.5, c: 30, f: 11, micro: { iron: 2.5 }, servings: 4, sEst: true, of: 7, n: 8, hash: ingredientHash(ing), v: 1, ...over });
     const recipeOf = async (q: string) => (await search(q)).body.items[0]!.data.recipe as Record<string, unknown>;

@@ -181,7 +181,7 @@ describe('importCatalog', () => {
     expect(await all()).toEqual(before);
   });
 
-  it('leaves the stored nutrition alone: unchanged rows are reported unchanged, and a changed row keeps its numbers (ADR 131)', async () => {
+  it('leaves the stored nutrition alone: unchanged rows are reported unchanged, and a changed row keeps its numbers (ADR 134)', async () => {
     const list = rows('A', 'B');
     await run(list);
     const nutrition = { kcal: 300, p: 10, c: 40, f: 9, servings: 4, of: 3, n: 4, hash: 'abc', v: 1 };

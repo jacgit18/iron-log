@@ -1,7 +1,7 @@
 import type { RecipeCategory } from '../types.ts';
 import { cleanMicro, scaleMicro, type Micro } from './foodMicro.js';
 
-/* ---------- Library recipe nutrition (brief library-recipe-nutrition, ADR 131) ----------
+/* ---------- Library recipe nutrition (brief library-recipe-nutrition, ADR 134) ----------
    Estimated per-serving numbers for a Library recipe, stored in `catalog_items.nutrition` by the owner-run batch and served by the API when they
    still match the recipe. Pure rules only, shared by the batch, the server and the client tests: the servings rule, what "counted" means, the
    show rule, the hash that ties numbers to the ingredient lines they came from, and the rescale when servings change on an estimated copy.
