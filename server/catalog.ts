@@ -1,5 +1,6 @@
 import { sql, type Kysely, type RawBuilder } from 'kysely';
 import type { CatalogData, CatalogKind, RecipeCategory } from '../src/types.ts';
+import { servedNutrition } from '../src/shared/libraryNutrition.ts';
 import { RECIPE_CATEGORIES } from '../src/shared/recipes.ts';
 import { inUserTransaction } from './auth.ts';
 import type { DB } from './db/types.ts';
@@ -79,6 +80,16 @@ const escapeLike = (w: string) => w.replace(/[\\%_]/g, c => `\\${c}`);
 const normalized = (expr: RawBuilder<string>) =>
   sql<string>`lower(regexp_replace(regexp_replace(${expr}, ${sql.lit("['’]")}, '', 'g'), ${sql.lit('[^[:alnum:]]+')}, ' ', 'g'))`;
 
+/** A Library recipe row with its stored estimate merged in (ADR 131): kcal, protein, carbs, fat, `micro`, the servings they are per and the `est` mark, inside
+ *  `data.recipe`. Only while the stored record still matches the ingredient lines and clears the half floor; otherwise the row is served as it is. */
+export function withNutrition(data: CatalogData, nutrition: unknown): CatalogData {
+  const r = data.recipe;
+  if (!r || !Array.isArray(r.ing)) return data;
+  const n = servedNutrition(nutrition, r.ing);
+  if (!n) return data;
+  return { ...data, recipe: { ...r, servings: n.servings, kcal: n.kcal, p: n.p, c: n.c, f: n.f, ...(n.micro ? { micro: n.micro } : {}), est: n.est } };
+}
+
 export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, words, offset, cat, sort }: CatalogSearch): Promise<CatalogSearchResult> {
   if (!words.length && kind !== 'recipe') return { items: [], more: false };
   const text = normalized(kind === 'recipe' ? sql`name || ' ' || coalesce(data #>> '{recipe,ing}', '')` : sql`name || ' ' || coalesce(brand, '')`);
@@ -87,7 +98,7 @@ export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, word
   const first = escapeLike(words[0] ?? '');
   const wordStarts = sql.join(words.map(w => sql`(' ' || ${text}) like ${`% ${escapeLike(w)}%`}`), sql` and `);
   const rows = await inUserTransaction(db, userId, trx => {
-    let q = trx.selectFrom('catalog_items').select(['id', 'name', 'brand', 'data'])
+    let q = trx.selectFrom('catalog_items').select(['id', 'name', 'brand', 'data', 'nutrition'])
       .where('kind', '=', kind).where('retired_at', 'is', null);
     if (cat) q = q.where(sql`data #>> '{recipe,cat}'`, '=', cat);
     for (const w of words) q = q.where(text, 'like', `%${escapeLike(w)}%`);
@@ -100,7 +111,7 @@ export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, word
     return q.orderBy(sql`lower(name)`).orderBy('id').limit(SEARCH_PAGE + 1).offset(offset).execute();
   });
   return {
-    items: rows.slice(0, SEARCH_PAGE).map(r => ({ id: r.id, name: r.name, ...(r.brand ? { brand: r.brand } : {}), data: (r.data ?? {}) as CatalogData })),
+    items: rows.slice(0, SEARCH_PAGE).map(r => ({ id: r.id, name: r.name, ...(r.brand ? { brand: r.brand } : {}), data: kind === 'recipe' ? withNutrition((r.data ?? {}) as CatalogData, r.nutrition) : (r.data ?? {}) as CatalogData })),
     more: rows.length > SEARCH_PAGE,
   };
 }

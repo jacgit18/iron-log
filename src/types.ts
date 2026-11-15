@@ -339,7 +339,7 @@ export interface CatalogData {
   entryYear?: number;
   upc?: string;
   /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
-  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number };
+  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number; /** Estimated per-serving numbers the API adds while the stored estimate still matches (brief library-recipe-nutrition): `est.of` of `est.n` lines counted, `est.sEst` when `servings` is an estimate. */ kcal?: number; p?: number; c?: number; f?: number; micro?: Micro; est?: { of: number; n: number; sEst?: true } };
 }
 
 /** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
