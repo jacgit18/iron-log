@@ -50,6 +50,8 @@ const FILTER_CHOICES = [{ key: 'closed', label: 'Closed' }, { key: 'open', label
 const EMPTY_CHIPS = new Map<string, ComboChip[]>();
 const openedThisVisit: string[] = []; // recipes opened in the list this visit, newest last (Recent chips; not stored)
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean; key: string } | { status: 'failed'; reason: string; key: string };
+const LIB_KEPT = 20; // library answers kept while Recipes is open: the newest 20 searches
+const keepAnswer = (cache: Map<string, Library>, key: string, answer: Library): void => { cache.delete(key); cache.set(key, answer); if (cache.size > LIB_KEPT) cache.delete(cache.keys().next().value as string); };
 const LIB_LOADING: Library = { status: 'loading' }; // one value, so the memos that read the library do not rerun on every render
 
 export default function Recipes() {
@@ -101,6 +103,8 @@ export default function Recipes() {
   asked.current = `${q}|${cat}|${libSort}|${tries}`;
   const libRef = useRef(lib); // the page the effect below checks, so hiding and re-showing the box does not ask for the same search again
   libRef.current = lib;
+  const libAsking = useRef(new Map<string, Promise<Library>>()); // searches sent and not yet answered: coming back to one of them (apple, pear, apple) waits for that request instead of sending another; a search's answer is kept even when the box has moved on to another search
+  const libCache = useRef(new Map<string, Library>()); // answers kept while Recipes stays open: going back to an earlier search (or reopening the box) shows its result with no request; Retry (`tries`) is part of the key, so it asks again
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
   const chips = visibleChips(chipCfg, src !== 'library');
@@ -141,10 +145,22 @@ export default function Recipes() {
     if (!boxOn || !syncing) return;
     const key = `${q}|${cat}|${libSort}|${tries}`;
     if (libRef.current.status !== 'loading' && libRef.current.key === key) return; // already answered for this search
+    const kept = libCache.current.get(key);
+    if (kept) { setLib(kept); return; } // asked before while Recipes stayed open
     let live = true;
     const t = setTimeout(() => {
       setLib({ status: 'loading' });
-      void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key }); });
+      let asking = libAsking.current.get(key);
+      if (!asking) {
+        asking = searchRecipes(q, cat, 0, libSort, devHeaders).then((r): Library => {
+          libAsking.current.delete(key);
+          const got: Library = r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key };
+          if (r.ok) keepAnswer(libCache.current, key, got); // only an answer is kept, never a failure
+          return got;
+        }, (): Library => { libAsking.current.delete(key); return { status: 'failed', reason: 'unreachable', key }; }); // a thrown search is a failed one, and is not reused
+        libAsking.current.set(key, asking);
+      }
+      void asking.then(got => { if (live) setLib(got); }); // only the search the box is showing now takes the answer (`libNow` also checks the key)
     }, q ? 300 : 0);
     return () => { live = false; clearTimeout(t); };
   }, [boxOn, syncing, q, cat, libSort, tries]);
@@ -152,7 +168,7 @@ export default function Recipes() {
     if (libNow.status !== 'ready') return;
     const key = asked.current, lib = libNow;
     const r = await searchRecipes(q, cat, lib.items.length, libSort, devHeaders);
-    if (r.ok && key === asked.current) setLib({ status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more, key });
+    if (r.ok && key === asked.current) { const next: Library = { status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more, key }; keepAnswer(libCache.current, key, next); setLib(next); }
   };
 
   const back = () => setView({ kind: 'list' });

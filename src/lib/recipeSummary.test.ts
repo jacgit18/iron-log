@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import type { DietEntry } from '../types.ts';
 import type { AddEntry, NewEntry } from './instantLog.js';
-import { addState, addToToday, eatenDayText, lastEaten, planDay, summaryCells } from './recipeSummary.js';
+import { addState, addToToday, eatenDayText, lastEaten, planDay, stillAdded, summaryCells, wholePackFor } from './recipeSummary.js';
 
 const today = '2026-11-15'; // a Sunday
 const stew = { id: 'stew', n: 'Stew', cat: 'protein' as const, servings: 4, kcal: 400, p: 30 };
@@ -79,6 +79,9 @@ describe('summaryCells', () => {
   it('uses the rolled-up numbers of a meal built from parts', () => {
     expect(summaryCells({ ...base, rolled: { kcal: 520, p: 41 } })[0]).toMatchObject({ head: '520 kcal', sub: 'P 41 g per serving' });
   });
+  it('bolds only a calorie figure: with protein and no calories the bold line is the label', () => {
+    expect(summaryCells({ ...base, recipe: { ...stew, kcal: undefined } })[0]).toMatchObject({ key: 'per', head: 'Per serving', sub: 'P 30 g' });
+  });
   it('says "No numbers yet" for a recipe of yours without any, and nothing for a library recipe', () => {
     expect(summaryCells({ ...base, recipe: { ...stew, kcal: undefined, p: undefined } })[0]).toEqual({ key: 'nonum', head: 'No numbers yet', sub: 'Calories and protein per serving are missing' });
     expect(keys({ ...base, mine: false, recipe: { ...stew, kcal: undefined, p: undefined } })).toEqual(['home']);
@@ -130,5 +133,39 @@ describe('addToToday', () => {
     const log: NewEntry[] = [];
     expect(addToToday(adder(log), { ...stew, kcal: undefined, p: undefined }, today).ok).toBe(false);
     expect(log).toHaveLength(0);
+  });
+});
+
+describe('wholePackFor', () => {
+  const gnocchi = { cat: 'ready' as const, servings: 12, kcal: 210, p: 6 };
+  it('is the pack size for a ready-made food of yours with numbers', () => {
+    expect(wholePackFor({ mine: true, recipe: gnocchi })).toBe(12);
+  });
+  it('is null with no pack size, a pack of 1, not yours, no numbers, or not ready-made', () => {
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, servings: undefined } })).toBeNull();
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, servings: 1 } })).toBeNull();
+    expect(wholePackFor({ mine: false, recipe: gnocchi })).toBeNull();
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, kcal: undefined } })).toBeNull();
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, cat: 'protein' } })).toBeNull();
+  });
+  it('is null when the pack is more than one entry can hold', () => {
+    expect(wholePackFor({ mine: true, recipe: { cat: 'ready', servings: 40, kcal: 900, p: 20 } })).toBeNull();
+  });
+});
+
+describe('addToToday with an amount', () => {
+  it('logs the amount it is given (a whole pack) and words it', () => {
+    const log: NewEntry[] = [];
+    const r = addToToday(adder(log), { id: 'g', n: 'Gnocchi', cat: 'ready', servings: 12, kcal: 210, p: 6, usual: 2 }, today, 12);
+    expect(r).toEqual({ ok: true, id: 'n1', text: 'Logged Gnocchi, 12 portions, for today.' });
+    expect(log[0]).toMatchObject({ kcal: 2520, p: 72, x: 12 });
+  });
+});
+
+describe('stillAdded', () => {
+  it('keeps the id while the entry is in the log and drops it once it is gone', () => {
+    expect(stillAdded([e('a', today)], 'a')).toBe('a');
+    expect(stillAdded([e('b', today)], 'a')).toBeNull();
+    expect(stillAdded([], null)).toBeNull();
   });
 });

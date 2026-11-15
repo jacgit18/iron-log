@@ -1,6 +1,6 @@
 import type { DietEntry, Recipe } from '../types.ts';
 import { MON, parseDate } from '../shared/dates.js';
-import { ateEntry, hasMacros, shiftDay } from './dietLog.js';
+import { ateEntry, ateMax, hasMacros, packServings, shiftDay } from './dietLog.js';
 import { amountText, usualStart } from './foodUnit.js';
 import { runInstantLog, type AddEntry } from './instantLog.js';
 import { macroLine, macroWords, type MacroParts } from './macroLine.js';
@@ -30,12 +30,14 @@ export interface StripCell { key: 'per' | 'nonum' | 'home' | 'last'; head: strin
 
 const NO_NUMBERS_SUB = 'Calories and protein per serving are missing';
 
-/** The macro line cut after its first part: "520 kcal" over "P 38 · C 41 · F 19 g per serving". */
+/** The macro line cut after its first part: "520 kcal" over "P 38 · C 41 · F 19 g per serving". With no calories the bold line is the label "Per serving" over the grams (a bold "P 38 g" would read as the headline number). */
 function perCell(m: MacroParts): StripCell | null {
   const line = macroLine(m);
   if (!line) return null;
-  const [head = '', ...rest] = line.split(' · ');
-  return { key: 'per', head, sub: `${rest.join(' · ')} per serving`.trim(), words: `${macroWords(m)} per serving` };
+  const [first = '', ...rest] = line.split(' · ');
+  const words = `${macroWords(m)} per serving`;
+  if (!first.endsWith(' kcal')) return { key: 'per', head: 'Per serving', sub: line, words }; // no calories: only a calorie figure is bold
+  return { key: 'per', head: first, sub: `${rest.join(' · ')} per serving`.trim(), words };
 }
 
 /** The boxes the page shows, left to right. Per serving (a meal built from parts uses its rolled-up numbers), or "No numbers yet" for a recipe of yours with none; "N of M at home" over "N missing" (left out with no ingredients or no inventory items);
@@ -63,14 +65,23 @@ export function addState(o: { mine: boolean; recipe: Pick<Recipe, 'kcal' | 'p'>;
   return o.added ? 'added' : 'add';
 }
 
+/** The pack size the "Whole pack (N)" button logs, or null for no button: a ready-made food of yours with numbers and a pack size one entry can hold. The same rule the portion sheet uses to show Whole pack for today (`packServings` within `ateMax`). */
+export function wholePackFor(o: { mine: boolean; recipe: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual'> }): number | null {
+  if (!o.mine || !hasMacros(o.recipe)) return null;
+  const pack = packServings(o.recipe);
+  return pack !== null && pack <= ateMax(o.recipe) ? pack : null;
+}
+
+/** Whether the entry "Add to today" made is still in the log: the page reads "Added" only while it is, so a delete elsewhere (the Nutrition board) brings "Add to today" back. */
+export const stillAdded = (diet: readonly Pick<DietEntry, 'id'>[], id: string | null): string | null => (id !== null && diet.some(e => e.id === id) ? id : null);
+
 /** The day "Plan…" opens on. */
 export const planDay = (today: string): string => shiftDay(today, 1);
 
 export type AddedToday = { ok: true; id: string; text: string } | { ok: false; error: string };
 
-/** Log the recipe's usual portion for today in one go (through `runInstantLog` and the same entry `ateEntry` makes for the log control and the portion sheet). The store's own words win when it refuses (a full day). */
-export function addToToday(add: AddEntry, recipe: Basis, today: string): AddedToday {
-  const amount = usualStart(recipe);
+/** Log `amount` of the recipe for today (its usual portion unless the caller says otherwise: the whole pack) in one go (through `runInstantLog` and the same entry `ateEntry` makes for the log control and the portion sheet). The store's own words win when it refuses (a full day). */
+export function addToToday(add: AddEntry, recipe: Basis, today: string, amount: number = usualStart(recipe)): AddedToday {
   const made = ateEntry(recipe, amount, today, today);
   if ('error' in made) return { ok: false, error: made.error };
   const r = runInstantLog(add, [made.entry]);

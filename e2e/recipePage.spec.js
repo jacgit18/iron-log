@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { deleteEaten, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // The recipe page after the log form left (brief recipe-page-after-log): a summary strip, one action row (Add to today, Plan…, Add N missing to Shopping), "Cook for N" always in the Ingredients heading, nothing fixed over the tab bar.
 // What the strip says and which button shows are node tests (recipeSummary.test.ts); this covers the wiring and the layout, which need a real page. The fixed clock in fixtures.js is Thursday 2026-09-24.
@@ -57,6 +57,18 @@ test('Add to today logs the usual portion in one tap, reads Added until Undo, an
   await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
   await openNutrition(page);
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // the first entry stays; Undo took only the second
+});
+
+test('after the entry is deleted on the board, returning to the page shows Add to today again (the page remounts here; stillAdded in recipeSummary.test.ts proves the page follows the store while mounted)', async ({ page }) => {
+  await seed(page, [stew]);
+  await open(page);
+  await page.getByRole('button', { name: 'Add to today' }).click();
+  await expect(page.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
+  await openNutrition(page);
+  await deleteEaten(page, 'Long stew');
+  await open(page);
+  await expect(page.getByRole('button', { name: 'Add to today' })).toBeEnabled();
+  await expect(strip(page)).toContainText('Not eaten yet');
 });
 
 test('Plan… opens the portion sheet on tomorrow, and planning from it lands on the board', async ({ page }) => {

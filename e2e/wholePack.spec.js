@@ -61,3 +61,39 @@ test('a food with no pack size has no Whole pack button and the stepper stops at
   await expect(dlg.getByRole('status').filter({ hasText: /^[\d.]+ portions$/ })).toHaveText('10 portions');
   await expect(more).toBeDisabled();
 });
+
+// The recipe page's Whole pack (N) button beside Add to today (brief whole-pack-button-and-log-leftovers, preview option B). Which foods get it is a node test (recipeSummary.test.ts); this covers the tap, the status line, Undo, the usual portion and the layout.
+test('the food page has Whole pack (12): one tap logs 12 for today, both buttons become Added, Undo takes the entry and the usual back', async ({ page }) => {
+  await make(page, 'Gnocchi', '12');
+  const pack = page.getByRole('button', { name: 'Whole pack (12)' });
+  await expect(pack).toBeVisible();
+  expect((await pack.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await pack.click();
+  const line = page.getByRole('status').filter({ hasText: /Logged Gnocchi, 12 portions, for today\./ });
+  await expect(line).toBeVisible();
+  await expect(line).toContainText('Usual portion saved: 12 portions.'); // the same rule as the portion sheet's Log
+  await expect(page.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(0);
+  await expect(pack).toHaveCount(0);
+  await expect(page.locator('.rc-strip')).toContainText('Usual 12 portions');
+  await line.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await expect(pack).toBeVisible();
+  await expect(page.locator('.rc-strip')).not.toContainText('Usual 12 portions'); // Undo took the usual back too
+  await page.getByRole('button', { name: 'Add to today' }).click(); // Add to today first: the pack button goes too
+  await expect(page.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
+  await expect(pack).toHaveCount(0);
+});
+
+test('the food page has no Whole pack button without a pack size', async ({ page }) => {
+  await make(page, 'Lasagna');
+  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Whole pack/ })).toHaveCount(0);
+});
+
+test('the action row wraps at 320 px with no sideways scroll', async ({ page }) => {
+  await make(page, 'Gnocchi', '12');
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expect(page.getByRole('button', { name: 'Whole pack (12)' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

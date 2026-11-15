@@ -34,6 +34,14 @@ export interface Ports {
 
 export type Made = { ok: true; text: string; undo: () => void } | { ok: false; error: string };
 
+/** The one write every log makes (one tap, the portion sheet's Log, a past food): add `entry`, then answer with `text` and an Undo that removes exactly the entry this call made. The store's own words win when it refuses. */
+export function logEntry(ports: Pick<Ports, 'addDietEntry' | 'removeDietEntry'>, entry: Omit<DietEntry, 'id'>, text: string): Made {
+  const r = ports.addDietEntry(entry);
+  if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
+  const id = r.id;
+  return { ok: true, text, undo: () => ports.removeDietEntry(id, false) };
+}
+
 const fail = (error: string): Made => ({ ok: false, error });
 
 /** Log `servings` of `recipe` on `day` when it is today or earlier, or plan it into `meal` when `day` is ahead. Returns the sentence to show and an Undo that removes only what this call made. */
@@ -42,10 +50,7 @@ export function logOrPlan(ports: Ports, recipe: Pick<Recipe, 'id' | 'n' | 'kcal'
   if (!isAhead(day, today)) {
     const made = ateEntry(recipe, servings, day, today);
     if ('error' in made) return fail(made.error);
-    const r = ports.addDietEntry(made.entry);
-    if (r.error || !r.id) return fail(r.error ?? 'Couldn’t log that.');
-    const id = r.id;
-    return { ok: true, text: `Logged ${recipe.n}: ${amount} to ${day === today ? 'today' : day}.`, undo: () => ports.removeDietEntry(id, false) };
+    return logEntry(ports, made.entry, `Logged ${recipe.n}: ${amount} to ${day === today ? 'today' : day}.`);
   }
   if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
   if (!meal) return fail('Pick a meal.');
