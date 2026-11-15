@@ -56,6 +56,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const pack = wholePackFor({ mine, recipe });
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   const addToDay = () => {
+    setUsualSaved(null); // a usual saved by an earlier whole pack is not this log's to take back
     const st = useAppStore.getState();
     const r = addToToday(st.addDietEntry, recipe, today);
     if (r.ok) setAdded(r.id);
@@ -63,6 +64,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   };
   const addPack = () => { // the portion sheet's Log saves a changed portion as the usual (`usualChange`); a whole pack does the same here, and Undo takes it back
     if (pack === null) return;
+    setUsualSaved(null);
     const st = useAppStore.getState();
     const r = addToToday(st.addDietEntry, recipe, today, pack);
     if (!r.ok) { setMsg(r.error); return; }

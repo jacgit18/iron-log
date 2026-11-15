@@ -1,7 +1,6 @@
-import type { Recipe } from '../types.ts';
+import type { DietEntry, Recipe } from '../types.ts';
 import { amountText, usualStart } from './foodUnit.js';
 import { ateEntry, ateDayError, entryFromFood, hasMacros, servingNumbers } from './dietLog.js';
-import type { DietEntry } from '../types.ts';
 import type { Made, Ports } from './logOrPlan.js';
 
 /* ---------- One tap logs at the usual portion (brief nutrition-log-first-portion-row, PR b): Quick add, Log in the Recipes way and a food picked in Find food. Pure: the store is passed in as `Ports`. A day ahead is not handled here: it plans through the portion sheet. ---------- */
