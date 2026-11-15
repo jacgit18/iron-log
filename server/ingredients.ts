@@ -10,7 +10,7 @@ import { jsonFromReply } from '../src/shared/scan.ts';
 import { cleanLineMatch, cleanLines, cleanPicks, cleanPlan, confidenceOf, normalizeLine, textGrams, MAX_LINE, MAX_LINES, type LineMatch } from '../src/shared/ingredientMatch.ts';
 import type { FoodHit } from '../src/shared/foods.ts';
 
-// Fill nutrition's resolver (brief recipe-auto-nutrition, ADR 118): ingredient lines in, one `LineMatch` per line out, mounted at /api/ingredients behind sign-in and a
+// Fill nutrition's resolver (brief recipe-auto-nutrition, ADR 133): ingredient lines in, one `LineMatch` per line out, mounted at /api/ingredients behind sign-in and a
 // per-user limit. Two model calls per request: call 1 turns each uncached line into a USDA search term, grams and a skip flag; the server searches USDA's plain foods
 // for every term; call 2 picks one of the foods the server showed, or none. Every number comes from the USDA row, never from the model. The server checks the model's
 // words: a food id it did not show is dropped, grams outside 1 to 5000 are dropped, and the confidence is set here. Resolved lines are cached by a hash of the resolver

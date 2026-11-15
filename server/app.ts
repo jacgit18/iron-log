@@ -267,7 +267,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/supplement-barcode', rateLimit(limits.foods, undefined, byUser), supplementBarcodeRoutes({ ...foods, db }));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): everyone signed in (owner, 2026-11-08), per-user limit and daily caps in scan.ts; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
-  // Fill nutrition (brief recipe-auto-nutrition, ADR 118): everyone signed in, per-user limit, 5 model-backed fills a person and 200 a server a day (ingredients.ts); the app-wide 100 kb parser has already read the body.
+  // Fill nutrition (brief recipe-auto-nutrition, ADR 133): everyone signed in, per-user limit, 5 model-backed fills a person and 200 a server a day (ingredients.ts); the app-wide 100 kb parser has already read the body.
   if (db) app.use('/api/ingredients', rateLimit(limits.ingredients, undefined, byUser), ingredientRoutes(db, ingredients));
   // Saved receipt photos (brief receipt-save-photo): everyone signed in (owner, 2026-11-10), per-user limit, 200 receipts and 60 MB per account; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
   if (db) app.use('/api/receipts', rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
