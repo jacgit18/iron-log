@@ -1,5 +1,6 @@
 import { skipSnack } from '../lib/dailySnacks.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
+import { portionTotalsAt } from '../lib/dietPortion.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
@@ -131,6 +132,14 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     set({ diet: list.map(x => (x.id === id ? e : x)) });
     get().saveDiet();
     return null;
+  },
+
+  setDietPortion(id, x, max) {
+    const cur = get().diet.find(e => e.id === id);
+    if (!cur) return 'That entry is gone.';
+    const t = portionTotalsAt(cur, x, max);
+    if (!t) return 'That portion is out of range.';
+    return get().updateDietEntry(id, { kcal: t.kcal, p: t.p, c: t.c, f: t.f, micro: t.micro, x });
   },
 
   removeDietEntry(id, undoNotice = true) {

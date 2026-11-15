@@ -87,6 +87,27 @@ describe('carbs and fat', () => {
   });
 });
 
+describe('setDietPortion (Less and More)', () => {
+  it('scales the entry\'s own numbers and records the count', () => {
+    const { id } = st().addDietEntry({ ...rice, c: 40, f: 2, x: 2, micro: { calcium: 100 } });
+    expect(st().setDietPortion(id!, 3)).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: 300, p: 6, c: 60, f: 3, x: 3, micro: { calcium: 150 } });
+  });
+  it('an entry with no count reads as 1', () => {
+    const { id } = st().addDietEntry(rice);
+    st().setDietPortion(id!, 1.5);
+    expect(st().diet[0]).toMatchObject({ kcal: 300, p: 6, x: 1.5 });
+  });
+  it('refuses a gone entry, half a portion down, the limit and 9,999 kcal; changes nothing', () => {
+    const { id } = st().addDietEntry({ ...rice, kcal: 4000 });
+    expect(st().setDietPortion('nope', 2)).toMatch(/gone/);
+    expect(st().setDietPortion(id!, 0.25)).toMatch(/range/);
+    expect(st().setDietPortion(id!, 3)).toMatch(/range/);
+    expect(st().setDietPortion(id!, 2, 1.5)).toMatch(/range/);
+    expect(st().diet[0]).toEqual({ id, d: day, n: 'Rice', kcal: 4000, p: 4 });
+  });
+});
+
 describe('the stored portion x (brief portion-scaled-micros)', () => {
   it('is kept on an entry, and updated with an explicit micro: a portion change never drops amounts', () => {
     const { id } = st().addDietEntry({ ...rice, x: 1, micro: { calcium: 100 } });
