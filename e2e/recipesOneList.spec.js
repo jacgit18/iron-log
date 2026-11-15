@@ -50,6 +50,9 @@ test('the library is folded until Browse the library or search text; Mine never 
   await expect(page.locator('#recipes-library-box')).toHaveCount(0);
   await expect(mineRows(page)).toHaveText(['Bread']);
   expect(asked).toHaveLength(1);
+  await page.click('#recipes-all'); // the box comes back with the page it already has: no second request for the same search
+  await expect(boxRows(page)).toHaveCount(3);
+  expect(asked).toHaveLength(1);
   await page.click('#recipes-library'); // Library: only the box
   await expect(page.getByRole('heading', { name: /Your recipes/ })).toHaveCount(0);
   await expect(boxRows(page)).toHaveCount(3);

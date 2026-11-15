@@ -99,6 +99,8 @@ export default function Recipes() {
   const month = monthKey(new Date());
   const asked = useRef(''); // the search the library list shows; a page that arrives for an older one is dropped
   asked.current = `${q}|${cat}|${libSort}|${tries}`;
+  const libRef = useRef(lib); // the page the effect below checks, so hiding and re-showing the box does not ask for the same search again
+  libRef.current = lib;
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
   const chips = visibleChips(chipCfg, src !== 'library');
@@ -137,10 +139,11 @@ export default function Recipes() {
 
   useEffect(() => {
     if (!boxOn || !syncing) return;
+    const key = `${q}|${cat}|${libSort}|${tries}`;
+    if (libRef.current.status !== 'loading' && libRef.current.key === key) return; // already answered for this search
     let live = true;
     const t = setTimeout(() => {
       setLib({ status: 'loading' });
-      const key = `${q}|${cat}|${libSort}|${tries}`;
       void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key }); });
     }, q ? 300 : 0);
     return () => { live = false; clearTimeout(t); };
