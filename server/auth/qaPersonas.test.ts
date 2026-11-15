@@ -82,15 +82,20 @@ describe('the environment locks', () => {
     expect(((await (await fetch(`${base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(false);
   });
 
-  it('answers on the QA Runner\'s scratch database mark too, and on no other mark', async () => {
-    await mark(QA_LOCAL_MARK);
-    const on = await serve();
-    expect(((await (await fetch(`${on.base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(true);
-    expect((await call(on.base, await signUp(on.base, ADMIN), 'GET', '/qa/personas')).status).toBe(200);
+  it('answers on the QA Runner\'s scratch database mark too: the admin gets the list, a non-admin is refused, and any other mark is a 404 for the admin', async () => {
+    // A false mark answer is asked again next time (qaMarkReader), so one server can go from another mark to the scratch mark.
+    const { base } = await serve();
+    const admin = await signUp(base, ADMIN);
+    const other = await signUp(base, 'someone@example.com');
     await mark('iron-log staging');
-    const off = await serve();
-    expect(((await (await fetch(`${off.base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(false);
-    expect((await call(off.base, (await call(off.base, new Jar(), 'POST', '/sign-in/email', { email: ADMIN, password: PASSWORD }).then(r => { const j = new Jar(); j.take(r); return j; })), 'GET', '/qa/personas')).status).toBe(404);
+    expect((await call(base, admin, 'GET', '/qa/personas')).status).toBe(404);
+    expect(((await (await fetch(`${base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(false);
+    await mark(QA_LOCAL_MARK);
+    expect(((await (await fetch(`${base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(true);
+    const listed = await call(base, admin, 'GET', '/qa/personas');
+    expect(listed.status).toBe(200);
+    expect(((await listed.json()) as { personas: unknown[] }).personas.length).toBeGreaterThan(0);
+    expect((await call(base, other, 'GET', '/qa/personas')).status).toBe(403);
   });
 
   it('has no such routes when the setting is off, even on a marked database', async () => {
