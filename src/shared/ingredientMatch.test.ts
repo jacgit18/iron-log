@@ -45,7 +45,7 @@ describe('grams from the text', () => {
 });
 
 describe('hasAmount', () => {
-  it.each([['2 eggs', true], ['½ cup milk', true], ['a pinch of salt', true], ['One medium onion', true], ['Olive oil', false], ['Salt', false]])('%s', (line, yes) => expect(hasAmount(line)).toBe(yes));
+  it.each([['2 eggs', true], ['½ cup milk', true], ['a pinch of salt', false], ['an onion', false], ['One medium onion', true], ['Olive oil', false], ['Salt', false]])('%s', (line, yes) => expect(hasAmount(line)).toBe(yes));
 });
 
 describe('confidenceOf', () => {
