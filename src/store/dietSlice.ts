@@ -1,6 +1,6 @@
 import { skipSnack } from '../lib/dailySnacks.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { portionTotalsAt } from '../lib/dietPortion.js';
+import { entryAtPortion } from '../lib/dietPortion.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
@@ -137,10 +137,10 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   setDietPortion(id, x, max) {
     const cur = get().diet.find(e => e.id === id);
     if (!cur) return 'That entry is gone.';
-    if (Math.round(x * 100) / 100 === (cur.x ?? 1)) return null; // already at that count: nothing to write or save
-    const t = portionTotalsAt(cur, x, max);
-    if (!t) return 'That portion is out of range.';
-    return get().updateDietEntry(id, { kcal: t.kcal, p: t.p, c: t.c, f: t.f, micro: t.micro, x: Math.round(x * 100) / 100 });
+    const n = entryAtPortion(cur, x, max);
+    if (!n) return 'That portion is out of range.';
+    if (n.x === (cur.x ?? 1)) return null; // already at that count: nothing to write or save
+    return get().updateDietEntry(id, { kcal: n.kcal, p: n.p, c: n.c ?? null, f: n.f ?? null, micro: n.micro ?? null, x: n.x });
   },
 
   removeDietEntry(id, undoNotice = true) {
