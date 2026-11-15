@@ -1,10 +1,11 @@
 // The allow/deny decision of scripts/qa-runner-guard.mjs, the PreToolUse hook that keeps the QA Runner agent inside the local stack and the evidence folder.
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+import { liveStackUrl, originProblem, readStackUrls } from './qa-local.mjs';
 import { bashProblem, decide, pathProblem, underEvidence, words } from './qa-runner-guard.mjs';
 
 const root = '/tmp/qa-runs';
@@ -100,9 +101,12 @@ describe('decide', () => {
 describe('the hook process', () => {
   const script = fileURLToPath(new URL('./qa-runner-guard.mjs', import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'qa-guard-test-'));
+  // A stand-in for the stack's server: a live process whose command line names server/index.ts, as the guard's pid check wants.
+  const server = spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore' });
+  afterAll(() => { server.kill(); });
   const state = (text: string) => { const f = join(dir, `state-${Math.random().toString(36).slice(2)}.json`); writeFileSync(f, text); return f; };
   // Started from another directory with a fake state file, as Claude Code starts it from wherever the session is.
-  const run = (input: string, stateFile = state(JSON.stringify({ url: stackUrl }))) => spawnSync('node', [script], { input, encoding: 'utf8', cwd: tmpdir(), env: { ...process.env, QA_LOCAL_STATE_FILE: stateFile } });
+  const run = (input: string, stateFile = state(JSON.stringify({ url: stackUrl, port: 41234, pid: server.pid }))) => spawnSync('node', [script], { input, encoding: 'utf8', cwd: tmpdir(), env: { ...process.env, QA_LOCAL_STATE_FILE: stateFile } });
   const call = (tool_name: string, tool_input: Record<string, unknown>) => JSON.stringify({ tool_name, tool_input });
   it('exits 2 with a reason when it refuses', () => {
     const r = run(call('Bash', { command: 'cat .env' }));
@@ -125,4 +129,35 @@ describe('the hook process', () => {
     it('refuses navigate, as if no stack were running', () => expect(run(call('mcp__Claude_Browser__navigate', { url: stackUrl }), bad).status).toBe(2));
   });
   it.each(['', 'not json', 'null', '[]', '{}', '{"tool_name":"Bash","tool_input":null}', '{"tool_name":"Bash"}'])('fails closed on input %j', input => expect(run(input).status).toBe(2));
+});
+
+describe('a stack started from another checkout (worktree)', () => {
+  const alive = () => true;
+  const rec = { url: stackUrl, port: 41234, pid: 4242 };
+  it('is allowed when the recorded pid is alive', () => expect(originProblem(`${stackUrl}/#/daily`, [liveStackUrl(rec, alive)])).toBeNull());
+  it('is refused when the pid is dead', () => expect(liveStackUrl(rec, () => false)).toBeNull());
+  it('is refused with no pid yet (start has not finished)', () => expect(liveStackUrl({ ...rec, pid: null }, alive)).toBeNull());
+  it('is refused when the port is not the recorded one', () => expect(liveStackUrl({ ...rec, port: 41999 }, alive)).toBeNull());
+  it.each(['http://localhost:41234', 'http://0.0.0.0:41234', 'http://192.168.1.5:41234', 'https://127.0.0.1:41234', 'https://example.com'])('is refused for %s', url => expect(liveStackUrl({ ...rec, url }, alive)).toBeNull());
+  it('is refused on a reserved port (dev server, e2e, Postgres)', () => expect(liveStackUrl({ url: 'http://127.0.0.1:5433', port: 5433, pid: 4242 }, alive)).toBeNull());
+  it('is refused for a malformed record', () => { for (const r of [null, {}, { url: 5 }, { url: 'nope', port: 1, pid: 2 }]) expect(liveStackUrl(r as never, alive)).toBeNull(); });
+  it('accepts any of several live stacks and refuses other ports', () => {
+    const stacks = ['http://127.0.0.1:41234', 'http://127.0.0.1:41235'];
+    expect(originProblem('http://127.0.0.1:41235/', stacks)).toBeNull();
+    expect(originProblem('http://127.0.0.1:1', stacks)).not.toBeNull();
+    expect(originProblem('https://example.com', stacks)).not.toBeNull();
+    expect(originProblem(stackUrl, [])).toMatch(/no stack/);
+  });
+  it('reads a state file from the temp folder that another checkout wrote, and ignores a dead one', () => {
+    const d = mkdtempSync(join(tmpdir(), 'qa-guard-tmp-'));
+    const server = spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore' });
+    const prev = process.env.TMPDIR; const prevState = process.env.QA_LOCAL_STATE_FILE;
+    try {
+      process.env.TMPDIR = d; delete process.env.QA_LOCAL_STATE_FILE;
+      writeFileSync(join(d, 'qa-local-aaaaaaaaaa.json'), JSON.stringify({ url: stackUrl, port: 41234, pid: server.pid }));
+      writeFileSync(join(d, 'qa-local-bbbbbbbbbb.json'), JSON.stringify({ url: 'http://127.0.0.1:41235', port: 41235, pid: 2 ** 22 + 12345 }));
+      writeFileSync(join(d, 'other.json'), JSON.stringify({ url: 'http://127.0.0.1:41236', port: 41236, pid: process.pid }));
+      expect(readStackUrls()).toEqual([stackUrl]); // the live one from the 'other checkout' only: not the dead pid, not a file with another name
+    } finally { server.kill(); if (prev === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = prev; if (prevState !== undefined) process.env.QA_LOCAL_STATE_FILE = prevState; rmSync(d, { recursive: true, force: true }); }
+  });
 });
