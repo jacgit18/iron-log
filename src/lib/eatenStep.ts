@@ -23,9 +23,6 @@ export function rowStepper(e: Stepped, recipe?: Unit): { text: string; less: num
   return { text: eatenAmount(e, recipe), less: stepEntryCount(e, -1, max), more: stepEntryCount(e, 1, max) };
 }
 
-/** Whether a row on `day` has a stepper: today and earlier days (an entry is never on a day ahead; this keeps the rule in one place). */
-export const hasStepper = (day: string, today: string): boolean => day <= today;
-
 /** The one entry a ticked planned recipe card logged, or undefined: none (not ticked, or the entry was deleted) or more than one (a saved meal) means there is nothing to step together. */
 export function loggedEntry(ids: readonly string[] | undefined, entries: readonly DietEntry[]): DietEntry | undefined {
   const found = (ids ?? []).map(id => entries.find(e => e.id === id)).filter((e): e is DietEntry => !!e);

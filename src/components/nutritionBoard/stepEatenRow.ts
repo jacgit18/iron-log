@@ -16,7 +16,7 @@ export function stepEatenRow(e: DietEntry, to: number, recipe: Recipe | undefine
   say(`Usual portion saved: ${now.n}, ${amountText(to, now)}.`, () => undoStep(now.id, change, say));
 }
 
-function undoStep(id: string, change: UsualChange, say: (t: string, undo?: () => void) => void): void {
+export function undoStep(id: string, change: UsualChange, say: (t: string, undo?: () => void) => void): void {
   const st = useAppStore.getState();
   const now = st.recipes.find(r => r.id === id);
   if (!now) { say('This food was removed, so there is no usual to restore.'); return; }

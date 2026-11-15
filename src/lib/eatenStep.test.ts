@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import { entryTotalsAt } from './portionBasis.js';
-import { eatenAmount, eatenMax, hasStepper, loggedEntry, plannedStep, rowStepper } from './eatenStep.js';
+import { eatenAmount, eatenMax, loggedEntry, plannedStep, rowStepper } from './eatenStep.js';
 
 const entry = (o: Partial<DietEntry> = {}): DietEntry => ({ id: 'e1', d: '2026-11-15', n: 'Oats', kcal: 300, p: 10, ...o });
 const oats = { cat: 'other' as const, kcal: 300, p: 10 };
@@ -47,14 +47,6 @@ describe('rowStepper', () => {
     const back = entryTotalsAt({ ...start, kcal: down.kcal, p: down.p, x: down.x }, rowStepper({ ...start, kcal: down.kcal, p: down.p, x: down.x }).more!)!;
     expect(less).toBe(1);
     expect(Math.abs(back.kcal - start.kcal)).toBeLessThanOrEqual(1);
-  });
-});
-
-describe('hasStepper', () => {
-  it('today and earlier days have one, a day ahead does not', () => {
-    expect(hasStepper('2026-11-15', '2026-11-15')).toBe(true);
-    expect(hasStepper('2026-11-01', '2026-11-15')).toBe(true);
-    expect(hasStepper('2026-11-16', '2026-11-15')).toBe(false);
   });
 });
 
