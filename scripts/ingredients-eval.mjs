@@ -44,7 +44,7 @@ for (const [name, ls] of recipes) {
     if (f.verdict === 'top' || f.verdict === 'top3') {
       known++;
       const right = picked !== null && (f.verdict === 'top' ? picked === f.usda[0] : f.usda.includes(picked));
-      if (right) knownRight++; else console.log(`  MISS  ${name}: "${f.line}" -> ${m.status}${picked ? ` ${picked}` : ''} (expected ${f.verdict === 'top' ? f.usda[0] : f.usda.join(' | ')})`);
+      if (right) knownRight++; else console.log(`  MISS  ${name}: "${f.line}" -> ${m.status}${picked ? ` ${picked}` : ''} (expected ${f.verdict === 'top' ? f.usda[0] : f.usda.join(' | ')}; a MISS can be another correct food, judge by hand)`);
     } else review.push(`${name}: "${f.line}" -> ${m.status}${picked ? ` ${picked} ${m.grams} g (${m.gramsFrom}, ${m.confidence})` : ''}`);
     if (typeof f.expectGrams === 'number') {
       grams++;

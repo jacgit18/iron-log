@@ -7,7 +7,7 @@ import { dayCap } from './dayCap.ts';
 import type { DB } from './db/types.ts';
 import { askPlainFoods } from './foodSearch.ts';
 import { jsonFromReply } from '../src/shared/scan.ts';
-import { cleanLineMatch, cleanLines, cleanPicks, cleanPlan, confidenceOf, normalizeLine, textGrams, MAX_LINE, MAX_LINES, type LineMatch } from '../src/shared/ingredientMatch.ts';
+import { cleanLineMatch, cleanLines, cleanPicks, cleanPlan, confidenceOf, normalizeLine, hasAmount, textGrams, MAX_LINE, MAX_LINES, type LineMatch } from '../src/shared/ingredientMatch.ts';
 import type { FoodHit } from '../src/shared/foods.ts';
 
 // Fill nutrition's resolver (brief recipe-auto-nutrition, ADR 133): ingredient lines in, one `LineMatch` per line out, mounted at /api/ingredients behind sign-in and a
@@ -120,7 +120,8 @@ export async function resolveLines(lines: string[], deps: ResolveDeps): Promise<
         // Grams the text states are read by code and win; a model claim of "text" the code cannot confirm counts as a conversion.
         const fromText = textGrams(t.line);
         const grams = fromText ?? p.grams;
-        const gramsFrom = fromText !== null ? 'text' : p.gramsFrom === 'text' ? 'converted' : p.gramsFrom;
+        // A line with no amount at all can only be a guess, whatever the model says: confidence must not rest on its word.
+        const gramsFrom = fromText !== null ? 'text' : !hasAmount(t.line) ? 'guess' : p.gramsFrom === 'text' ? 'converted' : p.gramsFrom;
         if (pick && food && grams !== null) m = { status: 'matched', fdcId: food.id, food: food.name, grams, gramsFrom, confidence: confidenceOf(gramsFrom, pick.approximate), per100: food };
       }
       results.set(t.key, m);

@@ -107,6 +107,13 @@ describe('resolveLines', () => {
     expect(out.ok && out.lines.map(l => [l.grams, l.gramsFrom])).toEqual([[300, 'converted'], [200, 'text']]);
   });
 
+  it('a line with no amount is a guess and low confidence even when the model says it converted', async () => {
+    const plan = { lines: [{ term: 'butter', grams: 14, gramsFrom: 'converted', skip: false }] };
+    const { fn } = fakeFetch({ plan, picks: { picks: [{ i: 0, id: 31, approximate: false }] } });
+    const out = await resolveLines(['Butter'], deps(fn, memCache()));
+    expect(out.ok && out.lines.map(l => [l.gramsFrom, l.confidence])).toEqual([['guess', 'low']]);
+  });
+
   it('answers a second request for the same lines from the cache: no model call, no USDA call, no gate', async () => {
     const cache = memCache();
     const first = fakeFetch({ plan: PLAN, picks: PICKS });

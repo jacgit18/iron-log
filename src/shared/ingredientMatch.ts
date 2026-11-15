@@ -77,6 +77,9 @@ export const leadingGrams = (line: string): number | null => toGrams(LEAD.exec(l
 /** The grams the text itself states, leading weight first, else grams in brackets. */
 export const textGrams = (line: string): number | null => leadingGrams(line) ?? bracketGrams(line);
 
+/** Whether the line states any amount at all (a digit, a fraction glyph, or a number word). A line with none ("Olive oil", "Salt") can only have guessed grams, whatever the model says. */
+export const hasAmount = (line: string): boolean => /[\d¼-¾⅓-⅞]|\b(?:an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|half|dozen)\b/i.test(line);
+
 /** The server's confidence: high only when the grams came from the text or a unit conversion and the pick is not approximate. */
 export const confidenceOf = (gramsFrom: 'text' | 'converted' | 'guess', approximate: boolean): 'high' | 'low' => (gramsFrom !== 'guess' && !approximate ? 'high' : 'low');
 

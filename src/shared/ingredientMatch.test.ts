@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracketGrams, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.js';
+import { bracketGrams, hasAmount, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.js';
 
 const hit = { id: 7, name: 'Flour, wheat', kcal: 360, p: 10, c: 76, f: 1, micro: { iron: 4.6 } };
 const ok = { status: 'matched', fdcId: 7, food: 'Flour, wheat', grams: 100, gramsFrom: 'text', confidence: 'high', per100: hit };
@@ -36,6 +36,10 @@ describe('grams from the text', () => {
     ['2-3 oz ham', null], ['2 cups flour', null], ['100 grams', 100], ['6000 g water', null], ['0 g salt', null],
   ])('leading: %s', (line, g) => expect(leadingGrams(line)).toBe(g));
   it('leading weight wins over brackets', () => expect(textGrams('200 g flour (1 lb)')).toBe(200));
+});
+
+describe('hasAmount', () => {
+  it.each([['2 eggs', true], ['½ cup milk', true], ['a pinch of salt', true], ['One medium onion', true], ['Olive oil', false], ['Salt', false]])('%s', (line, yes) => expect(hasAmount(line)).toBe(yes));
 });
 
 describe('confidenceOf', () => {
