@@ -28,7 +28,7 @@ function fakeFetch(f: Fakes) {
   const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string }[], urls: [] as string[] };
   const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
-    if (url.startsWith('https://api.anthropic.com')) {
+    if (new URL(url).hostname === 'api.anthropic.com') {
       calls.model++;
       const body = JSON.parse(String(init?.body));
       calls.bodies.push(body);
