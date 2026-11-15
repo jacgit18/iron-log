@@ -18,12 +18,12 @@ const open = async (page, size) => {
 };
 const noSideScroll = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
-test('on a phone the first recipe row starts above 340 px and nothing scrolls sideways', async ({ page }) => {
+test('on a phone the first recipe row starts above 440 px and nothing scrolls sideways', async ({ page }) => {
   await open(page, { width: 375, height: 812 });
   const box = await page.locator('.rc-item').first().boundingBox();
-  expect(box.y).toBeLessThan(340);
+  expect(box.y).toBeLessThan(440); // was 340 before Recipes became one list: the All / Mine / Library row and the "Your recipes" heading add about 80 px above the first row (brief recipes-mine-library-merge)
   expect(await noSideScroll(page)).toBe(true);
-  // title, search and the pill row are the only things above the list
+  // title, search, the filter row, the type pills and the group heading are the only things above the list
   const pills = await page.locator('.rc-tabs').boundingBox();
   expect(pills.height).toBeLessThan(60);
 });
