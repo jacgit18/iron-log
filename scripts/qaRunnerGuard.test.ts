@@ -64,7 +64,7 @@ describe('pathProblem', () => {
 describe('decide', () => {
   const d = (tool_name: string, tool_input: Record<string, unknown>) => decide({ tool_name, tool_input }, { root, stackUrl, repo: '/work/iron-log' });
   it('lets the browser open the running stack', () => {
-    for (const url of ['http://127.0.0.1:41234', 'http://127.0.0.1:41234/progress']) expect(d('mcp__Claude_Browser__navigate', { url })).toBeNull();
+    for (const url of ['http://127.0.0.1:41234', 'http://127.0.0.1:41234/progress', 'http://127.0.0.1:41234/qa-signin-erased-account.html?s=0123456789ab']) expect(d('mcp__Claude_Browser__navigate', { url })).toBeNull();
   });
   it.each(['https://iron-log-qa.a.run.app', 'https://loadbearer.app', 'http://127.0.0.1:4173', 'http://127.0.0.1:41235', 'http://localhost:41234', 'http://127.0.0.1:41234@evil.com', 'about:blank', 'back', 'forward', 'javascript:alert(1)', 'file:///etc/passwd', ''])('refuses navigate to %j', url => {
     expect(d('mcp__Claude_Browser__navigate', { url })).not.toBeNull();
