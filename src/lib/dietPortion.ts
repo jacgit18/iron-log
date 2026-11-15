@@ -1,5 +1,6 @@
 import type { DietEntry } from '../types.ts';
 import { portionBasis, totalsAt, PORTION_CEIL, PORTION_MIN, PORTION_STEP } from './portionBasis.js';
+import { MAX_KCAL } from '../shared/diet.js';
 import type { PortionTotals } from './portionBasis.js';
 
 /* ---------- Less and More on an eaten entry (brief nutrition-log-first-portion-row, PR a) ----------
@@ -22,7 +23,9 @@ export function portionTotalsAt(e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'm
   x = roundPortion(x);
   if (x < PORTION_MIN || x > Math.min(max, ENTRY_PORTION_CEIL)) return null;
   const b = portionBasis(e);
-  const t = totalsAt({ kcal: b.per.kcal, p: b.per.p, c: b.per.c ?? null, f: b.per.f ?? null, micro: b.microExact ?? null }, x);
+  // Rounding can land under one kcal over the cap (9,999 at 9 portions, Less, More = 9,999.5): that is the cap, not a refusal. A true 10,000 or more is still refused, so Less is always undoable.
+  const exact = b.per.kcal * x, kcal = exact > MAX_KCAL && exact < MAX_KCAL + 1 - 1e-6 ? MAX_KCAL / x : b.per.kcal;
+  const t = totalsAt({ kcal, p: b.per.p, c: b.per.c ?? null, f: b.per.f ?? null, micro: b.microExact ?? null }, x);
   if (t && Object.keys(e.micro ?? {}).length > Object.keys(t.micro ?? {}).length) return null;
   return t;
 }

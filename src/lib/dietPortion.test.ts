@@ -64,7 +64,7 @@ describe('rounding rule: Less then More returns the starting numbers within 1 kc
     for (let kcal = 1; kcal <= 3000; kcal += kcal === 1 ? 6 : 7) {
       for (let x = 0.5; x <= 10; x += 0.5) {
         const start = e({ kcal: Math.round(kcal * x) || 1, p: 10, c: undefined, f: undefined, x });
-        if (start.kcal >= 9999) continue; // at the cap itself, coming back up can round to 10,000, which More refuses (the cap wins)
+        if (start.kcal > 9999) continue; // not a storable entry; the cap itself (9,999) is now included
         gap(start, stepEntryPortion(start, -1), x);
         gap(start, stepEntryPortion(start, 1), x);
       }
@@ -90,5 +90,17 @@ describe('Less above the food\'s limit', () => {
     const over = e({ kcal: 1200, p: 10, c: undefined, f: undefined, x: 8 });
     expect(stepEntryPortion(over, -1, 5)).toBe(7.5);
     expect(stepEntryPortion(over, 1, 5)).toBeNull();
+  });
+});
+
+describe('the 9,999 kcal cap', () => {
+  it('Less then More from 9,999 kcal at 9 portions comes back to 9,999, not a refusal', () => {
+    const top = e({ kcal: 9999, p: 10, c: undefined, f: undefined, x: 9 });
+    const less = entryAtPortion(top, 8.5)!;
+    expect(less.kcal).toBe(9444);
+    expect(entryAtPortion(less, 9)!.kcal).toBe(9999);
+  });
+  it('a count that is really over the cap is still refused', () => {
+    expect(entryAtPortion(e({ kcal: 9000, p: 10, c: undefined, f: undefined, x: 4.5 }), 5)).toBeNull();
   });
 });
