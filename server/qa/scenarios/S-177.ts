@@ -1,16 +1,16 @@
 import type { Scenario } from '../scenarios.ts';
 
 const scenario: Scenario = {
-  id: 'S-177', feature: 'Library rows', title: 'Library rows: In Mine check and a one-tap Add with Undo', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
+  id: 'S-177', feature: 'Library rows', title: 'Library rows: a one-tap + Add to mine with Undo, and the copy moves up', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
   steps: [
-    'Open Recipes and press Library. Read a row: it has no Library pill. Press + Add on one row.',
-    'Read the notice, press Undo, then press + Add on the same row again and press Open.',
-    'Go back to Library and read that row.',
+    'Open Recipes and press the Library pill (beside All and Mine). Read a row in the dashed "Library · not in your recipes yet" box: it has a + Add to mine button. Press it.',
+    'Read the notice, press Undo, then press + Add to mine on the same row again and press Open.',
+    'Go back to Recipes, press the Library pill again and look for that recipe, then press the All pill and look for it under "Your recipes".',
   ],
   expected: [
-    'The row\'s + Add copies it and the notice says "<name> added to Mine." with Open, Undo and Dismiss.',
-    'Undo takes the copy away silently. Adding again and pressing Open shows the copy in Mine.',
-    'That Library row now shows a check named In Mine and no + Add button.',
+    'The row\'s + Add to mine copies it and the notice says "<name> added to Mine." with Open, Undo and Dismiss.',
+    'Undo takes the copy away and the row is back in the Library box. Adding again and pressing Open shows the copy in Mine.',
+    'A recipe you have a copy of is no longer in the Library box (it is listed once, under "Your recipes").',
   ],
 };
 
