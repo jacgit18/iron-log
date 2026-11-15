@@ -56,6 +56,11 @@ export function buildReport(scenarios, automationOf, results) {
   const notRunGroups = [...notRun.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([feature, rows]) => ({ feature, rows: rows.sort(byId) }));
+  // The phone checklist: every live phone-only scenario that is not failing or blocked (those stay in `attention`, tagged phone), not-tried ones first.
+  const phone = [
+    ...notRunGroups.flatMap(g => g.rows.filter(r => r.device).map(r => ({ ...r, state: 'not tried' }))),
+    ...[...confirmed, ...proposed].filter(r => r.device).map(r => ({ ...r, state: r.proposed ? 'passed, proposed' : 'passed, confirmed' })),
+  ];
   const notRunCount = notRunGroups.reduce((n, g) => n + g.rows.length, 0);
   const count = o => attention.filter(r => r.outcome === o).length;
 
@@ -73,6 +78,8 @@ export function buildReport(scenarios, automationOf, results) {
     lastDate,
     features,
     attention,
+    /** Phone-only scenarios not failing or blocked, each with a `state`; the renderer lists them in their own section and leaves them out of the others. */
+    phone,
     proposed,
     confirmed,
     notRun: notRunGroups,

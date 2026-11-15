@@ -57,9 +57,18 @@ export function renderReport(report, opts = {}) {
 
   const stat = (n, label, cls, kind) => `<button type="button" class="stat ${cls}" data-pick="${kind}"><span class="n">${n}</span><span class="l">${label}</span></button>`;
   const attention = report.attention.map(recordedRow).join('\n');
-  const proposed = report.proposed.map(recordedRow).join('\n');
-  const confirmed = report.confirmed.map(recordedRow).join('\n');
-  const notRun = report.notRun.map(g => `<details class="grp" data-feature="${esc(g.feature)}"><summary>${esc(g.feature)} <span class="count">${g.rows.length}</span></summary><ul class="rows">${g.rows.map(notRunRow).join('\n')}</ul></details>`).join('\n');
+  // Phone-only scenarios have their own section, so the lists below leave them out (the counts above still include them).
+  const proposedRows = report.proposed.filter(r => !r.device);
+  const confirmedRows = report.confirmed.filter(r => !r.device);
+  const notRunGroups = report.notRun.map(g => ({ feature: g.feature, rows: g.rows.filter(r => !r.device) })).filter(g => g.rows.length);
+  const notRunCount = notRunGroups.reduce((n, g) => n + g.rows.length, 0);
+  const proposed = proposedRows.map(recordedRow).join('\n');
+  const confirmed = confirmedRows.map(recordedRow).join('\n');
+  const group = (g, draw, open) => `<details class="grp" data-feature="${esc(g.feature)}"${open ? ' open' : ''}><summary>${esc(g.feature)} <span class="count">${g.rows.length}</span></summary><ul class="rows">${g.rows.map(draw).join('\n')}</ul></details>`;
+  const notRun = notRunGroups.map(g => group(g, notRunRow, false)).join('\n');
+  const phoneByFeature = [...new Set(report.phone.map(r => r.feature))].sort((a, b) => a.localeCompare(b)).map(feature => ({ feature, rows: report.phone.filter(r => r.feature === feature) }));
+  const phoneRow = r => (r.state === 'not tried' ? notRunRow(r) : recordedRow(r));
+  const phone = phoneByFeature.map(g => group(g, phoneRow, true)).join('\n');
   const featureOptions = report.features.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
 
   return `<title>QA results</title>
@@ -156,9 +165,10 @@ ${bar(t)}
 <span class="showing" id="showing" aria-live="polite"></span>
 </div>
 ${section('attention', 'Needs attention', 'Failing or blocked, newest first. The note says what happened.', report.attention.length, `<ul class="rows">${attention}</ul>`, true, 'Nothing is failing or blocked.')}
-${section('proposed', 'Proposed by an agent', 'Passes an agent recorded. Spot-check a few, then record your own result to confirm it.', report.proposed.length, `<ul class="rows">${proposed}</ul>`, true, 'No agent pass is waiting for a spot-check.')}
-${section('confirmed', 'Confirmed by you', 'Passes you recorded yourself.', report.confirmed.length, `<ul class="rows">${confirmed}</ul>`, true, 'You have not recorded a pass yet.')}
-${section('notrun', 'Not run', 'No result recorded, grouped by feature. The tag shows how automation covers it.', totals.notRun, notRun, false, 'Every live scenario has a result.')}
+${section('phone', 'Phone checklist', 'Scenarios that need a real phone, grouped by feature (a phone one that fails or is blocked is under Needs attention). Only you record these; an agent result on one is refused, and you retest on your phone either way.', report.phone.length, phone, true, 'No scenario needs a real phone.')}
+${section('proposed', 'Proposed by an agent', 'Passes an agent recorded. Spot-check a few, then record your own result to confirm it.', proposedRows.length, `<ul class="rows">${proposed}</ul>`, true, 'No agent pass is waiting for a spot-check.')}
+${section('confirmed', 'Confirmed by you', 'Passes you recorded yourself.', confirmedRows.length, `<ul class="rows">${confirmed}</ul>`, true, 'You have not recorded a pass yet.')}
+${section('notrun', 'Not run', 'No result recorded, grouped by feature (phone-only scenarios are in the Phone checklist). The tag shows how automation covers it.', notRunCount, notRun, false, 'Every live scenario that does not need a phone has a result.')}
 <p class="foot">Read-only view of the recorded results. It never edits a result or a scenario. Persona accounts and emails are left out on purpose.</p>
 </main>
 <script>

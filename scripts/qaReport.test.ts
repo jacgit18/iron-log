@@ -102,6 +102,16 @@ describe('buildReport', () => {
   });
 });
 
+describe('phone checklist', () => {
+  it('lists every live phone scenario with its state, not-tried first, and leaves a failing one to attention', () => {
+    const l = [sc('S-01', 'A', { device: true }), sc('S-02', 'A', { device: true }), sc('S-03', 'B', { device: true }), sc('S-04', 'B', { device: true, retired: true }), sc('S-05', 'B')];
+    const r = buildReport(l, () => undefined, [entry('S-01', 'pass', '2026-11-03', 'owner'), entry('S-02', 'fail', '2026-11-04', 'owner', 'back-swipe broken')]);
+    expect(r.phone.map(x => [x.id, x.state])).toEqual([['S-03', 'not tried'], ['S-01', 'passed, confirmed']]);
+    expect(r.attention.map(x => x.id)).toEqual(['S-02']);
+    expect(r.device).toEqual({ total: 3, notTried: 1, ownerRecorded: 2 });
+  });
+});
+
 describe('renderReport', () => {
   const html = (results: ReturnType<typeof entry>[]) => renderReport(buildReport(list, auto, results), { generatedOn: '2026-11-14', source: 'qa-results.json' });
 
@@ -131,5 +141,14 @@ describe('renderReport', () => {
     expect(html([])).not.toMatch(/<!doctype/i);
     expect(standalone(html([]))).toMatch(/^<!doctype html>/i);
     expect(html([])).toContain('<title>QA results</title>');
+  });
+
+  it('shows phone scenarios in the Phone checklist and not in Not run', () => {
+    const out = html([]);
+    const notRunPart = out.slice(out.indexOf('data-sec="notrun"'), out.indexOf('class="foot"'));
+    const phonePart = out.slice(out.indexOf('data-sec="phone"'), out.indexOf('data-sec="proposed"'));
+    expect(phonePart).toContain('S-10');
+    expect(notRunPart).not.toContain('S-10');
+    expect(notRunPart).toContain('S-03');
   });
 });
