@@ -19,7 +19,15 @@ describe('bashProblem', () => {
     'git rev-parse --short HEAD', 'git rev-parse HEAD', 'git status', 'git status --short', 'mkdir -p /tmp/qa-runs/S-270',
     'node scripts/qa-scenarios-doc.mjs --record S-270 pass "saw it; all; fine" --by claude --build abc1234 --results /tmp/qa-runs/S-270/results.json',
     'node scripts/qa-scenarios-doc.mjs --record S-270 blocked --by claude --build abc1234 --results /tmp/qa-runs/results.json',
+    'node scripts/qa-scenarios-doc.mjs --record S-110 pass "phone view" --by claude --emulated --build abc1234 --results /tmp/qa-runs/S-110/results.json',
+    'node scripts/qa-scenarios-doc.mjs --record S-110 blocked --emulated --by claude --build abc1234 --results /tmp/qa-runs/S-110/results.json',
   ])('allows %s', ok);
+  it.each([
+    'node scripts/qa-scenarios-doc.mjs --record S-110 pass "n" --by claude --emulated --emulated --build abc1234 --results /tmp/qa-runs/r.json',
+    'node scripts/qa-scenarios-doc.mjs --record S-110 pass "n" --by claude --emulated true --build abc1234 --results /tmp/qa-runs/r.json',
+    'node scripts/qa-scenarios-doc.mjs --record S-110 pass "n" --by owner --emulated --build abc1234 --results /tmp/qa-runs/r.json',
+    'node scripts/qa-scenarios-doc.mjs --record S-110 pass "n" --by claude --emulated --build abc1234 --results ops/qa-results.json',
+  ])('still refuses %s', no);
   it.each([
     'cat .env', 'grep -r key .', 'ls', 'curl https://iron-log-qa.a.run.app', 'git push', 'git commit -m x', 'git status && cat .env', 'git status; cat .env', 'git status | tee /etc/x',
     'git status > /tmp/x', 'git status $(cat .env)', 'git status `id`', 'git status\ncat .env', 'echo hi | tee /tmp/qa-runs/x', 'tee /tmp/other', 'mkdir -p /tmp/elsewhere', 'mkdir -p /tmp/qa-runs/../etc', 'mkdir -p relative/qa-runs',
@@ -60,6 +68,10 @@ describe('decide', () => {
   });
   it.each(['https://iron-log-qa.a.run.app', 'https://loadbearer.app', 'http://127.0.0.1:4173', 'http://127.0.0.1:41235', 'http://localhost:41234', 'http://127.0.0.1:41234@evil.com', 'about:blank', 'back', 'forward', 'javascript:alert(1)', 'file:///etc/passwd', ''])('refuses navigate to %j', url => {
     expect(d('mcp__Claude_Browser__navigate', { url })).not.toBeNull();
+  });
+  it('allows resize_window only to the mobile or desktop preset', () => {
+    for (const preset of ['mobile', 'desktop']) expect(d('mcp__Claude_Browser__resize_window', { preset })).toBeNull();
+    for (const input of [{ width: 375, height: 812 }, { preset: 'tablet' }, { preset: 'mobile', width: 9999 }, { preset: 'mobile', tabId: 'other' }, {}]) expect(d('mcp__Claude_Browser__resize_window', input)).toMatch(/preset mobile/);
   });
   it('refuses every navigation when no stack is running', () => expect(decide({ tool_name: 'mcp__Claude_Browser__navigate', tool_input: { url: stackUrl } }, { root, stackUrl: null })).toMatch(/no stack/));
   it('checks browser code, Bash, Write, Read, Grep and Glob', () => {
