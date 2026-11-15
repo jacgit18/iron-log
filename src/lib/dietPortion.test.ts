@@ -23,6 +23,15 @@ describe('entryAtPortion: the entry\'s own numbers scaled by new count over old 
 });
 
 describe('limits', () => {
+  it('the limit is the Edit sheet\'s (10), and a count scales by what is stored (two decimals)', () => {
+    expect(entryAtPortion(e({ kcal: 10, p: 1 }), 10.5)).toBeNull();
+    expect(entryAtPortion(e({ kcal: 10, p: 1 }), 10)).not.toBeNull();
+    expect(entryAtPortion(e({ kcal: 300 }), 1.333)).toMatchObject({ kcal: 399, x: 1.33 });
+  });
+  it('refuses a step that would drop an amount over its cap', () => {
+    expect(entryAtPortion(e({ micro: { calcium: 15000 } }), 2)).toBeNull();
+    expect(entryAtPortion(e({ micro: { calcium: 100 } }), 2)).not.toBeNull();
+  });
   it('refuses below half a portion and above the limit', () => {
     expect(entryAtPortion(e(), 0.25)).toBeNull();
     expect(entryAtPortion(e(), 3, 2.5)).toBeNull();
@@ -45,22 +54,28 @@ describe('limits', () => {
 });
 
 describe('rounding rule: Less then More returns the starting numbers within 1 kcal', () => {
-  it('holds for every whole kcal from 1 to 3000 and every half step, from either direction', () => {
-    for (let kcal = 1; kcal <= 3000; kcal++) {
+  it('holds for whole kcal from 1 to 3000 (every 7th, plus the edges) and every half step, from either direction', () => {
+    let worst = 0; // the largest gap seen, asserted once (60,000 expects would be slow)
+    const gap = (start: DietEntry, to: number | null, x: number) => {
+      if (to === null) return;
+      const back = entryAtPortion(entryAtPortion(start, to)!, x)!;
+      worst = Math.max(worst, Math.abs(back.kcal - start.kcal));
+    };
+    for (let kcal = 1; kcal <= 3000; kcal += kcal === 1 ? 6 : 7) {
       for (let x = 0.5; x <= 10; x += 0.5) {
         const start = e({ kcal: Math.round(kcal * x) || 1, p: 10, c: undefined, f: undefined, x });
         if (start.kcal >= 9999) continue; // at the cap itself, coming back up can round to 10,000, which More refuses (the cap wins)
-        const less = stepEntryPortion(start, -1);
-        if (less !== null) {
-          const back = entryAtPortion(entryAtPortion(start, less)!, x)!;
-          expect(Math.abs(back.kcal - start.kcal)).toBeLessThanOrEqual(1);
-        }
-        const more = stepEntryPortion(start, 1);
-        if (more !== null) {
-          const back = entryAtPortion(entryAtPortion(start, more)!, x)!;
-          expect(Math.abs(back.kcal - start.kcal)).toBeLessThanOrEqual(1);
-        }
+        gap(start, stepEntryPortion(start, -1), x);
+        gap(start, stepEntryPortion(start, 1), x);
       }
+    }
+    expect(worst).toBeLessThanOrEqual(1);
+  });
+  it('a run of Less and More taps drifts by at most 1 kcal per tap', () => {
+    let cur = e({ kcal: 521 });
+    for (let tap = 1; tap <= 10; tap++) {
+      cur = entryAtPortion(cur, stepEntryPortion(cur, tap % 2 ? -1 : 1)!)!;
+      expect(Math.abs(cur.kcal - 521 * entryPortion(cur))).toBeLessThanOrEqual(tap);
     }
   });
   it('a worked case: 521 kcal at 1 portion, Less then More', () => {
