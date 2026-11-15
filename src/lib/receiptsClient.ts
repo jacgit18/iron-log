@@ -92,9 +92,15 @@ export async function removeReceipt(id: string): Promise<{ ok: true } | { ok: fa
   return res.ok || res.status === 404 ? { ok: true } : { ok: false, reason: 'unavailable' }; // already gone is the same as deleted
 }
 
-/** The saved JPEG, or null when it could not be loaded. */
-export async function fetchPhoto(id: string): Promise<Blob | null> {
-  const res = await call(`/${id}/photo`);
-  if (!res || !res.ok) return null;
-  try { return await res.blob(); } catch { return null; }
+/** How long to wait before a refused call may be tried again: the server's Retry-After seconds, at least 1 and at most 60, 5 when it sent none. */
+export const retryWaitMs = (header: string | null): number => { const n = Number(header); return (Number.isFinite(n) && n > 0 ? Math.min(60, Math.max(1, Math.ceil(n))) : 5) * 1000; };
+
+/** The saved JPEG, or null when it could not be loaded. `patient` (Download all, which asks for every photo in a row) waits out the per-minute limit and tries again, up to 5 times, instead of giving up on that photo. */
+export async function fetchPhoto(id: string, patient = false): Promise<Blob | null> {
+  for (let tries = 0; ; tries++) {
+    const res = await call(`/${id}/photo`);
+    if (res?.status === 429 && patient && tries < 5) { await new Promise(done => setTimeout(done, retryWaitMs(res.headers.get('Retry-After')))); continue; }
+    if (!res || !res.ok) return null;
+    try { return await res.blob(); } catch { return null; }
+  }
 }

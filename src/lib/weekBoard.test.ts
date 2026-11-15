@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
-import { boardDay, fixFor, moveItem } from './weekBoard.js';
+import { addItemsToDays, boardDay, copyItemToDays, fixFor, moveItem } from './weekBoard.js';
 
 const rec = (id: string, cat: Recipe['cat'], kcal: number, p: number, extra: Partial<Recipe> = {}): Recipe => ({ id, n: id[0]!.toUpperCase() + id.slice(1), cat, ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p, ...extra });
 const chili = rec('chili', 'protein', 400, 30, { f: 14, pairs: ['rice'] }), rice = rec('rice', 'carbs', 200, 4, { f: 1, pairs: ['chili'] }), salad = rec('salad', 'sides', 80, 3, { f: 4 }), toast = rec('toast', 'carbs', 160, 5);
@@ -13,8 +13,8 @@ describe('boardDay', () => {
     const plan = { [D]: [pi('toast', 'breakfast'), pi('chili', 'dinner'), pi('salad')] };
     const d = boardDay(plan, D, recipes, [], 2775);
     expect(d).toMatchObject({ count: 3, kcal: 640, protein: 38 });
-    expect(d.slots.map(s => s.slot)).toEqual([null, 'breakfast', 'lunch', 'dinner', 'snack']);
-    expect(d.slots[3]).toMatchObject({ slot: 'dinner', kcal: 400, share: 971 });
+    expect(d.slots.map(s => s.slot)).toEqual([null, 'breakfast', 'lunch', 'snack', 'dinner']);
+    expect(d.slots[4]).toMatchObject({ slot: 'dinner', kcal: 400, share: 971 });
     expect(d.slots[0]!.items.map(x => x.r.name)).toEqual(['Salad']);
   });
   it('checks a meal against what it needs and offers the partner first', () => {
@@ -55,6 +55,21 @@ describe('boardDay with a saved meal', () => {
   });
 });
 
+describe('boardDay with a saved-meal item that moved (brief saved-meals-removal)', () => {
+  it('counts the recipe it became in its meal, and judges the plate with it', () => {
+    const d = boardDay({ [D]: [{ k: 'm', id: 'm1', s: 'dinner' }] }, D, recipes, [], null, { m1: 'chili' });
+    const dinner = d.slots.find(s => s.slot === 'dinner');
+    expect(dinner?.items[0]?.r).toMatchObject({ name: 'Chili', gone: false });
+    expect(d.kcal).toBeGreaterThan(0);
+    expect(dinner?.have.length).toBeGreaterThan(0);
+  });
+  it('shows a gone row, and counts nothing, when its recipe is gone', () => {
+    const d = boardDay({ [D]: [{ k: 'm', id: 'm1', s: 'dinner' }] }, D, recipes, [], null, { m1: 'deleted' });
+    expect(d.slots.find(s => s.slot === 'dinner')?.items[0]?.r.gone).toBe(true);
+    expect(d.kcal).toBe(0);
+  });
+});
+
 describe('moveItem', () => {
   const plan = { [D]: [pi('chili', 'dinner'), pi('rice', 'dinner')], [D2]: [pi('rice', 'lunch')] };
   it('changes only the meal on the same day', () => {
@@ -72,6 +87,16 @@ describe('moveItem', () => {
     expect(moveItem(full, D, 0, D2, 'dinner', TODAY).error).toMatch(/hold 8/);
     expect(moveItem(plan, D, 0, '2099-03-01', 'dinner', TODAY).error).toMatch(/two weeks/);
   });
+  it('a listed daily snack moves between days in Snack without counting, and into another meal it counts as planned (brief snacks-day-cap)', () => {
+    const list = [{ id: 'yog' }], eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `r${i}` }));
+    const full = { [D]: [pi('yog', 'snack')], [D2]: eight };
+    expect(moveItem(full, D, 0, D2, 'snack', TODAY, list).plan![D2]).toHaveLength(9);
+    expect(moveItem(full, D, 0, D2, 'lunch', TODAY, list).error).toMatch(/hold 8/);
+    expect(moveItem(full, D, 0, D2, 'snack', TODAY).error).toMatch(/hold 8/); // not on the list: a planned thing
+    const sameDay = { [D]: [...eight, pi('yog', 'snack')] };
+    expect(moveItem(sameDay, D, 8, D, 'dinner', TODAY, list).error).toMatch(/hold 8/); // into a meal it would be the ninth planned thing
+    expect(moveItem(sameDay, D, 0, D, 'dinner', TODAY, list).error).toBeNull(); // moving a planned thing within its day is not capped
+  });
   it('allows the same food in another meal of the day, as adding does', () => {
     const r = moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'dinner')] }, D, 0, D2, 'lunch', TODAY);
     expect(r.error).toBeNull();
@@ -80,5 +105,38 @@ describe('moveItem', () => {
   it('can set an item to no meal', () => {
     const r = moveItem(plan, D, 0, D, undefined, TODAY);
     expect(r.plan![D]![0]).toEqual({ k: 'r', id: 'chili' });
+  });
+});
+
+describe('addItemsToDays and copyItemToDays', () => {
+  const T = '2026-11-14', day = (n: number) => `2026-11-${String(n).padStart(2, '0')}`;
+  it('copies a planned item to the same meal and portion of each day, dropping the eaten tick', () => {
+    const plan = { [T]: [{ ...pi('chili', 'dinner', 1.5), e: ['e1'] }] };
+    const r = copyItemToDays(plan, T, 0, [day(15), day(16)], T);
+    expect(r.error).toBeNull();
+    expect(r.added).toEqual([day(15), day(16)]);
+    expect(r.plan[day(15)]).toEqual([pi('chili', 'dinner', 1.5)]);
+    expect(r.plan[T]).toEqual(plan[T]);
+  });
+  it('skips the own day, a full day, a duplicate in that meal and a day outside the window, naming each', () => {
+    const full = Array.from({ length: 8 }, (_, i) => pi(`f${i}`, 'lunch'));
+    const plan = { [T]: [pi('chili', 'dinner')], [day(15)]: full, [day(16)]: [pi('chili', 'dinner')], [day(17)]: [pi('chili', 'lunch')] };
+    const r = copyItemToDays(plan, T, 0, [T, day(15), day(16), day(17), '2026-11-28', day(13)], T);
+    expect(r.added).toEqual([day(17)]); // the same food in another meal is fine
+    expect(r.plan[day(17)]).toHaveLength(2);
+    expect(r.skipped).toEqual([{ day: T, reason: 'its own day' }, { day: day(15), reason: 'full' }, { day: day(16), reason: 'already there' }, { day: '2026-11-28', reason: 'out of reach' }, { day: day(13), reason: 'out of reach' }]);
+  });
+  it('an all-skipped batch returns the plan unchanged with an error; a missing item is gone', () => {
+    const plan = { [T]: [pi('chili', 'dinner')] };
+    const r = copyItemToDays(plan, T, 0, [T], T);
+    expect(r.plan).toBe(plan);
+    expect(r.error).toBe('Nothing copied. Skipped Sat 14: its own day.');
+    expect(copyItemToDays(plan, T, 3, [day(15)], T).error).toBe('That is gone.');
+  });
+  it('addItemsToDays adds different items to different days and counts earlier adds', () => {
+    const adds = [{ day: day(15), item: pi('rice', 'lunch') }, { day: day(15), item: pi('rice', 'lunch') }, { day: day(16), item: pi('salad') }];
+    const r = addItemsToDays({}, adds, T);
+    expect(r.added).toEqual([day(15), day(16)]);
+    expect(r.skipped).toEqual([{ day: day(15), reason: 'already there' }]);
   });
 });

@@ -40,6 +40,15 @@ test('Status and Muscle filter together with the search, the count follows, Clea
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(cards).toHaveCount(7);
   await expect(page.getByLabel('Muscle', { exact: true })).toHaveValue('');
+
+  // A new idea added with + Add idea goes last (the list is not re-sorted by the filters).
+  await page.getByRole('button', { name: '+ Add idea' }).click();
+  await page.getByRole('dialog').getByRole('combobox', { name: /Exercise/ }).fill('Zottman Curl Test');
+  await page.getByRole('dialog').getByLabel(/^Note/).click(); // leaves the exercise box so its suggestions do not swallow the Save click
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(cards).toHaveCount(8);
+  await expect(count).toHaveText('8 ideas');
+  await expect(cards.last()).toContainText('Zottman Curl Test');
 });
 
 test('Never logged and a day this week are independent choices', async ({ page }) => {

@@ -31,7 +31,7 @@ export default function NutrientRows({ rows, onChange }: { rows: NutrientDraft[]
         </div>
       ))}
       {duplicateRowNotes(rows).map(n => <p key={n} className="note">{n}</p>)}
-      <button type="button" className="btn sm" id="supp-add-nutrient" disabled={!free} onClick={() => { if (free) onChange([...rows, { key: free, amount: '', unit: nutrientUnit(free) ?? 'mg' }]); }}>+ Add a nutrient</button>
+      <button type="button" className="btn sm" id="supp-add-nutrient" disabled={!free} onClick={() => { if (free) onChange([...rows, { key: free, amount: '', unit: nutrientUnit(free) ?? 'mg' }]); }}>Add a nutrient</button>
     </fieldset>
   );
 }

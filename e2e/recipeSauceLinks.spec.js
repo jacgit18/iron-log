@@ -33,8 +33,10 @@ test('typing a sauce name links it, the detail shows a link that opens the sauce
   await page.getByRole('button', { name: 'Open Taco seasoning, seasoning' }).click();
   await expect(page.getByRole('heading', { name: 'Taco seasoning' })).toBeVisible();
   await expect(page.getByText('cumin')).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Delete the recipe Taco seasoning' }).click();
   await page.getByRole('button', { name: 'Tap again to delete' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Delete the recipe Tacos' }).click(); // the one button the old /Tacos/ matched here; the header star now matches it too
   await expect(page.locator('.rc-ing', { hasText: 'Taco seasoning' })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Open Taco seasoning/ })).toHaveCount(0);

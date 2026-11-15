@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Recipe macros from ingredients (brief recipe-ingredient-macros). The rules (grams from an amount, the sums, per serving, what is left out) are node tests
 // in recipeMacros.test.ts; this covers the wiring with the food route stubbed: the panel, a lookup per row, a Grams box for an amount in cups, the Servings
@@ -22,7 +22,6 @@ const setAmount = async (page, i, text) => {
   await page.getByRole('button', { name: 'Done', exact: true }).click();
 };
 // The nutrition card is folded away: Edit shows its four fields, and its summary line shows what is set.
-const editNutrition = page => page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
 const start = async (page, servings = '2') => {
   await open(page);
   await startRecipe(page);
@@ -54,11 +53,10 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await expect(panel(page).getByLabel('Grams for rice')).toHaveValue('100'); // an amount in cups starts at the food's 100 g and is yours to change
   await panel(page).getByLabel('Grams for rice').fill('200');
   await expect(panel(page).getByText('Counted 2 of 2 ingredients.')).toBeVisible();
-  await expect(panel(page).getByText('Per serving (÷ 2): 370 kcal · 47.7 g protein · 28 g carbs · 5.5 g fat')).toBeVisible();
+  await expect(panel(page).getByText('Per serving (÷ 2): 370 kcal · P 47.7 · C 28 · F 5.5 g')).toBeVisible();
   await panel(page).getByRole('button', { name: 'Use these numbers' }).click();
   await expect(panel(page)).toHaveCount(0);
-  await expect(page.getByText('370 kcal · 47.7 g protein · 28 g carbs · 5.5 g fat')).toBeVisible();
-  await editNutrition(page);
+  await expect(page.getByText('370 kcal · P 47.7 · C 28 · F 5.5 g')).toBeVisible();
   await expect(page.getByLabel('Calories per serving')).toHaveValue('370');
   await expect(page.getByLabel('Fat per serving (g), optional')).toHaveValue('5.5');
   await page.getByLabel('Calories per serving').fill('365'); // still editable
@@ -66,8 +64,9 @@ test('pick a food per ingredient, give grams for the cups, and the per-serving n
   await page.reload();
   await open(page);
   await page.locator('.rc-row', { hasText: /Chicken and rice/ }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await editNutrition(page);
+  await unfoldAll(page);
   await expect(page.getByLabel('Calories per serving')).toHaveValue('365');
   await expect(page.getByLabel('Protein per serving (g)')).toHaveValue('47.7');
 });
@@ -76,15 +75,14 @@ test('changing Servings keeps the per-serving numbers for gram amounts, and Clos
   await stub(page);
   await start(page, '4');
   await setAmount(page, 1, '100 g');
-  await editNutrition(page);
   await page.getByLabel('Carbs per serving (g), optional').fill('9');
   await page.getByRole('button', { name: 'Calculate from ingredients' }).click();
   await pickFood(page, 'chicken breast', 'Chicken breast, raw · 120 kcal per 100 g');
   await pickFood(page, 'rice', 'Rice, white, cooked · 130 kcal per 100 g');
-  await expect(panel(page).getByText('Per serving (÷ 4): 153 kcal · 23.2 g protein · 7 g carbs · 2.7 g fat')).toBeVisible();
+  await expect(panel(page).getByText('Per serving (÷ 4): 153 kcal · P 23.2 · C 7 · F 2.7 g')).toBeVisible();
   await page.getByLabel('Servings', { exact: true }).fill('2'); // the amounts halve with it, so each serving is the same
   await expect(panel(page).getByLabel('Grams for chicken breast')).toHaveAttribute('placeholder', '200');
-  await expect(panel(page).getByText('Per serving (÷ 2): 153 kcal · 23.2 g protein · 7 g carbs · 2.7 g fat')).toBeVisible();
+  await expect(panel(page).getByText('Per serving (÷ 2): 153 kcal · P 23.2 · C 7 · F 2.7 g')).toBeVisible();
   await panel(page).getByRole('button', { name: 'Close' }).click();
   await expect(page.getByLabel('Calories per serving')).toHaveValue('');
   await expect(page.getByLabel('Carbs per serving (g), optional')).toHaveValue('9');
@@ -98,11 +96,10 @@ test('a food with no carbs or fat leaves those two as typed, and says so', async
   await page.getByLabel('Servings', { exact: true }).fill(''); // servings start at 1; emptied, the totals say they assumed 1
   await page.getByLabel('Ingredient 1', { exact: true }).fill('seasoning');
   await setAmount(page, 0, '10 g');
-  await editNutrition(page);
   await page.getByLabel('Carbs per serving (g), optional').fill('9');
   await page.getByRole('button', { name: 'Calculate from ingredients' }).click();
   await pickFood(page, 'seasoning', 'Seasoning mix · 50 kcal per 100 g');
-  await expect(panel(page).getByText('Per serving (Servings is empty, so 1): 5 kcal · 0.1 g protein')).toBeVisible();
+  await expect(panel(page).getByText('Per serving (Servings is empty, so 1): 5 kcal · P 0.1 g')).toBeVisible();
   await expect(panel(page).getByText('Some foods have no carbs or fat, so those stay as typed.')).toBeVisible();
   await panel(page).getByRole('button', { name: 'Use these numbers' }).click();
   await expect(page.getByLabel('Calories per serving')).toHaveValue('5');

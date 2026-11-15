@@ -166,6 +166,8 @@ export interface Cfg extends ProgramCfg {
   hideKg?: true;
   /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
   recipeChips?: RecipeChips;
+  /** Your own daily target or cap per active ingredient, by lowercase ingredient name (brief supplement-active-ingredients). */
+  ingredientLimits?: Record<string, IngredientLimit>;
 }
 
 /** An Experiment (or added) card on one week. */
@@ -190,12 +192,17 @@ export interface SplitCard {
   item: ProgramItem;
 }
 
+/** One stay of a moved card: from `on` it sat on program day `day` (0 = its own day). */
+export interface MoveLeg { on: string; day: number }
+
 /** One week's state. Keys are card ids ("A-d1s1"), item keys ("A-d1s1#0" / "A-d1s1:0") and day numbers. */
 export interface Week {
   prog: ProgKey | null;
   done: Record<string, true>;
   skipped: Record<string, true>;
   moved: Record<string, number>;
+  /** Where each moved card sat and since when: legs `{ on: YYYY-MM-DD, day }` in date order, `day` the program day it moved to (0 = back on its own day). Lets `dayDate` count an entry only for the stay it was written in. Kept only while its last leg matches `moved`. */
+  moveTrail?: Record<string, MoveLeg[]>;
   ph: Record<string, PhaseKey>;
   warm: Record<string, Record<string, boolean>>;
   rest?: number[];
@@ -235,9 +242,13 @@ export interface LiftGoal { w: number; start?: number; by?: string; bw?: number;
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
 /** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[]; /** Servings taken each time, left out when it is 1 (brief supplement-portions): the nutrient rows are per serving, so the amount counted is row x portion. */ portion?: number }
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string; serving?: SupplementServing; nutrients?: SupplementNutrient[]; /** Active ingredients per serving (brief supplement-active-ingredients): omega-3, creatine, caffeine or a typed name, beside the 28 nutrient rows. Same portion rule as `nutrients`. */ ingredients?: SupplementIngredient[]; /** Servings taken each time, left out when it is 1 (brief supplement-portions): the nutrient rows are per serving, so the amount counted is row x portion. */ portion?: number }
 /** What is in one serving, typed by the person (supplement nutrient totals). `amount` is per serving; ticking the item on a day counts one serving. */
 export interface SupplementNutrient { key: NutrientKey; amount: number; unit: NutrientUnit }
+/** An active ingredient in one serving (brief supplement-active-ingredients): a free name (curated or typed), amount per serving, unit. */
+export interface SupplementIngredient { name: string; amount: number; unit: NutrientUnit }
+/** Your own daily number for one ingredient: a target (aim for at least) or a cap (stay under). Never a built-in limit. */
+export interface IngredientLimit { kind: 'target' | 'cap'; amount: number; unit: NutrientUnit; /** The name as the person typed it, for a row no supplement lists today. */ name?: string }
 /** `units`: how many capsules, tablets or scoops make one serving; `form`: Capsule, Powder, ... */
 export interface SupplementServing { units: number; form?: string }
 export type { NutrientKey, NutrientUnit };
@@ -281,7 +292,11 @@ export interface GroceryStore { id: string; n: string; retired?: true }
 /** `store`: where the item was bought this month when that is not its usual store (Move to on To get); '' is Anywhere, absent is the item's own store. */
 /** `unpriced`: bought with no price at all (the item had none and none was typed), so a price given to the item later does not reach back and price this month's purchase. */
 /** `rc`: this bought tick was written by a scanned receipt's Apply (brief receipt-earlier-items); cleared when the item is unticked. A later receipt does not list the item as "bought but not on this receipt". */
-export interface GroceryLine { got?: true; rc?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
+/** One closed purchase of an item in a month (brief grocery-purchase-log): what was open on the line when the person said they ran out. It holds its own count, price, store and split, so a later price, store or group change never reaches it.
+ *  `at`: when it was bought, local `YYYY-MM-DDTHH:mm` (a receipt gives its date alone, `YYYY-MM-DD`); absent on purchases saved before the log. */
+export interface GroceryBuy { at?: string; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string; rc?: true }
+/** `at`: when the open purchase (the line's own fields) was ticked bought. `buys`: the purchases already closed by Ran out on At home, oldest first; the month counts them with the open one. */
+export interface GroceryLine { at?: string; buys?: GroceryBuy[]; got?: true; rc?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
@@ -349,7 +364,7 @@ export type RecipeUse = 'meal' | 'ingredient' | 'ready' | 'drink';
 /** What a recipe covers on a plate (brief week-board): derived from its category and numbers until the person sets it. */
 export type PlateMark = 'protein' | 'carb' | 'veg';
 /** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; /** Vitamins and minerals per serving (brief recipes-vitamins-minerals), beside kcal, p, c and f. */ micro?: Micro }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; /** The id of the saved meal (`cfg.diet.meals`) this meal was made from by the move into Recipes (brief saved-meals-removal); lets a repeat or a second device find it instead of making a copy. */ fromMeal?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; /** Vitamins and minerals per serving (brief recipes-vitamins-minerals), beside kcal, p, c and f. */ micro?: Micro }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
@@ -362,11 +377,14 @@ export interface SavedMeal { id: string; n: string; items: SavedItem[] }
 /** The meal of the day a planned item belongs to (brief week-board); an item with none is "not set". */
 export type PlanSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 /** One planned item (brief diet-meal-planner): a recipe (`k` 'r') or a saved meal (`k` 'm') by id; `x` is the recipe's portion (0.5 to 10), left out when it is 1. */
-export interface PlanItem { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }
+/** `e` are the ids of the food-log entries that checking the item as eaten added; it counts as eaten while any of them is still in the log. */
+export interface PlanItem { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot; e?: string[]; /** Shown from the daily snack list, not stored (brief daily-snacks): never written to the plan; ticking or changing it stores a real item first. */ v?: true }
+/** One daily snack (brief daily-snacks): a recipe or food by id with its portion (0.5 to 10, left out when 1). Kept in `cfg.diet.snacks`, shown in Snack on every day of the plan window. */
+export interface DailySnack { id: string; x?: number }
 /** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
-export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]> }
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]>; /** The daily snack list, at most 6 (brief daily-snacks). */ snacks?: DailySnack[]; /** Day to the ids of listed snacks skipped on that day only. */ snackSkips?: Record<string, string[]> }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
-export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro }
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro; /** The portions the stored totals are for (0.5 to 99; brief portion-scaled-micros). Absent on an entry logged before it: one portion of its numbers. */ x?: number }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

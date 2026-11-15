@@ -7,9 +7,9 @@ const start = async (page, title = 'Cable%20Lateral%20Raise') => {
   await page.getByRole('button', { name: 'Exercise', exact: true }).click();
 };
 
-test('Create new exercise: the title fills the name, the link is saved, and it is in the library', async ({ page }) => {
+test('New exercise: the title fills the name, the link is saved, and it is in the library', async ({ page }) => {
   await start(page);
-  await page.getByRole('button', { name: 'Create new exercise' }).click();
+  await page.getByRole('button', { name: 'New exercise' }).click();
   await expect(page.getByLabel('Exercise name')).toHaveValue('Cable Lateral Raise');
   await page.getByRole('dialog').getByLabel('Equipment').selectOption({ label: 'Cable' });
   await page.getByRole('button', { name: 'Save exercise' }).click();
@@ -22,9 +22,9 @@ test('Create new exercise: the title fills the name, the link is saved, and it i
   await expect(page.locator('.exlib .exrow .exmain b', { hasText: 'Cable Lateral Raise' })).toBeVisible();
 });
 
-test('Create new exercise: an empty or duplicate name saves nothing, and Back returns to the search', async ({ page }) => {
+test('New exercise: an empty or duplicate name saves nothing, and Back returns to the search', async ({ page }) => {
   await start(page, '');
-  await page.getByRole('button', { name: 'Create new exercise' }).click();
+  await page.getByRole('button', { name: 'New exercise' }).click();
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByRole('alert')).toHaveText('Give the exercise a name.');
   await page.getByLabel('Exercise name').fill('Lat Pulldown');

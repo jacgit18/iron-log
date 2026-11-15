@@ -13,7 +13,6 @@ const make = async (page, name, cat, { kcal, p, tags = [] } = {}) => {
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   for (const t of tags) await page.getByRole('button', { name: `Use ${t}` }).click();
   if (kcal !== undefined || p !== undefined) {
-    await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
     if (kcal !== undefined) await page.getByLabel('Calories per serving').fill(String(kcal));
     if (p !== undefined) await page.getByLabel('Protein per serving (g)').fill(String(p));
   }
@@ -30,7 +29,7 @@ test('a badge shows on rows with numbers, and the two chips narrow the list besi
   await make(page, 'Rice', 'Carbs', { kcal: 300, p: 5 });
   await make(page, 'Mystery', 'Protein', { tags: ['Dinner'] });
   const row = name => page.locator('.rc-row', { hasText: name });
-  await expect(row('Chili').locator('.rc-badge')).toHaveText('450 kcal · 35 g protein');
+  await expect(row('Chili').locator('.rc-badge')).toHaveText('450 kcal · P 35 g');
   await expect(row('Mystery').locator('.rc-badge')).toHaveCount(0);
 
   await nutrition(page).getByRole('button', { name: 'High protein' }).click();

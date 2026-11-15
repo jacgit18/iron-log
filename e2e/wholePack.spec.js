@@ -15,22 +15,23 @@ const make = async (page, name, pack) => {
   await page.getByRole('button', { name: 'Save food' }).click();
 };
 
-test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More stops there, and Ate this logs the pack', async ({ page }) => {
+test('a 12-serving pack: the detail says so, Whole pack sets 12 portions, More stops there, and the log control logs the pack', async ({ page }) => {
   await make(page, 'Gnocchi', '12');
   await expect(page.getByText('12 servings per pack')).toBeVisible();
-  const portions = page.getByRole('status').filter({ hasText: /portions?$/ });
+  const portions = page.getByRole('status').filter({ hasText: /^[\d.]+ portions?$/ });
   await expect(portions).toHaveText('1 portion');
   await page.getByRole('button', { name: 'Whole pack (12)' }).click();
   await expect(portions).toHaveText('12 portions');
-  await expect(page.getByRole('button', { name: 'More' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Whole pack (12)' })).toBeDisabled();
   await page.getByRole('button', { name: 'Less' }).click();
   await expect(portions).toHaveText('11.5 portions');
   await page.getByRole('button', { name: 'Whole pack (12)' }).click();
-  await page.getByRole('button', { name: 'Ate this', exact: true }).click();
-  await expect(page.getByText('Logged 12 portions of Gnocchi to today.')).toBeVisible();
-  await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByText('Logged 12 portions')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText(/Logged .+: 12 portions to today\./)).toBeVisible();
+  await page.getByRole('status').filter({ hasText: /Logged .+: 12 portions/ }).getByRole('button', { name: 'Undo' }).click(); // the entry's Undo (a logged 12 also saves the usual, whose notice has its own Undo)
+  await expect(page.getByText(/Logged .+: 12 portions/)).toHaveCount(0);
+  await expect(page.getByText(/Usual portion saved/)).toHaveCount(0); // the entry's Undo takes the usual back too
 });
 
 test('the box saves, comes back on edit, and a wrong number is refused', async ({ page }) => {
@@ -39,6 +40,7 @@ test('the box saves, comes back on edit, and a wrong number is refused', async (
   await page.getByLabel('Servings per pack, optional').fill('8');
   await page.getByRole('button', { name: 'Save food' }).click();
   await expect(page.getByText('8 servings per pack')).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: /Edit/ }).first().click();
   await expect(page.getByLabel('Servings per pack, optional')).toHaveValue('8');
   await page.getByLabel('Servings per pack, optional').fill('');
@@ -50,8 +52,8 @@ test('the box saves, comes back on edit, and a wrong number is refused', async (
 test('a food with no pack size has no Whole pack button and the stepper stops at 10', async ({ page }) => {
   await make(page, 'Lasagna');
   await expect(page.getByRole('button', { name: /Whole pack/ })).toHaveCount(0);
-  const more = page.getByRole('button', { name: 'More' });
+  const more = page.getByRole('button', { name: 'More', exact: true });
   for (let i = 0; i < 18; i++) await more.click();
-  await expect(page.getByRole('status').filter({ hasText: /portions$/ })).toHaveText('10 portions');
+  await expect(page.getByRole('status').filter({ hasText: /^[\d.]+ portions$/ })).toHaveText('10 portions');
   await expect(more).toBeDisabled();
 });

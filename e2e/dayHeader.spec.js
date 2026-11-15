@@ -72,6 +72,17 @@ test('stamping a date on a day moves neither the Rest box nor the arrows, and li
   expect(before.head[1] - after.head[1]).toBeCloseTo(16, 0);
 });
 
+test('only the day that was worked shows a date: ticking a card stamps its day and no other day in the header', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+  const sel = page.locator('.col.sel');
+  await expect(sel.locator('article.card').first()).toBeVisible();
+  await expect(page.locator('.col .dd-text')).toHaveCount(0); // nothing ticked anywhere: no day carries a date
+  await sel.locator('article.card input.cardchk').first().click();
+  await expect(sel.locator('.dd-text')).toBeVisible();
+  await expect(page.locator('.col:not(.sel) .dd-text')).toHaveCount(0); // the other days hold cards with no tick and stay unstamped
+});
+
 test('the Rest box makes a rest day from the header, and a rest day keeps it ticked', async ({ page }) => {
   await phone(page);
   await page.locator('#rest-1').check();

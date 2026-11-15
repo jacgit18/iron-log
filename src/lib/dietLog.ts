@@ -1,5 +1,6 @@
 import type { DietEntry, Recipe } from '../types.ts';
-import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
+import { fmtNum, macroLine } from './macroLine.js';
+import { MAX_DIET_PER_DAY, RETAIN_DAYS, cleanGrams, cleanKcal, cleanPortion, cleanProtein } from '../shared/diet.js';
 import { parseDate, ymd } from '../shared/dates.js';
 import { scaleMicro, withMicro } from '../shared/foodMicro.js';
 import type { Micro } from '../shared/foodMicro.js';
@@ -31,7 +32,7 @@ export function shiftDay(day: string, delta: number): string {
 /** The oldest day that is kept: RETAIN_DAYS before `today`. */
 export const oldestDay = (today: string): string => shiftDay(today, -RETAIN_DAYS);
 
-/** Why a food can't be logged to `day` from the recipe page ("Ate this" on a chosen day), or null: a real date, not after `today`, not before the oldest kept day. */
+/** Why a food can't be logged to `day` from the recipe page (the log control on a chosen day), or null: a real date, not after `today`, not before the oldest kept day. */
 export function ateDayError(day: string, today: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || ymd(parseDate(day)) !== day) return 'Pick a day.';
   if (day > today) return 'Pick today or an earlier day.';
@@ -57,43 +58,42 @@ export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro
   return { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...withMicro(scaleMicro(r.micro, servings)) };
 }
 
-/** What "Ate this" and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
+/** What the log control and the portion sheet log for `servings` of a recipe on `day` (brief nutrition-quick-log: one function, so the two ways can't drift), or the sentence to show. */
 export function ateEntry(r: Pick<Recipe, 'id' | 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro'>, servings: number, day: string, today: string): { entry: Omit<DietEntry, 'id'> } | { error: string } {
   const nums = servingNumbers(r, servings);
   if (!nums) return { error: 'Those numbers are out of range.' };
   const bad = ateDayError(day, today);
   if (bad) return { error: bad };
-  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro) } };
+  return { entry: { d: day, n: r.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.id, ...withMicro(nums.micro), ...(cleanPortion(servings) !== null ? { x: cleanPortion(servings)! } : {}) } };
 }
 
 /** The entry to add for a food on `day`: its numbers, the recipe it came from, and its vitamins and minerals when it has them (one place, so a copied or re-logged food keeps them). */
-export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): Omit<DietEntry, 'id'> =>
-  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro) });
+export const entryFromFood = (d: string, f: { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; x?: number }): Omit<DietEntry, 'id'> =>
+  ({ d, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}), ...withMicro(f.micro), ...(f.x !== undefined ? { x: f.x } : {}) });
 
-/** The most portions Ate this, the planner and Find food offer. */
+/** The most portions the log control, the planner and Find food offer. */
 export const PORTION_MAX = 10;
 
 /** Servings in the pack of a ready-made food (brief whole-pack): 2 to 99, or null for a food with no pack size, a pack of 1, or any other recipe. */
 export const packServings = (r: Pick<Recipe, 'cat' | 'servings'>): number | null => (r.cat === 'ready' && r.servings !== undefined && r.servings >= 2 ? r.servings : null);
 
-/** The top of Ate this's portion stepper: PORTION_MAX, or the pack size or usual amount when that is larger (up to 99), lowered in half steps until the totals still fit one entry
- * (calories and protein have caps in shared/diet.ts), so More and Whole pack never reach a number Ate this would refuse. */
+/** The top of the log control's portion stepper: PORTION_MAX, or the pack size (ready-made foods) or usual amount (any recipe) when that is larger (up to 99), lowered in half steps until the totals still fit one entry
+ * (calories and protein have caps in shared/diet.ts), so More and Whole pack never reach a number the log control would refuse. */
 export function ateMax(r: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual'>): number {
-  let top = Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0, r.usual ?? 0)); // a usual amount over 10 (brief usual-amount-and-unit) can be reached too
+  let top = Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0, r.usual ?? 0)); // a usual amount over 10 (briefs usual-amount-and-unit, nutrition-usual-portion-field) can be reached too
   if (!hasMacros(r)) return top;
   while (top > 0.5 && servingNumbers(r, top) === null) top -= 0.5;
   return top;
 }
 
-/** One entry in words: "520 kcal · 42 g protein", with " · 60 g carbs" and " · 12 g fat" when they were entered. */
-export const entryText = (e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'>): string =>
-  [`${fmtNum(e.kcal)} kcal`, `${fmtNum(e.p)} g protein`, ...(e.c !== undefined ? [`${fmtNum(e.c)} g carbs`] : []), ...(e.f !== undefined ? [`${fmtNum(e.f)} g fat`] : [])].join(' · ');
+/** One entry in words, in the shared macro line (`macroLine`): "520 kcal · P 42 g", or "520 kcal · P 42 · C 60 · F 12 g" when carbs and fat were entered. */
+export const entryText = (e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'>): string => macroLine(e);
 
 /** How full a bar is, 0 to 100 (the bar stops at full; the text says how far over). */
 export const barPercent = (have: number, target: number | null): number => (target && target > 0 ? Math.max(0, Math.min(100, Math.round((have / target) * 100))) : 0);
 
-/** "1,850 of 2,775" style numbers. */
-export const fmtNum = (n: number): string => n.toLocaleString('en-US');
+/** "1,850 of 2,775" style numbers (lives in macroLine.ts; exported here as before, so callers do not change). */
+export { fmtNum };
 
 /** A meter's words: "1,850 of 2,775 kcal", with ", 225 over" past the target, or just "1,850 kcal" with no target. */
 export function meterText(have: number, target: number | null, unit: string): string {

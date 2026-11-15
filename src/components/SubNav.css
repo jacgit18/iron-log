@@ -1,0 +1,25 @@
+@layer base, components;
+@layer components {
+/* The sub-navigation row (SubNav.tsx): pills in one line that scrolls sideways inside its own box on a phone, so the page never does; a desktop wraps them. The pill itself is Pill.css. */
+.subnav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--sp-8);
+  overflow-x: auto;
+  max-width: 100%;
+  padding: var(--sp-2);
+  scrollbar-width: none;
+}
+.subnav::-webkit-scrollbar {
+  display: none;
+}
+.subnav .pillbtn {
+  flex: 0 0 auto;
+}
+@media (min-width:701px) {
+  .subnav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+}

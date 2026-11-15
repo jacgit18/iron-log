@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 // Goes with and Make a meal (brief recipes-goes-with). The pairing rules and the cleaner are node tests (recipePairs.test.ts); this covers the real
-// detail page: adding a partner, seeing it from the other side, Make a meal opening a linked meal with rolled-up numbers, Remove, and the 3 cap.
+// detail page: adding a partner, seeing it from the other side, Make a meal opening a linked meal with rolled-up numbers, Remove (two taps), and the 3 cap.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const seed = async page => {
   const mk = (id, n, cat, kcal, p) => ({ id, n, cat, ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p });
@@ -24,7 +24,8 @@ test('pairing is saved on both recipes, shown from either, and Remove takes it o
   await back(page);
   await open(page, 'Rice');
   await expect(goes(page).getByRole('button', { name: 'Chili', exact: true })).toBeVisible(); // seen from the other side
-  await goes(page).getByRole('button', { name: 'Remove Chili from Goes with' }).click();
+  const rm = goes(page).getByRole('button', { name: 'Remove Chili from Goes with' });
+  await rm.click(); await rm.click(); // two taps: arm, then remove
   await expect(goes(page)).toContainText('Nothing yet');
   await back(page);
   await open(page, 'Chili');
@@ -37,7 +38,7 @@ test('Make a meal builds a linked meal whose numbers are the two parts added up'
   await goes(page).getByLabel('Add a recipe it goes with').selectOption({ label: 'Rice' });
   await goes(page).getByRole('button', { name: 'Make a meal of Chili with Rice' }).click();
   await expect(page.getByRole('heading', { name: /Chili with Rice/ })).toBeVisible();
-  await expect(page.getByText('Per portion: 600 kcal · 34 g protein')).toBeVisible();
+  await expect(page.getByText('Per portion: 600 kcal · P 34 g')).toBeVisible();
 });
 
 test('a recipe goes with at most three, then asks to remove one', async ({ page }) => {
@@ -46,7 +47,8 @@ test('a recipe goes with at most three, then asks to remove one', async ({ page 
   for (const n of ['Rice', 'Beans', 'Salad']) await goes(page).getByLabel('Add a recipe it goes with').selectOption({ label: n });
   await expect(goes(page).getByLabel('Add a recipe it goes with')).toHaveCount(0);
   await expect(goes(page)).toContainText('goes with 3 recipes');
-  await goes(page).getByRole('button', { name: 'Remove Salad from Goes with' }).click();
+  const rm = goes(page).getByRole('button', { name: 'Remove Salad from Goes with' });
+  await rm.click(); await rm.click(); // two taps: arm, then remove
   await expect(goes(page).getByLabel('Add a recipe it goes with')).toBeVisible();
 });
 
@@ -58,4 +60,12 @@ test('Goes with has no accessibility violations and 44 px targets on a phone', a
   const axe = await new AxeBuilder({ page }).include('.rc-goes').analyze();
   expect(axe.violations).toEqual([]);
   for (const b of await goes(page).getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(43.5);
+  // Make a meal is a quiet underlined link, and the row stays on one line idle and with Remove armed (its longer label must not re-wrap it).
+  const make = goes(page).getByRole('button', { name: 'Make a meal of Chili with Rice' });
+  expect(await make.evaluate(el => { const c = getComputedStyle(el); return [c.textDecorationLine, c.backgroundColor, c.borderTopWidth]; })).toEqual(['underline', 'rgba(0, 0, 0, 0)', '0px']);
+  const row = goes(page).locator('.rc-goeslist li').first();
+  expect((await row.boundingBox()).height).toBeLessThan(50);
+  await goes(page).getByRole('button', { name: 'Remove Rice from Goes with' }).click();
+  await expect(goes(page).getByRole('button', { name: 'Tap again to remove' })).toBeVisible();
+  expect((await row.boundingBox()).height).toBeLessThan(50);
 });

@@ -23,6 +23,14 @@ describe('saveRecipe', () => {
     expect(st().recipes).toHaveLength(1);
     expect(st().recipes[0]).toMatchObject({ id, n: 'Better chili' });
   });
+  it('keeps the saved-meal mark when a moved meal is edited, and gives a new recipe none', () => {
+    expect(st().saveRecipe({ ...draft, fromMeal: 'm1' })).toBeNull();
+    const id = st().recipes[0]!.id;
+    expect(st().saveRecipe({ ...draft, id, n: 'Better chili' })).toBeNull(); // the form does not pass the mark
+    expect(st().recipes[0]).toMatchObject({ id, n: 'Better chili', fromMeal: 'm1' });
+    expect(st().saveRecipe({ ...draft, n: 'Second chili' })).toBeNull();
+    expect(st().recipes[1]).not.toHaveProperty('fromMeal');
+  });
   it('refuses a recipe with no name or no ingredient and changes nothing', () => {
     expect(st().saveRecipe({ ...draft, n: ' ' })).toBe('Give the recipe a name.');
     expect(st().saveRecipe({ ...draft, ing: [] })).toBe('Add at least one ingredient.');
@@ -337,5 +345,21 @@ describe('toggleRecipeFav (brief recipes-find-type-tabs)', () => {
     st().toggleRecipeFav(st().recipes[0]!.id);
     expect(st().recipes[0]!.fav).toBe(true);
     expect(st().recipes[0]!.edited).toBeUndefined();
+  });
+});
+
+describe('setRecipeUsual', () => {
+  it('sets, replaces and clears the usual portion and changes nothing else on the recipe', () => {
+    st().saveRecipe(draft);
+    const before = st().recipes[0]!;
+    expect(st().setRecipeUsual(before.id, 2)).toBeNull();
+    expect(st().recipes[0]).toEqual({ ...before, usual: 2 });
+    expect(st().setRecipeUsual(before.id, 1.5)).toBeNull();
+    expect(st().recipes[0]!.usual).toBe(1.5);
+    expect(st().setRecipeUsual(before.id, undefined)).toBeNull();
+    expect(st().recipes[0]).toEqual(before);
+  });
+  it('says so when the recipe is gone', () => {
+    expect(st().setRecipeUsual('nope', 2)).toBe('That food is gone.');
   });
 });

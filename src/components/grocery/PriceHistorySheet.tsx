@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { money, monthLabel, monthKey, unitWords } from '../../lib/grocery.js';
+import { stampText } from '../../lib/groceryPurchases.js';
 import { itemHistory, shortMonth, type Purchase } from '../../lib/itemHistory.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
@@ -31,11 +32,11 @@ export default function PriceHistorySheet() {
         </dl>
         <PriceLine purchases={h.purchases} now={now} />
         <ul className="phlist">
-          {rows.map(p => {
+          {rows.map((p, n) => {
             const cheapest = p.each != null && p.each === h.cheapestEach && h.priced > 1;
             return (
-              <li key={p.month} className="phrow">
-                <span className="phmo">{shortMonth(p.month, now)}</span>
+              <li key={`${p.month}-${n}`} className="phrow">
+                <span className="phmo">{p.at ? stampText(p.at, Number(now.slice(0, 4))) : shortMonth(p.month, now)}</span>
                 <span className="phwhere">{p.store || 'Anywhere'}<small>{detail(p, w.per, w.qty)}</small></span>
                 <span className="phprice">{p.each == null ? '' : money(p.each) + w.per}{cheapest && <span className="phcheap">Cheapest</span>}</span>
               </li>

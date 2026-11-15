@@ -164,7 +164,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e_sync == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 10 # about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror can exceed this: rerun
+    timeout-minutes: 15 # timeout-ok: about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror spends 8+ min on the Chromium install and cancelled the tests twice on PR 886 (2026-11-11), and a cancelled job never saves the cache that would fix it; owner approved 15
     services:
       postgres:
         image: postgres:17
@@ -205,7 +205,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 10 # about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror can exceed this: rerun
+    timeout-minutes: 15 # timeout-ok: about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror spends 8+ min on the Chromium install and cancelled the tests twice on PR 886 (2026-11-11), and a cancelled job never saves the cache that would fix it; owner approved 15
     strategy:
       fail-fast: false
       matrix:

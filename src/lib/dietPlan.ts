@@ -1,8 +1,9 @@
-import type { DietEntry, PlanItem, Recipe, SavedItem, SavedMeal } from '../types.ts';
+import type { DailySnack, DietEntry, PlanItem, Recipe, SavedItem, SavedMeal } from '../types.ts';
 import { withMicro } from '../shared/foodMicro.js';
-import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, samePlanItem } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, isDailySnackItem, plannedCount, samePlanItem } from '../shared/diet.js';
 import { fmtNum, hasMacros, servingNumbers, shiftDay } from './dietLog.js';
 import { planMeal } from './dietMeals.js';
+import { mealItems } from './quickMeals.js';
 import type { Food } from './foodMacros.js';
 import { sortByName } from './sort.js';
 
@@ -21,12 +22,12 @@ export const inWindow = (day: string, today: string): boolean => day >= today &&
 /** The plan without days before `today` (earlier days are dropped when it is written). */
 export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries(Object.entries(plan).filter(([d]) => d >= today));
 
-/** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. */
-export function addItem(plan: Plan, day: string, item: PlanItem, today: string): Made {
+/** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. A day holds MAX_PLAN_ITEMS planned things; a listed daily snack (`snacks` is the list) never counts toward that, and is held to MAX_DAY_ITEMS in all. */
+export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[]): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
   const list = plan[day] ?? [];
   if (list.some(i => samePlanItem(i, item))) return fail('That is already in that meal.'); // the same food may be in two different meals
-  if (list.length >= MAX_PLAN_ITEMS) return fail(`A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`);
+  if (isDailySnackItem(item, snacks) ? list.length >= MAX_DAY_ITEMS : plannedCount(list, snacks) >= MAX_PLAN_ITEMS) return fail(`A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`);
   return { plan: { ...plan, [day]: [...list, item] }, error: null };
 }
 
@@ -41,16 +42,31 @@ export function removeItem(plan: Plan, day: string, index: number): Plan {
 export function setPortion(plan: Plan, day: string, index: number, portion: number): Plan {
   const it = plan[day]?.[index];
   if (!it || it.k !== 'r' || !(portion >= 0.5 && portion <= 10) || portion * 2 !== Math.round(portion * 2)) return plan;
-  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}) };
+  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}), ...(it.e ? { e: it.e } : {}) };
   return { ...plan, [day]: plan[day]!.map((x, i) => (i === index ? next : x)) };
 }
+
+/** `plan` with the item at `index` of `day` marked eaten by the log entries `ids` (none clears it). */
+export function setEaten(plan: Plan, day: string, index: number, ids: string[]): Plan {
+  const it = plan[day]?.[index];
+  if (!it) return plan;
+  const { e: _old, ...rest } = it;
+  const next: PlanItem = ids.length ? { ...rest, e: ids } : rest;
+  return { ...plan, [day]: plan[day]!.map((x, i) => (i === index ? next : x)) };
+}
+
+/** Whether a planned item counts as eaten: one of the entries its check added is still in the log. */
+export const isEaten = (item: PlanItem, entries: readonly { id: string }[]): boolean => !!item.e?.some(id => entries.some(x => x.id === id));
 
 /** A planned item looked up: its name, the numbers it carries, and whether the recipe or meal is gone. */
 export interface Resolved { item: PlanItem; name: string; gone: boolean; kcal?: number; p?: number; c?: number; f?: number; portion: number; recipe?: Recipe; meal?: SavedMeal }
 
-export function resolve(item: PlanItem, recipes: Recipe[], meals: SavedMeal[]): Resolved {
+/** `meals` is the saved meals still held back from Recipes and `moved` the saved-meal id to recipe id record (brief saved-meals-removal): a saved-meal item shows the recipe it became, else the held meal, else the gone state. */
+export function resolve(item: PlanItem, recipes: Recipe[], meals: SavedMeal[], moved: Readonly<Record<string, string>> = {}): Resolved {
   const portion = item.x ?? 1;
   if (item.k === 'm') {
+    const to = moved[item.id];
+    if (to) return { ...resolve({ k: 'r', id: to }, recipes, meals), item }; // the recipe it became, one portion; the item stays the plan's own so a tap still edits it
     const meal = meals.find(m => m.id === item.id);
     if (!meal) return { item, name: 'Removed', gone: true, portion: 1 };
     return { item, name: meal.n, gone: false, portion: 1, meal, kcal: meal.items.reduce((a, i) => a + i.kcal, 0), p: meal.items.reduce((a, i) => a + i.p, 0) };
@@ -62,10 +78,10 @@ export function resolve(item: PlanItem, recipes: Recipe[], meals: SavedMeal[]): 
 }
 
 /** What a day's list adds up to: calories and protein, and how many items have no numbers (a recipe without them). Removed items count as nothing. */
-export function dayTotals(items: PlanItem[], recipes: Recipe[], meals: SavedMeal[]): { kcal: number; protein: number; without: number } {
+export function dayTotals(items: PlanItem[], recipes: Recipe[], meals: SavedMeal[], moved: Readonly<Record<string, string>> = {}): { kcal: number; protein: number; without: number } {
   let kcal = 0, protein = 0, without = 0;
   for (const it of items) {
-    const r = resolve(it, recipes, meals);
+    const r = resolve(it, recipes, meals, moved);
     if (r.gone) continue;
     if (r.kcal === undefined || r.p === undefined) { without++; continue; }
     kcal += r.kcal; protein += r.p;
@@ -80,13 +96,15 @@ export function totalsText(t: { kcal: number; protein: number; without: number }
 }
 
 /** What logging a planned item on `day` adds: the entries that fit under the per-day limit and how many did not; or why it cannot be logged. */
-export function planLog(r: Resolved, entries: DietEntry[], day: string): { add: Food[]; left: number } | { error: string } {
+export function planLog(r: Resolved, entries: DietEntry[], day: string, recipes: readonly Recipe[] = []): { add: Food[]; left: number } | { error: string } {
   if (r.gone) return { error: 'That was removed. Remove it from the plan.' };
   if (r.meal) return planMeal(entries, day, r.meal);
+  const parts = r.item.k === 'm' && r.recipe ? mealItems(r.recipe, recipes) : []; // a saved meal that moved logs one entry per food, as before
+  if (parts.length) return planMeal(entries, day, { id: r.item.id, n: r.name, items: parts });
   const nums = r.recipe && hasMacros(r.recipe) ? servingNumbers(r.recipe, r.portion) : null;
   if (!r.recipe || !nums) return { error: 'Add calories and protein to this recipe to log it.' };
   const room = entries.filter(e => e.d === day).length < MAX_DIET_PER_DAY;
-  return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id, ...withMicro(nums.micro) }], left: 0 } : { add: [], left: 1 };
+  return room ? { add: [{ n: r.recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: r.recipe.id, ...withMicro(nums.micro), x: r.portion }], left: 0 } : { add: [], left: 1 };
 }
 
 export const MAX_FIND_MATCHES = 8;

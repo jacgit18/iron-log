@@ -66,7 +66,7 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
       )}
       {step.k === 'exercise' && !step.ask && (
         <>
-          <button type="button" className="btn" onClick={() => setStep({ k: 'create', name: startName(title), eq: '', err: '' })}>Create new exercise</button>
+          <button type="button" className="btn" onClick={() => setStep({ k: 'create', name: startName(title), eq: '', err: '' })}>+ New exercise</button>
           <ItemPicker id="share-ex" label="Find an exercise" kind="exercise" value={step.q} mine={exerciseOptions(cfg, inUse)} catalogMeta={catalogMeta}
             placeholder="Type to search, or add a new one" createLabel={n => `Create “${n}” as a new exercise`}
             onText={q => setStep({ k: 'exercise', q })}

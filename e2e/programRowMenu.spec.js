@@ -18,6 +18,8 @@ for (const [label, width] of [['phone', 375], ['desktop', 1440]]) {
       const [a, b] = await Promise.all(btns.map(x => x.boundingBox()));
       expect(Math.abs(a.y - b.y)).toBeLessThan(2); // on one line
       expect(a.height).toBeGreaterThanOrEqual(44); expect(b.height).toBeGreaterThanOrEqual(44);
+      expect(b.width).toBeGreaterThanOrEqual(44); // the dots button is a full 44 px box with no side padding (.edmore), not just the icon's width
+      await expect(more(row).locator('svg')).toHaveCount(1); // the app's dots icon, not the ⋯ character
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });

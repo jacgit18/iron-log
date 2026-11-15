@@ -1,0 +1,23 @@
+@layer base, components;
+@layer components {
+/* The time chips and per-time steppers on the supplement sheet. The stepper buttons and the amount reuse PortionStepper's .pstep-btn and .pstep-val. */
+.stimes {
+  display: grid;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.stimes-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.stimes-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, auto) 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.stimes-name {
+  font-weight: 600;
+}
+}

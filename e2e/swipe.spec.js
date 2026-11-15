@@ -28,7 +28,7 @@ const pin = async (page, cards) => { const id = await page.locator(cards).first(
 const pick = async page => { const sel = await pin(page, CARD); return { sel, box: page.locator(`${sel} input.chk.cardchk`), key: (await page.locator(CARD).first().locator('> .row1 > .morebtn').getAttribute('id')).replace('more-', '') }; };
 // A done or skipped card folds into the day's Finished bar (it is no longer on the page as a card); its Untick / Undo skip button is on its row.
 const unfold = async (page, key) => { await openFinished(page); await page.locator(`#fin-undo-${key}`).click(); };
-const day = page => page.locator('.daytabs [aria-selected="true"]');
+const day = page => page.locator('.wdc-tabs [aria-selected="true"]');
 
 test('a long swipe right ticks a card off, and a swipe either way puts it back, like the checkbox', async ({ page }) => {
   await phone(page);
@@ -71,7 +71,7 @@ test('a long swipe left skips a card for the week, and the notice\'s Undo brings
 test('each exercise of a superset swipes on its own: right ticks it, left skips it, either way puts it back', async ({ page }) => {
   await phone(page);
   const SS = '.col.sel article.card:not(:has(input.chk.cardchk)):has(.ex + .ex)';
-  for (const tab of await page.locator('.daytabs [role="tab"]').all()) { if (await page.locator(`${SS}:not(:has(.or))`).count()) break; await tab.click(); }
+  for (const tab of await page.locator('.wdc-tabs [role="tab"]').all()) { if (await page.locator(`${SS}:not(:has(.or))`).count()) break; await tab.click(); }
   const sel = await pin(page, `${SS}:not(:has(.or))`);
   const card = page.locator(sel), one = card.locator('.excard').nth(0), two = card.locator('.excard').nth(1);
   const [i1, i2] = await card.locator('input.chk').evaluateAll(els => els.map(e => e.id));
@@ -102,7 +102,7 @@ test('each exercise of a superset swipes on its own: right ticks it, left skips 
 test('an either/or option skips on its own, the card stays put until the other is skipped too, and ticking the other finishes it', async ({ page }) => {
   await phone(page);
   const EI = '.col.sel article.card:has(.or)';
-  for (const tab of await page.locator('.daytabs [role="tab"]').all()) { if (await page.locator(EI).count()) break; await tab.click(); }
+  for (const tab of await page.locator('.wdc-tabs [role="tab"]').all()) { if (await page.locator(EI).count()) break; await tab.click(); }
   const sel = await pin(page, EI);
   const card = page.locator(sel);
   const [i1, i2] = await card.locator('input.chk').evaluateAll(els => els.map(e => e.id));
@@ -156,7 +156,7 @@ test('a default (non-admin) user can swipe a card done, and a card swipe never m
 test('the day tabs still change the day on a phone', async ({ page }) => {
   await phone(page);
   const before = await day(page).getAttribute('id');
-  await page.locator('.daytabs [role="tab"][aria-selected="false"]').first().click();
+  await page.locator('.wdc-tabs [role="tab"][aria-selected="false"]').first().click();
   await expect(day(page)).not.toHaveAttribute('id', before);
 });
 

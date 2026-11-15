@@ -1,0 +1,56 @@
+@layer base, components;
+@layer components {
+/* The desktop Board's week card (Board.tsx, wide screens only; the phone keeps the joined WeekDayCard): one bordered card in the look of
+   .wdc. Row 1: the week switcher at the left, the program switch, mode menu and body weight at the right. Row 2 (the filter bar) sits under
+   a hairline. Both rows wrap instead of overflowing. */
+.wsec {
+  margin-block: var(--sp-6) var(--sp-12);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+}
+.wsec-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8) var(--sp-16);
+  padding: var(--sp-6) var(--sp-12);
+}
+.wsec-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-8) var(--sp-12);
+  margin-left: auto;
+  min-width: 0;
+}
+.wsec .seg.modesel {
+  margin-left: 0;
+}
+.wsec .bwrow {
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-8);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.wsec .bwrow .bwsub {
+  display: none;
+}
+.wsec .bwrow input {
+  width: 72px;
+}
+.wsec .filterbar {
+  margin: 0;
+  padding: var(--sp-6) var(--sp-12);
+  border-top: 1px solid var(--line);
+  align-items: center;
+}
+.wsec .filterbar .injsw {
+  margin-left: auto;
+}
+}

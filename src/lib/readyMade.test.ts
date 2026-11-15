@@ -33,7 +33,7 @@ describe('readyMadeValues', () => {
     const base = { n: 'Egg', kcal: '72', p: '6', c: '', f: '' };
     expect(readyMadeValues({ ...base, usual: '4', unit: 'egg' })).toEqual({ kcal: 72, p: 6, usual: 4, unit: 'egg' });
     expect(readyMadeValues({ ...base, usual: '1.5', unit: ' egg ' })).toEqual({ kcal: 72, p: 6, usual: 1.5, unit: 'egg' });
-    expect(readyMadeValues({ ...base, usual: '1' })).toEqual({ kcal: 72, p: 6 }); // 1 is what Ate this opens at anyway
+    expect(readyMadeValues({ ...base, usual: '1' })).toEqual({ kcal: 72, p: 6 }); // 1 is what the log control opens at anyway
     expect(readyMadeValues({ ...base })).toEqual({ kcal: 72, p: 6 });
     expect(readyMadeValues({ ...base, usual: '', unit: '', plural: '' })).toEqual({ kcal: 72, p: 6 });
     expect(readyMadeValues({ ...base, unit: 'loaf', plural: 'loaves' })).toEqual({ kcal: 72, p: 6, unit: 'loaf', plural: 'loaves' });

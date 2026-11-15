@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { restDateCap, restDatesOf } from '../../lib/logic.js';
 import { addDays, fmtDayDate, ymd } from '../../shared/dates.js';
 import Sheet from '../Sheet.jsx';
+import '../Pill.css';
 import './RestDateSheet.css';
 
 // Change the date of one rest day: this week's seven days as chips. Days after today (or after the week's end for a week still
@@ -25,7 +26,7 @@ export default function RestDateSheet({ day }: { day: number }) {
           const [name, md] = fmtDayDate(d).split(' ');
           const later = d > cap;
           return (
-            <button key={d} type="button" className={`btn restdate-chip${d === pick ? ' on' : ''}`} aria-pressed={d === pick} disabled={later} onClick={() => setPick(d)}>
+            <button key={d} type="button" className="pillbtn restdate-chip" aria-pressed={d === pick} disabled={later} onClick={() => setPick(d)}>
               <span>{name.slice(0, 3)}</span><span>{md}</span>
             </button>
           );

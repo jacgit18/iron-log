@@ -1,0 +1,25 @@
+@layer base, components;
+@layer components {
+.lc-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.lc-step .btn {
+  min-height: 44px;
+}
+.lc-meals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: var(--sp-6) 0;
+}
+.lc-go {
+  margin: var(--sp-8) 0;
+}
+.lc-go .btn {
+  min-height: 44px;
+}
+}

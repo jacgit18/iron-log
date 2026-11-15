@@ -27,7 +27,7 @@ async function fillEverything() {
   const wk = st().weekKey();
   const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push day';
   useAppStore.setState({
-    cfg: { ...structuredClone(DEFAULT_CFG), rest: 120, recipeChips: { hide: ['drinks'], order: ['sides', 'protein'] } },
+    cfg: { ...structuredClone(DEFAULT_CFG), rest: 120, recipeChips: { hide: ['drinks'], order: ['sides', 'protein'] }, ingredientLimits: { caffeine: { kind: 'cap', amount: 400, unit: 'mg' } } },
     recipes: [{ id: 'chili-ab12', n: 'Chili', cat: 'protein', tags: ['Meal prep', 'weeknight'], ing: [{ n: 'beans' }], steps: ['Simmer.'] }],
     programs: { A: mine, B: BUILTIN.B },
     body: [{ wk, d: wk, w: 181.5 }],
@@ -36,7 +36,7 @@ async function fillEverything() {
     stretchExps: [{ id: 'x1', n: 'Couch stretch' }],
     grocery: { stores: ['Veg market'], items: [{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false, share: { with: ['p1'] } }], groups: [{ id: 'g1', n: 'Home', people: [{ id: 'p1', n: 'Sam', covered: true }], stores: ['Veg market'] }] },
     groceryMonths: { '2026-09': { lines: { kale: { got: true, qty: 3, cents: 260, share: { with: ['p1'], notMine: true } } }, pulled: [], payer: { 'Veg market': 'p1' } } },
-    supp: { waterGoal: 100, waterMode: 'fixed', water: { [wk]: [8, 16] }, boost: { [wk]: { hot: true, mins: 45 } }, items: [], taken: {} },
+    supp: { waterGoal: 100, waterMode: 'fixed', water: { [wk]: [8, 16] }, boost: { [wk]: { hot: true, mins: 45 } }, items: [{ id: 'fish-oil', n: 'Fish oil', slot: 'morning', ingredients: [{ name: 'Omega-3', amount: 475, unit: 'mg' }, { name: 'EPA', amount: 175, unit: 'mg' }] }], taken: {} },
   });
   st().submitLog('A-d1s1', 0, { entry: { d: wk, ph: 'hyp', ...summarizeSets([{ w: 45, r: 12 }, { w: 50, r: 10 }], false), slot: 'A-d1s1', wk, n: 'felt good' }, ph: 'hyp', done: true });
   st().checkCard('A-d3s1', true);
@@ -57,6 +57,8 @@ describe('backup round trip', () => {
     expect(first.programs.A.days[0].title).toBe('Push day');
     expect(first.recipes[0].tags).toEqual(['Meal prep', 'weeknight']); // recipe tags and the chip setting are in the file
     expect(first.config.recipeChips).toEqual({ hide: ['drinks'], order: ['sides', 'protein'] });
+    expect(first.config.ingredientLimits).toEqual({ caffeine: { kind: 'cap', amount: 400, unit: 'mg' } }); // active ingredients and your own limits are in the file
+    expect(first.supplements.items[0].ingredients).toEqual([{ name: 'Omega-3', amount: 475, unit: 'mg' }, { name: 'EPA', amount: 175, unit: 'mg' }]);
     expect(first.body).toHaveLength(1);
     expect(first.experiments).toHaveLength(1);
     expect(first.stretches.items).toHaveLength(1);

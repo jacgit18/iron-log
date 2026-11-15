@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, closeSupplementEditor, openAdd, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief supplement-more-nutrients, PR 2: the grouped pickers and the Totals sheet rows for the eight added nutrients. The figures, limits and words are node tests (supplementTotalsView.test.ts and the three
 // table tests); this covers the wiring: picking the new nutrients by heading, a limit nutrient (manganese) and a target nutrient (thiamin) in the sheet, no warning for the target, axe at 375 px in both
@@ -50,7 +50,7 @@ test('the Totals sheet shows manganese with its limit and thiamin and biotin und
   const col = todayCol(page);
   await expect(col.locator('.nb-suppwarn')).toContainText('Manganese'); // 15 mg of 11
   await expect(col.locator('.nb-suppwarn')).not.toContainText(/Thiamin|Biotin/);
-  await col.getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(col);
   const s = dialog(page);
   await expect(s.locator('#stt-manganese')).toContainText('Over the limit by 4 mg');
   await expect(s.getByRole('heading', { name: 'No upper limit' })).toBeVisible();
@@ -63,7 +63,7 @@ test('the Totals sheet shows manganese with its limit and thiamin and biotin und
 test('the sheet with the new rows has no axe violations in either theme at 375 px and does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await setUp(page);
-  await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(todayCol(page));
   await expect(dialog(page).locator('#stt-manganese')).toBeVisible();
   expect((await new AxeBuilder({ page }).include('[role=dialog]').analyze()).violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -109,7 +109,7 @@ test('a looked-up food carries the eight added nutrients into the Totals sheet',
   await sheet.getByRole('button', { name: 'Use', exact: true }).click();
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
-  await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+  await openDayTotals(todayCol(page));
   const s = dialog(page);
   for (const k of ['thiamin', 'riboflavin', 'biotin', 'pantothenicAcid', 'choline', 'chromium', 'molybdenum', 'manganese']) await expect(s.locator(`#stt-${k}`)).toBeVisible();
 });

@@ -72,18 +72,19 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
     setFolded(f => (f.size ? unfoldGrown(f, prevCounts.current, counts) : f));
     prevCounts.current = counts;
   }, [countsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- `counts` is rebuilt every render; its text is the real dependency
+  const [haveErr, setHaveErr] = useState<string | null>(null); // Ran out refused: the item already holds the most closed purchases this month
   const setHave = (it: GroceryItem, on: boolean) => {
     const order = listed.flatMap(grp => grp.items.map(i => i.id)); // under Need or Have the ticked row leaves the list: focus the next row here, else the one before, else Edit
     const at = order.indexOf(it.id); const next = order[at + 1] ?? order[at - 1];
     focusAfter.current = filterOn ? (next ? `groc-have-${next}` : 'groc-edit') : `groc-have-${it.id}`;
-    useAppStore.getState().setGroceryHave(nowKey, it.id, on);
+    setHaveErr(useAppStore.getState().setGroceryHave(nowKey, it.id, on) ? null : `${it.n} already has the most purchases kept for one month (20).`);
   }; // a sorted row may move: keep focus on its box
   const railOn = rail && g.items.length > 0;
   const page = (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead gsharehead">
         {editing && <b className="geditbadge">Editing</b>}
-        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'Ticks carry into next month. Untick an item when you run out, and it comes back to Shopping.'}</p>
+        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'Ticks carry into next month. Untick an item when you run out, and it comes back to Shopping. The purchase is kept with its date.'}</p>
         <div className="ghomebtns">
           <button type="button" className="btn sm ghost" id="groc-sharing" aria-pressed={sharingOpen} onClick={() => { setSharingSaved(false); setSharingOpen(v => !v); }}>{sharingOpen ? 'Close sharing groups' : 'Sharing groups'}</button>
           <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditMode(!editing)}>{editing ? 'Done' : 'Edit'}</button>
@@ -95,6 +96,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
       {sharingOpen && <SharingGroups g={g} onDone={() => { focusAfter.current = 'groc-sharing'; setSharingOpen(false); setSharingSaved(true); }} />}
       {sharingSaved && !sharingOpen && <p className="note" role="status">Sharing saved.</p>}
       <RemovedNotice scope="grocery" />
+      {haveErr && <p className="note gerr" role="alert">{haveErr}</p>}
       {!g.items.length && !editing && (
         <EmptyTiles heading="Start your grocery list" tiles={[
           { id: 'groc-tile-add', label: 'Add an item', hint: 'Type what you buy and where', onClick: () => { focusAfter.current = 'groc-name'; setEditMode(true); } },

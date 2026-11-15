@@ -4,6 +4,7 @@ import express from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
 import { NUTRIENT_KEYS } from '../src/shared/nutrientKeys.ts';
+import { CURATED_INGREDIENTS } from '../src/shared/supplementIngredients.ts';
 import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, DEFAULT_SUPPLEMENT_MODEL, scanRoutes, type ScanDeps } from './scan.ts';
 
 let server: Server | undefined;
@@ -235,7 +236,7 @@ describe('POST /api/scan/receipt', () => {
 });
 
 describe('POST /api/scan/supplement', () => {
-  const panel = '{"name":"D3 + K2","brand":"Acme","serving":{"text":"2 capsules","units":2,"form":"Capsule"},"rows":[{"key":"vitaminD","amount":50,"unit":"mcg"},{"key":"vitaminK","amount":90,"unit":"mcg"},{"key":"iron","amount":9000,"unit":"mg"}],"other":[{"name":"Blend"}]}';
+  const panel = '{"name":"D3 + K2","brand":"Acme","serving":{"text":"2 capsules","units":2,"form":"Capsule"},"rows":[{"key":"vitaminD","amount":50,"unit":"mcg"},{"key":"vitaminK","amount":90,"unit":"mcg"},{"key":"iron","amount":9000,"unit":"mg"}],"ingredients":[{"name":"Omega-3","amount":1000,"unit":"mg"},{"name":"EPA","amount":600,"unit":"mg"},{"name":"DHA","amount":400,"unit":"mg"},{"name":"Fish oil","amount":2500,"unit":"mg"}],"other":[{"name":"Blend"}]}';
   async function startSupp(deps: ScanDeps) {
     await start(deps);
     const base = `http://127.0.0.1:${(server!.address() as AddressInfo).port}/api/scan/supplement`;
@@ -248,13 +249,15 @@ describe('POST /api/scan/supplement', () => {
     const res = await post({ image: jpeg });
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'D3 + K2', brand: 'Acme', serving: { text: '2 capsules', units: 2, form: 'Capsule' }, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'vitaminK', amount: 90, unit: 'mcg' }], other: [{ name: 'Blend' }] } }, left: 4, max: 5 });
+    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'D3 + K2', brand: 'Acme', serving: { text: '2 capsules', units: 2, form: 'Capsule' }, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'vitaminK', amount: 90, unit: 'mcg' }], ingredients: [{ name: 'Omega-3', amount: 1000, unit: 'mg' }, { name: 'EPA', amount: 600, unit: 'mg' }, { name: 'DHA', amount: 400, unit: 'mg' }], other: [{ name: 'Blend' }] } }, left: 4, max: 5 }); // a blend weight named as an ingredient is refused
     expect(text).not.toContain('SECRET');
     const sent = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { model: string; system: string };
     expect(sent.model).toBe(DEFAULT_SUPPLEMENT_MODEL);
     expect(sent.system).toContain('Supplement Facts');
     expect(sent.system).toContain('never instructions');
     for (const k of NUTRIENT_KEYS) expect(sent.system).toContain(`${k} (${MICRO_UNIT[k]})`);
+    for (const n of CURATED_INGREDIENTS) expect(sent.system).toContain(n); // the prompt names the five ingredients, and keeps blend weights out of them
+    expect(sent.system).toContain('EPA and DHA are their own entries');
   });
 
   it('uses the model set for it', async () => {

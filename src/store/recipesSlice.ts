@@ -2,6 +2,8 @@ import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../
 import { linkError, settleMeals } from '../lib/mealRollup.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
+import { withUsual } from '../lib/usualPortion.js';
+import { cleanMicro } from '../shared/foodMicro.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
 import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
@@ -18,6 +20,26 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
 
   saveRecipes() { get().saveDoc(MAIN, { items: get().recipes }); },
 
+  // One serving's amounts onto a recipe with none (the Edit sheet's "also save to the recipe" tick, brief portion-scaled-micros): nothing else changes, and a recipe that has amounts is never overwritten.
+  setRecipeMicro(id, micro) {
+    const r = get().recipes.find(x => x.id === id);
+    if (!r) return 'That food is gone.';
+    if (r.micro && Object.keys(r.micro).length) return 'That recipe already has amounts.';
+    const m = cleanMicro(micro);
+    if (!m) return 'No amounts to save.';
+    set({ recipes: get().recipes.map(x => (x.id === id ? { ...x, micro: m } : x)) });
+    get().saveRecipes();
+    return null;
+  },
+
+  // The usual portion alone (brief nutrition-usual-portion): no edited mark, no meal re-settling, nothing else on the recipe changes. An error text, or null.
+  setRecipeUsual(id, usual) {
+    if (!get().recipes.some(r => r.id === id)) return 'That food is gone.';
+    set({ recipes: get().recipes.map(r => (r.id === id ? withUsual(r, usual) : r)) });
+    get().saveRecipes();
+    return null;
+  },
+
   saveRecipe(d) {
     const list = get().recipes;
     const others = d.id ? list.filter(r => r.id !== d.id) : list;
@@ -27,8 +49,8 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const limit = tagLimitError(others, normTags(d.tags));
     if (limit) return limit;
     for (const i of d.ing) { const loop = i.rid && i.q !== undefined ? linkError(list, d.id, i.rid) : null; if (loop) return loop; } // a meal inside a meal: no loop, three levels at most
-    const kept = d.id ? list.find(r => r.id === d.id) : undefined; // the star belongs to the recipe, not to the form
-    const made = normRecipe({ ...d, ...(kept?.fav && d.fav === undefined ? { fav: true } : {}), id, n: clean(d.n) });
+    const kept = d.id ? list.find(r => r.id === d.id) : undefined; // the star and the saved-meal mark belong to the recipe, not to the form
+    const made = normRecipe({ ...d, ...(kept?.fav && d.fav === undefined ? { fav: true } : {}), ...(kept?.fromMeal && d.fromMeal === undefined ? { fromMeal: kept.fromMeal } : {}), id, n: clean(d.n) });
     if (!made) return 'That recipe can’t be saved.';
     const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
     set({ recipes: settleMeals(d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item]) }); // meals built from this one follow its numbers and name

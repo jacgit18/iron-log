@@ -3,6 +3,8 @@ import type { Cfg, WarmupItem } from '../types.ts';
 import { normDietCfg } from './diet.js';
 import { cleanProfile } from './profile.js';
 import { normRecipeChips } from './recipes.js';
+import { UNSAFE } from './unknownKeys.js';
+import { ingredientLimitsOf } from './supplementIngredients.js';
 import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
 
 /* ---------- Config shape ----------
@@ -10,7 +12,6 @@ import { LIMITS, validBodyLb, validDate, validGroceryBudget, validFreq, validGoa
    Framework-free, so the client and the API share it (ADR 015). */
 
 // The config from a file: the keys the app reads as plain objects must be plain objects, or it would throw on every load.
-const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
 const EX_NOTE_MAX = 200; // the longest note an exercise keeps (src/lib/exerciseNote.ts has the same cap)
 const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals', 'equipment', 'freqGoals'];
 // A goal that scales with body weight keeps `bw` and `bwd` only as a valid pair; either one bad drops both and it becomes a plain goal.
@@ -47,6 +48,7 @@ export function normConfig(c: any): Partial<Cfg> {
   if ('diet' in out) { const d = normDietCfg(out.diet); if (d) out.diet = d; else delete out.diet; }
   if ('profile' in out) { const pr = cleanProfile(out.profile); if (pr) out.profile = pr; else delete out.profile; }
   if ('recipeChips' in out) { const rc = normRecipeChips(out.recipeChips); if (rc) out.recipeChips = rc; else delete out.recipeChips; }
+  if ('ingredientLimits' in out) { const il = ingredientLimitsOf(out.ingredientLimits); if (Object.keys(il).length) out.ingredientLimits = il; else delete out.ingredientLimits; }
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
   ['backup', 'ghBackup', 'token', 'ghToken'].forEach(k => { delete out[k]; });
   return out;
@@ -61,7 +63,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'groceryBudget', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips', 'profile'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'groceryBudget', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips', 'profile', 'ingredientLimits'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 

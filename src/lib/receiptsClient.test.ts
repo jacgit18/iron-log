@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { downloadName, groupByMonth, keepFailText, keepMeta, receiptTitle, usageText, type SavedReceipt } from './receiptsClient.js';
+import { downloadName, groupByMonth, keepFailText, keepMeta, receiptTitle, retryWaitMs, usageText, type SavedReceipt } from './receiptsClient.js';
 
 const r = (over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id: '1', savedAt: '2026-11-03T12:00:00.000Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 300_000, ...over });
 
@@ -49,5 +49,15 @@ describe('groupByMonth', () => {
 describe('usageText', () => {
   it('counts receipts and megabytes against the caps', () => {
     expect(usageText({ count: 12, bytes: 3.4 * 1024 * 1024, maxReceipts: 200, maxBytes: 60 * 1024 * 1024 })).toBe('12 of 200 saved, 3.4 MB of 60 MB');
+  });
+});
+
+describe('retryWaitMs', () => {
+  it('uses the server\'s seconds, kept between 1 and 60, and 5 when there are none', () => {
+    expect(retryWaitMs('12')).toBe(12_000);
+    expect(retryWaitMs('0')).toBe(5000);
+    expect(retryWaitMs('900')).toBe(60_000);
+    expect(retryWaitMs(null)).toBe(5000);
+    expect(retryWaitMs('soon')).toBe(5000);
   });
 });

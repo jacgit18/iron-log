@@ -50,7 +50,7 @@ test('a photo of a barcode fills the add sheet’s search with the product, and 
   const asked = await open(page);
   await gotoSheet(page);
   await expect(add(page).locator('#suppadd-q')).toHaveValue('');
-  await add(page).getByRole('button', { name: 'Scan barcode' }).click();
+  await add(page).getByRole('button', { name: 'Scan to fill form' }).click();
   await expect(camera(page)).toBeVisible();
   await camera(page).getByLabel('Barcode photo').setInputFiles(photo);
   await expect(camera(page)).toHaveCount(0); // found: the camera sheet is replaced by the add sheet again
@@ -97,7 +97,7 @@ test('a scanned UPC the table knows comes back to the add sheet with the exact l
   await withReader(page, [{ rawValue: UPC, format: 'upc_a' }]); await noCamera(page);
   await open(page, exact);
   await gotoSheet(page);
-  await add(page).getByRole('button', { name: 'Scan barcode' }).click();
+  await add(page).getByRole('button', { name: 'Scan to fill form' }).click();
   await camera(page).getByLabel('Barcode photo').setInputFiles(photo);
   await expect(camera(page)).toHaveCount(0);
   await expect(add(page)).toContainText('Found by barcode');
@@ -121,13 +121,13 @@ test('no reader in the browser says to type the name, Close returns to the add s
   await open(page);
   await gotoSheet(page);
   await add(page).locator('#suppadd-q').fill('fish');
-  await add(page).getByRole('button', { name: 'Scan barcode' }).click();
+  await add(page).getByRole('button', { name: 'Scan to fill form' }).click();
   await expect(camera(page).getByRole('status')).toContainText(/cannot read barcodes|camera is not available/);
   expect((await new AxeBuilder({ page }).include('.sbsheet').analyze()).violations).toEqual([]);
   await camera(page).getByRole('button', { name: 'Close' }).click();
   await expect(add(page)).toBeVisible();
   await expect(add(page).locator('#suppadd-q')).toHaveValue('fish'); // the text came back
-  await add(page).getByRole('button', { name: 'Scan barcode' }).click();
+  await add(page).getByRole('button', { name: 'Scan to fill form' }).click();
   await page.goBack();
   await expect(camera(page)).toHaveCount(0);
   await expect(page.locator('#tab-daily')).toBeVisible(); // the app stayed where it was

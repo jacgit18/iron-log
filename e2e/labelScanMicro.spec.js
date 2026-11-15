@@ -33,7 +33,7 @@ test('a photo with vitamin lines shows the count in the One-off form and the sav
 
 test('removing every row drops the amounts, and the food is saved without them', async ({ page }) => {
   const sheet = await scan(page, LABEL);
-  for (const n of ['Calcium', 'Iron', 'Vitamin D', 'Zinc']) await sheet.getByRole('button', { name: `Remove ${n} row` }).click();
+  for (const n of ['Calcium', 'Iron', 'Vitamin D', 'Zinc']) { const rm = sheet.getByRole('button', { name: `Remove ${n} row` }); await rm.click(); await rm.click(); } // two taps: arm, then confirm
   await expect(sheet.getByLabel('Amount 1')).toHaveCount(0);
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);

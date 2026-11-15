@@ -17,8 +17,8 @@ describe('which items count', () => {
   it('counts every scheduled item for "scheduled", never library-only ones', () => {
     expect(countedItems(items, {}, D, 'scheduled').map(i => i.id)).toEqual(['multi', 'cplus']);
   });
-  it('ignores a tick on a library-only item and ticks from another day', () => {
-    expect(countedItems(items, { [D]: { lib: true }, '2026-11-07': { multi: true } }, D, 'taken')).toEqual([]);
+  it('counts a tick on a library-only item (Add supplement) but not a tick from another day', () => {
+    expect(countedItems(items, { [D]: { lib: true }, '2026-11-07': { multi: true } }, D, 'taken').map(i => i.id)).toEqual(['lib']);
   });
 });
 

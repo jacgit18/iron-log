@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, moveCard, openAdd, todayCol } from './nutritionBoardHelpers.js';
 
 // The Nutrition board's planning (brief week-board, part 3, now on the Nutrition week board of brief nutrition-board). The rules (the day's meals and totals, the plate check and fixes, moves, the fat bar) are node tests (weekBoard.test.ts, plate.test.ts);
 // this covers the wiring: the board opens on a wide screen and one day with a stepper on a phone, planning into a meal from the add sheet, the plate check and its one-tap fix, moving a card, and the labelled meters.
@@ -19,10 +19,7 @@ const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const dinner = (c) => c.locator('.wb-slot', { hasText: 'Dinner' });
 // A day's planned card moved to today (the add sheet no longer plans on today, so a test that needs a planned card on today plans a day ahead and moves it, which is also how a person does it).
 const moveToToday = async (page, name, from) => {
-  const c = col(page, from);
-  await c.locator('.wb-card', { hasText: name }).click();
-  await c.getByRole('button', { name: `Move ${name}`, exact: true }).click();
-  await c.getByRole('group', { name: `Move ${name} to` }).getByRole('button', { name: 'Thu, Sep 24' }).click();
+  await moveCard(page, col(page, from), name, { day: 'Thu 24 · today' });
   await todayCol(page).locator('.nb-dayname').click();
 };
 // Plans a recipe into a meal of the board's selected day from the add sheet's Recipes way (a day on a wide screen is picked by its name).
@@ -39,19 +36,18 @@ const plan = async (page, name, { day, meal = 'Dinner' } = {}) => {
 test('a wide screen opens the board: seven days, meals each, meters with words', async ({ page }) => {
   await seed(page);
   await expect(board(page).locator('.nb-col')).toHaveCount(7);
-  for (const m of ['Breakfast', 'Lunch', 'Dinner']) await expect(today(page).locator('.wb-slothd', { hasText: m })).toBeVisible();
-  await expect(today(page).locator('.wb-slothd', { hasText: 'Snack' })).toHaveCount(0); // Snack only when it holds something
+  for (const m of ['Breakfast', 'Lunch', 'Snack', 'Dinner']) await expect(today(page).locator('.wb-slothd', { hasText: m })).toBeVisible(); // Snack is always there, between Lunch and Dinner (brief daily-snacks)
   await expect(today(page).getByText('Nothing planned')).toHaveCount(3);
   await expect(today(page).getByRole('button', { name: /^Add to / })).toHaveCount(0); // meals have no add button of their own
   for (const b of ['Calories', 'Protein']) await expect(today(page).getByRole('img', { name: new RegExp(`^${b} eaten so far: `) })).toBeVisible();
-  await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories planned: / })).toBeVisible();
+  await expect(col(page, TOMORROW).getByRole('img', { name: /^Calories eaten so far: / })).toBeVisible();
 });
 
 test('planning Dinner shows the card, the plate check and a fix that goes with the food', async ({ page }) => {
   await seed(page);
   await plan(page, 'Chili');
   await expect(dinner(today(page)).getByText('Chili', { exact: true })).toBeVisible();
-  await expect(dinner(today(page)).getByText('400 kcal · 30 g protein')).toBeVisible();
+  await expect(dinner(today(page)).getByText('400 kcal · P 30 g')).toBeVisible();
   const check = dinner(today(page)).getByRole('group', { name: 'Dinner plate check' });
   await expect(check).toContainText('✓ Protein');
   await expect(check).toContainText('Carb');
@@ -61,50 +57,47 @@ test('planning Dinner shows the card, the plate check and a fix that goes with t
   await expect(dinner(today(page)).getByText('Rice', { exact: true })).toBeVisible();
   // today's meters count what was eaten, so nothing planned moves them; the totals of the plan show in the meal header
   await expect(dinner(today(page)).locator('.wb-slothd')).toContainText('600');
-  // a day ahead counts the plan: both have a fat figure, so the fat meter is whole
+  // a day ahead's bars wait for eaten food (ADR 126) and the plan is a muted line; both foods have a fat figure, so the line carries it whole
   await plan(page, 'Chili', { day: TOMORROW });
   await plan(page, 'Rice', { day: TOMORROW });
   const next = col(page, TOMORROW);
-  await expect(next.getByText('Add fat to your foods')).toHaveCount(0);
-  await expect(next.getByRole('img', { name: /^Calories planned: 600 / })).toBeVisible();
-  await expect(next.getByRole('img', { name: /^Fat planned: 15 / })).toBeVisible();
+  await expect(next.getByRole('img', { name: /^Calories eaten so far: 0 / })).toBeVisible();
+  await expect(next.locator('.nb-planline')).toHaveText('Planned: 600 kcal · 34 g protein · 15 g fat');
 });
 
 test('Move to changes the meal of a card, and a card can be moved to another day', async ({ page }) => {
   await seed(page);
   await plan(page, 'Chili');
   const t = today(page);
-  await dinner(t).getByText('Chili', { exact: true }).click();
-  await dinner(t).getByRole('button', { name: 'Move Chili', exact: true }).click();
-  await dinner(t).getByRole('group', { name: 'Move Chili to' }).getByRole('button', { name: 'Lunch' }).click();
+  await moveCard(page, t, 'Chili', { meal: 'Lunch' });
   await expect(t.locator('.wb-slot', { hasText: 'Lunch' }).getByText('Chili', { exact: true })).toBeVisible();
   await expect(dinner(t).getByText('Chili', { exact: true })).toHaveCount(0);
-  await t.locator('.wb-slot', { hasText: 'Lunch' }).getByText('Chili', { exact: true }).click();
-  await t.getByRole('button', { name: 'Move Chili', exact: true }).click();
-  await t.getByRole('group', { name: 'Move Chili to' }).getByRole('button', { name: 'Fri, Sep 25' }).click();
+  await moveCard(page, t, 'Chili', { day: 'Fri 25' });
   await expect(t.getByText('Chili', { exact: true })).toHaveCount(0);
   await expect(col(page, TOMORROW).getByText('Chili', { exact: true })).toBeVisible();
 });
 
-test('a planned card has Log only on today, and Log puts it under Eaten', async ({ page }) => {
+test('a planned card has a check box only on today; checking it marks it eaten and logs it, unchecking removes the log', async ({ page }) => {
   await seed(page);
   await plan(page, 'Chili');
   await plan(page, 'Chili', { day: TOMORROW });
   await col(page, TOMORROW).getByText('Chili', { exact: true }).click();
   await expect(col(page, TOMORROW).getByRole('button', { name: 'Remove Chili' })).toBeVisible();
-  await expect(col(page, TOMORROW).getByRole('button', { name: 'Log Chili' })).toHaveCount(0);
-  await today(page).getByText('Chili', { exact: true }).click();
-  await today(page).getByRole('button', { name: 'Log Chili' }).click();
-  await expect(today(page).locator('.nb-eat', { hasText: 'Chili' })).toBeVisible();
+  await expect(col(page, TOMORROW).getByRole('checkbox', { name: /as eaten/ })).toHaveCount(0);
+  const box = today(page).getByRole('checkbox', { name: 'Check Chili as eaten' });
+  await box.click();
+  await expect(today(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' })).toBeChecked();
+  await expect(today(page).locator('.nb-eat')).toHaveCount(0); // planned food is not listed again: its meal shows the check
+  await today(page).getByRole('checkbox', { name: 'Uncheck Chili as eaten' }).click();
+  await expect(today(page).getByRole('checkbox', { name: 'Check Chili as eaten' })).not.toBeChecked();
 });
 
-test('on a phone the board shows one day at a time, with a stepper', async ({ page }) => {
+test('on a phone the board shows one day at a time, with the joined day tabs', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await seed(page);
   await expect(board(page).locator('.nb-col')).toHaveCount(1);
-  await expect(board(page).locator('.nb-step')).toBeVisible();
-  await expect(board(page).getByLabel('Day to show').locator('option')).toHaveCount(21);
-  await board(page).getByRole('button', { name: 'Next day' }).click();
+  await expect(page.locator('.wdc-tabs [role="tab"]')).toHaveCount(7);
+  await page.locator('.wdc-tabs [role="tab"][aria-selected="true"] + [role="tab"]').click();
   await expect(board(page).locator('.nb-col')).toHaveAttribute('data-day', TOMORROW);
   const axe = await new AxeBuilder({ page }).include('.wb').analyze();
   expect(axe.violations).toEqual([]);

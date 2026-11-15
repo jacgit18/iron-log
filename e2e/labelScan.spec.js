@@ -29,7 +29,7 @@ test.describe('as an admin', () => {
     await expect(page.getByLabel('Note')).toHaveValue('1 serving = 1 cup (140 g).');
     await expect(page.getByLabel('Servings per pack, optional')).toHaveValue('3');
     await page.getByRole('button', { name: 'Cancel' }).click();
-    await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Ready-made' });
+    await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Food' });
     await expect(page.getByRole('button', { name: /Gnocchi/ })).toHaveCount(0); // cancelled: nothing was saved
   });
 
@@ -68,6 +68,7 @@ test.describe('as an admin', () => {
     await page.getByLabel('Calories per serving').fill('420');
     await page.getByLabel('Protein per serving (g)').fill('22');
     await page.getByRole('button', { name: 'Save food' }).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: /Edit/ }).first().click();
     await expect(page.getByRole('button', { name: 'Scan label' })).toHaveCount(0);
   });

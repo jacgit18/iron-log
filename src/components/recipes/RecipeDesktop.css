@@ -1,0 +1,76 @@
+@layer base, components;
+@layer components {
+/* Recipes on a laptop or desktop (brief recipes-desktop-layouts, 2a): the full recipe page in two columns, a line cap on steps and notes, a day field that is not full width, and the recipe and food forms in two columns. The list beside the pane is 2b (RecipeFind.css). */
+/* The page: ingredients beside the steps from 1024 px. The pane (`.rc-pane`) and a phone keep one column. A column under about 320 px (large text) falls back to one: the grid only makes a second column when each can be 20rem. */
+.rc-cols {
+  display: block;
+}
+@media (min-width: 1024px) {
+  .rc-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+    gap: var(--sp-16);
+    align-items: start;
+  }
+  .rc-pane .rc-cols {
+    display: block;
+  }
+  /* Each ingredient row is narrower in a half-width column: the name on its own line, the state and the picker under it. */
+  .rc-detail .rc-cols .rc-ing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rc-pane .rc-cols .rc-ing {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  }
+  .rc-detail .rc-cols .rc-pick {
+    justify-content: flex-start;
+  }
+  .rc-detail .rc-cols .rc-pick:empty {
+    display: none;
+  }
+  .rc-pane .rc-cols .rc-pick {
+    justify-content: flex-end;
+  }
+}
+/* A line of steps or notes stops at about 70 characters, in the page and in the pane. */
+.rc-detail .rc-steps li,
+.rc-detail .note {
+  max-width: 70ch;
+}
+/* The day field of the log control is a date, not a line: it does not stretch across a wide page. */
+@media (min-width: 641px) {
+  .rc-detail .lc input[type='date'] {
+    max-width: 22rem;
+  }
+}
+/* The forms: two columns from 1024 px, each at most 900 px wide (Done when 2). Below that the columns vanish and the form is the one column it was (`display: contents`). */
+.rcf-cols,
+.rcf-col {
+  display: contents;
+}
+@media (min-width: 1024px) {
+  .rcf-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 900px));
+    gap: var(--sp-12) var(--sp-16);
+    align-items: start;
+  }
+  .rcf-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-8);
+    min-width: 0;
+  }
+}
+/* A phone: a row of fields that does not fit becomes one column (R6). The ingredient line puts the amount and Remove on one row and the name under them. */
+@media (max-width: 480px) {
+  .rc-form .rc-meta,
+  .rc-form .rc-nutfields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rc-form .rc-ingline {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-areas: 'amt rm' 'name name' 'alt alt';
+  }
+}
+}

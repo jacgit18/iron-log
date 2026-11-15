@@ -9,7 +9,7 @@ const addOne = async (page, n, dose) => {
   await page.click('#suplib-add');
   await page.fill('#suppadd-q', n); await page.fill('#suppadd-dose', dose);
   await page.click('#suppadd-go');
-  await expect(page.locator('.srow', { hasText: n })).toHaveCount(1); // really added, so the checks below are not vacuous
+  await expect(page.locator('.exlib .exrow', { hasText: n })).toHaveCount(1); // really added, so the checks below are not vacuous
   await closeSupplementEditor(page);
 };
 

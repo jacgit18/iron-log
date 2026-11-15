@@ -17,8 +17,8 @@ const openRecipes = async page => {
 const columns = page => page.locator('.rc-cards li').evaluateAll(els => new Set(els.map(e => Math.round(e.getBoundingClientRect().left))).size); // cards sharing a left edge are one column
 const tops = page => page.evaluate(() => [...document.querySelectorAll('.rc-filterbar > *')].map(el => Math.round(el.getBoundingClientRect().top)));
 
-for (const [w, h, cols] of [[1920, 1080, 4], [1280, 800, 3], [768, 1024, 2], [375, 812, 1]]) {
-  test(`Mine shows ${cols} card column${cols > 1 ? 's' : ''} at ${w} px`, async ({ page }) => {
+for (const [w, h, cols] of [[1920, 1080, 2], [1280, 800, 2], [768, 1024, 2], [375, 812, 1]]) {
+  test(`Mine shows ${cols} list column${cols > 1 ? 's' : ''} at ${w} px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await openRecipes(page);
     expect(await columns(page)).toBe(cols);

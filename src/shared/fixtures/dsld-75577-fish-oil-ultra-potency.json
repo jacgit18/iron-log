@@ -1,0 +1,128 @@
+{
+ "id": 75577,
+ "fullName": "Ultra Potency Omega-3 Fish Oil",
+ "brandName": "Source Naturals",
+ "upcSku": "0 21078 02014 1",
+ "entryDate": "2017-06-23",
+ "servingSizes": [
+  {
+   "minQuantity": 1,
+   "unit": "Softgel(s)"
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Calories",
+   "category": "other",
+   "ingredientGroup": "Calories",
+   "quantity": [
+    {
+     "quantity": 10,
+     "unit": "Calorie(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Calories from Fat",
+     "category": "other",
+     "ingredientGroup": "Calories",
+     "quantity": [
+      {
+       "quantity": 10,
+       "unit": "Calorie(s)"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "Total Fat",
+   "category": "fat",
+   "ingredientGroup": "Fat (unspecified)",
+   "quantity": [
+    {
+     "quantity": 1,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Saturated Fat",
+     "category": "fat",
+     "ingredientGroup": "Saturated fat",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Trans Fat",
+     "category": "fat",
+     "ingredientGroup": "Trans fat (unspecified)",
+     "quantity": [
+      {
+       "quantity": 0,
+       "unit": "Gram(s)"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  },
+  {
+   "name": "ArcticPure Fish Oil Concentrate",
+   "category": "fat",
+   "ingredientGroup": "Fish Oil",
+   "notes": "ArcticPure Fish Oil Concentrate Note: yielding: ",
+   "quantity": [
+    {
+     "quantity": 1.25,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": [
+    {
+     "name": "Eicosapentaenoic Acid",
+     "category": "fatty acid",
+     "ingredientGroup": "EPA (Eicosapentaenoic Acid)",
+     "quantity": [
+      {
+       "quantity": 450,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Docosahexaenoic Acid",
+     "category": "fatty acid",
+     "ingredientGroup": "DHA (Docosahexaenoic Acid)",
+     "quantity": [
+      {
+       "quantity": 340,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    },
+    {
+     "name": "Other Omega-3 Fatty Acids",
+     "category": "fatty acid",
+     "ingredientGroup": "Omega-3",
+     "notes": "Other Omega-3 Essential Fatty Acids",
+     "quantity": [
+      {
+       "quantity": 60,
+       "unit": "mg"
+      }
+     ],
+     "nestedRows": []
+    }
+   ]
+  }
+ ]
+}

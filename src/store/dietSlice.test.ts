@@ -1,5 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
+import { effectivePlan } from '../lib/dailySnacks.js';
+import { shiftDay } from '../lib/dietLog.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
@@ -11,6 +13,14 @@ beforeEach(() => { clearStorage(); useAppStore.setState({ diet: [], removed: nul
 
 const day = '2026-10-29';
 const rice = { d: day, n: 'Rice', kcal: 200, p: 4 };
+
+describe('a diet key this build does not know (ADR 122)', () => {
+  it('survives the writers that rebuild cfg.diet', () => {
+    st().mutateCfg(c => { c.diet = { kcal: 3000, future: { on: true } } as never; });
+    st().saveDailySnacks([{ id: 'yog' }]);
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, snacks: [{ id: 'yog' }], future: { on: true } });
+  });
+});
 
 describe('addDietEntry', () => {
   it('adds an entry with an id and keeps the numbers', () => {
@@ -77,6 +87,29 @@ describe('carbs and fat', () => {
   });
 });
 
+describe('the stored portion x (brief portion-scaled-micros)', () => {
+  it('is kept on an entry, and updated with an explicit micro: a portion change never drops amounts', () => {
+    const { id } = st().addDietEntry({ ...rice, x: 1, micro: { calcium: 100 } });
+    expect(st().diet[0]).toMatchObject({ x: 1, micro: { calcium: 100 } });
+    expect(st().updateDietEntry(id!, { kcal: 400, p: 8, micro: { calcium: 200 }, x: 2 })).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: 400, x: 2, micro: { calcium: 200 } });
+  });
+  it('changed calories with no micro in the patch still drop the amounts (the old rule), x stays', () => {
+    const { id } = st().addDietEntry({ ...rice, x: 2, micro: { calcium: 100 } });
+    st().updateDietEntry(id!, { kcal: 250 });
+    expect(st().diet[0]).toMatchObject({ x: 2 }); expect(st().diet[0]!.micro).toBeUndefined();
+  });
+  it('setRecipeMicro writes amounts to a recipe with none and never overwrites', () => {
+    useAppStore.setState({ recipes: [{ id: 'r1', n: 'Oats', cat: 'meal', ing: [{ n: 'oats' }], steps: [] }, { id: 'r2', n: 'Eggs', cat: 'meal', ing: [{ n: 'egg' }], steps: [], micro: { iron: 1 } }] as never });
+    expect(st().setRecipeMicro('r1', { calcium: 120 })).toBeNull();
+    expect(st().recipes.find(r => r.id === 'r1')?.micro).toEqual({ calcium: 120 });
+    expect(st().setRecipeMicro('r1', { calcium: 999 })).toMatch(/already/);
+    expect(st().setRecipeMicro('r2', { calcium: 5 })).toMatch(/already/);
+    expect(st().recipes.find(r => r.id === 'r2')?.micro).toEqual({ iron: 1 });
+    expect(st().setRecipeMicro('gone', { calcium: 1 })).toMatch(/gone/);
+  });
+});
+
 describe('updateDietEntry and removeDietEntry', () => {
   it('fixes the numbers and keeps the day and the recipe link', () => {
     const id = st().addDietEntry({ ...rice, from: 'chili-1' }).id!;
@@ -111,7 +144,7 @@ describe('updateDietEntry and removeDietEntry', () => {
     st().undoRemoved();
     expect(st().diet.map(e => e.id)).toEqual([a, b]);
   });
-  it('removes quietly when asked (the "Ate this" undo)', () => {
+  it('removes quietly when asked (the log control undo)', () => {
     const id = st().addDietEntry(rice).id!;
     st().removeDietEntry(id, false);
     expect(st().diet).toEqual([]);
@@ -181,7 +214,7 @@ const oldMeal = (name: string, entryIds: string[]) => {
 
 describe('Save meal makes a Recipes meal', () => {
   const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
-  beforeEach(() => { useAppStore.setState({ recipes: [] }); });
+  beforeEach(async () => { const { normGrocery } = await import('../lib/grocery.js'); useAppStore.setState({ grocery: normGrocery(null), groceryMonths: {}, recipes: [] }); });
   it('saves the ticked entries as a meal recipe with their totals, and leaves the old list alone', () => {
     const a = log('Oats', 350), b = log('Banana', 100); log('Skipped');
     expect(st().saveDietMeal('Breakfast', [a, b])).toBeNull();
@@ -211,6 +244,16 @@ describe('moveSavedMeals', () => {
     expect(st().cfg.diet!.meals).toHaveLength(2);
     expect(st().moveSavedMeals()).toBe(0);
     expect(st().recipes).toHaveLength(2);
+  });
+  it('a second device with the recipes but no moved record adds no copy and writes the record back', () => {
+    oldMeal('One', [log('Oats')]);
+    st().moveSavedMeals();
+    const recipes = st().recipes;
+    st().mutateCfg(c => { delete c.diet!.mealsMoved; });
+    expect(st().cfg.diet!.mealsMoved).toBeUndefined();
+    expect(st().moveSavedMeals()).toBe(0);
+    expect(st().recipes).toEqual(recipes);
+    expect(st().cfg.diet!.mealsMoved).toEqual({ m1: recipes[0]!.id });
   });
   it('does nothing before the recipes list has been read', () => {
     oldMeal('One', [log('Oats')]);
@@ -276,5 +319,295 @@ describe('the meal planner', () => {
     st().mutateCfg(c => { c.diet = { plan: { '2020-01-01': [{ k: 'r', id: 'r1' }] } }; });
     st().addPlanItem(today, 'r', 'r2');
     expect(Object.keys(st().cfg.diet!.plan!)).toEqual([today]);
+  });
+});
+
+describe('planToShopping (week to Shopping)', () => {
+  const today = ymd(new Date());
+  const plan = (...items: { k: 'r' | 'm'; id: string; e?: string[] }[]) => st().mutateCfg(c => { c.diet = { plan: { [today]: items } }; });
+  const itemNames = () => st().grocery.items.map(i => i.n).sort();
+  beforeEach(async () => { const { normGrocery } = await import('../lib/grocery.js'); useAppStore.setState({ grocery: normGrocery(null), groceryMonths: {}, recipes: [] }); });
+
+  it('adds each missing ingredient of the planned recipes once and reports the new items', () => {
+    st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
+    st().saveRecipe({ n: 'Bread', cat: 'carbs', ing: [{ n: 'garlic' }, { n: 'flour' }], steps: [] });
+    const [a, b] = st().recipes;
+    plan({ k: 'r', id: a!.id }, { k: 'r', id: b!.id });
+    const r = st().planToShopping([today]);
+    expect(itemNames()).toEqual(['flour', 'garlic', 'pasta']);
+    expect(r).toMatchObject({ added: 3, recipes: 2, refused: null });
+    expect(r.ids).toHaveLength(3);
+  });
+  it('leaves what is already on the list and adds nothing for an eaten item, a saved meal or no plan', () => {
+    st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
+    st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
+    const id = st().recipes[0]!.id;
+    plan({ k: 'r', id, e: ['gone-entry'] }, { k: 'm', id: 'm1' });
+    expect(st().planToShopping([today])).toMatchObject({ added: 1, already: 1 }); // the eaten mark points at a removed entry, so the item still counts
+    plan({ k: 'm', id: 'm1' });
+    expect(st().planToShopping([today])).toMatchObject({ added: 0, recipes: 0, ids: [] });
+    expect(st().planToShopping([])).toMatchObject({ added: 0, recipes: 0 });
+  });
+  it('adds the missing ingredients of listed daily snacks once, not those skipped today, and counts match', () => {
+    st().saveRecipe({ n: 'Yogurt bowl', cat: 'carbs', ing: [{ n: 'yogurt' }, { n: 'honey' }], steps: [] });
+    st().saveRecipe({ n: 'Nuts', cat: 'protein', ing: [{ n: 'almonds' }, { n: 'honey' }], steps: [] });
+    st().saveRecipe({ n: 'Fruit', cat: 'carbs', ing: [{ n: 'apple' }], steps: [] });
+    const [a, b, c] = st().recipes;
+    st().mutateCfg(cfg => { cfg.diet = { snacks: [{ id: a!.id, x: 2 }, { id: b!.id }, { id: c!.id }], snackSkips: { [today]: [c!.id] } }; });
+    const tomorrow = shiftDay(today, 1);
+    const r = st().planToShopping([today, tomorrow], undefined, today);
+    expect(itemNames()).toEqual(['almonds', 'apple', 'honey', 'yogurt']); // Fruit is skipped today only, so tomorrow still brings its apple; honey once
+    expect(r).toMatchObject({ added: 4, recipes: 3, refused: null });
+    expect(st().planToShopping([today], undefined, today)).toMatchObject({ added: 0, recipes: 2 }); // a second tap adds nothing twice
+  });
+  it('lets Undo remove exactly the items the call created', () => {
+    st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
+    st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
+    plan({ k: 'r', id: st().recipes[0]!.id });
+    const r = st().planToShopping([today]);
+    for (const id of r.ids) st().removeGroceryItem(id, { quiet: true });
+    expect(itemNames()).toEqual(['Garlic']);
+    expect(st().planToShopping([today]).added).toBe(1); // a second tap adds it again
+  });
+});
+
+describe('copyDietEntry (brief nutrition-move-copy-eaten)', () => {
+  const today = ymd(new Date()), past = '2026-10-29';
+  const eaten = () => st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4, micro: { calcium: 120 } }).id!;
+  it('copies to an earlier day with the hour and micronutrients; the original stays', () => {
+    const id = eaten(), t = st().diet[0]!.t;
+    expect(typeof t).toBe('number');
+    const r = st().copyDietEntry(id, past);
+    expect(r.error).toBeNull();
+    const c = st().diet.find(e => e.id === r.id)!;
+    expect(c).toMatchObject({ d: past, n: 'Rice', kcal: 200, p: 4, t, micro: { calcium: 120 } });
+    expect(st().diet.filter(e => e.d === today)).toHaveLength(1);
+    expect(st().removed).toBeNull();
+  });
+  it('a move removes the original and Undo puts it back without leaving the copy', () => {
+    const id = eaten();
+    const r = st().copyDietEntry(id, past, true);
+    expect(st().diet.map(e => e.id)).toEqual([r.id]);
+    expect(st().removed?.verb).toBe('Moved');
+    st().undoRemoved();
+    expect(st().diet.map(e => e.id)).toEqual([id]);
+  });
+  it('a full target day or the same day refuses and changes nothing', () => {
+    const id = eaten();
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ ...rice, d: past });
+    const before = st().diet.length;
+    expect(st().copyDietEntry(id, past, true).error).toBe('You can log 20 things a day.');
+    expect(st().copyDietEntry(id, today).error).toBe('Pick another day.');
+    expect(st().diet).toHaveLength(before);
+    expect(st().removed).toBeNull();
+  });
+});
+
+describe('Undo of a move respects the 20 a day limit (brief nutrition-move-copy-eaten)', () => {
+  it('refuses to put the original back onto a day that filled up', () => {
+    const today = ymd(new Date());
+    const id = st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4 }).id!;
+    st().copyDietEntry(id, '2026-10-29', true);
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ d: today, n: `F${i}`, kcal: 100, p: 1 });
+    st().undoRemoved();
+    expect(st().diet.filter(e => e.d === today)).toHaveLength(MAX_DIET_PER_DAY);
+    expect(st().diet.some(e => e.n === 'Rice' && e.d === '2026-10-29')).toBe(true);
+  });
+});
+
+describe('daily snacks (brief daily-snacks)', () => {
+  const today = ymd(new Date());
+  const tomorrow = ymd(new Date(Date.now() + 864e5));
+  const recipe = (id: string, n: string) => ({ id, n, cat: 'sides' as const, ing: [], steps: [], kcal: 120, p: 10 });
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe('yog', 'Yogurt'), recipe('bar', 'Bar')] }); });
+
+  it('saves the list in cfg.diet and clears it when emptied', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar', x: 2 }]);
+    expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }, { id: 'bar', x: 2 }]);
+    st().saveDailySnacks([]);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+  it('stores a shown snack as a real item of that day only, once, and returns its index', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar', x: 2 }]);
+    expect(st().realizeDailySnack(today, 'bar')).toBe(0);
+    expect(st().realizeDailySnack(today, 'bar')).toBe(0);
+    expect(st().cfg.diet!.plan).toEqual({ [today]: [{ k: 'r', id: 'bar', x: 2, s: 'snack' }] });
+  });
+  it('ticks a shown snack on a day already holding 8 planned things: it is stored, survives the clean, and the ninth planned thing is still refused (brief snacks-day-cap)', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: eight } }; });
+    expect(st().realizeDailySnack(tomorrow, 'yog')).toBe(8);
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    st().saveDailySnacks([{ id: 'yog' }]); // any later write cleans the plan again
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    expect(st().addPlanItem(tomorrow, 'r', 'bar')).toMatch(/hold 8/);
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+  });
+  it('moves a ticked snack to another full day in Snack, and refuses it into another meal there', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [today]: [{ k: 'r', id: 'yog', s: 'snack' }], [tomorrow]: eight } }; });
+    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toMatch(/hold 8/);
+    expect(st().movePlanItem(today, 0, tomorrow, 'snack')).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+  });
+  it('skips a snack on one day without touching the list or other days', () => {
+    st().saveDailySnacks([{ id: 'yog' }]);
+    st().skipDailySnack(today, 'yog');
+    expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
+    expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }]);
+  });
+  it('a shown snack changed in portion or moved is stored first, at the index realizeDailySnack returns, and the other listed snack is untouched', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
+    const i = st().realizeDailySnack(today, 'bar') as number;
+    st().setPlanPortion(today, i, 1.5);
+    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'bar', x: 1.5, s: 'snack' }]);
+    const j = st().realizeDailySnack(tomorrow, 'yog') as number;
+    expect(st().movePlanItem(tomorrow, j, tomorrow, 'dinner')).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'dinner' }]);
+    expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }, { id: 'bar' }]);
+  });
+  it('removing a snack from the list forgets its skips, so adding it back shows it again', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
+    st().skipDailySnack(today, 'yog'); st().skipDailySnack(today, 'bar');
+    st().saveDailySnacks([{ id: 'bar' }]);
+    expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['bar'] });
+    st().saveDailySnacks([]);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+  it('removing a stored listed snack from its day skips that day, so it does not come back', () => {
+    st().saveDailySnacks([{ id: 'yog' }]);
+    const i = st().realizeDailySnack(today, 'yog') as number;
+    st().removePlanItem(today, i);
+    expect(st().cfg.diet!.plan).toBeUndefined();
+    expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
+  });
+  it('moving a stored listed snack to another day skips the day it left; to another meal skips nothing', () => {
+    st().saveDailySnacks([{ id: 'yog' }]);
+    const i = st().realizeDailySnack(today, 'yog') as number;
+    expect(st().movePlanItem(today, i, today, 'dinner')).toBeNull();
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    expect(st().movePlanItem(today, 0, today, 'snack')).toBeNull(); // back in Snack
+    expect(st().movePlanItem(today, 0, tomorrow, 'snack')).toBeNull();
+    expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
+    expect(st().cfg.diet!.plan).toEqual({ [tomorrow]: [{ k: 'r', id: 'yog', s: 'snack' }] });
+  });
+  it('a recipe on the list and planned by hand in another meal hides the listed copy; taking the hand-planned one out or away leaves the listed snack as it was', () => {
+    st().saveDailySnacks([{ id: 'yog' }]);
+    st().addPlanItem(tomorrow, 'r', 'yog', 'lunch');
+    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'lunch' }]);
+    st().removePlanItem(tomorrow, 0);
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }]);
+    st().addPlanItem(today, 'r', 'yog', 'lunch');
+    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toBeNull();
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [today], today)[today]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }]);
+  });
+  it('a snack stored for a tick that did not happen is taken back, but an eaten one stays', () => {
+    st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
+    const a = st().realizeDailySnack(today, 'yog') as number;
+    st().unstoreDailySnack(today, a);
+    expect(st().cfg.diet!.plan).toBeUndefined();
+    expect(st().cfg.diet!.snackSkips).toBeUndefined();
+    const b = st().realizeDailySnack(today, 'bar') as number;
+    st().setPlanEaten(today, b, ['e1']);
+    st().unstoreDailySnack(today, b);
+    expect(st().cfg.diet!.plan![today]).toHaveLength(1);
+  });
+  it('removing an unlisted planned item adds no skip', () => {
+    st().addPlanItem(today, 'r', 'bar', 'snack');
+    st().removePlanItem(today, 0);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+});
+
+describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)', () => {
+  const today = ymd(new Date()), at = (n: number) => shiftDay(today, n);
+  const recipe = { id: 'rc', n: 'Rice', cat: 'carbs' as const, ing: [], steps: [], kcal: 200, p: 4 };
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe] }); });
+  const eaten = (extra = {}) => st().addDietEntry({ d: today, n: 'Rice', kcal: 200, p: 4, micro: { calcium: 120 }, ...extra }).id!;
+
+  it('copies to several earlier days in one go; the original stays and each copy keeps the micronutrients', () => {
+    const id = eaten();
+    const r = st().copyDietEntries(id, [at(-1), at(-2), at(-3)]);
+    expect(r.error).toBeNull();
+    expect(r.message).toBe('Copied to 3 days.');
+    expect(st().diet).toHaveLength(4);
+    expect(st().diet.filter(e => e.d !== today).every(e => e.n === 'Rice' && e.micro?.calcium === 120)).toBe(true);
+    expect(st().removed).toBeNull();
+  });
+  it('skips a full day, names it, and still copies the others', () => {
+    const id = eaten();
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) st().addDietEntry({ ...rice, d: at(-1) });
+    const r = st().copyDietEntries(id, [at(-1), at(-2)]);
+    expect(r.done).toEqual([at(-2)]);
+    expect(r.message).toMatch(/^Copied to .*\. Skipped .*: full\.$/);
+    expect(st().diet.filter(e => e.d === at(-1))).toHaveLength(MAX_DIET_PER_DAY);
+  });
+  it('a refused batch changes nothing', () => {
+    const id = eaten();
+    const before = st().diet, plan = st().cfg.diet?.plan;
+    expect(st().copyDietEntries(id, [today]).error).toBeTruthy();
+    expect(st().copyDietEntries('nope', [at(-1)]).error).toBe('That entry is gone.');
+    expect(st().copyDietEntries(id, [at(-1), at(-2)], true).error).toBe('Move takes one day.');
+    expect(st().diet).toBe(before);
+    expect(st().cfg.diet?.plan).toEqual(plan);
+  });
+  it('a recipe-linked food goes ahead as plan cards; a one-off is skipped', () => {
+    const id = eaten({ from: 'rc' }), one = eaten({ n: 'Bar' });
+    const r = st().copyDietEntries(id, [at(1), at(2)]);
+    expect(r.done).toEqual([at(1), at(2)]);
+    expect(st().cfg.diet!.plan![at(1)]).toMatchObject([{ k: 'r', id: 'rc' }]);
+    expect(st().diet).toHaveLength(2); // no log entry for a day ahead
+    const o = st().copyDietEntries(one, [at(1)]);
+    expect(o.error).toMatch(/^Nothing copied\. Skipped .*: one-off food\.$/);
+  });
+  it('a move to a day ahead refuses whole when its plan card does not fit, and Undo of a move takes the plan card away', () => {
+    const id = eaten({ from: 'rc' });
+    st().copyDietEntries(id, [at(1)]); // the card is now on that day
+    const before = st().diet;
+    const r = st().copyDietEntries(id, [at(1)], true);
+    expect(r.error).toMatch(/already there/);
+    expect(st().diet).toBe(before);
+    expect(st().removed).toBeNull();
+    const m = st().copyDietEntries(id, [at(2)], true);
+    expect(m.error).toBeNull();
+    expect(st().diet.some(e => e.id === id)).toBe(false);
+    st().undoRemoved();
+    expect(st().diet.some(e => e.id === id)).toBe(true);
+    expect(st().cfg.diet!.plan![at(2)]).toBeUndefined();
+  });
+  it('a move to an earlier day keeps the existing Undo', () => {
+    const id = eaten();
+    const r = st().copyDietEntries(id, [at(-1)], true);
+    expect(r.message).toMatch(/^Moved to /);
+    expect(st().removed?.verb).toBe('Moved');
+    st().undoRemoved();
+    expect(st().diet.map(e => e.id)).toEqual([id]);
+  });
+  it('copyPlanItems puts the card in the same meal on each day in one write, skipping full and duplicate days', () => {
+    expect(st().addPlanItem(today, 'r', 'rc', 'dinner')).toBeNull();
+    expect(st().addPlanItem(at(2), 'r', 'rc', 'dinner')).toBeNull();
+    const r = st().copyPlanItems(today, 0, [at(1), at(2), at(3), at(20)]);
+    expect(r.done).toEqual([at(1), at(3)]);
+    expect(r.skipped.map(s => s.reason)).toEqual(['already there', 'out of reach']);
+    expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner' }]);
+    expect(st().cfg.diet!.plan![today]).toHaveLength(1);
+    const before = st().cfg.diet!.plan;
+    expect(st().copyPlanItems(today, 0, [today]).error).toBeTruthy();
+    expect(st().copyPlanItems(today, 9, [at(1)]).error).toBe('That is gone.');
+    expect(st().cfg.diet!.plan).toEqual(before);
+  });
+  it('addPlanItemToDays plans one recipe on several days in one write, skipping duplicates and days out of reach', () => {
+    expect(st().addPlanItem(at(2), 'r', 'rc', 'lunch')).toBeNull();
+    const r = st().addPlanItemToDays('r', 'rc', [at(1), at(2), at(3), at(20)], 'lunch');
+    expect(r.error).toBeNull();
+    expect(r.done).toEqual([at(1), at(3)]);
+    expect(r.skipped.map(x => x.reason)).toEqual(['already there', 'out of reach']);
+    expect(st().cfg.diet!.plan![at(3)]).toEqual([{ k: 'r', id: 'rc', s: 'lunch' }]);
+    const before = st().cfg.diet!.plan;
+    expect(st().addPlanItemToDays('r', 'rc', [at(1)], 'lunch').error).toBeTruthy();
+    expect(st().addPlanItemToDays('r', 'nope', [at(4)], 'lunch').error).toBe('That recipe is gone.');
+    expect(st().cfg.diet!.plan).toEqual(before);
   });
 });

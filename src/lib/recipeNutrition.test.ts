@@ -4,17 +4,20 @@ import { HIGH_PROTEIN_G, NUTRITION_FILTERS, UNDER_KCAL, matchesNutrition, nutrit
 import { filterRecipes } from './recipeList.js';
 
 describe('nutritionBadge', () => {
-  it('shows calories and protein per serving', () => expect(nutritionBadge({ kcal: 420, p: 32 })).toBe('420 kcal · 32 g protein'));
+  it('shows calories and protein per serving, with carbs and fat when the recipe has them', () => {
+    expect(nutritionBadge({ kcal: 420, p: 32 })).toBe('420 kcal · P 32 g');
+    expect(nutritionBadge({ kcal: 410, p: 22, c: 58, f: 9 })).toBe('410 kcal · P 22 · C 58 · F 9 g');
+  });
   it('shows only the part a recipe has', () => {
     expect(nutritionBadge({ kcal: 420 })).toBe('420 kcal');
-    expect(nutritionBadge({ p: 12.5 })).toBe('12.5 g protein');
+    expect(nutritionBadge({ p: 12.5 })).toBe('P 12.5 g');
   });
   it('shows protein 0 (a real number) but nothing for a recipe with neither', () => {
-    expect(nutritionBadge({ kcal: 90, p: 0 })).toBe('90 kcal · 0 g protein');
+    expect(nutritionBadge({ kcal: 90, p: 0 })).toBe('90 kcal · P 0 g');
     expect(nutritionBadge({})).toBeNull();
   });
   it('rounds calories and ignores a value that is not a number', () => {
-    expect(nutritionBadge({ kcal: 419.6, p: 31.04 })).toBe('420 kcal · 31 g protein');
+    expect(nutritionBadge({ kcal: 419.6, p: 31.04 })).toBe('420 kcal · P 31 g');
     expect(nutritionBadge({ kcal: NaN, p: '9' as unknown as number })).toBeNull();
   });
 });

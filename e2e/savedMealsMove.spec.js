@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition } from './nutritionBoardHelpers.js';
 
 // Saved meals move into Recipes (brief saved-meals-into-recipes, part 2). The move, its once-only record and the plan remap are node tests
 // (quickMeals.test.ts, dietSlice.test.ts); this covers what they cannot: a real load with old saved meals, the meals showing in Recipes and Quick add, and no second copy after a reload.
@@ -23,4 +23,30 @@ test('old saved meals appear in Recipes and Quick add once, with their saved num
   await page.locator('#recipes-tab-meals').click();
   await expect(page.locator('.rc-row', { hasText: 'Usual breakfast' })).toHaveCount(1);
   await expect(page.locator('.rc-row', { hasText: 'Post-workout' })).toHaveCount(1);
+});
+
+// The gate (brief saved-meals-removal): with 300 recipes a saved meal cannot move, so the old list stays for that account, its meal is still offered, and a note says to make room in Recipes.
+test('with 300 recipes a saved meal that cannot move stays listed with a note to make room', async ({ page }) => {
+  await page.evaluate(() => {
+    const items = Array.from({ length: 300 }, (_, i) => ({ id: `r${i}`, n: `Recipe ${i}`, cat: 'carbs', ing: [{ n: 'x' }], steps: ['Cook.'], kcal: 100, p: 5 }));
+    localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items }));
+  });
+  await seedOld(page);
+  await openNutrition(page);
+  const sheet = await openAdd(page, 'Saved meals');
+  await expect(sheet.getByRole('button', { name: 'Usual breakfast · 2 foods · 450 kcal' })).toBeVisible();
+  await expect(sheet.getByText(/make room in Recipes/)).toBeVisible();
+  await closeSheet(page);
+  await page.click('#tab-daily'); await page.click('#daily-recipes');
+  await page.locator('#recipes-tab-meals').click();
+  await expect(page.locator('.rc-row', { hasText: 'Usual breakfast' })).toHaveCount(0);
+});
+
+test('once every saved meal has moved, Quick add shows each once and no waiting note', async ({ page }) => {
+  await seedOld(page);
+  await openNutrition(page);
+  const sheet = await openAdd(page, 'Saved meals');
+  await expect(sheet.getByRole('button', { name: /^Usual breakfast/ })).toHaveCount(1);
+  await expect(sheet.getByText(/make room in Recipes/)).toHaveCount(0);
+  await expect(sheet.getByText('Rename or edit a meal in Recipes.')).toBeVisible();
 });

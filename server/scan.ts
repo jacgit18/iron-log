@@ -46,7 +46,7 @@ const SYSTEM = [
 ].join(' ');
 
 const SUPPLEMENT_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-const SUPPLEMENT_MAX_TOKENS = 1500; // a panel can list 30 rows and a long "other ingredients" blend
+const SUPPLEMENT_MAX_TOKENS = 1600; // a panel can list 30 rows and a long "other ingredients" blend
 
 const SUPPLEMENT_SYSTEM = [
   'You read one photo of the Supplement Facts panel on a supplement bottle and answer with one JSON object and nothing else.',
@@ -57,6 +57,7 @@ const SUPPLEMENT_SYSTEM = [
   `"rows" the nutrients printed on the panel PER SERVING that have one of these keys (unit shown is the usual one): ${SUPPLEMENT_KEYS}; each row is {"key":...,"amount":<number>,"unit":"mg"|"mcg"|"g"|"IU"}.`,
   'Give the amount and unit as printed on the panel (convert nothing; write "mcg" for mcg, mcg DFE and mcg RAE, "mg" for mg and mg NE). "IU" is allowed only for vitaminA, vitaminD and vitaminE. For folate give the folic acid amount when the panel lists one, else the amount printed. Use the nutrient itself, not a salt or compound weight ("Magnesium (as citrate) 200 mg" is magnesium 200 mg); one row per key.',
   'Never use the percent of Daily Value as an amount. Leave out a nutrient that is not printed.',
+  '"ingredients" the active ingredients printed on the panel PER SERVING, only these names: Omega-3 (the total omega-3 fatty acids line), EPA, DHA, Creatine, Caffeine; each is {"name":...,"amount":<number>,"unit":"mg"|"mcg"|"g"|"IU"} with the amount and unit as printed (convert nothing). EPA and DHA are their own entries, listed apart from Omega-3 even when printed under it; never add them together or subtract them. Never put the weight of a blend or an oil here ("Fish oil 2,500 mg", "Creatine blend") and never "Other omega-3" lines: those go in "other". Creatine monohydrate or HCl, and caffeine anhydrous, count as Creatine and Caffeine with the amount printed. One entry per name; omit "ingredients" when none is printed.',
   '"other" every other line of the panel that has a name: {"name":...} plus "amount" and "unit" when printed; a proprietary blend without a stated total has only a name. Ignore the "other ingredients" list below the panel.',
   'Read the per-serving column only. If only a per-100 g column or a per-2-servings column is printed, or the photo is not a Supplement Facts panel (the front of a bottle, a Nutrition Facts panel, a blur), answer {}.',
 ].join(' ');

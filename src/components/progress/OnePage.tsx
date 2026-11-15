@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { SECTIONS, currentSection, pathOfSection, sectionOfPage, type SectionId } from '../../lib/progressPage.js';
 import { motionOK } from '../../lib/motion.js';
+import { scrollWhenSettled } from '../../lib/scrollSettle.js';
 import { pageOf } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import './OnePage.css';
@@ -24,12 +25,7 @@ export default function OnePage({ sections }: { sections: Record<SectionId, Reac
     if (want && jumped.current === want) { jumped.current = null; return; }
     jumped.current = null;
     if (!want) return;
-    // Sections above grow as history and charts draw, so scroll again once they have, unless the reader has already moved.
-    let moved = false; const stop = () => { moved = true; };
-    for (const e of ['wheel', 'touchstart', 'keydown']) window.addEventListener(e, stop, { once: true, passive: true });
-    const f = requestAnimationFrame(() => scrollTo(want));
-    const t = window.setTimeout(() => { if (!moved) scrollTo(want); }, 700);
-    return () => { cancelAnimationFrame(f); clearTimeout(t); for (const e of ['wheel', 'touchstart', 'keydown']) window.removeEventListener(e, stop); };
+    return scrollWhenSettled(() => scrollTo(want)); // scrolls again once the sections above have drawn, unless the reader has moved
   }, [want]);
   useEffect(() => {
     let frame = 0;

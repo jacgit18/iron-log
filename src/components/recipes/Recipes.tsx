@@ -1,30 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FilterSelect from '../FilterSelect.jsx';
+import ComboChips from './ComboChips.js';
 import FoodTypeReview from './FoodTypeReview.js';
 import Icon from '../Icon.js';
 import RecipeDetail from './RecipeDetail.js';
 import RecipeDetailPane, { useDetailPaneWidth } from './RecipeDetailPane.js';
 import RecipeNewMenu, { type NewChoice } from './RecipeNewMenu.js';
-import RecipeQuickRow from './RecipeQuickRow.js';
+import LibrarySignIn from './LibrarySignIn.js';
 import RecipeTypeTabs from './RecipeTypeTabs.js';
+import { useKept } from './useRecipesViewState.js';
 import ReadyMadeForm from './ReadyMadeForm.js';
 import RecipeForm from './RecipeForm.js';
+import '../Pill.css';
 import './Recipes.css';
 import './RecipeFind.css';
-import { hasMacros } from '../../lib/dietLog.js';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
 import { LIBRARY_TABS, inLibraryTab, inMine, libraryEmptyNote, libraryHave, type LibraryTab } from '../../lib/libraryRows.js';
+import { comboIds, comboTabCounts, expandedRows, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
-import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, haveBadge, inTab, librarySortedBy, recipeMeta, sortRecipes, tabCounts, typeTag, type RecipeTab } from '../../lib/recipeList.js';
+import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
-import { NUTRITION_FILTERS, nutritionBadge, type NutritionKey } from '../../lib/recipeNutrition.js';
+import { loggableRecipe, recentRows } from '../../lib/recipeRows.js';
+import { NUTRITION_FILTERS, nutritionBadge } from '../../lib/recipeNutrition.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { showSavedRecipe } from '../../lib/recipesViewState.js';
 import { pageOf } from '../../lib/route.js';
-import { isEatable } from '../../lib/recipeUses.js';
+import { takeRecipesJump } from '../../lib/recipesJump.js';
 import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import SortControl from '../SortControl.jsx';
@@ -39,8 +44,9 @@ import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
 // Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
 // ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
 type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'types' } | { kind: 'form'; id?: string; ready?: boolean; scan?: boolean; start?: { title: string; url: string } | null };
-const PANE_CHOICES = [{ key: 'auto', label: 'Beside the list' }, { key: 'closed', label: 'Page only' }] as const; // no control yet: e2e/fixtures.js stores 'closed' so older specs keep opening a recipe as a page
+const PANE_CHOICES = [{ key: 'auto', label: 'Beside the list' }, { key: 'closed', label: 'Page only' }] as const; // kept for the e2e specs only (no control; nothing in the app sets it): e2e/fixtures.js stores 'closed' so older specs keep opening a recipe as a page
 const FILTER_CHOICES = [{ key: 'closed', label: 'Closed' }, { key: 'open', label: 'Open' }] as const;
+const EMPTY_CHIPS = new Map<string, ComboChip[]>();
 const openedThisVisit: string[] = []; // recipes opened in the list this visit, newest last (Recent chips; not stored)
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
 
@@ -59,6 +65,7 @@ export default function Recipes() {
     if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind}`, page ? 'replace' : 'push');
   };
   useEffect(() => {
+    if (page === 'form' && view.kind === 'list') { const jump = takeRecipesJump(); if (jump && (jump.kind === 'new' || useAppStore.getState().recipes.some(r => r.id === jump.id))) { setViewNow(jump.kind === 'edit' ? { kind: 'form', id: jump.id } : { kind: 'form' }); return; } } // Nutrition's New recipe and Edit in Recipes buttons
     if (page === 'form' && view.kind === 'list') { const start = takeRecipeStart(); if (start) { setViewNow({ kind: 'form', start }); return; } } // New recipe with a shared link (the share sheet)
     if (page && view.kind === 'list') navigate('daily/recipes', 'replace'); // an address for a page with nothing to show
     if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
@@ -67,22 +74,25 @@ export default function Recipes() {
   }, [page, view]);
   // Opening a linked sauce is a page opened from a page: it pushes its own address, so Back returns to the recipe.
   const openLinked = (id: string, from: string) => { setViewNow({ kind: 'mine', id, from }); navigate('daily/recipes/mine/sauce', 'push'); };
-  const [src, setSrc] = useState<'mine' | 'library'>('mine');
-  const [q, setQ] = useState('');
-  const [tab, setTab] = useState<RecipeTab>('all');
+  // Kept while another Daily section is open and until reload (lib/recipesViewState.ts): the source, search, tabs, filters and the recipe in the pane.
+  const [src, setSrc] = useKept('src');
+  const [q, setQ] = useKept('q');
+  const [tab, setTab] = useKept('tab');
+  const [recent, setRecent] = useKept('recent'); // the Recent pill: favourites and recently used recipes instead of a type tab
   const [filtersChoice, setFiltersChoice] = useSortChoice('recipes-filters', FILTER_CHOICES, 'closed'); // closed until opened; remembered on this device
   const filtersOpen = filtersChoice === 'open';
-  const [selId, setSelId] = useState<string | null>(null); // the recipe in the detail pane (wide screens)
+  const [selId, setSelId] = useKept('selId'); // the recipe in the detail pane (wide screens)
   const [paneChoice] = useSortChoice('recipes-detail', PANE_CHOICES, 'auto');
   const pane = useDetailPaneWidth() && paneChoice === 'auto';
-  const [cat, setCat] = useState<RecipeCategory | null>(null);
-  const [canMake, setCanMake] = useState(false);
-  const [tagSel, setTagSel] = useState<string[]>([]);
-  const [nutSel, setNutSel] = useState<NutritionKey[]>([]);
+  const libSignedOut = src === 'library' && !syncing; // the Library needs the account: a prompt replaces the search box, tabs and filters
+  const [cat, setCat] = useKept('cat');
+  const [canMake, setCanMake] = useKept('canMake');
+  const [tagSel, setTagSel] = useKept('tagSel');
+  const [nutSel, setNutSel] = useKept('nutSel');
   const [mineSort, setMineSort] = useSortChoice('recipes', RECIPE_SORTS, DEFAULT_RECIPE_SORT);
   const [libSort, setLibSort] = useSortChoice('recipes-library', LIBRARY_SORTS, DEFAULT_LIBRARY_SORT);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
-  const [libTab, setLibTab] = useState<LibraryTab>('all');
+  const [libTab, setLibTab] = useKept('libTab');
   const [added, setAdded] = useState<{ id: string; name: string } | { error: string } | null>(null); // the last one-tap Add from the Library, for its Undo
   const [tries, setTries] = useState(0);
   const month = monthKey(new Date());
@@ -98,12 +108,23 @@ export default function Recipes() {
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
-  const counts = useMemo(() => tabCounts(narrowed), [narrowed]);
-  const shown = useMemo(() => sortRecipes(tab === 'all' ? narrowed : narrowed.filter(r => inTab(r, tab)), mineSort, recipes, makeable), [narrowed, tab, mineSort, recipes, makeable]);
+  const counts = useMemo(() => comboTabCounts(narrowed, recipes), [narrowed, recipes]); // the rows each tab shows: a combo is a chip on its parts, a row only in Meals (brief recipes-combo-chips)
   const libShown = useMemo(() => (lib.status === 'ready' ? lib.items.filter(it => inLibraryTab(it, libTab)) : []), [lib, libTab]);
   const libHave = useMemo(() => new Map(libShown.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libShown, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   const picks = quickPicks(recipes, diet, openedThisVisit); // read every render: the opened list lives outside React
-  const selected = shown.find(r => r.id === selId) ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
+  const recentOn = recent && picks.length > 0; // the pill is hidden, and Recent off, when nothing was starred, logged or opened
+  const combos = useMemo(() => comboIds(recipes), [recipes]);
+  const mineList = useMemo(() => mineRows(narrowed, recipes, tab), [narrowed, recipes, tab]);
+  const shown = recentOn ? recentRows(narrowed, picks) : sortRecipes(mineList.rows, mineSort, recipes, makeable);
+  const chipRows = recentOn ? EMPTY_CHIPS : mineList.chips; // Recent lists recipes as they are
+  // The rows with "+N more" pressed. Held here, not in the chip line, so they stay open while a combo's page replaces the list on a phone;
+  // folded when the tab changes (owner rule, 2026-11-14) or the row has nothing more to show. No search text, tab or filter is touched.
+  const [openChips, setOpenChips] = useState<{ tab: typeof tab; ids: readonly string[] }>({ tab, ids: [] });
+  const openIds = openChips.tab === tab ? expandedRows(openChips.ids, chipRows) : [];
+  if (openChips.tab !== tab || openIds.length !== openChips.ids.length) setOpenChips({ tab, ids: openIds });
+  const toggleChips = (id: string) => setOpenChips({ tab, ids: openIds.includes(id) ? openIds.filter(x => x !== id) : [...openIds, id] });
+  const chipped = recipes.find(r => r.id === selId && combos.has(r.id)); // a combo opened from a chip is in the pane although it is not a row
+  const selected = shown.find(r => r.id === selId) ?? chipped ?? shown[0]; // a deleted or filtered-out pick shows the list's first item
 
   useEffect(() => {
     if (src !== 'library' || !syncing) return;
@@ -122,24 +143,30 @@ export default function Recipes() {
   };
 
   const back = () => setView({ kind: 'list' });
+  const openCombo = (id: string) => { // a chip: the combo opens as it is, the list and its tab stay
+    if (pane) setSelId(id);
+    else { openedThisVisit.push(id); setView({ kind: 'mine', id }); }
+  };
   const openRecipe = (id: string) => {
     if (pane) { // a pick in the pane is not recorded as opened: the Recent chips would appear or reorder under the pointer and move the list
-      if (!shown.some(r => r.id === id)) setTab('all'); // a chip for a recipe the tab hides shows it under All
+      if (!shown.some(r => r.id === id)) { setTab('all'); setRecent(false); } // a pick the list hides shows it under All
       setSelId(id);
     } else { openedThisVisit.push(id); setView({ kind: 'mine', id }); }
   };
   const choose = (c: NewChoice) => {
-    if (c === 'library') { setSrc('library'); setNutSel([]); if (cat === 'ready') setCat(null); return; }
     if (c === 'food') setView({ kind: 'form', ready: true });
     else if (c === 'scan') setView({ kind: 'form', ready: true, scan: true });
-    else setView({ kind: 'form' }); // Build a meal and Write a recipe share the recipe form until meals-from-foods
+    else setView({ kind: 'form' }); // Recipe or meal: one form until meals-from-foods
   };
   const [typesUndo, setTypesUndo] = useState<(() => boolean) | null>(null); // Undo for the last "Looks right"; it belongs to this visit of the list
   const banner = untypedBanner(recipes);
   const backFromSauce = () => goUp('daily/recipes/mine'); // the address change shows the recipe it was opened from (effect above)
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
   if (view.kind === 'form') {
-    const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => { if (id) setView({ kind: 'mine', id }); else back(); };
+    const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => {
+      if (pane) { if (id) showSavedRecipe(id); else if (editing) setSelId(editing.id); back(); return; } // beside the list: back to the list with the recipe open in the pane
+      if (id) setView({ kind: 'mine', id }); else if (editing) setView({ kind: 'mine', id: editing.id }); else back(); // a phone: the recipe's page; Cancel from Edit returns to the recipe, from New to the list
+    };
     return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} {...(view.scan ? { scanFirst: true } : {})} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
   }
   if (view.kind === 'types') return <FoodTypeReview onDone={undo => { setTypesUndo(() => undo); back(); }} onBack={back} />;
@@ -158,36 +185,39 @@ export default function Recipes() {
     setAdded(err ? { error: err } : copy ? { id: copy.id, name: it.name } : null);
   };
 
-  const row = (key: string, title: string, meta: string, pill: string | null, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null, tag: string | null = null, fav = false, current = false, logId?: string, addIt?: () => void, mine = false) => (
-    <li key={key} className={`rc-item${current ? ' current' : ''}`}>
-      <button type="button" className="rc-row" onClick={open} aria-current={current ? 'true' : undefined}>
+  // One compact row (brief recipes-list-compact): name and star, then the type and the macro line; the same right-hand slot holds Log or + Add, or an arrow that opens the item.
+  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; mine?: boolean; open: () => void }) => (
+    <li key={o.key} className={`rc-item${o.current ? ' current' : ''}${o.chips?.length ? ' hascombos' : ''}`}>
+      <button type="button" className="rc-row" onClick={o.open} aria-current={o.current ? 'true' : undefined}>
         <span className="rc-main">
-          <span className="rc-title"><span><b id={`rc-t-${key}`}>{title}</b>{fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{pill && <span className="pill custom">{pill}</span>}{mine && <span className="rc-inmine" role="img" aria-label="In Mine"><Icon name="check" /></span>}{tag && <span className="rc-typetag">{tag}</span>}{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
-          <span className="rc-meta">{meta}</span>
+          <span className="rc-title"><b id={`rc-t-${o.key}`}>{o.title}</b>{o.fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{o.mine && <span className="rc-inmine" role="img" aria-label="In Mine"><Icon name="check" /></span>}{o.edited && <span className="rc-edited">Edited</span>}</span>
+          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}</span>
         </span>
-        {badge && <span className="rc-badge">{badge}</span>}
+        {!o.logId && !o.addIt && <span className="rc-go" aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
-      {logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: logId })}>Log</button>}
-      {addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add ${title}`} onClick={addIt}>+ Add</button>}
+      {o.logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${o.key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: o.logId! })}>Log</button>}
+      {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add ${o.title}`} onClick={o.addIt}>+ Add</button>}
+      {o.chips?.length ? <ComboChips food={o.title} chips={o.chips} expanded={openIds.includes(o.key)} onToggle={() => toggleChips(o.key)} onOpen={openCombo} /> : null}
     </li>
   );
 
   return (
     <section className="panel" aria-labelledby="recipes-h">
-      <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
-      <div className="seg" role="group" aria-label="Recipe source">
-        <button type="button" id="recipes-mine" className={src === 'mine' ? 'on' : ''} aria-pressed={src === 'mine'} onClick={() => setSrc('mine')}>Mine</button>
-        <button type="button" id="recipes-library" className={src === 'library' ? 'on' : ''} aria-pressed={src === 'library'} onClick={() => { setSrc('library'); setNutSel([]); if (cat === 'ready') setCat(null); }}>Library</button>
-      </div>
-      <div className="rc-top">
-        <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
+      <div className="rc-titlebar">
+        <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
+        <div className="rc-src" role="group" aria-label="Recipe source">
+          <button type="button" id="recipes-mine" className="pillbtn" aria-pressed={src === 'mine'} onClick={() => setSrc('mine')}>Mine</button>
+          <button type="button" id="recipes-library" className="pillbtn" aria-pressed={src === 'library'} onClick={() => { setSrc('library'); setNutSel([]); setRecent(false); if (cat === 'ready') setCat(null); }}>Library</button>
+        </div>
         {src === 'mine' && <RecipeNewMenu onChoose={choose} />}
       </div>
-      {src === 'mine' && <RecipeTypeTabs value={tab} counts={counts} onChange={setTab} />}
-      {src === 'library' && <RecipeTypeTabs value={libTab} onChange={t => setLibTab(t as LibraryTab)} tabs={LIBRARY_TABS} />}
-      {src === 'mine' && <RecipeQuickRow picks={picks} onOpen={openRecipe} />}
-      <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
-      <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
+      {!libSignedOut && <div className="rc-top">
+        <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
+        <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
+      </div>}
+      {src === 'mine' && <RecipeTypeTabs value={recentOn ? null : tab} counts={counts} onChange={t => { setRecent(false); setTab(t); }} {...(picks.length ? { recent: { on: recentOn, onToggle: () => setRecent(!recentOn) } } : {})} />}
+      {src === 'library' && !libSignedOut && <RecipeTypeTabs value={libTab} onChange={t => setLibTab(t as LibraryTab)} tabs={LIBRARY_TABS} />}
+      {!libSignedOut && <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
         <FilterSelect label="Category" value={cat ?? ''} onChange={v => setCat(v === '' ? null : v as RecipeCategory)}>
           <option value="">All categories</option>
           {chips.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
@@ -216,7 +246,7 @@ export default function Recipes() {
           {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
           {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
         </div>
-      </div>
+      </div>}
       <RemovedNotice scope="recipes" />
       {typesUndo && (
         <Notice kind="undo" className="removednote" expire={{ ms: UNDO_MS, onExpire: () => setTypesUndo(null) }} actions={[{ label: 'Undo', onClick: () => { typesUndo(); setTypesUndo(null); } }, { label: 'Dismiss', onClick: () => setTypesUndo(null), ghost: true }]}>
@@ -240,15 +270,13 @@ export default function Recipes() {
             <EmptyTiles heading="Add your first recipe" tiles={[
               { id: 'rc-tile-new', label: 'Write a recipe', hint: 'Your own, ingredient by ingredient', onClick: () => setView({ kind: 'form' }) },
               { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setSrc('library') },
-              { id: 'rc-tile-ready', label: 'Add a ready-made food', hint: 'A packaged food with its nutrition', onClick: () => setView({ kind: 'form', ready: true }) },
             ]} />
           )}
-          {recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
+          {recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
           <div className={pane ? 'rc-split' : undefined}>
-            <ul className={`rc-list rc-cards${pane ? ' rc-narrow' : ''}`}>
+            <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
-                const have = haveBadge(status.get(r.id)!);
-                return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => openRecipe(r.id), !!r.edited, nutritionBadge(r), typeTag(r), !!r.fav, pane && selected?.id === r.id, hasMacros(r) && isEatable(r) ? r.id : undefined);
+                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
             {pane && recipes.length > 0 && <RecipeDetailPane recipe={selected} onEdit={id => setView({ kind: 'form', id })} onGone={() => setSelId(null)} onOpen={setSelId} />}
@@ -258,7 +286,7 @@ export default function Recipes() {
 
       {src === 'library' && (
         <>
-          {!syncing && <p className="note">Sign in to browse the recipe library.</p>}
+          {libSignedOut && <LibrarySignIn />}
           {syncing && lib.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
           {syncing && lib.status === 'failed' && <p className="note gerr" role="alert">{lib.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
           {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
@@ -268,7 +296,7 @@ export default function Recipes() {
               <ul className="rc-list rc-cards">
                 {libShown.map(it => {
                   const have = libHave.get(it.id) ?? null, mine = inMine(it, recipes);
-                  return row(it.id, it.name, recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), null, have ? `${have.text} at home` : null, !!have?.all, () => setView({ kind: 'library', item: it }), false, null, null, false, false, undefined, mine ? undefined : () => addFromLibrary(it), mine);
+                  return row({ key: it.id, title: it.name, meta: recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), have: have ? `${have.text} at home` : null, haveAll: !!have?.all, mine, ...(mine ? {} : { addIt: () => addFromLibrary(it) }), open: () => setView({ kind: 'library', item: it }) });
                 })}
               </ul>
               {lib.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { openNutrition, openSupplementEditor } from './nutritionBoardHelpers.js';
+import { expectScheduledAt, openNutrition, openSupplementEditor } from './nutritionBoardHelpers.js';
 
 // Brief supplement-add-redesign: one add sheet on Manage, one search over yours and the catalog, results that tell two label years of one product apart, the label before Add, one time of day,
 // and Back closing the sheet. The result line, the add plan and the import mapping are node tests (supplementResultLine.test.ts, supplementAddPlan.test.ts, catalogImport.test.ts); this covers the wiring a
@@ -71,18 +71,33 @@ test('Add saves the product with its amounts in the chosen time of day, and addi
   await sheet(page).getByRole('button', { name: /2020 label/ }).click();
   await expect(sheet(page).locator('.lblrows')).toContainText('15 mg');
   await sheet(page).getByLabel('Morning').check();
+  await sheet(page).getByLabel('Night').check();
+  await sheet(page).getByLabel('Library only').check(); // Library only stands alone: it clears the times
+  await expect(sheet(page).getByLabel('Morning')).not.toBeChecked(); await expect(sheet(page).getByLabel('Night')).not.toBeChecked();
+  await sheet(page).getByLabel('Morning').check(); // and a time clears Library only
+  await expect(sheet(page).getByLabel('Library only')).not.toBeChecked();
+  await sheet(page).getByLabel('Night').check();
   await page.fill('#suppadd-dose', '1 tab');
-  await page.click('#suppadd-go');
+  await page.click('#suppadd-go'); // Morning and Night in one press of Add
   await expect(sheet(page)).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Fish Oil1 g', 'Mega Men1 tab']);
+  await expectScheduledAt(page, 'Morning', ['Fish Oil1 g', 'Mega Men1 tab']);
+  await expectScheduledAt(page, 'Night', ['Mega Men1 tab']);
   await page.locator('#suplib-add').click();
   await sheet(page).locator('#suppadd-q').fill('mega');
   await sheet(page).getByRole('button', { name: /^Mega Men.*Library/ }).click();
-  await sheet(page).getByLabel('Night').check();
+  await sheet(page).getByLabel('Morning').uncheck();
+  await sheet(page).getByLabel('Noon').check();
   await page.click('#suppadd-go');
-  await expect(page.getByRole('group', { name: 'Night' }).locator('.srow')).toContainText(['Mega Men1 tab']);
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Fish Oil1 g', 'Mega Men1 tab']);
-  await page.getByRole('button', { name: 'Edit Mega Men in Night' }).click();
+  await expectScheduledAt(page, 'Noon', ['Mega Men1 tab']);
+  await expectScheduledAt(page, 'Morning', ['Fish Oil1 g', 'Mega Men1 tab']);
+  const source = page.getByLabel('Source'); // both a Library and a Custom supplement are listed, so the Source filter appears
+  await source.selectOption('library');
+  await expect(page.locator('.exlib .exrow')).toHaveCount(1);
+  await expect(page.locator('.exlib .exrow').first()).toContainText('Mega Men');
+  await source.selectOption('custom');
+  await expect(page.locator('.exlib .exrow').first()).toContainText('Fish Oil');
+  await source.selectOption('');
+  await page.getByRole('button', { name: 'Edit Mega Men' }).click();
   await expect(page.getByLabel('Amount 1')).toHaveValue('15'); // the label's amounts came along
 });
 
@@ -96,7 +111,7 @@ test('a failed label lookup still adds, with a Try again', async ({ page }) => {
   await expect(sheet(page).getByRole('button', { name: 'Try again' })).toBeVisible();
   await page.click('#suppadd-go');
   await expect(sheet(page)).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Mega Men']);
+  await expectScheduledAt(page, 'Morning', ['Mega Men']);
 });
 
 test('a name with no match adds as a new supplement', async ({ page }) => {
@@ -106,7 +121,7 @@ test('a name with no match adds as a new supplement', async ({ page }) => {
   await expect(sheet(page).getByText('No match.')).toBeVisible();
   await expect(sheet(page).getByRole('button', { name: /Add “Zzyzx tonic” as a new supplement/ })).toBeVisible();
   await page.click('#suppadd-go');
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Fish Oil1 g', 'Zzyzx tonic']);
+  await expectScheduledAt(page, 'Morning', ['Fish Oil1 g', 'Zzyzx tonic']);
 });
 
 test('the sheet adds one Back step: Back closes it onto Manage, and a reload returns to the board', async ({ page }) => {
@@ -133,6 +148,7 @@ test('the full form opens with what was typed, the time of day and the dose', as
   await open(page);
   await page.locator('#suplib-add').click();
   await sheet(page).locator('#suppadd-q').fill('Zzyzx tonic');
+  await sheet(page).getByLabel('Morning').uncheck(); // the times are checkboxes now: Morning is on by default
   await sheet(page).getByLabel('Night').check();
   await page.fill('#suppadd-dose', '2 drops');
   await page.click('#suppadd-full');
@@ -183,5 +199,5 @@ test('without syncing, the sheet adds your own supplement and says there is no c
   await expect(sheet(page).getByText('No catalog here: this device keeps its own supplements only.')).toBeVisible();
   await page.click('#suppadd-go');
   await expect(sheet(page)).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Local tonic']);
+  await expectScheduledAt(page, 'Morning', ['Local tonic']);
 });

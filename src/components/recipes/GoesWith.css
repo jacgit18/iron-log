@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* Goes with (GoesWith.tsx): partners as a list of rows, each name, Make a meal and Remove at 44px, wrapping on a phone. */
+/* Goes with (GoesWith.tsx): partners as a list of rows, each a name, a quiet Make a meal text link and Remove, with 44px targets. */
 .rc-goes select {
   min-height: 44px;
   max-width: 100%;
@@ -14,15 +14,33 @@
 }
 .rc-goeslist li {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-6);
 }
 .rc-goeslist .btn {
   min-height: 44px;
 }
+.rc-goesmake {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--sp-6);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+@media (hover:hover) {
+  .rc-goesmake:hover {
+    text-decoration-thickness: 2px;
+  }
+}
 .rc-goesname {
-  flex: 1 1 8rem;
+  flex: 1 1 4rem;
+  min-width: 0;
   justify-content: flex-start;
   font-weight: 600;
   text-align: left;

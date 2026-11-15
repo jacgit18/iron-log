@@ -18,17 +18,7 @@
 .ftr-row b {
   overflow-wrap: anywhere;
 }
-.ftr-row .seg,
-.rc-type .seg {
+.ftr-row .seg {
   margin-left: 0;
-}
-.rc-type {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-}
-.rc-type .seg {
-  align-self: flex-start;
-  flex-wrap: wrap;
 }
 }

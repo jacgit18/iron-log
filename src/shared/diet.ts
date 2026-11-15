@@ -1,8 +1,9 @@
-import type { DietCfg, DietEntry, PlanItem, PlanSlot, SavedItem, SavedMeal } from '../types.ts';
+import type { DailySnack, DietCfg, DietEntry, PlanItem, PlanSlot, SavedItem, SavedMeal } from '../types.ts';
 import { addDays, parseDate, ymd } from './dates.js';
 import { cleanMicro } from './foodMicro.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
+import { keepUnknownKeys } from './unknownKeys.js';
 import { validDate } from './validate.js';
 
 /* ---------- Diet shapes: one thing you ate, and the targets you typed (ADR 086) ----------
@@ -69,9 +70,41 @@ export function normMealsMoved(v: unknown): Record<string, string> {
 }
 
 /** The meals of a day, in order (brief week-board). */
-export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
-export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8;
+export const MAX_PLAN_AHEAD = 13, MAX_PLAN_ITEMS = 8, MAX_DAILY_SNACKS = 6;
+/** The most a day can store: MAX_PLAN_ITEMS planned things plus a listed daily snack each (brief snacks-day-cap). The cleaner keeps up to this, so a snack ticked on a full day is never dropped, even after it leaves the list. */
+export const MAX_DAY_ITEMS = MAX_PLAN_ITEMS + MAX_DAILY_SNACKS;
+
+/** A portion in half steps from 0.5 to 10, or null when it is 1 (stored as no `x`) or unusable. */
+const portionOf = (x: unknown): number | null => (fin(x) && x >= 0.5 && x <= 10 && x * 2 === Math.round(x * 2) && x !== 1 ? x : null);
+
+/** The daily snack list of a stored value, cleaned: recipe ids only, a repeated one dropped, at most MAX_DAILY_SNACKS. */
+export function normSnacks(v: unknown): DailySnack[] {
+  const out: DailySnack[] = [];
+  for (const raw of Array.isArray(v) ? v : []) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const o = raw as Record<string, unknown>, id = str(o.id, MAX_DIET_ID), x = portionOf(o.x);
+    if (!id || out.some(s => s.id === id) || out.length >= MAX_DAILY_SNACKS) continue;
+    out.push({ id, ...(x !== null ? { x } : {}) });
+  }
+  return out;
+}
+
+/** The skips of a stored value, cleaned: real dates, at most MAX_DAILY_SNACKS ids a day, none empty. With `today` the plan window is applied, as for the plan. */
+export function normSnackSkips(v: unknown, today?: string): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const lo = today && validDate(today) ? today : null;
+  const hi = lo ? ymd(addDays(parseDate(lo), MAX_PLAN_AHEAD)) : null;
+  for (const d of Object.keys(v as object).sort()) {
+    if (!validDate(d) || (lo && d < lo) || (hi && d > hi)) continue;
+    const raw = (v as Record<string, unknown>)[d];
+    const ids = [...new Set((Array.isArray(raw) ? raw : []).map(x => str(x, MAX_DIET_ID)).filter((x): x is string => !!x))].slice(0, MAX_DAILY_SNACKS);
+    if (ids.length) out[d] = ids;
+  }
+  return out;
+}
 
 /** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1). */
 export function normPlanItem(x: unknown): PlanItem | null {
@@ -82,7 +115,8 @@ export function normPlanItem(x: unknown): PlanItem | null {
   const x2 = o.x;
   const ok = o.k === 'r' && fin(x2) && x2 >= 0.5 && x2 <= 10 && x2 * 2 === Math.round(x2 * 2) && x2 !== 1;
   const slot = PLAN_SLOTS.find(t => t === o.s);
-  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}) };
+  const eaten = Array.isArray(o.e) ? [...new Set(o.e.map(v => str(v, MAX_DIET_ID)).filter((v): v is string => !!v))].slice(0, MAX_DIET_PER_DAY) : [];
+  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}), ...(eaten.length ? { e: eaten } : {}) };
 }
 
 /** Whether two planned items are the same food in the same meal; "no meal" is a meal of its own, so the same food may sit untagged and in a meal. */
@@ -90,7 +124,12 @@ export const samePlanItem = (a: PlanItem, b: PlanItem): boolean => a.k === b.k &
 /** A key for one planned item among its day's items (a day never holds two that `samePlanItem` matches). */
 export const planItemKey = (i: PlanItem): string => JSON.stringify([i.k, i.id, i.s ?? '']);
 
-/** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS a day, a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
+/** Whether a stored item is a listed daily snack: a recipe in Snack whose id is on the daily list. Such an item never counts toward MAX_PLAN_ITEMS; one left on a day after its snack leaves the list counts as planned again. */
+export const isDailySnackItem = (i: PlanItem, snacks: readonly { id: string }[] | undefined): boolean => i.k === 'r' && i.s === 'snack' && !!snacks?.some(s => s.id === i.id);
+/** How many of a day's stored items count toward MAX_PLAN_ITEMS: all but its listed daily snacks. */
+export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined): number => items.filter(i => !isDailySnackItem(i, snacks)).length;
+
+/** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS a day outside Snack and MAX_DAY_ITEMS in all (the exact planned count needs the daily list, so `addItem` and `moveItem` hold it; a ticked daily snack survives here), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {
   const out: Record<string, PlanItem[]> = {};
   if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
@@ -101,7 +140,7 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
     const items: PlanItem[] = [];
     for (const raw of Array.isArray((v as Record<string, unknown>)[d]) ? (v as Record<string, unknown[]>)[d]! : []) {
       const it = normPlanItem(raw);
-      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_PLAN_ITEMS) continue; // the same food may be in two different meals of a day
+      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_DAY_ITEMS || (it.s !== 'snack' && items.filter(x => x.s !== 'snack').length >= MAX_PLAN_ITEMS)) continue; // the cleaner does not know the daily list, so it keeps what the app can have stored: at most 8 outside Snack and MAX_DAY_ITEMS in all (a ticked snack is never dropped). The same food may be in two different meals of a day
       items.push(it);
     }
     if (items.length) out[d] = items;
@@ -111,6 +150,9 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
 
 /** The hour of day an entry was added, as stored: a whole number from 0 to 23, or null. */
 export const cleanHour = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23 ? v : null);
+
+/** The portions an entry's totals are for as stored: 0.5 to 99, two decimals, or null. */
+export const cleanPortion = (v: unknown): number | null => (fin(v) && v >= 0.5 && v <= 99 ? Math.round(v * 100) / 100 : null);
 
 /** One entry, cleaned. Null without an id, a real date, a name, or numbers in range. */
 export function normDietEntry(x: unknown): DietEntry | null {
@@ -122,7 +164,8 @@ export function normDietEntry(x: unknown): DietEntry | null {
   const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f); // optional: an unusable one is left out
   const t = cleanHour(o.t); // optional too
   const micro = cleanMicro(o.micro); // vitamins and minerals as eaten; unusable keys are dropped, none left means no field
-  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}) };
+  const xp = cleanPortion(o.x); // the portions the totals are for; optional
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}), ...(xp !== null ? { x: xp } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */
@@ -159,7 +202,10 @@ export function targetError(key: TargetKey, value: number | null): string | null
 export const MIN_RATE = 0.1, MAX_RATE = 3; // lb a week you may type for Custom (the app holds you to its own limit when it works out the calories)
 export const rateError = (v: number | null): string | null => (v !== null && Number.isFinite(v) && v >= MIN_RATE && v <= MAX_RATE ? null : `Pace must be ${MIN_RATE} to ${MAX_RATE} lb a week.`);
 
-/** The targets you typed and your pace pick (`cfg.diet`): only the keys that are in range survive; undefined when none do. */
+/** Every key `normDietCfg` cleans itself; a key it adds must be listed here (a test fails otherwise), or a bad value of it would pass through as an unknown key. */
+export const DIET_KEYS = ['kcal', 'protein', 'carbs', 'fat', 'pace', 'rate', 'meals', 'mealsMoved', 'plan', 'snacks', 'snackSkips'] as const;
+
+/** The targets you typed and your pace pick (`cfg.diet`): only the keys that are in range survive; undefined when none do. Keys this build does not know are kept when they are safe bounded JSON (ADR 122), so an older build does not erase a newer one's. */
 export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const o = v as Record<string, unknown>;
@@ -173,5 +219,10 @@ export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   if (Object.keys(moved).length) out.mealsMoved = moved;
   const plan = normPlan(o.plan, today);
   if (Object.keys(plan).length) out.plan = plan;
+  const snacks = normSnacks(o.snacks);
+  if (snacks.length) out.snacks = snacks;
+  const skips = normSnackSkips(o.snackSkips, today);
+  if (Object.keys(skips).length) out.snackSkips = skips;
+  Object.assign(out, keepUnknownKeys(o, DIET_KEYS));
   return Object.keys(out).length ? out : undefined;
 }

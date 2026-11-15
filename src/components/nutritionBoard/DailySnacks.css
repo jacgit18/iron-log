@@ -1,0 +1,32 @@
+@layer base, components;
+@layer components {
+/* The Daily snacks sheet (brief daily-snacks): one row per snack with its calories and portion, Less, More and Remove; the picker lists recipes and foods with an Add button. */
+.nb-snacklist {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nb-snackrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6) var(--sp-8);
+  padding: var(--sp-8) 0;
+  border-top: 1px solid var(--line);
+}
+.nb-snackname {
+  display: grid;
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.nb-snackname small {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.nb-snackstep {
+  display: inline-flex;
+  gap: var(--sp-4);
+}
+}

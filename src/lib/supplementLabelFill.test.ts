@@ -13,12 +13,12 @@ describe('planFill: adding a catalog supplement (nothing there yet)', () => {
   it('every tracked label row is new, and the countable serving is saved with its form', () => {
     const p = planFill({}, gummies);
     expect(p.lines.map(l => [l.key, l.change])).toEqual([['vitaminD', 'new'], ['sodium', 'new']]);
-    expect(p.result).toEqual({ nutrients: gummies.rows, serving: { units: 2, form: 'Gummy' } });
+    expect(p.result).toEqual({ nutrients: gummies.rows, ingredients: [], serving: { units: 2, form: 'Gummy' } });
     expect(p.changes).toBe(true);
   });
   it('a liquid serving saves no serving size', () => {
     const p = planFill({}, ddrops);
-    expect(p.result).toEqual({ nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }] });
+    expect(p.result).toEqual({ nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }], ingredients: [] });
     expect(p.serving).toBeUndefined();
     expect(servingWords(ddrops)).toContain('1 drop');
   });
@@ -44,7 +44,7 @@ describe('planFill: the eight added nutrients (brief supplement-more-nutrients)'
 
 describe('planFill: Fill from label on a supplement in the library (Done when 3)', () => {
   const typed = { nutrients: [{ key: 'vitaminD' as const, amount: 25, unit: 'mcg' as const }, { key: 'vitaminK' as const, amount: 90, unit: 'mcg' as const }, { key: 'zinc' as const, amount: 11, unit: 'mg' as const }], serving: { units: 1, form: 'Capsule' } };
-  const label: SupplementLabel = { name: 'x', serving: { text: '2 gummies', units: 2, form: 'Gummy' }, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'zinc', amount: 11, unit: 'mg' }], other: [] };
+  const label: SupplementLabel = { name: 'x', serving: { text: '2 gummies', units: 2, form: 'Gummy' }, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'zinc', amount: 11, unit: 'mg' }], ingredients: [], other: [] };
   it('shows what is replaced, what is the same and what is kept', () => {
     const p = planFill(typed, label);
     expect(Object.fromEntries(p.lines.map(l => [l.key, l.change]))).toEqual({ vitaminD: 'replace', zinc: 'same', vitaminK: 'kept' });
@@ -71,7 +71,7 @@ describe('planFill: Fill from label on a supplement in the library (Done when 3)
   });
   it('says there is nothing to change when the supplement already matches, or the label has no tracked amounts', () => {
     expect(planFill({ nutrients: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }, { key: 'sodium', amount: 10, unit: 'mg' }], serving: { units: 2, form: 'Gummy' } }, gummies).changes).toBe(false);
-    expect(planFill({}, { name: 'x', serving: null, rows: [], other: [{ name: 'Thiamine', amount: 5, unit: 'mg' }] }).changes).toBe(false);
+    expect(planFill({}, { name: 'x', serving: null, rows: [], ingredients: [], other: [{ name: 'Thiamine', amount: 5, unit: 'mg' }] }).changes).toBe(false);
   });
   it('never makes more rows than a supplement may hold', () => {
     const p = planFill({}, mega);
@@ -85,9 +85,30 @@ describe('the "Also on the label" lines', () => {
     expect(otherLine({ name: 'Calories', amount: 15, unit: 'Calorie(s)' })).toEqual({ name: 'Calories', amount: '15 Calorie(s)' });
   });
   it('show at most 40 and count the rest', () => {
-    const many: SupplementLabel = { name: 'x', serving: null, rows: [], other: Array.from({ length: 55 }, (_, i) => ({ name: `n${i}` })) };
+    const many: SupplementLabel = { name: 'x', serving: null, rows: [], ingredients: [], other: Array.from({ length: 55 }, (_, i) => ({ name: `n${i}` })) };
     const s = otherShown(many);
     expect(s.lines).toHaveLength(40); expect(s.more).toBe(15);
     expect(servingWords(many)).toBe('not stated');
+  });
+});
+
+describe('planFill: active ingredients (brief supplement-active-ingredients, PR 2)', () => {
+  const fish: SupplementLabel = { name: 'Fish oil', serving: null, rows: [], ingredients: [{ name: 'Omega-3', amount: 2000, unit: 'mg' }, { name: 'EPA', amount: 1500, unit: 'mg' }, { name: 'DHA', amount: 500, unit: 'mg' }], other: [{ name: 'Fish Oil', amount: 4.5, unit: 'Gram(s)' }] };
+  it('a new supplement gets omega-3, EPA and DHA as three own rows, and the blend weight stays only on the label', () => {
+    const p = planFill({}, fish);
+    expect(p.result.ingredients).toEqual(fish.ingredients);
+    expect(p.ingredientLines.map(l => [l.name, l.change])).toEqual([['Omega-3', 'new'], ['EPA', 'new'], ['DHA', 'new']]);
+    expect(p.changes).toBe(true);
+  });
+  it('Fill from label compares: replaced, same, and a row the label lacks is kept (typed spelling merges with the curated one)', () => {
+    const p = planFill({ ingredients: [{ name: 'omega-3', amount: 1000, unit: 'mg' }, { name: 'EPA', amount: 1500, unit: 'mg' }, { name: 'Caffeine', amount: 50, unit: 'mg' }] }, fish);
+    expect(Object.fromEntries(p.ingredientLines.map(l => [l.name, l.change]))).toEqual({ 'Omega-3': 'replace', EPA: 'same', DHA: 'new', Caffeine: 'kept' });
+    expect(p.result.ingredients).toEqual([...fish.ingredients, { name: 'Caffeine', amount: 50, unit: 'mg' }]);
+  });
+  it('a label row replaces the name in every unit it had; nothing to change when they already match', () => {
+    const p = planFill({ ingredients: [{ name: 'Creatine', amount: 5, unit: 'g' }, { name: 'Creatine', amount: 5000, unit: 'mg' }] }, { ...fish, ingredients: [{ name: 'Creatine', amount: 5, unit: 'g' }] });
+    expect(p.result.ingredients).toEqual([{ name: 'Creatine', amount: 5, unit: 'g' }]);
+    expect(p.ingredientLines[0].change).toBe('replace');
+    expect(planFill({ ingredients: fish.ingredients }, fish).changes).toBe(false);
   });
 });

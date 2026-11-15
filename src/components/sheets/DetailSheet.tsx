@@ -8,6 +8,7 @@ import { volText, AUTO_NOTE } from '../../lib/logic.js';
 import { entryId, findEntry } from '../../lib/entryMerge.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.jsx';
 import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
@@ -50,7 +51,7 @@ export default function DetailSheet({ exId }: { exId: string }) {
               <td role="cell">{e.n || (e.auto ? AUTO_NOTE : '')}</td>
               <td role="cell" className="nowrap">
                 <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => setEditing(e)}>Edit</button>{' '}
-                <ArmedButton className={`btn sm ${arming === `${entryId(e)}-${i}` ? 'danger' : 'ghost'}`} aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? `${entryId(e)}-${i}` : null)} onConfirm={() => { setArming(null); setEditing(null); deleteLog(exId, e); }} />
+                <ArmedButton className={`btn sm ${arming === `${entryId(e)}-${i}` ? 'danger' : 'ghost'}`} aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label={<Icon name="close" />} armedLabel="Delete?" onArmedChange={a => setArming(a ? `${entryId(e)}-${i}` : null)} onConfirm={() => { setArming(null); setEditing(null); deleteLog(exId, e); }} />
               </td>
             </tr>
           ))}

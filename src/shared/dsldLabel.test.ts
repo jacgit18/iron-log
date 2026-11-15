@@ -13,6 +13,11 @@ const momBaby = mapDsldLabel(fixture('dsld-288124-mom-baby-multi.json'))!;
 const everyMan = mapDsldLabel(fixture('dsld-40175-every-man-ii.json'))!;
 const vegan = mapDsldLabel(fixture('dsld-57549-vegan-multi.json'))!;
 const acetylCholine = mapDsldLabel(fixture('dsld-242191-acetyl-choline.json'))!;
+// Brief supplement-active-ingredients PR 2: trimmed copies of live labels (read 2026-11-10 from /dsld/v9/label/<id>).
+const fishExtra = mapDsldLabel(fixture('dsld-65530-fish-oil-extra-strength.json'))!;
+const fishUltra = mapDsldLabel(fixture('dsld-75577-fish-oil-ultra-potency.json'))!;
+const creatine = mapDsldLabel(fixture('dsld-205180-creatine-monohydrate.json'))!;
+const caffeine = mapDsldLabel(fixture('dsld-323467-caffeine-capsule.json'))!;
 const row = (l: { rows: { key: string; amount: number; unit: string }[] }, key: string) => l.rows.find(r => r.key === key);
 
 describe('mapDsldLabel on real DSLD labels', () => {
@@ -120,6 +125,58 @@ describe('mapDsldLabel on real DSLD labels', () => {
     const l = mapDsldLabel({ ingredientRows: [{ name: 'Calcium', ingredientGroup: 'Calcium', category: 'mineral', quantity: [{ quantity: 5, unit: 'IU' }] }] })!;
     expect(l.rows).toEqual([]);
     expect(l.other).toEqual([{ name: 'Calcium', amount: 5, unit: 'IU' }]);
+  });
+});
+
+describe('mapDsldLabel: active ingredients on real DSLD labels (brief supplement-active-ingredients)', () => {
+  it('Omega-3 Extra Strength EPA (65530): omega-3, EPA and DHA are three rows read from under the Fish Oil row; the 4.5 g blend weight, calories and fat stay under Also on the label', () => {
+    expect(fishExtra.ingredients).toEqual([{ name: 'Omega-3', amount: 2, unit: 'g' }, { name: 'EPA', amount: 1.5, unit: 'g' }, { name: 'DHA', amount: 500, unit: 'mg' }]);
+    expect(fishExtra.other.map(o => o.name)).toContain('Fish Oil');
+    expect(fishExtra.other.find(o => o.name === 'Fish Oil')).toEqual({ name: 'Fish Oil', amount: 4.5, unit: 'Gram(s)' });
+    expect(fishExtra.other.map(o => o.name)).not.toEqual(expect.arrayContaining(['Omega-3 Fatty Acids']));
+    expect(fishExtra.serving).toEqual({ text: '4 Softgels', units: 4, form: 'Softgel' });
+  });
+  it('Ultra Potency Omega-3 (75577): EPA 450 mg and DHA 340 mg are saved; "Other Omega-3 Fatty Acids" (60 mg) is not the omega-3 total, so no Omega-3 row is made', () => {
+    expect(fishUltra.ingredients).toEqual([{ name: 'EPA', amount: 450, unit: 'mg' }, { name: 'DHA', amount: 340, unit: 'mg' }]);
+    expect(fishUltra.ingredients.some(i => i.name === 'Omega-3')).toBe(false);
+    expect(fishUltra.other.find(o => o.name === 'ArcticPure Fish Oil Concentrate')).toEqual({ name: 'ArcticPure Fish Oil Concentrate', amount: 1.25, unit: 'Gram(s)' });
+  });
+  it('Creatine Monohydrate (205180): group "Creatine", 5 g, saved as g', () => {
+    expect(creatine.ingredients).toEqual([{ name: 'Creatine', amount: 5, unit: 'g' }]);
+    expect(creatine.rows).toEqual([]); expect(creatine.other).toEqual([]);
+  });
+  it('a caffeine capsule (323467): row name "PurCaf" under group "Caffeine", 200 mg', () => {
+    expect(caffeine.ingredients).toEqual([{ name: 'Caffeine', amount: 200, unit: 'mg' }]);
+    expect(caffeine.other).toEqual([]);
+  });
+  it('the omega-3 total under a blend is read; the blend weight, the "EPA/DHA" blend line and ALA stay listed (26562 shape)', () => {
+    const l = mapDsldLabel({ ingredientRows: [{ name: 'Omega Fatty Acid Blend', category: 'blend', ingredientGroup: 'Blend (Fatty Acid or Fat/Oil Supplement)', quantity: [{ quantity: 300, unit: 'mg' }], nestedRows: [
+      { name: 'Total Omega-3 Fatty Acids', category: 'fatty acid', ingredientGroup: 'Omega-3', quantity: [{ quantity: 100, unit: 'mg' }] },
+      { name: 'EPA/DHA', category: 'blend', ingredientGroup: 'Blend (Fatty Acid or Fat/Oil Supplement)', quantity: [{ quantity: 50, unit: 'mg' }] },
+      { name: 'ALA', category: 'non-nutrient/non-botanical', ingredientGroup: 'Alpha Lipoic Acid', quantity: [{ quantity: 50, unit: 'mg' }] }] }] })!;
+    expect(l.ingredients).toEqual([{ name: 'Omega-3', amount: 100, unit: 'mg' }]);
+    expect(l.other).toEqual([{ name: 'Omega Fatty Acid Blend', amount: 300, unit: 'mg' }, { name: 'EPA/DHA', amount: 50, unit: 'mg' }, { name: 'ALA', amount: 50, unit: 'mg' }]);
+  });
+  it('an ingredient with no stated amount is not saved as a row; the first row of a name wins; a mass-less unit is refused', () => {
+    const l = mapDsldLabel({ ingredientRows: [
+      { name: 'Caffeine', ingredientGroup: 'Caffeine', category: 'x', quantity: [{ quantity: 0, unit: 'NP' }] },
+      { name: 'Creatine Monohydrate', ingredientGroup: 'Creatine', category: 'x', quantity: [{ quantity: 3, unit: 'g' }] },
+      { name: 'Creatine HCl', ingredientGroup: 'Creatine', category: 'x', quantity: [{ quantity: 1, unit: 'g' }] },
+      { name: 'Caffeine', ingredientGroup: 'Caffeine', category: 'x', quantity: [{ quantity: 2, unit: 'Billion CFU' }] }] })!;
+    expect(l.ingredients).toEqual([{ name: 'Creatine', amount: 3, unit: 'g' }]);
+    expect(l.other.map(o => o.name)).toEqual(['Caffeine', 'Creatine HCl', 'Caffeine']);
+  });
+  it('a refused duplicate inside a blend stays listed, and an implausible amount (200 g of caffeine) is refused by the cleaner', () => {
+    const l = mapDsldLabel({ ingredientRows: [{ name: 'Blend', category: 'blend', ingredientGroup: 'Blend', quantity: [{ quantity: 1, unit: 'g' }], nestedRows: [
+      { name: 'Total Omega-3', ingredientGroup: 'Omega-3', quantity: [{ quantity: 100, unit: 'mg' }] }, { name: 'Omega-3 again', ingredientGroup: 'Omega-3', quantity: [{ quantity: 50, unit: 'mg' }] }] }] })!;
+    expect(l.ingredients).toEqual([{ name: 'Omega-3', amount: 100, unit: 'mg' }]);
+    expect(l.other.map(o => o.name)).toEqual(['Blend', 'Omega-3 again']);
+    expect(cleanSupplementLabel({ name: 'x', serving: null, rows: [], other: [], ingredients: [{ name: 'Caffeine', amount: 200, unit: 'g' }, { name: 'Caffeine', amount: 200, unit: 'mg' }] })!.ingredients).toEqual([{ name: 'Caffeine', amount: 200, unit: 'mg' }]);
+  });
+  it('the cleaner keeps curated ingredients only and tolerates a label cached before the field existed', () => {
+    const c = cleanSupplementLabel({ name: 'x', serving: null, rows: [], other: [], ingredients: [{ name: ' epa ', amount: 400, unit: 'mg' }, { name: 'Ashwagandha', amount: 300, unit: 'mg' }, { name: 'DHA', amount: -1, unit: 'mg' }, { name: 'DHA', amount: 200, unit: 'ppm' }, { name: 'EPA', amount: 1, unit: 'g' }] })!;
+    expect(c.ingredients).toEqual([{ name: 'EPA', amount: 400, unit: 'mg' }]);
+    expect(cleanSupplementLabel({ name: 'x', serving: null, rows: [], other: [] })!.ingredients).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, editEaten, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief food-vitamins-minerals, PR A: vitamins and minerals from a lookup ride along to the logged food. Nothing shows them yet (the Totals sheet follows in PR B), so this reads the saved
 // food log. The vendor maps, scaling, caps and the copy and re-log paths are node tests (shared/foodMicro.test.ts, lib/foodMicroFlow.test.ts); this covers the wiring a node test cannot:
@@ -46,13 +46,13 @@ test('editing an eaten food keeps its vitamins and minerals, and changing its ca
   await sheet.getByRole('button', { name: 'Add', exact: true }).click();
   await closeSheet(page);
   const [e] = await stored(page);
-  await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
+  await editEaten(page);
   await page.locator(`#nb-e-${e.id}-n`).fill('Spinach, fresh');
   await page.getByRole('button', { name: 'Save' }).click();
   const [renamed] = await stored(page);
   expect(renamed.n).toBe('Spinach, fresh');
   expect(renamed.micro).toEqual({ calcium: 100, iron: 2 }); // a rename keeps them
-  await todayCol(page).getByRole('button', { name: /^Edit/ }).first().click();
+  await editEaten(page);
   await page.locator(`#nb-e-${e.id}-k`).fill('110');
   await page.getByRole('button', { name: 'Save' }).click();
   const [after] = await stored(page);

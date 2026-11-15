@@ -93,16 +93,12 @@
 }
 
 /* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed get a thin, soft accent outline that fades away, and on a
-   phone the two day tabs a faint tint, so the change is noticeable without shouting. Under reduced motion there is no fade: the outline just
+   phone the two day tabs a faint tint (WeekDayCard.css), so the change is noticeable without shouting. Under reduced motion there is no fade: the outline just
    stays for the same moment, then goes. The status line also names the days, so colour is not the only cue. */
 .boardroot .col.swapped {
   outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 1px;
   animation: swapfade 1.8s ease-out forwards;
-}
-.boardroot .daytabs button.swapped {
-  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
-  animation: swaptint 1.8s ease-out forwards;
 }
 @keyframes swapfade {
   0%, 35% {
@@ -110,14 +106,6 @@
   }
   100% {
     outline-color: transparent;
-  }
-}
-@keyframes swaptint {
-  0%, 35% {
-    background-color: color-mix(in srgb, var(--accent) 16%, transparent);
-  }
-  100% {
-    background-color: transparent;
   }
 }
 

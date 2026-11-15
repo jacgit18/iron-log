@@ -5,7 +5,7 @@
   gap: var(--sp-8);
   margin: var(--sp-8) 0;
 }
-@media (min-width: 720px) {
+@media (min-width: 701px) {
   .hubtiles {
     grid-template-columns: 1fr 1fr;
   }

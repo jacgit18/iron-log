@@ -24,13 +24,17 @@ const px = v => [...v.matchAll(/(-?[\d.]+)px/g)].map(m => Number(m[1]));
 // On-scale lengths must be tokens; lengths inside a function (calc, env, var) are left alone.
 const spacing = v => !v.replace(/[a-z-]*\([^)]*\)/g, ' ').split(/\s+/).some(t => /^(2|4|6|8|10|12|16)px$/.test(t));
 const rules = {
-  'font-size': v => /^var\(--fs-[a-z0-9-]+\)$/.test(v) || /^(max|clamp)\(/.test(v) || /^(inherit|initial)$/.test(v) || /^[\d.]+(em|%)$/.test(v) || (/^[\d.]+rem$/.test(v) && parseFloat(v) >= 2),
+  'font-size': v => /^var\(--(fs|h)-[a-z0-9-]+\)$/.test(v) || /^(max|clamp)\(/.test(v) || /^(inherit|initial)$/.test(v) || /^[\d.]+(em|%)$/.test(v) || (/^[\d.]+rem$/.test(v) && parseFloat(v) >= 2),
   'border-radius': v => /var\(--r-[a-z]+\)/.test(v) || /^(0|50%|inherit)$/.test(v) || (px(v).length > 0 && px(v).every(n => n <= 5) && !/[a-z(]/.test(v.replace(/px/g, ''))),
   'gap': spacing, 'row-gap': spacing, 'column-gap': spacing,
   'z-index': v => /^var\(--z-[a-z-]+\)$/.test(v) || /^(auto|-1|0|1|2)$/.test(v),
 };
 const hint = { 'font-size': 'a --fs-* token', 'border-radius': 'a --r-* token', 'z-index': 'a --z-* token' };
 
+// A heading rule in these files takes the heading scale (--h-page, --h-section, --h-sub, --h-label), not a bare --fs-* size. The list grows as design-language-later-slices moves more files; the hands-off .weeknav and .colhead rules never join it.
+const HEADING_FILES = /(grocery\/(Grocery|Receipts|ReceiptScan|AcrossStores)|progress\/(Progress|OnePage)|plans\/PlansTab|program\/(Library|ProgramHeader|DaySummary)|sheets\/LogSheet)\.css$|(^|\/)src\/styles\.css$/;
+const HEADING = /(^|[\s,>+~])h[1-4]\b[^\s,]*$/;
+const HANDS_OFF = /\.(weeknav|colhead)\b/;
 const SPACING = /^(padding|margin)(-[a-z]+){0,2}$/;
 const problems = [];
 for (const file of await cssFiles(join(ROOT, 'src'))) {
@@ -40,6 +44,7 @@ for (const file of await cssFiles(join(ROOT, 'src'))) {
     if (!ok || d.parent.selector?.startsWith(':root')) return;
     const prev = d.prev();
     if (prev?.type === 'comment' && /token-ok/.test(prev.text)) return;
+    if (d.prop === 'font-size' && HEADING_FILES.test(file) && d.parent.selector && !HANDS_OFF.test(d.parent.selector) && d.parent.selector.split(',').some(x => HEADING.test(x.trim())) && !/^var\(--h-[a-z]+\)$/.test(d.value.trim())) problems.push(`${relative(ROOT, file)}:${d.source.start.line}  ${d.parent.selector}: ${d.value}  (a heading takes --h-page, --h-section, --h-sub or --h-label)`);
     if (!ok(d.value.trim())) problems.push(`${relative(ROOT, file)}:${d.source.start.line}  ${d.prop}: ${d.value}  (use ${hint[d.prop] || 'a --sp-* token'}, or /* token-ok: why */ above it)`);
   });
 }

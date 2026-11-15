@@ -1,4 +1,5 @@
 import type { Recipe } from '../types.ts';
+import { macroLine } from './macroLine.js';
 
 /* ---------- Nutrition on the recipe list (brief recipe-nutrition-badges): pure, so every rule here is a node test ----------
    Per serving, from the numbers a recipe already carries (typed, or filled by Calculate from ingredients). A recipe without a number is
@@ -15,13 +16,9 @@ export const NUTRITION_FILTERS = [
 export type NutritionKey = typeof NUTRITION_FILTERS[number]['key'];
 
 const num = (v: number | undefined): v is number => typeof v === 'number' && Number.isFinite(v);
-const g = (v: number) => String(Math.round(v * 10) / 10);
 
-/** The small line on a list row: "420 kcal · 32 g protein", only the parts the recipe has, or null when it has neither. */
-export function nutritionBadge(r: Pick<Recipe, 'kcal' | 'p'>): string | null {
-  const parts = [num(r.kcal) ? `${Math.round(r.kcal)} kcal` : '', num(r.p) ? `${g(r.p)} g protein` : ''].filter(Boolean);
-  return parts.length ? parts.join(' · ') : null;
-}
+/** The small line on a list row, in the shared macro line (`macroLine`): "420 kcal · P 32 · C 58 · F 9 g", only the parts the recipe has, or null when it has none. */
+export const nutritionBadge = (r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f'>): string | null => macroLine(r) || null;
 
 const test: Record<NutritionKey, (r: Pick<Recipe, 'kcal' | 'p'>) => boolean> = {
   protein: r => num(r.p) && r.p >= HIGH_PROTEIN_G,

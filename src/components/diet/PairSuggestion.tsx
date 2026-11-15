@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ateEntry, entryText } from '../../lib/dietLog.js';
 import { amountText, usualStart } from '../../lib/foodUnit.js';
+import { runInstantLog } from '../../lib/instantLog.js';
 import { suggestedPartners } from '../../lib/pairSuggestions.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe } from '../../types.ts';
 
-// After a food is logged (the Log sheet and Ate this): what goes with it, one tap each at its usual amount on the same day, with Undo (brief recipes-goes-with, part 3).
+// After a food is logged (the Log sheet and the log control): what goes with it, one tap each at its usual amount on the same day, with Undo (brief recipes-goes-with, part 3).
 export default function PairSuggestion({ recipe, day, today }: { recipe: Recipe; day: string; today: string }) {
   const recipes = useAppStore(s => s.recipes);
   const [added, setAdded] = useState<Record<string, string>>({}); // partner id -> the entry it made
@@ -15,9 +16,9 @@ export default function PairSuggestion({ recipe, day, today }: { recipe: Recipe;
   const add = (p: Recipe) => {
     const made = ateEntry(p, usualStart(p), day, today);
     if ('error' in made) { setErr(made.error); return; }
-    const r = useAppStore.getState().addDietEntry(made.entry);
-    if (r.error || !r.id) { setErr(r.error ?? 'Couldn’t log that.'); return; }
-    setErr(''); setAdded(a => ({ ...a, [p.id]: r.id! }));
+    const r = runInstantLog(useAppStore.getState().addDietEntry, [made.entry]);
+    if (r.error) { setErr(r.error); return; }
+    setErr(''); setAdded(a => ({ ...a, [p.id]: r.ids[0]! }));
   };
   const undo = (p: Recipe) => { useAppStore.getState().removeDietEntry(added[p.id]!, false); setAdded(({ [p.id]: _gone, ...rest }) => rest); };
   return (

@@ -73,15 +73,15 @@ describe('the catalogue', () => {
     expect(l.qty).toBe(3); expect(lineCost(l)).toBe(2873);
     expect(tally(st().grocery.items, st().groceryMonths[mk])).toMatchObject({ planned: 2873, unpriced: 0 });
     st().setGroceryGot(mk, 'beef', true); // a tick keeps the prices and adds no count of its own
-    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, prices: [899, 1049, 925] });
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ at: expect.any(String), got: true, prices: [899, 1049, 925] });
     st().setGroceryPrices(mk, 'beef', [1, -5]); st().setGroceryPrices(mk, 'beef', []); // not prices: ignored
     expect(st().groceryMonths[mk].lines.beef.prices).toEqual([899, 1049, 925]);
     st().setGroceryQty(mk, 'beef', 2);
-    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, qty: 2, unpriced: true }); // a bought line with no price stays unpriced (audit G-1)
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ at: expect.any(String), got: true, qty: 2, unpriced: true }); // a bought line with no price stays unpriced (audit G-1)
     st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryCents(mk, 'beef', 700);
     expect(st().groceryMonths[mk].lines.beef.prices).toBeUndefined();
     st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryPrices(mk, 'beef', null);
-    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, unpriced: true }); // a bought line with no price left keeps saying so (audit M-01)
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ at: expect.any(String), got: true, unpriced: true }); // a bought line with no price left keeps saying so (audit M-01)
   });
   it('puts a new item at the top of its store’s section', () => {
     st().addGroceryItem(form({ n: 'Eggs', store: 'Aldi' })); st().addGroceryItem(form({ n: 'Rice', store: 'Costco' })); st().addGroceryItem(form({ n: 'Oats', store: 'Aldi' }));
@@ -138,7 +138,7 @@ describe('a month', () => {
     const mk = await thisMonth();
     st().addGroceryItem(form());
     st().setGroceryGot(mk, 'kale', true);
-    expect(st().groceryMonths[mk].lines.kale).toEqual({ got: true, qty: 2, cents: 250 });
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ at: expect.any(String), got: true, qty: 2, cents: 250 });
     expect(saved('grocery/' + mk).lines.kale.got).toBe(true);
     st().setGroceryGot(mk, 'kale', false);
     expect(st().groceryMonths[mk].lines.kale).toEqual({ qty: 2, cents: 250 });
@@ -204,11 +204,14 @@ describe('a month', () => {
     st().addGroceryItem(form());
     st().setGroceryHave(mk, 'kale', true);
     st().setGroceryGot(mk, 'kale', true);
-    expect(st().groceryMonths[mk].lines.kale).toEqual({ got: true, qty: 2, cents: 250 }); // no `have` next to `got`
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ at: expect.any(String), got: true, qty: 2, cents: 250 }); // no `have` next to `got`
     st().setGroceryHave(mk, 'kale', true); // already had: no change
     expect(st().groceryMonths[mk].lines.kale.got).toBe(true);
-    st().setGroceryHave(mk, 'kale', false); // unticked at home: not bought either
-    expect(st().groceryMonths[mk].lines.kale).toEqual({ qty: 2, cents: 250 });
+    st().setGroceryHave(mk, 'kale', false); // unticked at home: you ran out, so it is not bought now but the purchase is kept (brief grocery-purchase-log)
+    const kale = st().groceryMonths[mk].lines.kale;
+    expect(kale.got).toBeUndefined();
+    expect(kale.buys).toHaveLength(1);
+    expect(kale.buys[0]).toMatchObject({ qty: 2, cents: 250 });
   });
   it('ignores a Have tick for a bad month or an unknown item', async () => {
     st().addGroceryItem(form());

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
-import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
-import { addItem, dayTotals, daysFrom, findMatches, inWindow, planLog, prunePlan, removeItem, resolve, setPortion, totalsText } from './dietPlan.js';
+import { MAX_DAILY_SNACKS, MAX_DAY_ITEMS, MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
+import { normPlan } from '../shared/diet.js';
+import { moveItem } from './weekBoard.js';
+import { addItem, dayTotals, daysFrom, findMatches, inWindow, isEaten, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
 
 const today = '2026-10-30';
 const recipes: Recipe[] = [
@@ -12,6 +14,27 @@ const recipes: Recipe[] = [
 const meals: SavedMeal[] = [{ id: 'm1', n: 'Breakfast', items: [{ n: 'Oats', kcal: 350, p: 12 }, { n: 'Banana', kcal: 100, p: 1 }] }];
 const r = (id: string, x?: number): PlanItem => ({ k: 'r', id, ...(x ? { x } : {}) });
 const m = (id: string): PlanItem => ({ k: 'm', id });
+
+describe('a saved-meal item resolves through mealsMoved to its recipe (brief saved-meals-removal)', () => {
+  it('shows the recipe it became: same numbers as the recipe, portion 1', () => {
+    expect(resolve(m('m1'), recipes, [], { m1: 'r1' })).toMatchObject({ name: 'Chili', kcal: 600, p: 40, gone: false, portion: 1 });
+    expect(resolve(m('m1'), recipes, [], { m1: 'r1' }).recipe?.id).toBe('r1');
+  });
+  it('logging a moved meal gives one entry per food, as the saved meal did', () => {
+    const linked: Recipe = { id: 'bf', n: 'Breakfast', cat: 'other', ing: [{ n: 'Rice', rid: 'r3', q: 1 }, { n: 'Chili', rid: 'r1', q: 1 }], steps: [] };
+    const all = [...recipes, linked];
+    const out = planLog(resolve(m('m1'), all, [], { m1: 'bf' }), [], today, all);
+    expect(out).toMatchObject({ left: 0, add: [{ n: 'Rice', from: 'r3' }, { n: 'Chili', from: 'r1' }] });
+  });
+  it('prefers the recipe over a held old meal with the same id', () => {
+    expect(resolve(m('m1'), recipes, meals, { m1: 'r3' })).toMatchObject({ name: 'Rice', gone: false });
+  });
+  it('shows the existing gone state, not a crash, when the recipe was deleted or the meal never moved and is not held', () => {
+    expect(resolve(m('m1'), recipes, [], { m1: 'deleted' })).toMatchObject({ gone: true, name: 'Removed' });
+    expect(resolve(m('m1'), recipes, [])).toMatchObject({ gone: true, name: 'Removed' });
+    expect(dayTotals([m('m1'), r('r3')], recipes, [], { m1: 'deleted' })).toEqual({ kcal: 200, protein: 4, without: 0 });
+  });
+});
 
 describe('window', () => {
   it('daysFrom counts forward and inWindow is today to 13 days after', () => {
@@ -31,6 +54,15 @@ describe('addItem, setPortion, removeItem', () => {
     expect(addItem(p, '2026-10-29', r('r3'), today).error).toMatch(/two weeks/);
     const full: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`)) };
     expect(addItem(full, today, r('r1'), today).error).toContain(String(MAX_PLAN_ITEMS));
+  });
+  it('a listed daily snack never counts toward the 8 planned things, and a day holds at most 8 plus one snack per listed recipe (brief snacks-day-cap)', () => {
+    const list = [{ id: 's1' }, { id: 's2' }], snack = (id: string): PlanItem => ({ k: 'r', id, s: 'snack' });
+    const eight: PlanItem[] = Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`));
+    const withSnack = addItem({ [today]: eight }, today, snack('s1'), today, list);
+    expect(withSnack.error).toBeNull(); expect(withSnack.plan![today]).toHaveLength(9);
+    expect(addItem(withSnack.plan!, today, r('y'), today, list).error).toContain(String(MAX_PLAN_ITEMS)); // the ninth planned thing is still refused
+    expect(addItem(withSnack.plan!, today, snack('s2'), today, list).plan![today]).toHaveLength(10);
+    expect(addItem({ [today]: eight }, today, snack('s1'), today).error).toContain(String(MAX_PLAN_ITEMS)); // not on the list: counts as planned, so a full day refuses it
   });
   it('sets a portion in half steps, stores 1 as no x, and leaves a meal or a bad portion alone', () => {
     const p = { [today]: [r('r1'), m('m1')] };
@@ -68,7 +100,7 @@ describe('planLog', () => {
   const e = (d: string): DietEntry => ({ id: Math.random().toString(), d, n: 'F', kcal: 1, p: 0 });
   it('a recipe logs one entry at its portion with the recipe link', () => {
     const out = planLog(resolve(r('r1', 2), recipes, meals), [], today);
-    expect(out).toEqual({ add: [{ n: 'Chili', kcal: 1200, p: 80, c: 102, f: 22, from: 'r1' }], left: 0 });
+    expect(out).toEqual({ add: [{ n: 'Chili', kcal: 1200, p: 80, c: 102, f: 22, from: 'r1', x: 2 }], left: 0 }); // the planned portion is stored, so the Edit sheet opens per portion (brief portion-scaled-micros)
   });
   it('a meal logs each food and stops at the per-day limit', () => {
     expect('add' in planLog(resolve(m('m1'), recipes, meals), [], today) && (planLog(resolve(m('m1'), recipes, meals), [], today) as { add: unknown[] }).add).toHaveLength(2);
@@ -94,5 +126,34 @@ describe('findMatches', () => {
   });
   it('keeps equal names in id order', () => {
     expect(findMatches([r('b', 'Soup'), r('a', 'soup')], '').map(x => x.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('a planned item checked as eaten', () => {
+  const plan = { [today]: [{ k: 'r', id: 'r1', s: 'lunch' }] } as Record<string, PlanItem[]>;
+  it('carries the ids of the entries its check added, and clears them', () => {
+    const on = setEaten(plan, today, 0, ['e1', 'e2']);
+    expect(on[today]![0]).toEqual({ k: 'r', id: 'r1', s: 'lunch', e: ['e1', 'e2'] });
+    expect(setEaten(on, today, 0, [])[today]![0]).toEqual({ k: 'r', id: 'r1', s: 'lunch' });
+    expect(setEaten(plan, today, 5, ['e1'])).toBe(plan);
+  });
+  it('counts as eaten only while one of its entries is still in the log', () => {
+    const item: PlanItem = { k: 'r', id: 'r1', e: ['e1', 'e2'] };
+    expect(isEaten(item, [{ id: 'e2' }])).toBe(true);
+    expect(isEaten(item, [{ id: 'x' }])).toBe(false);
+    expect(isEaten({ k: 'r', id: 'r1' }, [{ id: 'e1' }])).toBe(false);
+  });
+  it('survives a portion change and a move within the day, not a move to another day', () => {
+    const on = setEaten(plan, today, 0, ['e1']);
+    expect(setPortion(on, today, 0, 2)[today]![0]!.e).toEqual(['e1']);
+    expect(moveItem(on, today, 0, today, 'dinner', today).plan![today]![0]!.e).toEqual(['e1']);
+    expect(moveItem(on, today, 0, '2026-10-31', 'dinner', today).plan!['2026-10-31']![0]!.e).toBeUndefined();
+  });
+  it('is kept when the plan is cleaned, with junk ids dropped', () => {
+    const snacks = Array.from({ length: MAX_PLAN_ITEMS + MAX_DAILY_SNACKS + 2 }, (_, i) => ({ k: 'r', id: `q${i}`, s: i < MAX_PLAN_ITEMS ? undefined : 'snack' }));
+    expect(normPlan({ [today]: snacks }, today)[today]).toHaveLength(MAX_DAY_ITEMS);
+    expect(normPlan({ [today]: snacks.map(x => ({ ...x, s: undefined })) }, today)[today]).toHaveLength(MAX_PLAN_ITEMS); // the cleaner keeps a ticked snack beside 8 planned things, and still bounds the day
+    const clean = normPlan({ [today]: [{ k: 'r', id: 'r1', e: ['e1', 'e1', 5, ''] }] }, today);
+    expect(clean[today]![0]!.e).toEqual(['e1']);
   });
 });

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { gramsOf, rowGrams, servingsFor, totals, totalsNote, type MacroRow } from '../../lib/recipeMacros.js';
+import { macroLine } from '../../lib/macroLine.js';
 import type { Micro } from '../../shared/foodMicro.js';
 import { defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from '../diet/useFoodHits.js';
@@ -25,7 +26,7 @@ function Row({ idx, ing, pick, onPick }: { idx: number; ing: Ing; pick: Pick; on
         <input aria-label={`Grams for ${ing.n}`} inputMode="decimal" value={pick.typed} placeholder={auto !== null ? String(auto) : 'grams'} onChange={e => onPick({ ...pick, typed: e.target.value })} />
       </label>
       {!pick.open && <button type="button" className="btn sm" aria-label={`Look up ${ing.n}`} onClick={() => onPick({ ...pick, open: true })}>{pick.hit ? 'Change' : 'Look up'}</button>}
-      {pick.hit && <p className="note">{pick.hit.name}{got ? ` · ${got.kcal} kcal · ${got.p} g protein` : ' · enter grams'}</p>}
+      {pick.hit && <p className="note">{pick.hit.name}{got ? ` · ${macroLine(got)}` : ' · enter grams'}</p>}
       {pick.open && (
         <div className="rc-calcfind">
           <label className="field" htmlFor={`rc-calc-q-${idx}`}>Search for {ing.n}
@@ -57,7 +58,7 @@ export default function IngredientMacros({ ingredients, servings, onUse, onClose
         {rows.map((r, i) => <Row key={keyOf(i)} idx={i} ing={r} pick={pickOf(i)} onPick={p => setPicks(old => ({ ...old, [keyOf(i)]: p }))} />)}
       </ul>
       <p className="rc-calctotal" role="status">
-        Per serving{s.assumed ? ' (Servings is empty, so 1)' : ` (÷ ${s.servings})`}: {t.per.kcal} kcal · {t.per.p} g protein{t.per.c !== undefined ? ` · ${t.per.c} g carbs` : ''}{t.per.f !== undefined ? ` · ${t.per.f} g fat` : ''}
+        Per serving{s.assumed ? ' (Servings is empty, so 1)' : ` (÷ ${s.servings})`}: {macroLine(t.per)}
       </p>
       <p className="note">{totalsNote(t)}</p>
       <div className="actions">

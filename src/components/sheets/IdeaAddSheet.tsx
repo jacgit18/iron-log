@@ -6,6 +6,7 @@ import { ideaDayChoices } from '../../lib/ideaDays.js';
 import { todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import Sheet from '../Sheet.jsx';
+import '../Pill.css';
 import './MoveSheet.css';
 import '../program/RowMenuSheet.css';
 import './IdeaAddSheet.css';
@@ -31,15 +32,15 @@ export default function IdeaAddSheet({ id }: { id: string }) {
     <Sheet>
       <h2 className="cond">Add {name}</h2>
       <div className="iaseg" role="group" aria-label="When to add it">
-        <button type="button" className="btn" aria-pressed={mode === 'week'} onClick={() => setMode('week')}>This week only</button>
-        <button type="button" className="btn" aria-pressed={mode === 'program'} onClick={() => setMode('program')}>Every week (program)</button>
+        <button type="button" className="pillbtn" aria-pressed={mode === 'week'} onClick={() => setMode('week')}>This week only</button>
+        <button type="button" className="pillbtn" aria-pressed={mode === 'program'} onClick={() => setMode('program')}>Every week (program)</button>
       </div>
       <p className="note iahelp">{mode === 'week' ? 'Adds a card to the week you are viewing. Next week it is gone.' : 'Adds it to your program, so it comes back every week.'}</p>
       <div className="mvs-label" id="ia-day">Day</div>
       {days.length ? (
         <div className="mvs-chips rowdays" role="group" aria-labelledby="ia-day">
           {days.map(d => (
-            <button key={d.col} type="button" className={`btn mvs-chip mvs-day iaday${d.on ? ' on' : ''}${d.today ? ' today' : ''}`} aria-label={`Day ${d.col}`} onClick={() => pick(d.col)}>
+            <button key={d.col} type="button" className={`pillbtn iaday${d.on ? ' on' : ''}${d.today ? ' today' : ''}`} aria-label={`Day ${d.col}`} aria-pressed={d.on} onClick={() => pick(d.col)}>
               <span>{d.col}</span>{d.on ? <small>On</small> : d.today ? <small>Today</small> : null}
             </button>
           ))}

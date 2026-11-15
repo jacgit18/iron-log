@@ -243,6 +243,8 @@ export interface ImportOptions {
   apply: boolean;
   /** Let one run retire more than a fifth of the source's live rows (a shrunken or broken download otherwise stops here). */
   allowMassRetire?: boolean;
+  /** Progress lines while writing; a big import is otherwise silent for as long as the writes take. */
+  log?(msg: string): void;
 }
 
 export interface ImportResult {
@@ -259,7 +261,7 @@ export interface ImportResult {
 const stable = (v: unknown): string => JSON.stringify(v, (_k, x: unknown) =>
   x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x);
 
-export async function importCatalog(db: Kysely<DB>, { source, license, rows, apply, allowMassRetire = false }: ImportOptions): Promise<ImportResult> {
+export async function importCatalog(db: Kysely<DB>, { source, license, rows, apply, allowMassRetire = false, log = () => {} }: ImportOptions): Promise<ImportResult> {
   if (!rows.length) throw new Error(`catalog:import ${source}: the new list is empty; refusing to retire every row`);
   const prefix = `c:${source}:`;
   const bad = rows.find(r => !r.id.startsWith(prefix));
@@ -288,15 +290,21 @@ export async function importCatalog(db: Kysely<DB>, { source, license, rows, app
     }
 
     if (apply) {
+      log(`catalog:import: writing ${added.length} new, ${changed.length} changed, ${retired.length} retired`);
       for (let i = 0; i < added.length; i += 200) {
         await trx.insertInto('catalog_items')
           .values(added.slice(i, i + 200).map(r => ({ id: r.id, kind: r.kind, source, license, name: r.name, brand: r.brand, data: JSON.stringify(r.data) })))
           .execute();
       }
-      for (const r of changed) {
-        await trx.updateTable('catalog_items')
-          .set({ kind: r.kind, license, name: r.name, brand: r.brand, data: JSON.stringify(r.data), retired_at: null, updated_at: sql`now()` })
-          .where('id', '=', r.id).execute();
+      // Updates in batches of one statement each (500 rows, 2,500 parameters): one round trip per row took hours against a remote database.
+      for (let i = 0; i < changed.length; i += 500) {
+        const values = changed.slice(i, i + 500).map(r => sql`(${r.id}::text, ${r.kind}::text, ${r.name}::text, ${r.brand}::text, ${JSON.stringify(r.data)}::jsonb)`);
+        await sql`
+          update catalog_items as c
+          set kind = v.kind, license = ${license}, name = v.name, brand = v.brand, data = v.data, retired_at = null, updated_at = now()
+          from (values ${sql.join(values)}) as v(id, kind, name, brand, data)
+          where c.id = v.id`.execute(trx);
+        if ((i / 500) % 20 === 19 || i + 500 >= changed.length) log(`catalog:import: ${Math.min(i + 500, changed.length)} of ${changed.length} changed rows written`);
       }
       // In chunks: a supplement re-import can retire thousands, and one statement takes at most 65,535 parameters.
       for (let i = 0; i < retired.length; i += 1000) {

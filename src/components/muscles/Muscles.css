@@ -6,7 +6,7 @@
   gap: 20px;
   align-items: start;
 }
-@media (max-width:900px) {
+@media (max-width:1000px) {
   .bodywrap {
     grid-template-columns: minmax(0,1fr);
   }
@@ -32,16 +32,16 @@
   user-select: none;
 }
 /* Phone: both figures fit in about half the screen, so a tapped muscle's detail is a short scroll away */
-@media (max-width:900px) {
+@media (max-width:1000px) {
   .fig svg {
     max-height: min(50svh,380px);
   }
 }
 .fig figcaption {
-  font-size: var(--fs-xs);
-  font-weight: 600;
+  font-size: var(--h-label);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   color: var(--muted);
 }
 .sil {
@@ -89,7 +89,7 @@
 }
 .msec h2 {
   margin: 0;
-  font-size: var(--fs-3xl);
+  font-size: var(--h-section);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -148,7 +148,7 @@
   overflow-wrap: anywhere;
 }
 /* Phone: the days go on a second line under the name, so a row never runs wider than the screen */
-@media (max-width:600px) {
+@media (max-width:700px) {
   .mrow {
     grid-template-columns: auto minmax(0,1fr) auto;
     row-gap: var(--sp-2);

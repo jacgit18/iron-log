@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
+import './RecipeDesktop.css';
+import './RecipeFormSections.css';
 import { liveRows, microOfRows, rowsFromMicro } from '../../lib/foodAmountRows.js';
 import type { AmountRow } from '../../lib/foodAmountRows.js';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
@@ -23,7 +25,7 @@ const FOOD_USES: readonly RecipeUse[] = ['ingredient', 'ready', 'drink'];
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 
 // A ready-made food (brief recipe-first-diet-log): something bought or frozen that you only heat up. It is a recipe in the Ready-made category with
-// no ingredients or steps, so it is listed, searched, logged with Ate this and planned like any recipe. Numbers are per serving, typed from the
+// no ingredients or steps, so it is listed, searched, logged with the log control and planned like any recipe. Numbers are per serving, typed from the
 // label or filled from the food lookup (still editable).
 export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: Recipe; onDone: (savedId: string | null) => void; scanFirst?: boolean }) {
   const [n, setN] = useState(recipe?.n ?? '');
@@ -39,7 +41,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [note, setNote] = useState(recipe?.note ?? '');
   const [pack, setPack] = useState(str(recipe?.servings));
-  const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many Ate this opens at, and what one serving is called
+  const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many the log control opens at, and what one serving is called
   const [unit, setUnit] = useState(recipe?.unit ?? '');
   const [plural, setPlural] = useState(recipe?.plural ?? '');
   const [err, setErr] = useState('');
@@ -80,8 +82,8 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null);
   };
   return (
-    <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New ready-made food'}>
-      <h3 tabIndex={-1}>{recipe ? 'Edit ready-made food' : 'New ready-made food'}</h3>
+    <form className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New food'}>
+      <h3 tabIndex={-1}>{recipe ? 'Edit food' : 'New food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
         <FoodSearch onUse={fillFrom} {...(scanFirst ? { scanFirst } : {})} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
       </div>
@@ -94,9 +96,12 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
             <button type="button" className="btn sm" disabled={scanning} onClick={() => camera.current?.click()}>{scanning ? 'Reading label...' : 'Scan label'}</button>
             <button type="button" className="btn sm" disabled={scanning} onClick={() => library.current?.click()}>Choose photo</button>
           </div>
+          <p className="note">Fills the form; nothing is saved until you save.</p>
           {scanNote && <p className="note" role="status">{scanNote}</p>}
         </div>
       )}
+      <div className="rcf-cols">{/* from 1024 px two columns: the name and numbers beside the amounts and the optional fields (RecipeDesktop.css) */}
+      <div className="rcf-col">
       <label>Name
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
@@ -108,11 +113,13 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
         <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => { setCarbs(e.target.value); setErr(''); }} /></label>
         <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => { setFat(e.target.value); setErr(''); }} /></label>
       </div>
+      </div>
+      <div className="rcf-col">
       <FoodAmountRows idp="rc" perServing rows={live.rows} onChange={setRows} cleared={live.cleared} />
       <label>Servings per pack, optional
         <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
       </label>
-      <p id="rc-pack-help" className="note">Lets Ate this log the whole pack in one step.</p>
+      <p id="rc-pack-help" className="note">Lets you log the whole pack in one step.</p>
       <label>Usual amount, optional
         <input inputMode="decimal" value={usual} onChange={e => { setUsual(e.target.value); setErr(''); }} aria-describedby="rc-usual-help" />
       </label>
@@ -124,14 +131,18 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
           <input value={plural} maxLength={20} onChange={e => { setPlural(e.target.value); setErr(''); }} autoComplete="off" />
         </label>
       )}
-      <p id="rc-usual-help" className="note">Ate this opens at your usual amount and reads in your word: 4 and egg give "4 eggs".</p>
+      <p id="rc-usual-help" className="note">The log control opens at your usual amount and reads in your word: 4 and egg give "4 eggs".</p>
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>
-      {err && <p className="note gerr" role="alert">{err}</p>}
-      <div className="rc-actions rc-bar">
-        <button type="submit" className="btn primary">Save food</button>
-        <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+      </div>
+      </div>
+      <div className="rcf-foot">
+        {err && <p className="note gerr" role="alert">{err}</p>}
+        <div className="rc-actions rc-bar">
+          <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+          <button type="submit" className="btn primary">Save food</button>
+        </div>
       </div>
     </form>
   );

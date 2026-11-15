@@ -215,7 +215,7 @@
   }
 }
 /* Wide screens: the five feature cards sit three and two, the second row centred, not three and a hole. */
-@media (min-width:900px) {
+@media (min-width:1000px) {
   .landing-list {
     grid-template-columns: repeat(6, 1fr);
   }

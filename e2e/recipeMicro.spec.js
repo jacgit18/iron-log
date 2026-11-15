@@ -35,7 +35,7 @@ test('a looked-up food saved on the Ready-made form keeps its amounts, and loggi
   const portion = page.getByRole('dialog').last();
   await portion.getByRole('button', { name: 'More' }).click(); // 1 serving, then 1.5
   await portion.getByRole('button', { name: 'More' }).click(); // 2
-  await portion.getByRole('button', { name: 'Ate this' }).or(portion.getByRole('button', { name: /^Log it/ })).first().click();
+  await portion.getByRole('button', { name: 'Log', exact: true }).click();
   await expect.poll(async () => (await eaten(page)).length).toBe(1);
   const [e] = await eaten(page);
   expect(e.kcal).toBe(200);

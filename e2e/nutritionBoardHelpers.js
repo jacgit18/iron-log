@@ -24,13 +24,19 @@ export const openDrink = async (page, day) => {
 };
 // Today's column on the board (the fixed clock in fixtures.js is Thursday 2026-09-24).
 export const todayCol = page => page.locator('.nb-col.today');
-// The Targets and goal sheet (PR 2 of brief nutrition-board) and the Manage sheet, opened from the board header. Both return the dialog.
-export const openTargets = async page => {
-  await page.locator('#nb-targets').click();
-  const sheet = page.getByRole('dialog', { name: 'Targets and goal' });
-  await expect(sheet).toBeVisible();
-  return sheet;
+// An eaten row opens a sheet (brief nutrition-items-row-sheet-and-more). `editEaten` opens it from today's row (or uses the sheet that is already open) and starts Edit; `deleteEaten` taps the sheet's two-tap Delete.
+export const editEaten = async (page, name = '') => {
+  const d = page.getByRole('dialog');
+  if (!(await d.count())) await todayCol(page).locator('.nb-eatrow', { hasText: name }).first().click();
+  await d.getByRole('button', { name: 'Edit', exact: true }).click();
 };
+export const deleteEaten = async (page, name) => {
+  await todayCol(page).locator('.nb-eatrow', { hasText: name }).first().click();
+  const del = page.getByRole('dialog').getByRole('button', { name: new RegExp(`Delete ${name}$`) });
+  await del.click(); await del.click(); // two taps: arm, then confirm
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+};
+// The Manage sheet (daily targets with the goal under them, water, library), opened from the board header. Returns the dialog.
 export const openManage = async page => {
   await page.locator('#nb-manage').click();
   const sheet = page.getByRole('dialog', { name: 'Manage' });
@@ -40,3 +46,35 @@ export const openManage = async page => {
 // The supplement editor and library: Manage, then Supplements and library. `closeSupplementEditor` is its Done button.
 export const openSupplementEditor = async page => { await openManage(page); await page.locator('#sched-edit').click(); await expect(page.locator('#sched-h')).toBeVisible(); };
 export const closeSupplementEditor = async page => { await page.locator('#sched-done').click(); await expect(page.getByRole('dialog')).toHaveCount(0); };
+// The merged supplement list in Manage (brief supplement-merged-list): a product is one row, its times are the lit chips.
+export const suppRow = (page, name) => page.locator('.exlib .exrow').filter({ hasText: name });
+export const suppChip = (page, name, slot) => suppRow(page, name).getByRole('button', { name: slot, exact: true });
+// Each text is a name, optionally followed by its dose ("Fish Oil1 g"): that row has the time lit and shows the dose.
+export const expectScheduledAt = async (page, slot, texts) => {
+  for (const t of texts) {
+    const [, name, dose] = t.match(/^(.*?)(\d.*)?$/);
+    await expect(suppChip(page, name, slot)).toHaveAttribute('aria-pressed', 'true');
+    if (dose) await expect(suppRow(page, name)).toContainText(dose);
+  }
+};
+// Open a day's Totals sheet from its column (brief nutrition-manage-cleanup): the Supplements section's Totals button when it is shown, otherwise the vitamin meter's own way in (open the line, then Open Totals / All N in Totals).
+export const openDayTotals = async col => {
+  const direct = col.locator('[id^="nb-supp-totals-"]');
+  const tog = col.locator('.nb-vit-tog');
+  await expect(direct.or(tog).first()).toBeVisible();
+  if (await direct.count()) { await direct.click(); return; }
+  if ((await tog.getAttribute('aria-expanded')) !== 'true') await tog.click();
+  await col.locator('.nb-vit-all').click();
+};
+// The box of the first element matching `sel`, and whether anything in the week and day card (or the page) runs past the card's edge (shared by nutritionOneCard.spec.js and weekDayCard.spec.js).
+export const box = (page, sel) => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, r: r.right, b: r.bottom, w: r.width, h: r.height }; });
+export const overflows = page => page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || [...document.querySelectorAll('.wdc, .wdc *')].some(e => { const r = e.getBoundingClientRect(), c = document.querySelector('.wdc').getBoundingClientRect(); return r.width && (r.right > c.right + 1 || r.left < c.left - 1); }));
+// A planned card's Move to (brief nutrition-multi-day-picker): opens the card in `scope` (a day column), opens its Move sheet, optionally ticks one day by its picker name ("Thu 24 · today", "Fri 25") and/or picks a meal chip, and presses the Move button.
+export const moveCard = async (page, scope, name, { day, meal } = {}) => {
+  await scope.locator('.wb-card', { hasText: name }).first().click();
+  await scope.getByRole('button', { name: `Move ${name}`, exact: true }).click();
+  const d = page.getByRole('dialog');
+  if (day) await d.getByRole('group', { name: `Move ${name} to day` }).getByRole('button', { name: day, exact: true }).click();
+  if (meal) await d.getByRole('group', { name: `Meal for ${name}` }).getByRole('button', { name: meal, exact: true }).click();
+  await d.getByRole('button', { name: /^Move to / }).click();
+};

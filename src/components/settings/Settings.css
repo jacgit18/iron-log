@@ -58,24 +58,11 @@
   margin-top: var(--sp-4);
 }
 .sjump {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
   position: sticky;
   top: env(safe-area-inset-top,0px);
   z-index: var(--z-sticky);
   background: var(--bg);
   padding-block: var(--sp-6) var(--sp-8);
-}
-.sjump .chip {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--ink);
-}
-.sjump .chip[aria-current="true"] {
-  background: var(--m4);
-  border-color: var(--m4);
-  color: var(--m-ink-hi);
 }
 /* With the account menu in the header (a signed-in badge, or one expected), the menu is the way to a group and the row is not drawn. Without it (Settings is a tab) the row stays. */
 @media (max-width:900px) {
@@ -96,35 +83,10 @@ html:has(.sjump) {
 .smain[hidden] {
   display: none;
 }
-/* A wide screen: the groups in one readable column, and the jump row becomes a rail down the left, sticky beside them. */
+/* A wide screen: the groups in one readable column under the jump row (the row is the same pills at every width). */
 @media (min-width:901px) {
-  .smain {
-    display: grid;
-    grid-template-columns: 11rem minmax(0,46rem);
-    column-gap: var(--sp-16);
-    align-items: start;
-  }
-  .sjump {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    gap: var(--sp-2);
-    top: var(--sp-16);
-    padding: 0;
-    align-self: start;
-  }
-  .sjump .chip {
-    border-color: transparent;
-    background: transparent;
-    border-radius: var(--r-md);
-    text-align: start;
-  }
-  .sjump .chip[aria-current="true"] {
-    background: var(--surface);
-    border-color: var(--line);
-    color: var(--ink);
-  }
-  html:has(.sjump) {
-    scroll-padding-top: var(--sp-16);
+  .sgroups {
+    max-width: 46rem;
   }
 }
 /* Training's summary rows: a title and one line of what is set, a chevron, one tap target each. */
@@ -333,10 +295,8 @@ html:has(.sjump) {
 }
 /* Last in the file so it wins over the one-column rules above: from 1280px the page has two columns, each at most 46rem. Training and Data share the first row (Training left, Data right); App and Erase & delete run across both columns with their own two panel columns lined up under them. Grid placement only, so DOM and tab order are unchanged. */
 @media (min-width:1280px) {
-  .smain {
-    grid-template-columns: 11rem minmax(0,1fr);
-  }
   .sgroups {
+    max-width: none;
     display: grid;
     grid-template-columns: repeat(2,minmax(0,46rem));
     gap: 24px var(--sp-16);

@@ -3,6 +3,7 @@ import { MAX_PAIRS } from '../../shared/recipes.js';
 import { mealPairError, pairCandidates, pairsOf } from '../../lib/recipePairs.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe } from '../../types.ts';
+import ArmedButton from '../ArmedButton.jsx';
 import './GoesWith.css';
 
 // "Goes with" (brief recipes-goes-with): the recipes this one is eaten with (chili with rice), saved on both. Each partner opens, can be turned into a meal
@@ -25,8 +26,8 @@ export default function GoesWith({ recipe, mine, onOpen }: { recipe: Recipe; min
         {partners.map(p => (
           <li key={p.id}>
             <button type="button" className="btn sm ghost rc-goesname" onClick={() => onOpen?.(p.id)}>{p.n}</button>
-            {!mealPairError(live, p) && <button type="button" className="btn sm" aria-label={`Make a meal of ${live.n} with ${p.n}`} onClick={() => make(p)}>Make a meal</button>}
-            <button type="button" className="btn sm ghost" aria-label={`Remove ${p.n} from Goes with`} onClick={() => { useAppStore.getState().unpairRecipes(live.id, p.id); setMsg(''); }}>Remove</button>
+            {!mealPairError(live, p) && <button type="button" className="rc-goesmake" aria-label={`Make a meal of ${live.n} with ${p.n}`} onClick={() => make(p)}>Make a meal</button>}
+            <ArmedButton className="btn sm ghost" aria-label={`Remove ${p.n} from Goes with`} label="Remove" armedLabel="Tap again to remove" onConfirm={() => { useAppStore.getState().unpairRecipes(live.id, p.id); setMsg(''); }} />
           </li>
         ))}
       </ul>

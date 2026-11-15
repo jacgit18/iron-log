@@ -1,4 +1,5 @@
 import { findByAlias, withoutAlias } from '../lib/groceryAliases.js';
+import { closeOpen, stampNow } from '../lib/groceryPurchases.js';
 import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
@@ -331,33 +332,47 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (get().blocked() || (cents != null && !validGroceryBudget(cents))) return false;
       return get().mutateCfg(c => { if (cents == null) delete c.groceryBudget; else c.groceryBudget = cents; });
     },
-    setGroceryGot(month, id, on) {
+    setGroceryGot(month, id, on, at) {
       const it = get().grocery.items.find(i => i.id === id);
       if (!it || !MONTH_RE.test(month) || get().blocked()) return false; // false: nothing changed (sync is loading), so the screen shows no Undo for it
       if (!on && untickBlock(get().grocery, get().groceryMonths, month, id)) return false; // it would come back beside an item with the same name; the screen says why before it gets here
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         if (on) {
-          delete l.have; l.got = true;
+          delete l.have; l.got = true; l.at = at ?? l.at ?? stampNow(); // when it was bought: a receipt gives its own date
           if (!l.prices) {
             l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents;
             if (l.cents == null) l.unpriced = true; else delete l.unpriced; // bought with no price: a price the item gets later must not price this month
           }
-        } else { delete l.got; delete l.unpriced; delete l.rc; }
+        } else { delete l.got; delete l.unpriced; delete l.rc; delete l.at; } // an undo takes back the open purchase only; the ones Ran out closed stay
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
       return true;
     },
 
-    // The At home tick: you have it this month, so it is off that month's list. Unticking brings it back, and undoes a purchase too (the
-    // same tick shows on both lists). A bought item is already had: ticking changes nothing.
+    // The At home tick: you have it this month, so it is off that month's list. Unticking is "I ran out": a purchase is kept (closed, with its stamp, store and split) and the item
+    // is back on To get unticked, so buying it again is a second purchase (brief grocery-purchase-log). A bought item ticked here changes nothing. False: the item already holds
+    // MAX_BUYS closed purchases this month, so nothing changed.
     setGroceryHave(month, id, on) {
-      if (!get().grocery.items.some(i => i.id === id) || !MONTH_RE.test(month)) return;
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it || !MONTH_RE.test(month)) return true;
+      let refused = false;
       mutateMonth(month, m => {
-        const l = { ...(m.lines[id] || {}) };
-        if (on) { if (!l.got) l.have = true; } else { delete l.have; delete l.got; delete l.unpriced; } // unticking drops the unpriced mark with the purchase
+        const raw = m.lines[id] || {};
+        const l = { ...raw };
+        if (on) { if (!l.got) l.have = true; }
+        else if (l.got) {
+          const g = get().grocery; const store = storeFor(g, it, m);
+          const parties = settle.partiesFor(g, store === it.store ? it : { ...it, store }, raw);
+          const share: GroceryShare = { with: parties.filter(p => p !== SELF), ...(parties.includes(SELF) ? {} : { notMine: true as const }) };
+          const closed = closeOpen(raw, { qty: raw.qty ?? it.qty, cents: raw.cents ?? (raw.unpriced ? null : it.cents), store, share });
+          if (!closed) { refused = true; return; }
+          m.lines[id] = closed;
+          return;
+        } else delete l.have;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
+      return !refused;
     },
 
     setGroceryQty(month, id, qty) {

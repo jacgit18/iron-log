@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { GAIN_RATES, LOSE_RATES, targetNote, targetsFor, type Recommendation } from '../../lib/dietTarget.js';
 import { afterSheetClose } from '../../lib/backNav.js';
+import { requestProgressJump } from '../../lib/progressJump.js';
 import { fmtNum } from '../../lib/dietLog.js';
 import { MIN_RATE, rateError, targetError, type TargetKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -74,8 +75,10 @@ const recFor = (rec: Recommendation, key: TargetKey) => (rec.kind === 'ok' ? (ke
 // What the recommendation still needs, with a way to supply it, so nobody has to type a target just because a number is missing.
 function Missing({ rec }: { rec: Recommendation }) {
   if (rec.kind === 'ok' && rec.direction !== null) return null;
-  const toProgress = () => { afterSheetClose(window.history, window, () => useAppStore.getState().setTab('progress')); useAppStore.getState().closeModal(); }; // the Targets sheet closes so Progress is not left under it
-  return <p className="dp-missing"><button type="button" className="btn sm" onClick={toProgress}>{rec.kind === 'none' ? (rec.reason === 'low-goal' ? 'Change goal weight' : 'Set a goal weight') : 'Log your weight'}</button></p>;
+  const leaveTo = (go: () => void) => { afterSheetClose(window.history, window, go); useAppStore.getState().closeModal(); }; // the sheet closes so the next screen is not left under it
+  const toGoal = () => leaveTo(() => { requestProgressJump('body'); useAppStore.getState().setTab('progress'); }); // the goal is edited under the Body weight chart, as Manage's Edit in Progress opens it
+  const toWeighIn = () => leaveTo(() => useAppStore.getState().setTab('board')); // weight is typed on the Board
+  return <p className="dp-missing"><button type="button" className="btn sm" onClick={rec.kind === 'none' ? toGoal : toWeighIn}>{rec.kind === 'none' ? (rec.reason === 'low-goal' ? 'Change goal weight' : 'Set a goal weight') : 'Log your weight'}</button></p>;
 }
 
 const PRESETS: { pace: Exclude<DietPace, 'custom'>; label: string }[] = [{ pace: 'slow', label: 'Slow' }, { pace: 'steady', label: 'Steady' }, { pace: 'fast', label: 'Fast' }];

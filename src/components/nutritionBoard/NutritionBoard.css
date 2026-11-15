@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* Nutrition as one week board (NutritionBoard.tsx). The day columns, meters, meal sections and plate marks reuse the week board's rules (diet/board/WeekBoard.css, class prefix wb-); this file adds the header, toolbar, day stepper, Supplements, Hydration, Eaten and the two sheets. */
+/* Nutrition as one week board (NutritionBoard.tsx). The day columns, meters, meal sections and plate marks reuse the week board's rules (diet/board/WeekBoard.css, class prefix wb-); this file adds the header, toolbar, joined week card extras, Supplements, Hydration, Eaten and the two sheets. */
 .nb-head {
   display: flex;
   flex-wrap: wrap;
@@ -9,15 +9,6 @@
 }
 .nb-head h2 {
   margin: 0;
-}
-.nb-headbtns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-8);
-  margin-left: auto;
-}
-.nb-headbtns .btn {
-  min-height: 44px;
 }
 .nb-manage {
   display: grid;
@@ -33,6 +24,30 @@
 .nb-manage .btn {
   min-height: 44px;
   justify-self: start;
+}
+.nb-sect-first {
+  margin-top: 0;
+}
+.nb-ro {
+  margin: 0 0 var(--sp-8);
+}
+.nb-inlink {
+  min-height: 44px;
+  padding: 0 var(--sp-8);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.nb-weekname {
+  min-width: 110px;
+  text-align: center;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
 }
 .nb-weeklab {
   margin: var(--sp-4) 0 var(--sp-8);
@@ -63,27 +78,6 @@
 .nb-scan {
   margin-bottom: var(--sp-8);
 }
-.nb-step {
-  display: flex;
-  gap: var(--sp-6);
-  align-items: center;
-  margin-bottom: var(--sp-8);
-}
-.nb-stepbtn {
-  flex: 0 0 auto;
-  min-width: 44px;
-  min-height: 44px;
-}
-.nb-stepbtn[aria-disabled="true"] {
-  opacity: 0.45;
-}
-.nb-steppick {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  text-align: center;
-  text-align-last: center;
-}
 .nb-dayname {
   min-height: 44px;
   padding: 0;
@@ -105,17 +99,53 @@
 .nb-col.today {
   border-color: var(--muted);
 }
+/* A past day's Supplements fold to their header line: the whole line is the button (44px tall), its chevron on the right. */
+.nb-fold {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-fold .wb-slothd {
+  flex: 1;
+}
+.nb-fold svg {
+  flex: none;
+}
+.nb-slotadd {
+  justify-self: start;
+  min-height: 44px;
+}
 .nb-col.past {
   background: var(--surface);
+}
+/* Calories, Protein and Fat fills: DayMeters.tsx names its bars `nb-<key>`, and the week board's `.wb-meter.kcal/.prot/.fat` rules never matched them, so the bars were empty. `:not(.over)` leaves a bar past its target to the rust `.wb-meter.over i` rule in WeekBoard.css. */
+.wb-meter.nb-kcal:not(.over) i {
+  background-color: var(--wb-kcal);
+}
+.wb-meter.nb-protein:not(.over) i {
+  background-color: var(--wb-prot);
+}
+.wb-meter.nb-fat:not(.over) i {
+  background-color: var(--wb-fat);
+}
+.wb-meter.nb-carbs:not(.over) i {
+  background-color: var(--nb-carbs);
 }
 .wb-meter.nb-water i {
   background: var(--wb-water);
 }
 .wb-meter.nb-supps-meter i {
   background: var(--m-supp);
-}
-.wb-legend .nbw {
-  background: var(--wb-water);
 }
 /* Vitamins and minerals under Supplements (brief vitamin-mineral-day-meter, layout B): a closed line, then thin bars in the new teal `--m-vit`. Own classes only; the Board's rules are untouched. */
 .wb-meter.nb-vit-meter {
@@ -125,6 +155,15 @@
   background: var(--m-vit);
 }
 .wb-meter.nb-vit-meter.over i {
+  background: var(--str);
+}
+.wb-meter.nb-ing-meter {
+  height: 6px;
+}
+.wb-meter.nb-ing-meter i {
+  background: var(--m-ing);
+}
+.wb-meter.nb-ing-meter.over i {
   background: var(--str);
 }
 .nb-vit {
@@ -179,67 +218,190 @@
 .nb-vit-none {
   margin: 0 0 var(--sp-8) var(--sp-8);
 }
-.wb-legend .nbs {
-  background: var(--m-supp);
+/* One day below 768 px, two and three days side by side at 768 to 1439 px (1440 px and up keeps `.wb-board`'s seven tracks). */
+.nb-board-1 {
+  grid-template-columns: minmax(0, 1fr);
 }
-.nb-short {
-  display: none;
+.nb-board-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nb-board-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .wb {
   --wb-water: #2f5fa8;
   --m-supp: #3b7d2c;
   --m-vit: #0e7c86;
+  --m-ing: #4f55a0;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .wb {
     --wb-water: #7fb0f0;
     --m-supp: #8fd16a;
     --m-vit: #5fc9d2;
+    --m-ing: #9ea3ee;
   }
 }
 :root[data-theme="dark"] .wb {
   --wb-water: #7fb0f0;
   --m-supp: #8fd16a;
   --m-vit: #5fc9d2;
+  --m-ing: #9ea3ee;
 }
 /* Phone (brief nutrition-mobile-layout): header B puts the short Targets and Manage buttons on one row (the Nutrition heading is visually hidden: the tab already says it) with the week switcher full width below; add-food A is Add food across the width over three equal buttons. Wide screens keep the long layout. */
-@media (max-width: 699px) {
-  .nb-headbtns {
-    order: 2;
+.nb-cardrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.nb-cardrow .wb-card {
+  flex: 1;
+  min-width: 0;
+}
+.nb-eatck {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nb-eatck i {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--muted);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-weight: 700;
+  color: transparent;
+}
+.nb-eatck[aria-checked="true"] i {
+  background: var(--m-supp);
+  border-color: var(--m-supp);
+  color: var(--bg);
+}
+.wb-cardwrap.eaten .wb-card {
+  border-color: var(--m-supp);
+}
+/* From 700 px the week row is the joined card's (WeekDayCard): the switcher stays at the left, Manage at the right end as it was in the header. */
+.wdc-week .nb-weeksw {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+}
+.nb-cardmanage {
+  margin-inline-start: auto;
+  min-height: 44px;
+}
+/* From 700 px the one card also holds the week's dates (row 1, after the switcher) and the add-food toolbar (the last row, under a hairline): "Adding to ..." at the left, the buttons at the right end with Add food last, wrapping onto a second line inside the card when the width runs out (brief week-day-joined-tabs). The phone keeps both outside the card. */
+.wdc-week .nb-weeklab {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.wdc-foot {
+  padding: var(--sp-6) var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+.wdc-foot .nb-toolbar {
+  justify-content: space-between;
+  margin: 0;
+}
+.wdc-foot .nb-tbtns {
+  justify-content: flex-end;
+  margin-inline-start: auto;
+}
+.wdc-foot .nb-tbtns .btn {
+  min-height: 44px;
+}
+/* The pinned card is taller with the toolbar: anchors and focus scroll to below it. */
+html:has(.wdc-foot) {
+  /* --wdc-h is the card's measured height (WeekDayCard.tsx), so the offset follows wrapping and text size */
+  scroll-padding-top: calc(var(--wdc-h, 260px) + var(--sp-16) + env(safe-area-inset-top, 0px));
+}
+/* On a short window (a landscape tablet) the taller card would cover a large share of the screen, so it scrolls with the page. */
+@media (max-height: 599px) {
+  .wdc:has(.wdc-foot) {
+    position: static;
+    box-shadow: none;
   }
-  .nb-weeksw {
-    order: 3;
-    flex: 1 0 100%;
-    display: flex;
+  html:has(.wdc-foot) {
+    scroll-padding-top: 0;
+  }
+}
+@media (max-width: 699px) {
+  /* The week row (WeekDayCard) holds the switcher at the left and Manage, the same small button as on desktop, at the right end (brief nutrition-mobile-manage); the name and dates share what is left and wrap onto a second line before anything overflows. The day tabs are in the joined card. */
+  .nb-head {
+    gap: var(--sp-8);
+  }
+  /* The week row may wrap, so with large text Manage drops to its own line, still at the right end, instead of squeezing the name or leaving the card; the switcher keeps room for the arrows and a readable name (rem follows the text size). Scoped to the row that holds Manage: the Board and Stretches rows are untouched. */
+  .wdc-week:has(> .nb-cardmanage) {
+    flex-wrap: wrap;
+  }
+  .nb-cardmanage {
+    flex: none;
+  }
+  .wdc-week .nb-weeksw {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: var(--sp-4);
+    flex: 1 1 0;
+    min-width: min(11.5rem, 100%);
+  }
+  /* On another week "This week" takes its own line under the arrows so the name and dates keep the room. */
+  .nb-weeksw .ghost {
+    grid-column: 1 / -1;
   }
   .nb-weeksw button {
-    flex: 1;
     min-height: 44px;
+    min-width: 44px;
+  }
+  /* Option B (owner 2026-11-12): the week's dates sit in the switcher row, and the status line and the "Adding to" line stay for screen readers only. The date range stays in .nb-weeklab (role=status). */
+  .nb-weekname {
     min-width: 0;
-    padding-inline: var(--sp-4);
-    white-space: normal;
+    font-size: var(--fs-lg);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
   }
-  .nb-long {
-    display: none;
+  /* The empty message line takes no room on a phone; it grows back when a message arrives. */
+  .nb-msg:empty {
+    min-height: 0;
+    margin: 0;
   }
-  .nb-short {
-    display: inline;
+  .nb-weekname::after {
+    content: " · " attr(data-dates);
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .nb-weeklab,
+  .nb-target-quiet {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .nb-tbtns {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr));
-    /* three across at normal text, fewer as text grows (the rem scales with it), so large text wraps instead of scrolling sideways */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    /* always one row of equal columns, so Add food (last) stays at the right end; a long label wraps inside its button (below), so large text grows the buttons and never scrolls sideways */
     flex: 1 0 100%;
-  }
-  .nb-tbtns #nb-add {
-    grid-column: 1 / -1;
-    min-height: 44px;
   }
   .nb-tbtns .btn {
     min-height: 44px;
     padding-inline: var(--sp-4);
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
   }
 }
 .nb-empty {
@@ -317,19 +479,39 @@
 }
 .nb-menu {
   display: grid;
+  gap: var(--sp-12);
+}
+.nb-menu ul {
+  display: grid;
   gap: var(--sp-6);
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.nb-grouph {
+  margin: 0 0 var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Every way is one row with the same left edge: its icon, its name, and its hint under the name; a long hint wraps under the name, not under the icon. */
 .nb-menu .btn {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--sp-10);
   justify-items: start;
   width: 100%;
   min-height: 44px;
   text-align: left;
 }
+.nb-menu .btn svg {
+  grid-row: 1 / span 2;
+}
 .nb-menu .btn span {
+  grid-column: 2;
   font-weight: 400;
   font-size: var(--fs-sm);
   color: var(--muted);
@@ -347,5 +529,29 @@
   display: flex;
   justify-content: space-between;
   gap: var(--sp-8);
+}
+
+/* The carbs bar (brief nutrition-items-row-sheet-and-more): its own amber, light and dark, so it is told apart from the calories, protein and fat bars by more than its label. */
+.nb {
+  --nb-carbs: #8a6200;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nb {
+    --nb-carbs: #e0b050;
+  }
+}
+:root[data-theme="dark"] .nb {
+  --nb-carbs: #e0b050;
+}
+/* The Add food sheet (its Find food way included) is 640 px wide from 768 px; every other sheet keeps the shared 480 px `.sheet` width. */
+@media (min-width: 768px) {
+  .sheet.sheet-wide {
+    max-width: 640px;
+  }
+}
+.nb-suppact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
 }
 }

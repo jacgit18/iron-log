@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { entriesOn } from '../../lib/dietLog.js';
 import { weekAverages } from '../../lib/intakeAverage.js';
 import { INTAKE_DISCLAIMER } from '../../lib/intakeChecks.js';
+import { INGREDIENT_NOTE, hasIngredientData, ingredientRows, rowIds } from '../../lib/supplementIngredients.js';
 import { totalsView } from '../../lib/supplementTotalsView.js';
 import type { TotalsBasis } from '../../lib/supplementNutrients.js';
 import { shortDay } from '../../lib/nutritionBoard.js';
@@ -15,8 +16,12 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
   const supp = useAppStore(s => s.supp);
   const diet = useAppStore(s => s.diet);
   const profile = useAppStore(s => s.cfg.profile);
+  const limits = useAppStore(s => s.cfg.ingredientLimits);
   const [basis, setBasis] = useState<TotalsBasis>('taken');
   const v = totalsView(supp.items, supp.taken, day, basis, entriesOn(diet, day), profile, weekAverages(supp.items, supp.taken, day, basis, diet));
+  const ing = ingredientRows(supp.items, supp.taken, day, basis, limits);
+  const ids = rowIds(ing.map(r => r.key));
+  const ingData = hasIngredientData(supp.items, limits);
   const first = supp.items.find(i => i.slot !== '');
   const st = () => useAppStore.getState();
   return (
@@ -29,13 +34,13 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
       </div>
       {v.coverage && <p className="note" id="stt-coverage">{v.coverage}</p>}
       <p className="note" id="stt-profile">{v.profileNote}</p>
-      {!v.hasData && (
+      {!v.hasData && !ingData && (
         <div className="stt-empty">
           <p>Add what is in a supplement, or log a food with a barcode scan or Find food, to see totals.</p>
           {first && <button type="button" className="btn" id="stt-first" onClick={() => st().openModal({ type: 'supplement', id: first.id })}>Add to {first.n}</button>}
         </div>
       )}
-      {v.noneCounted && <p className="nb-empty" id="stt-none">Nothing ticked on this day yet.</p>}
+      {(v.noneCounted || (!v.hasData && ingData)) && ing.length === 0 && <p className="nb-empty" id="stt-none">Nothing ticked on this day yet.</p>}
       <ul className="stt-list">
         {v.rows.map(r => (
           <li key={r.key} className={`stt-row ${r.status}`} id={`stt-${r.key}`}>
@@ -71,6 +76,25 @@ export default function SupplementTotalsSheet({ day }: { day: string }) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+      {ing.length > 0 && (
+        <section aria-labelledby="stt-ing-h">
+          <h3 className="stt-sect" id="stt-ing-h">Active ingredients</h3>
+          <p className="note">Sums of what you listed for each supplement. A limit here is your own number, not a recommendation.</p>
+          <ul className="stt-list" id="stt-ingredients">
+            {ing.map((r, n) => (
+              <li key={r.key} className={`stt-row ing ${r.status}`} id={`stt-ing-${ids[n]}`}>
+                <div className="stt-hd"><b>{r.label}</b><span className="stt-fig">{r.figure}</span></div>
+                {r.limit && <div className="stt-bar" role="img" aria-label={`${r.label}: ${r.figure}. ${r.statusText}. ${r.limitText}`}><i style={{ width: `${r.percent}%` }} /></div>}
+                {r.limit && <div className="stt-st"><b>{r.statusText}</b><span>{r.limitText}</span></div>}
+                <p className="note">From supplements: {r.productLines.length ? r.productLines.join(', ') : 'none'}</p>
+                {r.notAddedLines.map(n => <p key={n} className="note">{n}</p>)}
+                <button type="button" className="btn sm ghost stt-limit" id={`stt-limit-${ids[n]}`} aria-label={`${r.limit ? 'Change limit' : 'Set your limit'} for ${r.label}`} onClick={() => st().openModal({ type: 'ingredientlimit', name: r.key, label: r.label, day, unit: r.unit })}>{r.limit ? 'Change limit' : 'Set your limit'}</button>
+              </li>
+            ))}
+          </ul>
+          <p className="note" id="stt-ing-note">{INGREDIENT_NOTE}</p>
         </section>
       )}
       <p className="note stt-foot">Food counts only where the foods you logged list vitamins or minerals (a barcode scan, Find food, a label photo, or a recipe, ready-made food or meal built from those; Quick add and foods typed by hand add nothing), so a total can be low, and a total under a limit is not proof of safety. A supplement you also log as a food counts twice. {INTAKE_DISCLAIMER}</p>

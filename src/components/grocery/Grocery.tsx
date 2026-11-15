@@ -22,12 +22,12 @@ import './SplitSection.js';
 import './StoreTax.js';
 import './StoreMoney.js';
 import { useEffect, useState } from 'react';
-import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { monthKey } from '../../lib/grocery.js';
 import { pageOf } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
+import SubNav from '../SubNav.js';
 import GroceryBoughtTabs, { type BoughtView } from './GroceryBoughtTabs.js';
 import GrocerySpend from './GrocerySpend.js';
 import Receipts from './Receipts.js';
@@ -54,25 +54,18 @@ export default function Grocery() {
   const [priceFor, setPriceFor] = useState<string | null>(null); // the item whose price field the tick notice's Add price opens on Bought
   const routed = pageOf(useRoutePath(), 'daily/grocery'); // #/daily/grocery/bought/history wins over the default (the old #/daily/grocery/spend lands there)
   const routedView = routed?.split('/')[0] ?? null; // `bought/history` is the Bought view's second switch
-  const receiptsOn = useFeature('receipts');
-  const showReceipts = routed === 'receipts' && receiptsOn; // the saved receipts page (brief receipt-save-photo): admin only, and a reload of its address falls back to the list for anyone else
+  const showReceipts = routed === 'receipts'; // the saved receipts page (brief receipt-save-photo), released to everyone 2026-11-10
   const view = (routedView && VIEWS.includes(routedView) ? routedView : chosen) as View;
   const inner: BoughtView = view === 'bought' && routed === 'bought/history' ? 'history' : 'month';
   const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); }; // leaving Bought, or pressing it, starts at This month
   const setInner = (v: BoughtView) => navigate(v === 'history' ? 'daily/grocery/bought/history' : 'daily/grocery/bought', 'replace');
   if (showReceipts) return <section className="panel groc" aria-labelledby="rcs-h"><Receipts /></section>;
-  const tab = (v: View, label: string) => (
-    <button type="button" id={`groc-view-${v}`} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>{label}</button>
-  );
+  const VIEW_ITEMS = [{ key: 'shopping', label: 'Shopping', id: 'groc-view-shopping' }, { key: 'bought', label: 'Bought', id: 'groc-view-bought' }, { key: 'inventory', label: 'Inventory', id: 'groc-view-inventory' }] as const;
   return (
     <section className="panel groc" aria-labelledby="groc-h">
       <div className="gtop">
         <h2 id="groc-h">Groceries</h2>
-        <div className="seg" role="group" aria-label="Grocery view">
-          {tab('shopping', 'Shopping')}
-          {tab('bought', 'Bought')}
-          {tab('inventory', 'Inventory')}
-        </div>
+        <SubNav label="Grocery view" items={VIEW_ITEMS} value={view} onChange={k => setView(k as View)} />
       </div>
       {view === 'bought' && <GroceryBoughtTabs value={inner} onChange={setInner} />}
       <p className="note gviewsub" id="groc-sub">{SUBTITLE[view === 'bought' && inner === 'history' ? 'history' : view]}</p>

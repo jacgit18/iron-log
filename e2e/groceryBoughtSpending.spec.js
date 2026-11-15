@@ -89,14 +89,14 @@ test('on a phone Shopping has a full-width Scan receipt, a full-width search and
   expect(wide).toBe(false);
 });
 
-test('a phone without the saved-receipt feature sees search and Sort, Select items, More, Scan receipt and Pick from photos, and no Saved receipts button', async ({ page }) => {
+test('a phone sees search and Sort, Select items, More, Scan receipt, Pick from photos and Saved receipts (open to everyone since 2026-11-10)', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
   await page.click('#groc-view-shopping');
   await expect(page.locator('#groc-scan')).toHaveCount(1);
   await page.click('#groc-toolmore');
   await expect(page.locator('#groc-scan-pick')).toHaveCount(1);
-  await expect(page.locator('#groc-receipts')).toHaveCount(0);
+  await expect(page.locator('#groc-receipts')).toHaveCount(1);
   await expect(page.locator('#groc-details-all')).toBeVisible();
 });
 

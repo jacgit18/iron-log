@@ -70,7 +70,7 @@ test('Manage filters hides and reorders the chips on both tabs, keeps them after
   await expect(rows(page)).toHaveText(['Chili']); // hiding a chip loses no recipe
   await page.locator('#recipes-library').click();
   await expect(chipRow(page).filter({ hasText: 'Carbs' })).toHaveCount(0); // the same setting on the Library tab
-  await expect(chipRow(page).filter({ hasText: 'Ready-made' })).toHaveCount(0); // as before: the Library has no ready-made chip
+  await expect(chipRow(page).filter({ hasText: 'Food' })).toHaveCount(0); // as before: the Library has no ready-made chip
   await page.reload();
   await openRecipes(page);
   await expect(chipRow(page).nth(1)).toHaveText('Sides');

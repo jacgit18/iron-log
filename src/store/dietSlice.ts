@@ -1,11 +1,17 @@
+import { skipSnack } from '../lib/dailySnacks.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { addItem, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
+import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
+import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
-import { moveItem } from '../lib/weekBoard.js';
+import { plannedText, resultText, type SkippedDay } from '../lib/dayPicker.js';
+import { copyEaten, copyEatenMany } from '../lib/moveCopyEaten.js';
+import { shortDay } from '../lib/nutritionBoard.js';
+import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
+import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
 import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
-import type { DietEntry, SavedMeal } from '../types.ts';
+import type { DailySnack, DietEntry, PlanItem, SavedMeal } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
 
 // Your food log (ADR 086): one document, diet/main, saved like every other (synced when syncing is on, in this browser otherwise). Entries are
@@ -22,12 +28,18 @@ const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
 
 // The plan lives in cfg.diet.plan (brief diet-meal-planner), keyed by date; every write goes back through normDietCfg with today, which drops earlier days.
 const planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
-const putPlan = (get: StoreGet, plan: Plan) => get().mutateCfg(c => {
+const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>) => get().mutateCfg(c => {
   const next = { ...(c.diet || {}) };
   if (Object.keys(plan).length) next.plan = plan; else delete next.plan;
+  if (skips) { if (Object.keys(skips).length) next.snackSkips = skips; else delete next.snackSkips; } // the daily snack skips go in the same write as the plan change that needs them
   const clean = normDietCfg(next, ymd(new Date()));
   if (clean) c.diet = clean; else delete c.diet;
 });
+
+// A listed daily snack (brief daily-snacks) that leaves a day from Snack (removed there, or moved to another day) is skipped on that day, so its listed copy does not come back in its place.
+// Only an item in Snack counts: the same recipe planned by hand in another meal is the person's own plan, and taking it out leaves the listed snack as it was.
+const skipsAfterLeaving = (get: StoreGet, day: string, item: { k: string; id: string; s?: string } | undefined): Record<string, string[]> | undefined =>
+  item && item.k === 'r' && item.s === 'snack' && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
 
 export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   diet: [],
@@ -44,6 +56,65 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     set({ diet: pruned([...list, e], today) });
     get().saveDiet();
     return { id: e.id, error: null };
+  },
+
+  copyDietEntry(id, toDay, move = false) {
+    const list = get().diet, today = ymd(new Date());
+    const r = copyEaten(list, id, toDay, today, newId(list), move);
+    if (r.error || !r.id) return { id: null, error: r.error ?? 'Couldn’t log that.' };
+    const gone = list.find(e => e.id === id)!, at = list.indexOf(gone), copyId = r.id;
+    set({ diet: pruned(r.list, today) });
+    get().saveDiet();
+    if (move) {
+      // Undo puts the original back where it was and takes the copy away again, so an undone move is a no-op (nothing duplicated).
+      get().noteRemoved('diet', `${gone.n} to ${shortDay(toDay)}`, () => {
+        if (get().blocked() || get().diet.some(e => e.id === id) || !get().diet.some(e => e.id === copyId)) return false;
+        const l = get().diet.filter(e => e.id !== copyId);
+        if (!roomOn(l, gone.d)) return false; // the day filled up since: Undo must not push it past the limit
+        l.splice(Math.min(at, l.length), 0, gone);
+        set({ diet: normDietEntries(l) }); get().saveDiet(); return true;
+      }, { verb: 'Moved' });
+    }
+    return { id: copyId, error: null };
+  },
+
+  // Copy (or move) one eaten entry to several days as ONE write per document (brief nutrition-multi-day-picker): the log list is set and saved once, and the plan cards for days ahead go in one plan write. A full or invalid day is skipped and named; a move takes one day and is refused whole when its plan card can't be added, so nothing is half-copied.
+  copyDietEntries(id, days, move = false) {
+    const list = get().diet, today = ymd(new Date());
+    const refuse = (error: string) => ({ done: [], skipped: [], message: error, error });
+    const r = copyEatenMany(list, id, days, today, newId, move, get().recipes);
+    if (r.error) return refuse(r.error);
+    const plan = addItemsToDays(planOf(get), r.planAdds, today, get().cfg.diet?.snacks);
+    const skipped: SkippedDay[] = [...r.skipped, ...plan.skipped];
+    if (move && plan.skipped.length) return refuse(resultText('Moved', [], skipped));
+    const gone = list.find(e => e.id === id)!, at = list.indexOf(gone), copyId = r.copied[0]?.id;
+    const done = [...r.copied.map(c => c.day), ...plan.added];
+    if (!done.length) return refuse(resultText(move ? 'Moved' : 'Copied', [], skipped));
+    if (plan.added.length) putPlan(get, plan.plan); // the plan first: if the log write below never happens, a move leaves the original and a card (a duplicate), never a lost entry
+    if (r.copied.length || move) { set({ diet: pruned(r.list, today) }); get().saveDiet(); } // a move to a day ahead drops the original without a copy in the log
+    if (move) {
+      const toDay = done[0]!, planned = r.planAdds[0]?.item;
+      get().noteRemoved('diet', `${gone.n} to ${shortDay(toDay)}`, () => {
+        if (get().blocked() || get().diet.some(e => e.id === id) || (copyId && !get().diet.some(e => e.id === copyId))) return false;
+        const l = get().diet.filter(e => e.id !== copyId);
+        if (!roomOn(l, gone.d)) return false; // the day filled up since: Undo must not push it past the limit
+        l.splice(Math.min(at, l.length), 0, gone);
+        set({ diet: normDietEntries(l) }); get().saveDiet();
+        if (planned) { const p = planOf(get), i = (p[toDay] ?? []).findIndex(x => x.k === planned.k && x.id === planned.id && x.s === planned.s); if (i >= 0) putPlan(get, removeItem(p, toDay, i), skipsAfterLeaving(get, toDay, p[toDay]![i])); }
+        return true;
+      }, { verb: 'Moved' });
+    }
+    const message = resultText(move ? 'Moved' : 'Copied', done, skipped);
+    return { done, skipped, message, error: null };
+  },
+
+  // The planned item at `index` of `day` copied to the same meal of each day in `days`, in one plan write. Days that are full, outside the window or already hold it are skipped and named.
+  copyPlanItems(day, index, days) {
+    const today = ymd(new Date());
+    const r = copyItemToDays(planOf(get), day, index, days, today, get().cfg.diet?.snacks);
+    if (r.error) return { done: [], skipped: r.skipped, message: r.error, error: r.error };
+    putPlan(get, r.plan);
+    return { done: r.added, skipped: r.skipped, message: resultText('Copied', r.added, r.skipped), error: null };
   },
 
   updateDietEntry(id, patch) {
@@ -90,9 +161,11 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const st = get(), meals = mealsOf(get), have = st.cfg.diet?.mealsMoved ?? {};
     if (!st.isReady() || !st.recipesLoaded || meals.every(m => have[m.id])) return 0;
     const r = moveMeals(meals, have, st.recipes);
-    if (!r.added) return 0;
-    set({ recipes: r.recipes });
-    get().saveRecipes(); // recipes first: if the settings write below fails, the next load moves again (a copy), never loses a meal
+    if (!r.added && !r.found) return 0;
+    if (r.added) {
+      set({ recipes: r.recipes });
+      get().saveRecipes(); // recipes first: if the settings write below fails, the next load finds each recipe by its fromMeal mark and rebuilds the moved record (no copy, no lost meal)
+    }
     get().mutateCfg(c => {
       const next = { ...(c.diet || {}), mealsMoved: r.moved };
       const plan = remapPlan(next.plan, r.moved);
@@ -106,16 +179,28 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   addPlanItem(day, kind, id, slot) {
     const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
     if (!there) return kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
-    const r = addItem(planOf(get), day, { k: kind, id, ...(slot ? { s: slot } : {}) }, ymd(new Date()));
+    const r = addItem(planOf(get), day, { k: kind, id, ...(slot ? { s: slot } : {}) }, ymd(new Date()), get().cfg.diet?.snacks);
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return null;
   },
 
-  movePlanItem(day, index, toDay, slot) {
-    const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()));
-    if (r.plan === null) return r.error;
+  // One recipe or saved meal planned on several days in one plan write (the Add sheet's "This day on" and "Pick days"). Days that are full, outside the window or already hold it are skipped and named.
+  addPlanItemToDays(kind, id, days, slot) {
+    const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
+    const gone = kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
+    if (!there) return { done: [], skipped: [], message: gone, error: gone };
+    const item: PlanItem = { k: kind, id, ...(slot ? { s: slot } : {}) };
+    const r = addItemsToDays(planOf(get), [...new Set(days)].map(day => ({ day, item })), ymd(new Date()), get().cfg.diet?.snacks);
+    if (!r.added.length) { const m = plannedText('', '', [], r.skipped); return { done: [], skipped: r.skipped, message: m, error: m }; }
     putPlan(get, r.plan);
+    return { done: r.added, skipped: r.skipped, message: '', error: null };
+  },
+
+  movePlanItem(day, index, toDay, slot) {
+    const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()), get().cfg.diet?.snacks);
+    if (r.plan === null) return r.error;
+    putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, planOf(get)[day]?.[index]) : undefined);
     return null;
   },
 
@@ -124,7 +209,59 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (next !== plan) putPlan(get, next);
   },
 
-  removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index)); },
+  removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index), skipsAfterLeaving(get, day, planOf(get)[day]?.[index])); },
+
+  // Daily snacks (brief daily-snacks): the saved list in cfg.diet.snacks, shown in Snack on every day of the plan window.
+  saveDailySnacks(list: DailySnack[]) {
+    get().mutateCfg(c => {
+      const next = { ...(c.diet || {}) };
+      if (list.length) next.snacks = list; else delete next.snacks;
+      if (next.snackSkips) { // a skip belongs to a snack on the list: one removed and added back starts clean
+        const keep = new Set(list.map(s => s.id));
+        const left = Object.fromEntries(Object.entries(next.snackSkips).map(([d, ids]) => [d, ids.filter(i => keep.has(i))] as const).filter(([, ids]) => ids.length));
+        if (Object.keys(left).length) next.snackSkips = left; else delete next.snackSkips;
+      }
+      const clean = normDietCfg(next, ymd(new Date()));
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+  },
+
+  // One listed snack, today only: it is skipped on that day and comes back on the next.
+  skipDailySnack(day, id) { putPlan(get, planOf(get), skipSnack(get().cfg.diet?.snackSkips, day, id)); },
+
+  // A listed snack that is only shown becomes a real item of that day's Snack (so it can be ticked, changed or moved); the index of the real item, or an error text (the day is outside the plan window).
+  realizeDailySnack(day, id) {
+    const have = (planOf(get)[day] ?? []).findIndex(i => i.k === 'r' && i.id === id && i.s === 'snack');
+    if (have >= 0) return have;
+    const listed = get().cfg.diet?.snacks?.find(x => x.id === id);
+    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()), get().cfg.diet?.snacks); // a listed snack never counts toward the day's 8 planned things, so a full day still lets it be ticked
+    if (r.plan === null) return r.error;
+    putPlan(get, r.plan);
+    return r.plan[day]!.length - 1;
+  },
+
+  // Takes back a snack realizeDailySnack just stored when what it was stored for did not happen (the log failed): it has no eaten mark, so it only goes back to being shown.
+  unstoreDailySnack(day, index) {
+    const it = planOf(get)[day]?.[index];
+    if (!it || it.e?.length) return;
+    putPlan(get, removeItem(planOf(get), day, index));
+  },
+
+  setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },
+
+  // Week to Shopping (briefs week-shopping, snacks-into-shopping): each planned, uneaten recipe on those days, and each listed daily snack that shows there, puts its missing ingredients on Shopping through the recipe's own button; `ids` are the items this call created, for Undo.
+  planToShopping(days, month = monthKey(new Date()), today = ymd(new Date())) {
+    const recipeIds = plannedShoppingIds(get().cfg.diet, days, today, get().recipes, get().diet), before = get().grocery.items;
+    let added = 0, already = 0, refused: string | null = null;
+    for (const id of recipeIds) { const r = get().addMissingToGrocery(id, month); added += r.added; already += r.already; refused ??= r.refused; }
+    return { added, already, refused, recipes: recipeIds.length, ids: idsAdded(before, get().grocery.items) };
+  },
+
+  uncheckPlanItem(day, index) {
+    const ids = planOf(get)[day]?.[index]?.e ?? [];
+    ids.forEach(id => get().removeDietEntry(id, false));
+    putPlan(get, setEaten(planOf(get), day, index, []));
+  },
 
   setDietPace(pace, rate) {
     if (pace === 'custom') { const bad = rateError(rate ?? null); if (bad) return bad; }

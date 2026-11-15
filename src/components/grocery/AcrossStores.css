@@ -9,7 +9,7 @@
 }
 .gacross h4 {
   margin: 0 0 var(--sp-8);
-  font-size: var(--fs-sm);
+  font-size: var(--h-sub);
 }
 .gacrossrows {
   display: grid;

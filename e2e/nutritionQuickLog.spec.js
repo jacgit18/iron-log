@@ -29,48 +29,48 @@ test('the strip hides with nothing logged; after logging a food the chip opens t
   await expect((await chips(page)).getByText('Recent and favorites')).toHaveCount(0);
   await closeSheet(page);
   await make(page);
-  await page.getByRole('button', { name: 'Ate this' }).click();
-  await expect(page.getByText('Logged 3 eggs of Boiled egg to today.')).toBeVisible();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText(/Logged .+: 3 eggs to today\./)).toBeVisible();
   await openDiet(page);
   const strip = await chips(page);
   await expect(strip.getByText('Recent and favorites')).toBeVisible();
   await strip.getByRole('list', { name: 'Recent and favorites' }).getByRole('button', { name: 'Boiled egg' }).click();
   await expect(sheet(page).getByRole('heading', { name: 'Boiled egg' })).toBeVisible();
   await expect(sheet(page).getByText('3 eggs').first()).toBeVisible(); // the usual amount
-  await expect(sheet(page).getByText('210 kcal · 18 g protein for 3 eggs')).toBeVisible();
+  await expect(sheet(page).getByText(/210 kcal · P 18 g.*for 3 eggs/)).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Less' }).click();
-  await expect(sheet(page).getByText('175 kcal · 15 g protein for 2.5 eggs')).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'Log it' }).click();
-  await expect(sheet(page).getByText('Logged 2.5 eggs to today.')).toBeVisible();
+  await expect(sheet(page).getByText(/175 kcal · P 15 g.*for 2\.5 eggs/)).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(sheet(page).getByText(/Logged .+: 2\.5 eggs to today\./)).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Done' }).click();
   await expect(eaten(page)).toHaveCount(2);
   await (await chips(page)).getByRole('list', { name: 'Recent and favorites' }).getByRole('button', { name: 'Boiled egg' }).click();
-  await sheet(page).getByRole('button', { name: 'Log it' }).click();
+  await sheet(page).getByRole('button', { name: 'Log', exact: true }).click();
   await sheet(page).getByRole('button', { name: 'Undo' }).click(); // only the entry this sheet made
   await sheet(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(eaten(page)).toHaveCount(2);
 });
 
-test('the sheet refuses a future day with the usual wording and accepts a past one', async ({ page }) => {
+test('the sheet logs a past day and offers a future day as a plan (the plan itself is in logOrPlan.spec.js)', async ({ page }) => {
   await make(page);
-  await page.getByRole('button', { name: 'Log', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click(); // the row's Log opens the portion sheet
   const tomorrow = await page.evaluate(() => new Date(Date.now() + 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }));
   const yesterday = await page.evaluate(() => new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }));
   await sheet(page).getByLabel('Day').fill(tomorrow);
-  await sheet(page).getByRole('button', { name: 'Log it' }).click();
-  await expect(sheet(page).getByRole('alert')).toHaveText('Pick today or an earlier day.');
+  await expect(sheet(page).getByText('Which meal?')).toBeVisible();
+  await expect(sheet(page).getByRole('button', { name: 'Plan', exact: true })).toBeVisible();
   await sheet(page).getByLabel('Day').fill(yesterday);
-  await sheet(page).getByRole('button', { name: 'Log it' }).click();
-  await expect(sheet(page).getByText(`Logged 3 eggs to ${yesterday}.`)).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(sheet(page).getByText(new RegExp(`Logged .+: 3 eggs to ${yesterday}\\.`))).toBeVisible();
 });
 
-test('Recipes rows and the food page have Log, and Ate this still works on the page', async ({ page }) => {
+test('Recipes rows have Log, and the food page has one log control and no Ate this', async ({ page }) => {
   await make(page);
-  await page.getByRole('button', { name: 'Log', exact: true }).first().click(); // the page's own Log
-  await expect(sheet(page).getByRole('heading', { name: 'Boiled egg' })).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('button', { name: 'Ate this' }).click();
-  await expect(page.getByText('Logged 3 eggs of Boiled egg to today.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ate this' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(1); // the page's one control
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await expect(page.getByText(/Logged .+: 3 eggs to today\./)).toBeVisible();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible(); // the row's Log
 });
@@ -84,23 +84,23 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Almond milk', brand: 'Silk', kcal: 30, p: 1, c: 1, f: 2.5, serving: 240 } }) }));
   await page.reload();
   await openDiet(page);
-  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   const scanned = page.getByRole('group', { name: 'Scanned food' });
   await expect(scanned.getByText('Almond milk (Silk) · 30 kcal per 100 g')).toBeVisible();
   await scanned.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Drink' }).click();
-  await expect(scanned.getByText('72 kcal · 2.4 g protein · 2.4 g carbs · 6 g fat')).toBeVisible();
+  await expect(scanned.getByText('72 kcal · P 2.4 · C 2.4 · F 6 g')).toBeVisible();
   const go = scanned.getByRole('button', { name: 'Save and log it' });
   await go.dblclick(); // a double tap still logs once
-  await expect(page.getByText('Saved Almond milk (Silk) as drink and logged it.')).toBeVisible();
+  await expect(page.getByText('Saved Almond milk (Silk) to Recipes as drink and logged it.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(1);
   await openRecipes(page);
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
   await openDiet(page); // the same product scanned again is logged under the saved food, not saved twice
-  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   await page.getByRole('group', { name: 'Scanned food' }).getByRole('button', { name: 'Save and log it' }).click();
-  await expect(page.getByText('Logged Almond milk (Silk), a food you already had.')).toBeVisible();
+  await expect(page.getByText('Logged Almond milk (Silk), a food you already had in Recipes.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(2);
   await openRecipes(page);
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
@@ -115,14 +115,14 @@ test('a scanned food is logged to the day the scan began on, even if another day
   await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Almond milk', brand: 'Silk', kcal: 30, p: 1, c: 1, f: 2.5, serving: 240 } }) }));
   await page.reload();
   await openDiet(page);
-  await page.getByRole('button', { name: 'Scan barcode', exact: true }).click();
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click();
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   const scanned = page.getByRole('group', { name: 'Scanned food' });
   await expect(scanned).toBeVisible();
   await page.locator('.nb-col[data-day="2026-09-25"]').getByRole('button', { name: /^Fri 25/ }).click(); // another day, before saving
   await expect(scanned.getByText('Logs to today, the day you scanned on.')).toBeVisible(); // the panel says where it will log
   await scanned.getByRole('button', { name: 'Save and log it' }).click();
-  await expect(page.getByText(/Saved Almond milk \(Silk\) as .* and logged it\./)).toBeVisible();
+  await expect(page.getByText(/Saved Almond milk \(Silk\) to Recipes as .* and logged it\./)).toBeVisible();
   await expect(page.locator('.nb-col.today .nb-eat')).toHaveCount(1);
   await expect(page.locator('.nb-col[data-day="2026-09-25"] .nb-eat')).toHaveCount(0);
 });

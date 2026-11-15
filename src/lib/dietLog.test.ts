@@ -50,9 +50,9 @@ describe('carbs and fat', () => {
     expect(missingCarbsFat(l, '2026-10-28')).toBe(false);
   });
   it('words an entry, with carbs and fat only when entered', () => {
-    expect(entryText({ kcal: 1520, p: 42 })).toBe('1,520 kcal · 42 g protein');
-    expect(entryText({ kcal: 520, p: 42, c: 60, f: 12 })).toBe('520 kcal · 42 g protein · 60 g carbs · 12 g fat');
-    expect(entryText({ kcal: 520, p: 42, f: 0 })).toBe('520 kcal · 42 g protein · 0 g fat');
+    expect(entryText({ kcal: 1520, p: 42 })).toBe('1,520 kcal · P 42 g');
+    expect(entryText({ kcal: 520, p: 42, c: 60, f: 12 })).toBe('520 kcal · P 42 · C 60 · F 12 g');
+    expect(entryText({ kcal: 520, p: 42, f: 0 })).toBe('520 kcal · P 42 · F 0 g');
   });
   it('a recipe serving brings its carbs and fat scaled', () => {
     expect(servingNumbers({ kcal: 600, p: 40, c: 51, f: 11 }, 1.5)).toEqual({ kcal: 900, p: 60, c: 76.5, f: 16.5 });
@@ -130,7 +130,7 @@ describe('whole pack (ready-made foods)', () => {
     expect(ateMax({ cat: 'ready', servings: 24, kcal: 450, p: 10 })).toBe(22); // 22 x 450 = 9,900; 22.5 would be 10,125 over the 9,999 calorie cap
     expect(ateMax({ cat: 'ready', servings: 40, kcal: 100, p: 30 })).toBe(33); // 33 x 30 = 990 g protein; 33.5 would be 1,005 g over the 999 g cap
     expect(ateMax({ cat: 'ready', servings: 12, kcal: 210, p: 6 })).toBe(12); // fits: unchanged
-    expect(ateMax({ cat: 'ready', servings: 24 })).toBe(24); // no numbers yet: Ate this shows the "Add them" prompt, not the stepper
+    expect(ateMax({ cat: 'ready', servings: 24 })).toBe(24); // no numbers yet: the log control shows the "Add them" prompt, not the stepper
   });
   it('lets the stepper reach a usual amount over 10', () => {
     expect(ateMax({ cat: 'ready', usual: 12, kcal: 100, p: 5 })).toBe(12);
@@ -141,12 +141,12 @@ describe('whole pack (ready-made foods)', () => {
   });
 });
 
-describe('ateEntry (shared by Ate this and the portion sheet)', () => {
+describe('ateEntry (shared by the log control and the portion sheet)', () => {
   const r = { id: 'r1', n: 'Egg', kcal: 70, p: 6, c: 0.5, f: 5 };
   const today = '2026-11-07';
   it('logs exactly the numbers servingNumbers gives, with the recipe id', () => {
     const out = ateEntry(r, 3, today, today);
-    expect(out).toEqual({ entry: { d: today, n: 'Egg', ...servingNumbers(r, 3)!, from: 'r1' } });
+    expect(out).toEqual({ entry: { d: today, n: 'Egg', ...servingNumbers(r, 3)!, from: 'r1', x: 3 } });
   });
   it('accepts a past day, refuses a future or too-old day with the usual wording', () => {
     expect('entry' in ateEntry(r, 1, '2026-11-01', today)).toBe(true);

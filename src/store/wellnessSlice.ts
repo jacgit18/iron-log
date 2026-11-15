@@ -2,9 +2,11 @@ import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId, sameSupplement } from '../lib/supplements.js';
-import { isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
+import { ingredientsOf, isCatalogId, normSupplementItem, nutrientsOf } from '../shared/listItems.js';
+import { MAX_INGREDIENT_LIMITS, checkLimit, ingredientKey, ingredientName } from '../shared/supplementIngredients.js';
 import { normPortion } from '../lib/supplementPortion.js';
-import type { StretchTier, SupplementSlot } from '../types.ts';
+import { planTimes } from '../lib/supplementTimes.js';
+import type { StretchTier, SupplementItem, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
 import { goalMetNow, trackWater } from '../lib/waterReminder.js';
@@ -182,8 +184,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const n = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (!n) { flag('Give the supplement a name'); return false; }
     const dz = String(dose || '').trim().slice(0, 40);
     const brand = String(opts.brand || '').trim().replace(/\s+/g, ' ').slice(0, 60);
-    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
-    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); });
+    const nutrients = nutrientsOf(opts.nutrients), ingredients = ingredientsOf(opts.ingredients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}) }); });
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
   // `dose`, when typed (the Supplements tab's add form), replaces the saved one.
@@ -206,6 +208,27 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
       delete copy.portion; // a new intake starts at one serving: you choose its amount
       s.items.splice(i + 1, 0, copy);
     });
+  },
+  // Save from the sheet's time chips (brief supplement-split-times): the product of `id` ends up at `times`, each with its own amount. `planTimes` says what
+  // changes: new entries are copies (like addSupplementInstance), a time turned off is removed with its Undo notice. `dose` is written to every time; left out (undefined), the doses stay as they are (the merged list's chips, brief supplement-merged-list).
+  saveSupplementTimes(id, times, dose) {
+    if (get().blocked()) return false;
+    const plan = planTimes(get().supp.items, id, times); if (!plan) return false;
+    const dz = String(dose || '').trim().slice(0, 40);
+    const cur = get().supp.items.find(x => x.id === id)!;
+    if (!get().mutateSupp(s => {
+      const put = (x: SupplementItem, portion: number) => { const p = normPortion(portion); if (p) x.portion = p; else delete x.portion; };
+      for (const m of plan.move) { const x = s.items.find(i => i.id === m.id); if (x) { x.slot = m.slot; put(x, m.portion); } }
+      for (const a of plan.add) {
+        const i = s.items.findIndex(x => x.id === a.from); if (i < 0) continue;
+        const copy: SupplementItem = { ...s.items[i], id: newSupplementId(s.items, s.items[i].n), slot: a.slot }; put(copy, a.portion);
+        s.items.splice(i + 1, 0, copy);
+      }
+      for (const m of plan.set) { const x = s.items.find(i => i.id === m.id); if (x) put(x, m.portion); }
+      if (dose !== undefined) for (const x of s.items) if (x.slot && sameSupplement(x, cur.n, cur.brand) && !plan.remove.includes(x.id)) { if (dz) x.dose = dz; else delete x.dose; }
+    })) return false;
+    for (const rid of plan.remove) get().removeSupplement(rid);
+    return true;
   },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
   removeSupplement(id) {
@@ -243,8 +266,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
     const slot = opts.slot && SLOTS.some(([k]) => k === opts.slot) ? opts.slot : ''; const dz = String(opts.dose || '').trim().slice(0, 40);
     // The label's amounts (brief supplement-label-amounts) are cleaned like any typed rows and become the supplement's own (ADR 026); none given adds it exactly as before.
-    const nutrients = nutrientsOf(opts.nutrients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
-    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id, ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}) }); })) return null;
+    const nutrients = nutrientsOf(opts.nutrients), ingredients = ingredientsOf(opts.ingredients), serving = opts.serving ? normSupplementItem({ id: 'x', n: 'x', serving: opts.serving })?.serving : undefined;
+    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id, ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}) }); })) return null;
     flag(`Added ${n}`); return null;
   },
   // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id
@@ -260,21 +283,35 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     const nutrients = d.nutrients === undefined ? cur?.nutrients || [] : nutrientsOf(d.nutrients);
+    const ingredients = d.ingredients === undefined ? cur?.ingredients || [] : ingredientsOf(d.ingredients);
     const serving = d.serving === undefined ? cur?.serving : normSupplementItem({ id: 'x', n: 'x', serving: d.serving })?.serving; // one serving size per product; the same cleaner as a synced item
     const portion = d.portion === undefined ? cur?.portion : normPortion(d.portion);
     get().mutateSupp(s => {
       const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}),
-        ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
+        ...(serving ? { serving } : {}), ...(nutrients.length ? { nutrients } : {}), ...(ingredients.length ? { ingredients } : {}), ...(portion ? { portion } : {}) }; // the form sends the rows it shows; a caller that sends none keeps what the item has
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
-      // The same product in other sections shares one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
+      // The same product in other sections shares its name, one set of nutrient rows and one serving size (what the label says); the portion and the section stay each one's own.
       if (cur) for (const x of s.items) {
         if (x.id === item.id || !sameSupplement(x, cur.n, cur.brand)) continue;
+        x.n = n; // a rename reaches every time of the product: the sheet shows them as one supplement, and Save groups them by name
         if (d.nutrients !== undefined) { if (nutrients.length) x.nutrients = nutrients.map(r => ({ ...r })); else delete x.nutrients; }
+        if (d.ingredients !== undefined) { if (ingredients.length) x.ingredients = ingredients.map(r => ({ ...r })); else delete x.ingredients; }
         if (d.serving !== undefined) { if (serving) x.serving = { ...serving }; else delete x.serving; }
       }
     });
     set({ modal: null }); flag('Supplement saved'); return null;
+  },
+  // Your own daily target or cap for one active ingredient (brief supplement-active-ingredients): per name, all supplements. `null` removes it. The limit is the person's own number, so removing an ingredient row elsewhere keeps it.
+  setIngredientLimit(name, limit) {
+    const key = ingredientKey(name); if (!key) return 'Name the ingredient.';
+    if (get().blocked()) return 'Try again in a moment.';
+    if (limit === null) { get().mutateCfg(c => { if (c.ingredientLimits) { delete c.ingredientLimits[key]; if (!Object.keys(c.ingredientLimits).length) delete c.ingredientLimits; } }); flag('Limit removed'); return null; }
+    const ok = checkLimit(limit.kind, limit.amount, limit.unit);
+    if ('error' in ok) return ok.error;
+    if (!get().cfg.ingredientLimits?.[key] && Object.keys(get().cfg.ingredientLimits || {}).length >= MAX_INGREDIENT_LIMITS) return 'You have set as many limits as fit. Remove one first.';
+    if (!get().mutateCfg(c => { c.ingredientLimits = { ...(c.ingredientLimits || {}), [key]: { ...ok.limit, name: ingredientName(name) } }; })) return 'Try again in a moment.';
+    flag('Limit saved'); return null;
   },
   // Undo puts it back where it was, with every day it was ticked.
   deleteSupplement(id) {

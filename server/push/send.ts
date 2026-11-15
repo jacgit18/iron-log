@@ -1,4 +1,4 @@
-import webpush from 'web-push';
+import * as webpush from 'web-push';
 import type { PushConfig } from './config.ts';
 import type { PushKind } from './scheduler.ts';
 import { isPushServiceUrl } from './validate.ts';

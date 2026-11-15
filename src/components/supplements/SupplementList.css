@@ -1,0 +1,41 @@
+@layer base, components;
+@layer components {
+/* The merged supplement list in Manage (brief supplement-merged-list): a row is name, line and Edit on top, the three time chips under it. The chips and the filter are the shared .pillbtn (Pill.css). */
+.slrow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-8);
+  padding: var(--sp-8) 0;
+}
+.sltop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.sltop .exmain {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.slchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.slbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.slfilter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+.slfilter button span {
+  font-variant-numeric: tabular-nums;
+}
+}

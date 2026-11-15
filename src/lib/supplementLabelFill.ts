@@ -1,6 +1,7 @@
 import { MAX_NUTRIENT_ROWS, NUTRIENT_KEYS, type NutrientKey } from '../shared/nutrientKeys.js';
 import type { LabelOther, SupplementLabel } from '../shared/dsldLabel.js';
-import type { SupplementNutrient, SupplementServing } from '../types.ts';
+import type { SupplementIngredient, SupplementNutrient, SupplementServing } from '../types.ts';
+import { MAX_INGREDIENT_ROWS, ingredientKey } from '../shared/supplementIngredients.js';
 import { nutrientLabel } from './nutrientInfo.js';
 
 /* ---------- Putting a label's amounts on a supplement (brief supplement-label-amounts) ----------
@@ -10,10 +11,14 @@ import { nutrientLabel } from './nutrientInfo.js';
 
 export type FillChange = 'new' | 'replace' | 'same' | 'kept';
 export interface FillLine { key: NutrientKey; label: string; current?: Pick<SupplementNutrient, 'amount' | 'unit'>[]; fromLabel?: Pick<SupplementNutrient, 'amount' | 'unit'>; change: FillChange }
+/** An active ingredient (omega-3, EPA, DHA, creatine, caffeine) beside the nutrient lines: same Now, Label and Result columns, matched by name, never converted or added to another ingredient. */
+export interface IngredientFillLine { name: string; current?: Pick<SupplementIngredient, 'amount' | 'unit'>[]; fromLabel?: Pick<SupplementIngredient, 'amount' | 'unit'>; change: FillChange }
 export interface FillPlan {
   lines: FillLine[];
+  /** One line per ingredient the supplement has or the label states. */
+  ingredientLines: IngredientFillLine[];
   /** What the supplement holds after Replace. */
-  result: { nutrients: SupplementNutrient[]; serving?: SupplementServing };
+  result: { nutrients: SupplementNutrient[]; ingredients: SupplementIngredient[]; serving?: SupplementServing };
   /** The serving size the label would set, with the one it has now (only when they differ). */
   serving?: { now?: SupplementServing; label: SupplementServing };
   /** False when Replace would change nothing (the label has no tracked amounts, or the supplement already matches). */
@@ -23,8 +28,8 @@ export interface FillPlan {
 export const formatAmount = (a: { amount: number; unit: string }) => `${a.amount} ${a.unit}`;
 const sameServing = (a?: SupplementServing, b?: SupplementServing) => !!a && !!b && a.units === b.units && (a.form || '') === (b.form || '');
 
-export function planFill(current: { nutrients?: SupplementNutrient[]; serving?: SupplementServing }, label: SupplementLabel): FillPlan {
-  const have = current.nutrients ?? [];
+export function planFill(current: { nutrients?: SupplementNutrient[]; ingredients?: SupplementIngredient[]; serving?: SupplementServing }, label: SupplementLabel): FillPlan {
+  const have = current.nutrients ?? [], haveIng = current.ingredients ?? [];
   const lines: FillLine[] = [];
   for (const key of NUTRIENT_KEYS) {
     const mine = have.filter(r => r.key === key), theirs = label.rows.find(r => r.key === key);
@@ -38,14 +43,26 @@ export function planFill(current: { nutrients?: SupplementNutrient[]; serving?: 
   }
   const labelKeys = new Set(label.rows.map(r => r.key));
   const nutrients = [...label.rows.map(r => ({ ...r })), ...have.filter(r => !labelKeys.has(r.key)).map(r => ({ ...r }))].slice(0, MAX_NUTRIENT_ROWS);
+  // Ingredients: a label row replaces that name's rows (every unit); a name the label does not state is kept. Names are the curated spellings, matched case-insensitively.
+  const ingredientLines: IngredientFillLine[] = [];
+  const names = [...new Set([...label.ingredients.map(r => r.name), ...haveIng.map(r => r.name)].map(ingredientKey))];
+  for (const k of names) {
+    const mine = haveIng.filter(r => ingredientKey(r.name) === k), theirs = label.ingredients.find(r => ingredientKey(r.name) === k);
+    const name = theirs?.name ?? mine[0].name;
+    const base = { name, ...(mine.length ? { current: mine.map(({ amount, unit }) => ({ amount, unit })) } : {}) };
+    if (!theirs) ingredientLines.push({ ...base, change: 'kept' });
+    else ingredientLines.push({ ...base, fromLabel: { amount: theirs.amount, unit: theirs.unit }, change: !mine.length ? 'new' : mine.length === 1 && mine[0].amount === theirs.amount && mine[0].unit === theirs.unit ? 'same' : 'replace' });
+  }
+  const labelNames = new Set(label.ingredients.map(r => ingredientKey(r.name)));
+  const ingredients = [...label.ingredients.map(r => ({ ...r })), ...haveIng.filter(r => !labelNames.has(ingredientKey(r.name))).map(r => ({ ...r }))].slice(0, MAX_INGREDIENT_ROWS);
   const ls = label.serving?.units ? { units: label.serving.units, ...(label.serving.form ? { form: label.serving.form } : {}) } : undefined;
   const serving = ls ?? current.serving;
   const servingChanges = !!ls && !sameServing(ls, current.serving);
   return {
-    lines,
-    result: { nutrients, ...(serving ? { serving } : {}) },
+    lines, ingredientLines,
+    result: { nutrients, ingredients, ...(serving ? { serving } : {}) },
     ...(servingChanges ? { serving: { ...(current.serving ? { now: current.serving } : {}), label: ls } } : {}),
-    changes: lines.some(l => l.change === 'new' || l.change === 'replace') || servingChanges,
+    changes: lines.some(l => l.change === 'new' || l.change === 'replace') || ingredientLines.some(l => l.change === 'new' || l.change === 'replace') || servingChanges,
   };
 }
 

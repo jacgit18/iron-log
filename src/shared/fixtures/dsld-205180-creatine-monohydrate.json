@@ -1,0 +1,29 @@
+{
+ "id": 205180,
+ "fullName": "Creatine Monohydrate",
+ "brandName": "NOW Sports",
+ "upcSku": "7 33739 02030 7",
+ "entryDate": "2019-07-24",
+ "servingSizes": [
+  {
+   "minQuantity": 1.5,
+   "unit": "tsp",
+   "notes": "approx. 5 g"
+  }
+ ],
+ "ingredientRows": [
+  {
+   "name": "Creatine Monohydrate",
+   "category": "non-nutrient/non-botanical",
+   "ingredientGroup": "Creatine",
+   "notes": "Creatine Monohydrate Note: 5,000 mg ",
+   "quantity": [
+    {
+     "quantity": 5,
+     "unit": "Gram(s)"
+    }
+   ],
+   "nestedRows": []
+  }
+ ]
+}

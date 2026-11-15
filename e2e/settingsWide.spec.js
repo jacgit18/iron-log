@@ -50,10 +50,10 @@ for (const w of [375, 768, 1024, 1279]) {
 }
 
 for (const [id, label] of [['training', 'Training'], ['data', 'Data'], ['app', 'App'], ['erase', 'Erase & delete']]) {
-  test(`at 1920px the rail's ${label} link scrolls to its group, in either column`, async ({ page }) => {
+  test(`at 1920px the jump row's ${label} link scrolls to its group, in either column`, async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 700 });
     await open(page);
-    await page.locator('.sjump .chip', { hasText: label }).click();
+    await page.locator('.sjump button', { hasText: label }).click();
     await expect(page.locator(`#set-${id}-h`)).toBeFocused();
     // Smooth scrolling is still moving just after the click; the group ends near the top, or as high as the page can scroll when it is short.
     await expect.poll(() => page.evaluate(h => {

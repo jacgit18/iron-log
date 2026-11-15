@@ -6,7 +6,9 @@ import { SLOT_OPTIONS } from '../../lib/supplements.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { nutrientLabel } from '../../lib/nutrientInfo.js';
+import IngredientRows from '../supplements/IngredientRows.js';
 import NutrientRows from '../supplements/NutrientRows.js';
+import { draftsOf, rowsOf } from '../../lib/supplementIngredients.js';
 import { LabelCompare } from '../supplements/LabelPreview.js';
 import ScanBottle from '../supplements/ScanBottle.js';
 import { SUPPLEMENT_SCAN_TEXT } from '../../lib/scanPhoto.js';
@@ -14,6 +16,9 @@ import type { SupplementLabel } from '../../shared/dsldLabel.js';
 import { planFill } from '../../lib/supplementLabelFill.js';
 import { isDsldCatalogId, useSupplementLabel } from '../../hooks/useSupplementLabel.js';
 import PortionStepper from '../supplements/PortionStepper.js';
+import SupplementTimes from '../supplements/SupplementTimes.js';
+import { timesOf } from '../../lib/supplementTimes.js';
+import type { TimeChoice } from '../../lib/supplementTimes.js';
 import './SupplementSheet.css';
 import type { NutrientDraft } from '../supplements/NutrientRows.js';
 
@@ -29,7 +34,8 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
   const s = useAppStore.getState();
   useEffect(() => () => { if (backToManage && useAppStore.getState().modal === null) afterSheetClose(window.history, window, () => useAppStore.getState().openModal({ type: 'nbmanage', view: 'editor' })); }, [backToManage]); // after the sheet's own Back step (lib/backNav.ts)
   const cur = id ? s.supp.items.find(x => x.id === id) : null;
-  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : draft?.n ?? '', dose: cur ? cur.dose || '' : draft?.dose ?? '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : draft?.slot ?? 'morning', nutrients: (cur?.nutrients || []).map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), portion: cur?.portion ?? 1, units: cur?.serving ? String(cur.serving.units) : '', form: cur?.serving?.form || '' }));
+  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : draft?.n ?? '', dose: cur ? cur.dose || '' : draft?.dose ?? '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : draft?.slot ?? 'morning', nutrients: (cur?.nutrients || []).map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), ingredients: draftsOf(cur?.ingredients), portion: cur?.portion ?? 1, units: cur?.serving ? String(cur.serving.units) : '', form: cur?.serving?.form || '' }));
+  const [times, setTimes] = useState<TimeChoice[]>(() => (cur ? timesOf(s.supp.items, cur.id) : [])); // an existing supplement edits its times as chips; a new one picks one time below
   const [err, setErr] = useState('');
   // Fill from label (brief supplement-label-amounts): read the label on request, show it beside the rows in the form, change the form only on Replace (Save still keeps it).
   const [asked, setAsked] = useState(false); const [replaced, setReplaced] = useState(false);
@@ -37,12 +43,12 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
   const { state: lab, retry } = useSupplementLabel(asked ? cur?.catalogId : null);
   const units = Number(d.units);
   const label = scanned ?? (asked && lab.status === 'ready' ? lab.label : null);
-  const plan = label ? planFill({ nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ...(units > 0 ? { serving: { units, ...(d.form ? { form: d.form } : {}) } } : {}) }, label) : null;
+  const plan = label ? planFill({ nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ingredients: rowsOf(d.ingredients), ...(units > 0 ? { serving: { units, ...(d.form ? { form: d.form } : {}) } } : {}) }, label) : null;
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   return (
     <Sheet>
       <h2 className="cond">{cur ? (cur.catalogId ? cur.n : 'Edit supplement') : 'New supplement'}</h2>
-      <form id="supp-form" noValidate onSubmit={e => { e.preventDefault(); const units = Number(d.units); const m = s.saveSupplement({ ...d, serving: units > 0 ? { units, ...(d.form ? { form: d.form } : {}) } : null, portion: d.portion, nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])) }); if (m) setErr(m); }}>
+      <form id="supp-form" noValidate onSubmit={e => { e.preventDefault(); const units = Number(d.units); const m = s.saveSupplement({ ...d, serving: units > 0 ? { units, ...(d.form ? { form: d.form } : {}) } : null, ...(cur ? {} : { portion: d.portion }), nutrients: d.nutrients.flatMap(r => (Number(r.amount) > 0 ? [{ key: r.key, amount: Number(r.amount), unit: r.unit }] : [])), ingredients: rowsOf(d.ingredients) }); if (m) setErr(m); else if (cur && times.length) s.saveSupplementTimes(cur.id, times, d.dose); }}>
         <section className="ssg" aria-labelledby="ssg-id">
           <h3 className="ssgh" id="ssg-id">The supplement</h3>
           {cur?.catalogId
@@ -52,14 +58,17 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
         </section>
         <section className="ssg" aria-labelledby="ssg-sched">
           <h3 className="ssgh" id="ssg-sched">When you take it</h3>
-          <label className="field">On the schedule
-            <select value={d.slot} onChange={e => up({ slot: e.target.value as SupplementSlot })}>{SLOT_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-          </label>
+          {cur
+            ? <SupplementTimes times={times} serving={Number(d.units) > 0 ? { units: Number(d.units), ...(d.form ? { form: d.form } : {}) } : undefined} onChange={setTimes} />
+            : <label className="field">On the schedule
+              <select value={d.slot} onChange={e => up({ slot: e.target.value as SupplementSlot })}>{SLOT_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+            </label>}
           <label className="field">Dose (optional)<input maxLength={40} value={d.dose} placeholder="e.g. 2000 IU" onChange={e => up({ dose: e.target.value })} /></label>
         </section>
         <section className="ssg" aria-labelledby="ssg-amt">
           <h3 className="ssgh" id="ssg-amt">What is in one serving</h3>
           <NutrientRows rows={d.nutrients} onChange={nutrients => up({ nutrients })} />
+          <IngredientRows rows={d.ingredients} onChange={ingredients => up({ ingredients })} />
           {cur && isDsldCatalogId(cur.catalogId) && !asked && <button type="button" className="btn sm" onClick={() => { setAsked(true); setReplaced(false); }}>Fill from label</button>}
           {!cur?.catalogId && !scanned && <ScanBottle label="Scan label" onRead={l => { setScanned(l); setReplaced(false); setD(x => (x.n.trim() ? x : { ...x, n: l.name.slice(0, 60) })); }} />}
           {asked && lab.status === 'loading' && <p className="note" role="status">Reading the label...</p>}
@@ -70,14 +79,14 @@ export default function SupplementSheet({ id, backToManage, draft }: { id?: stri
             <>
             {scanned && <p className="note" role="status">{SUPPLEMENT_SCAN_TEXT.check} Check that every row on the bottle is here.</p>}
             <LabelCompare label={label} plan={plan} onCancel={() => { setAsked(false); setScanned(null); }}
-              onReplace={() => { up({ nutrients: plan.result.nutrients.map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), units: plan.result.serving ? String(plan.result.serving.units) : d.units, form: plan.result.serving?.form ?? d.form }); setAsked(false); setScanned(null); setReplaced(true); }} />
+              onReplace={() => { up({ nutrients: plan.result.nutrients.map((r): NutrientDraft => ({ key: r.key, amount: String(r.amount), unit: r.unit })), ingredients: [...draftsOf(plan.result.ingredients), ...d.ingredients.filter(r => rowsOf([r]).length === 0)], units: plan.result.serving ? String(plan.result.serving.units) : d.units, form: plan.result.serving?.form ?? d.form }); setAsked(false); setScanned(null); setReplaced(true); }} />
             </>
           )}
           {replaced && <p className="note" role="status">Label amounts are in the rows above. Press Save to keep them.</p>}
         </section>
         <section className="ssg" aria-labelledby="ssg-serv">
-          <h3 className="ssgh" id="ssg-serv">How much you take</h3>
-          <PortionStepper portion={d.portion} units={d.units} form={d.form} row={firstRow(d.nutrients)} onPortion={portion => up({ portion })} onUnits={units => up({ units })} onForm={form => up({ form })} />
+          <h3 className="ssgh" id="ssg-serv">{cur ? 'Serving size' : 'How much you take'}</h3>
+          <PortionStepper sizeOnly={!!cur} portion={d.portion} units={d.units} form={d.form} row={firstRow(d.nutrients)} onPortion={portion => up({ portion })} onUnits={units => up({ units })} onForm={form => up({ form })} />
         </section>
         {err && <p className="note err" role="alert">{err}</p>}
       </form>

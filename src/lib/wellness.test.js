@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_STRETCHES, normStretches, normStretchWeek, groupsOf, dayTally, weekDaysDone, weekDaysCounted, withoutStretch, newStretchId } from './stretches.js';
+import { DEFAULT_STRETCHES, normStretches, normStretchWeek, groupsOf, dayTally, weekDaysDone, weekDaysCounted, weekProgress, withoutStretch, newStretchId } from './stretches.js';
 import { goalFor, boostOz, normSupplements, sumOz, cupsOf, validOz, lastDays } from './water.js';
 import { ymd } from '../shared/dates.js';
 
@@ -31,6 +31,15 @@ describe('stretch routine', () => {
     const sk = { ...w, skipped: { 1: true } };
     expect(dayTally(items, sk, 1)).toMatchObject({ total: 0, full: false, skipped: true });
     expect(weekDaysCounted(sk)).toBe(6);
+  });
+  it('words the week card progress: days done, skipped days, today only in this week', () => {
+    const items = [{ id: 'a', n: 'A', group: 'G', tier: 'primary' }, { id: 'b', n: 'B', group: 'G', tier: 'primary' }];
+    const w = normStretchWeek({ done: { '0:a': true, '0:b': true, '1:a': true } });
+    expect(weekProgress(items, w, 1)).toEqual({ text: '1 of 7 days done · Today 1 of 2', pct: 14 });
+    expect(weekProgress(items, w, null).text).toBe('1 of 7 days done');
+    const sk = { ...w, skipped: { 1: true } };
+    expect(weekProgress(items, sk, 1)).toEqual({ text: '1 of 6 days done · 1 skipped', pct: 17 });
+    expect(weekProgress([], normStretchWeek({}), 2)).toEqual({ text: '0 of 7 days done', pct: 0 });
   });
   it('makes unique ids and drops junk check-offs', () => {
     expect(newStretchId([{ id: 'wall-angels' }], 'Wall Angels')).toBe('wall-angels-2');

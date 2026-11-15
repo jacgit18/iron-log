@@ -1,4 +1,4 @@
-import type { GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson, GroceryShare, GroceryStore, GroceryUnit } from '../types.ts';
+import type { GroceryBuy, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson, GroceryShare, GroceryStore, GroceryUnit } from '../types.ts';
 import { str } from './stretchWeek.js';
 
 /* ---------- Grocery list shapes: one item, one store, one month ----------
@@ -9,6 +9,7 @@ import { str } from './stretchWeek.js';
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999, MAX_PRICES = 50;
 export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120, MAX_PAID = 600;
 export const MAX_ALIASES = 20, MAX_ALIAS = 60; // receipt names per item (brief receipt-rename-memory); a receipt line's text is at most 60 characters
+export const MAX_BUYS = 20; // closed purchases of one item in one month (brief grocery-purchase-log)
 export const MAX_GROUPS = 10, MAX_PEOPLE = 10, MAX_PERSON = 40;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -137,6 +138,33 @@ export function validGroceryStore(x: unknown): x is GroceryStore {
   return !!o && exact(o.n, MAX_STORE) && o.id === o.n && !reservedId(o.n as string) && (o.retired === undefined || o.retired === true);
 }
 
+/** A purchase stamp: local `YYYY-MM-DDTHH:mm`, or a date alone (a receipt's), or null when it is not one. */
+export const cleanStamp = (v: unknown): string | null => (typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])(T([01]\d|2[0-3]):[0-5]\d)?$/.test(v) ? v : null);
+
+/** The closed purchases of a line (brief grocery-purchase-log), cleaned: at most MAX_BUYS, each with only the fields a purchase has. Null when none is usable. */
+export function cleanBuys(v: unknown): GroceryBuy[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: GroceryBuy[] = [];
+  v.slice(0, MAX_BUYS).forEach(x => {
+    const o = asObject(x); if (!o) return;
+    const b: GroceryBuy = {};
+    const at = cleanStamp(o.at); if (at) b.at = at;
+    const prices = cleanPrices(o.prices); if (prices) b.prices = prices;
+    const qty = cleanQty(o.qty); if (qty != null && !prices) b.qty = qty;
+    const cents = cleanCents(o.cents); if (cents != null && !prices) b.cents = cents;
+    if (o.unpriced === true && b.cents === undefined && !prices) b.unpriced = true;
+    const share = cleanShare(o.share); if (share) b.share = share;
+    if (typeof o.store === 'string' && o.store !== '__proto__') b.store = str(o.store, MAX_STORE);
+    if (prices && Array.isArray(o.packShares)) {
+      const ps = prices.map((_, i) => (o.packShares as unknown[])[i] == null ? null : cleanShare((o.packShares as unknown[])[i]));
+      if (ps.some(Boolean)) b.packShares = ps;
+    }
+    if (o.rc === true) b.rc = true;
+    if (Object.keys(b).length) out.push(b); // nothing usable in it: not a purchase
+  });
+  return out.length ? out : null;
+}
+
 /** One month's list: ticks, counts and prices by item id, and the old `pulled` ids. At most MAX_ITEMS of each. */
 export function normGroceryMonth(d: unknown): GroceryMonth {
   const raw = asObject(d) ?? {};
@@ -160,6 +188,8 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
         const ps = prices.map((_, i) => (o.packShares as unknown[])[i] == null ? null : cleanShare((o.packShares as unknown[])[i]));
         if (ps.some(Boolean)) line.packShares = ps;
       }
+      const at = cleanStamp(o.at); if (at && line.got) line.at = at; // the stamp of the open purchase
+      const buys = cleanBuys(o.buys); if (buys) line.buys = buys;
       if (Object.keys(line).length) lines[id] = line;
     });
   }

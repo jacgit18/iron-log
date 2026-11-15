@@ -8,7 +8,7 @@ describe('fetchSupplementLabel', () => {
   it('asks the route for the catalog id and cleans the answer', async () => {
     const f = reply({ ok: true, label });
     const r = await fetchSupplementLabel('c:dsld:320047', f);
-    expect(r).toEqual({ status: 'ready', label: { name: 'x', serving: null, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }], other: [] } });
+    expect(r).toEqual({ status: 'ready', label: { name: 'x', serving: null, rows: [{ key: 'vitaminD', amount: 50, unit: 'mcg' }], ingredients: [], other: [] } });
     expect(String((f as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0])).toBe('/api/supplement-label/c%3Adsld%3A320047');
   });
   it('says not-found for a 404 and unavailable for any other failure or a body that is not a label', async () => {

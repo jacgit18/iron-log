@@ -1,5 +1,17 @@
 @layer base, components;
 @layer components {
+/* The purchases of one item this month under its count and price on Shopping and Bought (brief grocery-purchase-log). */
+.gbuys {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-basis: 100%;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.gbuys li {
+  padding: var(--sp-2) 0;
+}
 /* The price and place history sheet and the "Last:" line under an At home row (brief grocery-price-history). */
 .ghome:has(.ghistory) {
   flex-wrap: wrap;

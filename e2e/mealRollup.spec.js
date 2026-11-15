@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Meals built from foods (brief meals-from-foods). The rules (roll-up, loops, depth, rename and delete, the cleaner) are node tests
 // (mealRollup.test.ts, mealsFromFoods.test.ts, shared/recipes.test.ts); this covers the wiring they cannot see: the picker, the amount
@@ -33,29 +33,32 @@ test('a bowl built from two foods rolls up in the form, on save and on its page,
   await page.getByRole('button', { name: '+ Food or meal' }).click();
   await page.getByRole('group', { name: 'Foods and meals' }).getByRole('button', { name: /Whole milk/ }).click();
   const roll = page.locator('.rc-roll');
-  await expect(roll).toContainText('Per serving, from the parts: 375 kcal · 15.5 g protein · 52.5 g carbs · 12.5 g fat');
+  await expect(roll).toContainText('Per serving, from the parts: 375 kcal · P 15.5 · C 52.5 · F 12.5 g');
   await expect(roll).toContainText('2 of 2 ingredients counted');
   await page.getByRole('button', { name: '+ Food or meal' }).click();
   await page.getByRole('group', { name: 'Foods and meals' }).getByRole('button', { name: /Mystery food/ }).click();
   await expect(roll).toContainText('2 of 3 ingredients counted, needs numbers: Mystery food');
   await page.getByRole('button', { name: 'Remove ingredient 3' }).click();
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByText('Per serving, from the parts: 375 kcal · 15.5 g protein')).toBeVisible();
+  await expect(page.getByText('Per serving, from the parts: 375 kcal · P 15.5 · C 52.5 · F 12.5 g')).toBeVisible();
   await expect(page.locator('.rc-ing', { hasText: '1.5 portions Oat cereal' })).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await page.getByLabel('Use my own numbers').check();
   await expect(roll).toContainText('From the parts: 375 kcal');
-  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('700');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Your own numbers are used. The parts add up to 375 kcal')).toBeVisible();
 });
 
 test('a loop is refused in the picker with a message, and the form stays usable', async ({ page }) => {
-  await seed(page, [oats, rc('a', 'Lunch box', 'other', { ing: [{ n: 'Sandwich', rid: 'b', q: 1 }] }), rc('b', 'Sandwich', 'other', { ing: [{ n: 'Oat cereal', rid: 'oats', q: 1 }] })]);
-  await openRecipes(page);
+  await seed(page, [oats, rc('a', 'Lunch box', 'other', { ing: [{ n: 'Sandwich', rid: 'b', q: 1 }] }), rc('b', 'Sandwich', 'other', { ing: [{ n: 'Oat cereal', rid: 'oats', q: 1 }, { n: 'Salt' }] })]);
+  await openRecipes(page); // Sandwich has a typed line, so it is a row (a meal made only of linked foods is a chip, brief recipes-combo-chips)
   await page.getByRole('button', { name: /Sandwich/ }).first().click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await page.getByRole('button', { name: '+ Food or meal' }).click();
   const list = page.getByRole('group', { name: 'Foods and meals' });
   await expect(list.locator('.rc-saucerow b')).toHaveText(['Oat cereal', 'Lunch box']); // never the recipe itself

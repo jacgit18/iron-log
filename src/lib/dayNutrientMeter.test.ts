@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, SupplementItem, Taken } from '../types.ts';
-import { dayNutrientMeter } from './dayNutrientMeter.js';
+import { dayNutrientMeter, sectionTotalsVisible } from './dayNutrientMeter.js';
 import { totalsView } from './supplementTotalsView.js';
 
 // Brief vitamin-mineral-day-meter (layout B): the day's vitamin and mineral lines read the rows the Totals sheet draws, so these tests feed real supplements and foods through `totalsView`.
@@ -67,5 +67,26 @@ describe('food counts as the sheet counts it', () => {
   it('a day with food data and nothing ticked still has a line', () => {
     const m = view(items, {}, eaten);
     expect(m).toMatchObject({ kind: 'rows' });
+  });
+});
+
+describe('the section Totals button (brief nutrition-manage-cleanup)', () => {
+  const visible = (items: SupplementItem[], taken: Taken = all(items), eaten: DietEntry[] = []) => sectionTotalsVisible(true, view(items, taken, eaten));
+  it('is hidden while the meter draws its rows, because the meter reaches the same sheet', () => {
+    expect(view(items)?.kind).toBe('rows');
+    expect(visible(items)).toBe(false);
+  });
+  it('stays when the meter says nothing ticked yet (that line has no button)', () => {
+    expect(view(items, {})).toEqual({ kind: 'none' });
+    expect(visible(items, {})).toBe(true);
+  });
+  it('stays when there is no meter (nutrients without a limit, or none listed) and something is scheduled', () => {
+    expect(view([item('k', [{ key: 'potassium', amount: 900, unit: 'mg' }])])).toBeNull();
+    expect(visible([item('k', [{ key: 'potassium', amount: 900, unit: 'mg' }])])).toBe(true);
+    expect(visible([{ id: 'x', n: 'Plain', slot: 'morning' }])).toBe(true);
+  });
+  it('is never shown when Totals would have nothing to show', () => {
+    expect(sectionTotalsVisible(false, null)).toBe(false);
+    expect(sectionTotalsVisible(false, { kind: 'none' })).toBe(false);
   });
 });

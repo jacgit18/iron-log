@@ -106,12 +106,13 @@ describe('/api/receipts', () => {
     expect((await body(res)).receipt).toMatchObject({ receiptDate: null, totalCents: null, store: '' });
   });
 
-  it('answers 401 with no session, 403 for a non-admin, 422 for a bad body, 404 for an odd id', async () => {
+  it('answers 401 with no session, lets any signed-in account in (released to everyone 2026-11-10), 422 for a bad body, 404 for an odd id', async () => {
     const { call } = await start();
     for (const [m, p] of [['GET', ''], ['POST', ''], ['GET', '/1/photo'], ['PATCH', '/1'], ['DELETE', '/1']] as const) {
       expect((await call(null, m, p, m === 'GET' || m === 'DELETE' ? undefined : {})).status, `${m} ${p} anonymous`).toBe(401);
-      expect((await call('plain', m, p, m === 'GET' || m === 'DELETE' ? undefined : good())).status, `${m} ${p} plain`).toBe(403);
     }
+    expect((await call('plain', 'GET', '')).status).toBe(200); // not an admin, and not refused
+    expect((await call('plain', 'GET', '/1/photo')).status).toBe(404); // another account's id, or none: the same answer
     expect(await count()).toBe(0);
     expect((await call('boss', 'POST', '', { image: 'nope', month: '2026-11' })).status).toBe(422);
     expect((await call('boss', 'POST', '', good({ image: 'iVBO' + 'A'.repeat(396) }))).status).toBe(422);

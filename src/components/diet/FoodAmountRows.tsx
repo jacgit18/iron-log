@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.js';
 import NutrientOptionGroups from '../NutrientOptionGroups.js';
 import type { NutrientKey } from '../../shared/nutrientKeys.js';
 import { AMOUNT_UNITS, microOfRows, nextFreeKey } from '../../lib/foodAmountRows.js';
@@ -19,7 +21,7 @@ export default function FoodAmountRows({ idp, rows, onChange, perServing = false
   return (
     <div className="fa">
       <button type="button" className="btn fa-disc" id={`${idp}-fa-disc`} aria-expanded={shown} aria-controls={`${idp}-fa`} aria-disabled={locked || undefined} onClick={() => { if (!locked) setOpen(!shown); }}>
-        <span>Vitamins and minerals{perServing ? ' per serving' : ''} (optional)</span><span aria-hidden="true">{locked ? '' : shown ? '▾' : '▸'}</span>
+        <span>Vitamins and minerals{perServing ? ' per serving' : ''} (optional)</span><span aria-hidden="true">{locked ? null : <Icon name={shown ? 'chevron-down' : 'chevron-right'} />}</span>
       </button>
       {shown && (
         <div id={`${idp}-fa`} className="fa-body" role="group" aria-label={`Vitamins and minerals${perServing ? ' per serving' : ''}`}>
@@ -34,7 +36,7 @@ export default function FoodAmountRows({ idp, rows, onChange, perServing = false
               <select aria-label={`Unit ${i + 1}`} value={r.unit} onChange={e => set(i, { unit: e.target.value as AmountUnit })}>
                 {AMOUNT_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
-              <button type="button" className="btn sm" aria-label={`Remove ${nutrientLabel(r.key)} row`} onClick={() => onChange(rows.filter((_, j) => j !== i))}>Remove</button>
+              <ArmedButton className="btn sm" aria-label={`Remove ${nutrientLabel(r.key)} row`} label="Remove" armedLabel="Tap again to remove" onConfirm={() => onChange(rows.filter((_, j) => j !== i))} />
             </div>
           ))}
           {notes.map(n => <p key={n} className="note">{n}</p>)}

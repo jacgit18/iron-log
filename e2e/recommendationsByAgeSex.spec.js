@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol } from './nutritionBoardHelpers.js';
+import { closeSupplementEditor, openNutrition, openSupplementEditor, todayCol, openDayTotals } from './nutritionBoardHelpers.js';
 
 // Brief recommendations-by-age-sex, PR 2: the optional birth year and sex in Settings pick the person's own limit and recommended amount in the Totals sheet. The table, the bands and every fallback
 // are node tests (lib/nutrientGroups.test.ts, lib/supplementTotalsProfile.test.ts, lib/profileEdit.test.ts); this covers the wiring a node test cannot: the Settings row, what the real sheet and the
@@ -35,7 +35,7 @@ test.describe('admin session', () => {
     await setProfile(page, 1974, 'Female');
     await takeCalcium(page, 2200);
     await expect(todayCol(page).locator('.nb-suppwarn')).toContainText('Over an upper limit today: Calcium');
-    await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+    await openDayTotals(todayCol(page));
     const s = dialog(page);
     await expect(s.locator('#stt-calcium')).toContainText('Over the limit for ages 51 to 70 by 200 mg');
     await expect(s.locator('#stt-calcium')).toContainText('Limit 2,000 mg for ages 51 to 70');
@@ -47,7 +47,7 @@ test.describe('admin session', () => {
     await expect(page.locator('#pr-year')).toHaveValue('');
     expect(await profile(page)).toBeNull();
     await page.locator('#tab-daily').click();
-    await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+    await openDayTotals(todayCol(page));
     await expect(dialog(page).locator('#stt-calcium')).toContainText('Recommended 1,000 to 1,200 mg a day');
     await expect(dialog(page).locator('#stt-profile')).toContainText('Add your birth year and sex in Settings');
   });
@@ -61,7 +61,7 @@ test.describe('admin session', () => {
     await expect(page.getByRole('radio', { name: 'Male', exact: true })).toBeChecked();
     await takeCalcium(page, 2200);
     await expect(todayCol(page).locator('.nb-suppwarn')).toHaveCount(0);
-    await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+    await openDayTotals(todayCol(page));
     await expect(dialog(page).locator('#stt-calcium')).toContainText('Close to the limit (88%)');
     await expect(dialog(page).locator('#stt-calcium')).toContainText('Limit 2,500 mg for ages 19 to 50');
   });
@@ -74,7 +74,7 @@ test.describe('admin session', () => {
     await page.getByRole('radio', { name: 'Female', exact: true }).check();
     await expect(page.locator('#pr-year-msg')).toContainText('adult range is used');
     await takeCalcium(page, 2200);
-    await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+    await openDayTotals(todayCol(page));
     await expect(dialog(page).locator('#stt-profile')).toHaveText('Amounts for your age are not shown. The adult range is used.');
     await expect(dialog(page).locator('#stt-calcium')).toContainText('Limit 2,000 mg');
   });
@@ -88,7 +88,7 @@ test.describe('admin session', () => {
       expect(row.violations.map(v => v.id)).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await takeCalcium(page, 800);
-      await todayCol(page).getByRole('button', { name: /^Totals for/ }).click();
+      await openDayTotals(todayCol(page));
       const sheet = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
       expect(sheet.violations.map(v => v.id)).toEqual([]);
     });

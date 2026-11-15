@@ -1,5 +1,8 @@
 @layer base, components;
 @layer components {
+.edit-item .fields {
+  align-items: end;
+}
 .fields .daypick {
   grid-column: 1/-1;
 }

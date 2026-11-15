@@ -166,7 +166,9 @@ describe('switching and returning', () => {
     const tagged = list.personas.find(p => p.id === 'meal-planner') as { scenarios: { id: string; title: string }[] };
     expect(tagged.scenarios.map(s => s.id)).toEqual(scenariosForPersona('meal-planner').map(s => s.id));
     expect(Object.keys(tagged.scenarios[0]!).sort()).toEqual(['id', 'title']);
-    expect((list.personas.find(p => p.id === 'legacy-beta') as { scenarios: unknown[] }).scenarios).toEqual([]);
+    const legacy = list.personas.find(p => p.id === 'legacy-beta') as { scenarios: { id: string }[] }; // every account has a scenario since the QA audit (S-268)
+    expect(legacy.scenarios.map(s => s.id)).toEqual(scenariosForPersona('legacy-beta').map(s => s.id));
+    expect(legacy.scenarios.length).toBeGreaterThan(0);
 
     expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'paid-past-due' })).status).toBe(200);
     expect(jar.has('admin_session')).toBe(true);
@@ -286,7 +288,7 @@ describe('reset (the seed, run in the app on QA)', () => {
       expect((await call(base, jar, 'POST', '/qa/personas/reset', { id })).status).toBe(200);
       expect(await counts(id)).toEqual(expected(id));
     }
-    expect(expected('meal-planner')).toMatchObject({ config: 1, recipes: 4 });
+    expect(expected('meal-planner')).toMatchObject({ config: 1, recipes: 5 });
     // Change it, then reset: the extra row is gone, the counts are a fresh seed's again.
     await sql`insert into list_items (user_id, seq, client_id, list, position, data) select id, 9999, 'extra', 'recipe', 99, '{"id":"extra","n":"Extra"}'::jsonb from users where auth_user_id = ${personaAuthId('recipe-collector')}`.execute(db);
     expect((await counts('recipe-collector')).recipes).toBe(31);

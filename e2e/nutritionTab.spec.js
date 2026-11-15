@@ -11,7 +11,7 @@ test('a regular account sees Groceries, Nutrition and Recipes, with the week boa
   await expect(page.locator('#daily-grocery')).toBeVisible();
   expect(await ids(page)).toEqual(['daily-grocery', 'daily-supplements', 'daily-recipes']);
   await expect(page.locator('#daily-supplements')).toHaveText('Nutrition');
-  await expect(page.locator('#nb-h')).toBeVisible(); // the week board; its Targets and goal button replaced the Diet panel
+  await expect(page.locator('#nb-h')).toBeVisible(); // the week board; its Manage button replaced the Diet panel
 });
 
 test('an admin also sees Medical', async ({ page }) => {

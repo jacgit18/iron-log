@@ -8,6 +8,7 @@ import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { countTab, type DayTab } from '../../lib/weekDayTabs.js';
 import { boardFilterCount, boardFilterSummary } from '../../lib/boardFilter.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
@@ -17,8 +18,10 @@ import Experiments from './Experiments.jsx';
 import FinishedGroup from './FinishedGroup.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
+import ModeSelect from './ModeSelect.js';
 import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
+import WeekDayCard from '../WeekDayCard.js';
 import { useBoardFilter } from './useBoardFilter.js';
 import { useMountedDays } from './useMountedDays.js';
 import { useWide } from './useWide.js';
@@ -26,7 +29,7 @@ import './BoardTop.css';
 import './DayCount.css';
 import './DayHeader.css';
 import './Leftovers.css';
-import './WeekBar.css';
+import './WeekSection.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -154,19 +157,25 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
-  return (
-    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div className="weekbar">
-        <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
-          <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
-          <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
-          {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-        </div>
-        <ProgramSwitch />
-      </div>
-
-      {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
+  // weekNav is the week switcher, shared by both layouts. weekRow (switcher and program switch) is the phone's: the top of the joined week and day card (WeekDayCard). A wide screen composes weekNav, ProgramSwitch, ModeSelect and BodyWeightRow in its own card (.wsec) below, so keep the ProgramSwitch placement in step.
+  const weekNav = (
+    <div className="weeknav">
+      <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
+      <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
+      <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
+      {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
+    </div>
+  );
+  const weekRow = (
+    <>
+      {weekNav}
+      <ProgramSwitch />
+    </>
+  );
+  // Two notices explain an empty or wrong board, so they stay above the filter row on a phone; the tip and the leftovers go under Body weight there.
+  const missingNotice = !fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>;
+  const notices = (
+    <>
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
           <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export all data in Settings to keep a copy.'}</span>
@@ -193,61 +202,80 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           </div>
         </div>
       )}
-      {slots.length === 0 && <FirstRun />}
-      {!wide && <BodyWeightRow draft={bodyWeight} />}
-      <div className="filterbar">
-        {wide && (
-          <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
-            <div className="filterfields" id="filter-fields">
-              <label className="field">Sort by muscle
-                <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
-                  <option value="">Program order</option>
-                  {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-                </select>
-              </label>
-              <label className="field">Equipment
-                <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
-                  <option value="">All equipment</option>
-                  {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-              {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
-            </div>
-          </div>
-        )}
-        <InjurySwitch />
-        {!wide && (
-          <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
-            <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
-          </button>
-        )}
-        {!wide && boardFilterCount(filter) > 0 && (
-          <div className="filtersummary" role="status">
-            <span>{boardFilterSummary(muscleName, eqLabel)}</span>
-            <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
-          </div>
-        )}
-        {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
-        {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
-      </div>
+    </>
+  );
+  const firstRun = slots.length === 0 && <FirstRun />;
+  // Only the phone card draws them. The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
+  const tabs: DayTab[] = wide ? [] : DAYS.map(d => ({ ...countTab(String(d), `D${d}`, `Day ${d}`, tally(cols[d], week), rest.includes(d) ? 'rest' : undefined), swapped: !!swapFlash?.includes(d) }));
 
-      <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
-        const n = { ArrowRight: (day as number) + 1, ArrowLeft: (day as number) - 1, Home: 1, End: DAYS.length }[e.key]; if (n == null) return;
-        e.preventDefault(); const d = ((n - 1 + DAYS.length) % DAYS.length) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`)!.focus();
-      }}>
-        {DAYS.map(d => {
-          const t = tally(cols[d], week); const isRest = rest.includes(d);
-          const short = isRest ? 'Rest' : t.full ? '✓' : `${t.done}/${t.total}`;
-          return (
-            <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
-              // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
-              className={`${isRest || t.full ? 'full' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`.trim()} aria-label={`D${d} ${short}: Day ${d}, ${isRest ? 'rest day' : t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
-              onClick={() => { st.setMDay(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
-              <b aria-hidden="true">D{d}</b>{' '}<span aria-hidden="true">{short}</span>
-            </button>
-          );
-        })}
-      </div>
+  const filterbar = (
+    <div className="filterbar">
+      {wide && (
+        <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
+          <div className="filterfields" id="filter-fields">
+            <label className="field">Sort by muscle
+              <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
+                <option value="">Program order</option>
+                {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+              </select>
+            </label>
+            <label className="field">Equipment
+              <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
+                <option value="">All equipment</option>
+                {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </label>
+            {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
+          </div>
+        </div>
+      )}
+      <InjurySwitch />
+      {!wide && (
+        <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
+          <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
+        </button>
+      )}
+      {!wide && boardFilterCount(filter) > 0 && (
+        <div className="filtersummary" role="status">
+          <span>{boardFilterSummary(muscleName, eqLabel)}</span>
+          <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
+        </div>
+      )}
+      {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
+      {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
+    </div>
+  );
+
+  return (
+    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      {wide ? (
+        <>
+          {/* One card (WeekSection.css): the week switcher with the program switch, mode menu and body weight on the first row, the sort and filter row under a hairline. The notices sit under it. */}
+          <div className="wsec">
+            <div className="weekbar wsec-top">
+              {weekNav}
+              <div className="wsec-end">
+                <ProgramSwitch />
+                <ModeSelect />
+                <BodyWeightRow draft={bodyWeight} />
+              </div>
+            </div>
+            {filterbar}
+          </div>
+          {missingNotice}
+          {notices}
+          {firstRun}
+        </>
+      ) : (
+        <>
+          {missingNotice}
+          {firstRun}
+          {filterbar}
+          <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
+          <BodyWeightRow draft={bodyWeight} />
+          {notices}
+        </>
+      )}
 
       <div className="board">
         {DAYS.map(d => {
@@ -266,7 +294,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           );
           const dayDef = prog.days[pd - 1];
           const list = cols[d];
-          const date = dayDate(list, logs, wk);
+          const date = dayDate(list, logs, wk, week);
           const t = tally(list, week);
           const count = wide ? <span>{t.done}/{t.total} exercises</span> : null; // the phone's day tabs already show it
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.

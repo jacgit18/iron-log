@@ -98,7 +98,7 @@ export function buildOverallWorkbook(X: XLSX, S: Snapshot, weeks: Record<string,
   return wb;
 }
 
-/* ---------- Data sheets: what the workbook holds beyond the readable report, so it imports back whole ---------- */
+/* ---------- Data sheets: what the workbook holds beyond the readable report: programs, saved versions, experiments, check-offs and config. Not stretches, supplements, recipes, food log or groceries: the JSON data file is the full backup ---------- */
 export const PROG_HEAD = ['Program', 'Day', 'Day title', 'Day subtitle', 'Make-up day', 'Slot #', 'Slot id', 'Section', 'Tier', 'Type', 'Slot note', 'Exercise id', 'Exercise', 'Phase', 'Weight (lb)', 'Bodyweight', 'Rx', 'Item note'];
 const dayCells = (d: { title?: string; sub?: string; makeup?: boolean }) => [d.title ?? '', d.sub ?? '', d.makeup ? 'Yes' : ''];
 export function programRows(cfg: Cfg, owner: string, prog: { days: DayDraft[] }) {

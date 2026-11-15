@@ -13,24 +13,12 @@
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PROJECT, secret } from './lib/gcloud-secret.mjs';
 
-const PROJECT = process.env.GCP_PROJECT_ID || 'iron-log-jacgit18';
 export const URL_SECRET = 'iron-log-qa-owner-database-url';
 export const KEY_SECRET = 'iron-log-qa-pii-key';
 
 const die = msg => { console.error(msg); process.exit(1); };
-
-// The value of a secret, never printed: only its name appears in a message.
-function secret(name) {
-  const r = spawnSync('gcloud', ['secrets', 'versions', 'access', 'latest', `--secret=${name}`, `--project=${PROJECT}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  if (r.error) die(`Could not run gcloud (${r.error.code ?? r.error.message}). Install it and run: gcloud auth login`);
-  const value = (r.stdout ?? '').trim();
-  if (r.status !== 0 || !value) {
-    const said = r.status !== 0 ? (r.stderr ?? '').split('\n').find(l => l.trim()) : ''; // gcloud's own reason, shown only when it failed (so no value was returned)
-    die(`Could not read the secret ${name} in project ${PROJECT}.${said ? ` gcloud said: ${said.trim().slice(0, 200)}` : ''} Run: gcloud auth login (as someone who can read it).`);
-  }
-  return value;
-}
 
 const args = process.argv.slice(2);
 if (args.some(a => a === '--host' || a.startsWith('--host='))) die('Do not pass --host: it is taken from the secret.');

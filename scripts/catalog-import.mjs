@@ -51,7 +51,7 @@ const db = createDb(url);
 try {
   const { rows, unmapped, skipped } = await load();
   const kinds = rows.reduce((n, r) => ({ ...n, [r.kind]: (n[r.kind] ?? 0) + 1 }), {});
-  const result = await importCatalog(db, { source: values.source, license: values.source === 'dsld' ? DSLD_LICENSE : values.source === 'wbc' ? WBC_LICENSE : FEDB_LICENSE, rows, apply: values.apply, allowMassRetire: values['allow-mass-retire'] });
+  const result = await importCatalog(db, { source: values.source, license: values.source === 'dsld' ? DSLD_LICENSE : values.source === 'wbc' ? WBC_LICENSE : FEDB_LICENSE, rows, apply: values.apply, allowMassRetire: values['allow-mass-retire'], log: msg => console.log(JSON.stringify({ msg })) });
   console.log(JSON.stringify({
     applied: result.applied, rows: rows.length, kinds,
     added: result.added.length, changed: result.changed.length, retired: result.retired.length, unchanged: result.unchanged,

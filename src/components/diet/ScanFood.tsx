@@ -36,8 +36,8 @@ export default function ScanFood({ hit, day, onDone, onCancel }: { hit: FoodHit;
     const food = known ?? existingReady(useAppStore.getState().recipes, draft.recipe.n);
     const made = food && ateEntry({ ...nums, id: food.id }, 1, day, today);
     const r = made && 'entry' in made ? useAppStore.getState().addDietEntry({ ...made.entry, ...withMicro(draft.micro) }) : null;
-    if (!r || r.error) { onDone(`${known ? 'Found' : 'Saved'} ${draft.recipe.n} as a food. ${r?.error ?? 'It was not logged.'}`); onCancel(); return; }
-    onDone(known ? `Logged ${draft.recipe.n}, a food you already had.` : `Saved ${draft.recipe.n} as ${FOOD_TYPE_LABEL[type].toLowerCase()} and logged it.`);
+    if (!r || r.error) { onDone(`${known ? 'Found' : 'Saved'} ${draft.recipe.n} ${known ? 'in Recipes' : 'to Recipes'} as a food. ${r?.error ?? 'It was not logged.'}`); onCancel(); return; }
+    onDone(known ? `Logged ${draft.recipe.n}, a food you already had in Recipes.` : `Saved ${draft.recipe.n} to Recipes as ${FOOD_TYPE_LABEL[type].toLowerCase()} and logged it.`);
     onCancel();
   };
   return (

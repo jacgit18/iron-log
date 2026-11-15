@@ -19,6 +19,11 @@ describe('food log in the backup file', () => {
     expect('diet' in buildDataFile(snap([]), {})).toBe(false);
   });
 
+  it('keeps the stored portion x of an entry through the data file (brief portion-scaled-micros)', () => {
+    const eaten: DietEntry[] = [{ id: 'p1', d: '2026-10-30', n: 'Oats', kcal: 600, p: 30, x: 2.5, micro: { calcium: 300 } }];
+    expect(parseDataFile(JSON.stringify(buildDataFile(snap(eaten), {}))).diet).toEqual(eaten);
+  });
+
   it('counts toward the backup score, so a wipe of the food log cannot replace a fuller copy of the same day', () => {
     const full = backupScore(buildDataFile(snap(entries(40)), {}));
     const wiped = backupScore(buildDataFile(snap([]), {}));
@@ -26,5 +31,20 @@ describe('food log in the backup file', () => {
     expect(full).toBeGreaterThanOrEqual(40);
     expect(shouldWrite(full, wiped)).toBe(false);
     expect(shouldWrite(full, backupScore(buildDataFile(snap(entries(30)), {})))).toBe(true); // a normal edit still saves
+  });
+});
+
+describe('usual amount in the backup file (brief nutrition-usual-portion-field)', () => {
+  const meal = { id: 'chili', n: 'Chili', cat: 'protein', ing: [], steps: [], kcal: 400, p: 30, usual: 1.5 };
+  const withRecipes = (recipes: unknown[]) => ({ ...snap([]), recipes } as unknown as Snapshot);
+  it('keeps a usual amount on a non-ready recipe through export and import, and drops a bad one', () => {
+    const back = parseDataFile(JSON.stringify(buildDataFile(withRecipes([meal]), {})));
+    expect(back.recipes?.[0]).toMatchObject({ id: 'chili', usual: 1.5 });
+    const bad = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...meal, usual: 2.3 }, { ...meal, id: 'b', usual: 100 }, { ...meal, id: 'c', usual: 'x' }]), {})));
+    expect(bad.recipes).toHaveLength(3);
+    for (const r of bad.recipes ?? []) expect(r).not.toHaveProperty('usual');
+    const never = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...meal, usual: 1 }, { ...meal, id: 'b', usual: 0.25 }]), {}))); // the stored field never holds 1, and 0.5 is the least
+    expect(never.recipes).toHaveLength(2);
+    for (const r of never.recipes ?? []) expect(r).not.toHaveProperty('usual');
   });
 });

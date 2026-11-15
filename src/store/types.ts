@@ -4,10 +4,12 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
-  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
+  BodyEntry, CatalogItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementIngredient, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
+import type { SkippedDay } from '../lib/dayPicker.ts';
 import type { Micro } from '../shared/foodMicro.ts';
+import type { TimeChoice } from '../lib/supplementTimes.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
@@ -38,7 +40,7 @@ export interface SlotForm {
 /** `cat`: a new stretch picked from the catalog in the sheet; it is saved with that catalog id and name (ADR 036). */
 export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string; cat?: CatalogItem | null }
 export interface StretchExpForm { id?: string; n: string; url?: string; note?: string; group?: string }
-export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string; /** What is in one serving; left out, an edit keeps what the item has. */ nutrients?: SupplementNutrient[]; /** Capsules or tablets in one serving; null clears it, left out keeps it. Shared by every section the product is in. */ serving?: SupplementServing | null; /** Servings taken each time (1 clears it), left out keeps what the item has. Per section. */ portion?: number }
+export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string; /** What is in one serving; left out, an edit keeps what the item has. */ nutrients?: SupplementNutrient[]; /** Active ingredients in one serving (brief supplement-active-ingredients); left out, an edit keeps what the item has. */ ingredients?: SupplementIngredient[]; /** Capsules or tablets in one serving; null clears it, left out keeps it. Shared by every section the product is in. */ serving?: SupplementServing | null; /** Servings taken each time (1 clears it), left out keeps what the item has. Per section. */ portion?: number }
 /** The log sheet's save: the entry plus the optional changes it can make along the way. */
 export interface LogForm {
   entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
@@ -304,19 +306,33 @@ export interface RemovedSlice {
 }
 
 /** Your food log and typed targets (ADR 086): entries are saved as the document diet/main, the targets as cfg.diet. */
+/** What a batch copy did: the days it reached, the days it skipped with why, the one sentence to show, and an error text when nothing was written. */
+export interface BatchResult { done: string[]; skipped: SkippedDay[]; message: string; error: string | null }
+
 export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
-  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
-  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null; micro?: Micro | null }): string | null; // an error text, or null when saved
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; x?: number }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  copyDietEntry(id: string, toDay: string, move?: boolean): { id: string | null; error: string | null }; // the same food on another day (numbers, micronutrients and hour kept); a move also removes the original and offers Undo (brief nutrition-move-copy-eaten)
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null; micro?: Micro | null; x?: number }): string | null; // an error text, or null when saved
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
   setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
   saveDietMeal(name: string, entryIds: string[]): string | null; // makes a Recipes meal from those entries (brief saved-meals-into-recipes); an error text, or null when saved
   moveSavedMeals(): number; // copies each saved meal not yet moved into Recipes as a meal, once; the old list is left as it is (brief saved-meals-into-recipes); how many were made
+  copyDietEntries(id: string, days: string[], move?: boolean): BatchResult; // one eaten food to several days in one write: days up to today get an entry, days ahead a plan card (recipe-linked foods only); a full or invalid day is skipped and named; a move takes one day and offers Undo (brief nutrition-multi-day-picker)
+  copyPlanItems(day: string, index: number, days: string[]): BatchResult; // a planned item to the same meal of several days in one plan write; days that can't take it are skipped and named
+  addPlanItemToDays(kind: 'r' | 'm', id: string, days: string[], slot?: PlanSlot): BatchResult; // one recipe or saved meal on several days in one plan write; days that can't take it are skipped and named (`message` is empty on success: the caller words it)
   addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
-  removePlanItem(day: string, index: number): void;
+  removePlanItem(day: string, index: number): void; // a listed daily snack removed from a day is skipped on that day only
+  saveDailySnacks(list: DailySnack[]): void; // the daily snack list (cfg.diet.snacks, at most 6; brief daily-snacks); an empty list clears it
+  skipDailySnack(day: string, id: string): void; // a listed snack is not shown on that day (it returns on the others)
+  realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (outside the plan window; a day already holding 8 planned things still takes it, snacks never count toward the 8)
+  unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
+  setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
+  planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo
+  uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark
   setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
 
@@ -325,6 +341,8 @@ export interface RecipesSlice {
   recipes: Recipe[];
   recipesLoaded: boolean; // the recipes list has been read (from this browser, or pulled from the account): a write built on it before then could replace the account's list
   saveRecipes(): void;
+  setRecipeMicro(id: string, micro: Micro): string | null; // one serving's vitamins and minerals onto a recipe that has none (never overwrites; brief portion-scaled-micros); an error text, or null
+  setRecipeUsual(id: string, usual: number | undefined): string | null; // the usual portion alone (undefined clears it); an error text when the recipe is gone, else null
   toggleRecipeFav(id: string): void; // the star on a recipe (brief recipes-find-type-tabs); saved with the recipes
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
@@ -358,9 +376,9 @@ export interface GrocerySlice {
   removeGroceryStore(name: string, opts?: { quiet?: boolean }): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
   setGroceryBudget(cents: number | null): boolean; // the monthly budget in cents (null clears it); false when it was refused or data is still loading
-  setGroceryGot(month: string, id: string, on: boolean): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
+  setGroceryGot(month: string, id: string, on: boolean, at?: string): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
   restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void; // one month line back exactly as it was, for Undo after a receipt is applied
-  setGroceryHave(month: string, id: string, on: boolean): void; // the At home tick: had this month, so off that month's list (ADR 054)
+  setGroceryHave(month: string, id: string, on: boolean): boolean; // the At home tick: had this month, so off that month's list (ADR 054); unticking a bought item closes its purchase (ran out), false when it already holds the most closed ones
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
@@ -417,14 +435,18 @@ export interface WellnessSlice {
   promoteStretchExp(id: string): boolean;
   removeStretchExtra(id: string): void;
   /** `nutrients`, `serving` and `brand` are read from a bottle's label (brief supplement-label-scan); left out, it is added with none. */
-  addSupplement(slot: SupplementSlot, name: string, dose?: string, opts?: { nutrients?: SupplementNutrient[]; serving?: SupplementServing; brand?: string }): boolean;
+  addSupplement(slot: SupplementSlot, name: string, dose?: string, opts?: { nutrients?: SupplementNutrient[]; ingredients?: SupplementIngredient[]; serving?: SupplementServing; brand?: string }): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
   /** Adds another instance of one of yours (same name, brand and catalog id; its own id, section and ticks) to a section, e.g. a second dose later in the day. `dose` replaces the copied one when typed. */
   addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;
+  /** Sets the times of day (and the amount at each) of one supplement from the sheet's chips; every time gets `dose`. Times turned off are removed with Undo. */
+  saveSupplementTimes(id: string, times: TimeChoice[], dose?: string): boolean;
   removeSupplement(id: string): boolean;
+  /** Sets your own daily target or cap for one active ingredient, or clears it with `null` (brief supplement-active-ingredients). Returns the words that say why it was refused, or null when saved. */
+  setIngredientLimit(name: string, limit: { kind: string; amount: string | number; unit: string } | null): string | null;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
   /** `nutrients` and `serving` are one serving's amounts read from its label (brief supplement-label-amounts); left out, it is added with none. */
-  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string; nutrients?: SupplementNutrient[]; serving?: SupplementServing }): string | null;
+  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string; nutrients?: SupplementNutrient[]; ingredients?: SupplementIngredient[]; serving?: SupplementServing }): string | null;
   saveSupplement(d: SupplementForm): string | null;
   deleteSupplement(id: string): void;
   moveSupplement(id: string, dir: number): void;

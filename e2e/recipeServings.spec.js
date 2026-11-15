@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startRecipe, unfoldAll } from './recipesNav.js';
 
 // Servings scale a recipe's amounts (brief recipe-servings-scaling). Every amount shape is a node test (recipeScale.test.ts); this covers
 // the wiring: the Servings field rewriting the amount fields, the note, what Save keeps, and the view-only "Scale for tonight" stepper.
@@ -21,7 +21,9 @@ const soupWithoutServings = async page => {
   await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
   await setAmount(page, 0, '2 cups');
   await page.getByRole('button', { name: 'Save recipe' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
 };
 const make = async page => {
   await open(page);
@@ -86,6 +88,8 @@ test('Scale for tonight changes the amounts shown and saves nothing', async ({ p
   await make(page);
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'More servings' })).toHaveCount(0); // the stepper stays hidden behind the link
+  await page.getByRole('button', { name: 'Scale the amounts' }).click();
   await page.getByRole('button', { name: 'More servings' }).click();
   await expect(page.getByText('5 servings', { exact: true })).toBeVisible();
   await expect(page.getByText('2½ cups flour')).toBeVisible();
@@ -95,6 +99,8 @@ test('Scale for tonight changes the amounts shown and saves nothing', async ({ p
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await unfoldAll(page);
   await expectAmount(page, 0, '2 cups');
 });
