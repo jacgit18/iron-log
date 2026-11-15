@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogItem, Recipe } from '../types.ts';
-import { countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts, type BoxInput } from './recipeMerged.js';
+import { countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts, yourHeadingShown, type BoxInput } from './recipeMerged.js';
 
 const mine = (id: string, from?: string) => ({ id, n: id, ...(from ? { from } : {}) }) as unknown as Recipe;
 const lib = (id: string) => ({ id, name: id }) as unknown as CatalogItem;
@@ -70,5 +70,14 @@ describe('filtersSkipLibrary', () => {
     expect(filtersSkipLibrary([], [])).toBe(false);
     expect(filtersSkipLibrary(['protein'], [])).toBe(true);
     expect(filtersSkipLibrary([], ['quick'])).toBe(true);
+  });
+});
+
+describe('yourHeadingShown', () => {
+  it('shows only with the library box drawn under your recipes', () => {
+    expect(yourHeadingShown(true, true, true)).toBe(true);
+    expect(yourHeadingShown(false, true, true)).toBe(false); // box folded, Mine, or hidden for the tab
+    expect(yourHeadingShown(true, false, true)).toBe(false); // Library filter hides your group
+    expect(yourHeadingShown(true, true, false)).toBe(false); // nothing of yours
   });
 });

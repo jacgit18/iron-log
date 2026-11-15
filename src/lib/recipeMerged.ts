@@ -41,3 +41,6 @@ export function libraryBoxShown(i: BoxInput): boolean {
 
 /** Whether the "Your nutrition and tag filters do not apply here" line shows in the box. */
 export const filtersSkipLibrary = (nutrition: readonly string[], tags: readonly string[]): boolean => nutrition.length > 0 || tags.length > 0;
+
+/** Whether the "Your recipes (n)" heading shows: only while the library box is drawn under your recipes (it tells the two groups apart); with no box the Mine count is already on the filter. */
+export const yourHeadingShown = (boxOn: boolean, yours: boolean, hasRecipes: boolean): boolean => boxOn && yours && hasRecipes;

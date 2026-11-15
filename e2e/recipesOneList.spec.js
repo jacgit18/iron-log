@@ -34,10 +34,12 @@ test('the library is folded until Browse the library or search text; Mine never 
   await make(page, 'Bread'); // yours; a library recipe of the same name is another recipe, so only a real copy hides one
   await expect(page.getByRole('button', { name: 'Browse the library' })).toBeVisible();
   await expect(page.locator('#recipes-library-box')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /Your recipes/ })).toHaveCount(0); // no box, nothing to tell apart
   await expect(page.locator('#recipes-library .rc-count')).toHaveCount(0); // no count before the library has loaded
   expect(asked).toHaveLength(0);
   await page.getByRole('button', { name: 'Browse the library' }).click();
   await expect(boxRows(page)).toHaveText(['Apple pie', 'Bread', 'Chili']);
+  await expect(page.getByRole('heading', { name: 'Your recipes (1)' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /Library · not in your recipes yet \(3\+\)/ })).toBeVisible();
   await expect(page.locator('#recipes-library')).toContainText('3+'); // more pages can be loaded
   await expect(page.locator('#recipes-all')).toContainText('4+');
@@ -59,7 +61,7 @@ test('typing asks the library, + Add to mine moves a row up with the notice, and
   await openRecipes(page);
   await make(page, 'Apple dip');
   await page.getByRole('searchbox', { name: 'Search recipes' }).fill('apple');
-  await expect(page.getByRole('heading', { name: 'Your recipes (1)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your recipes (1)' })).toBeVisible(); // the heading shows once the box is open
   await expect(mineRows(page)).toHaveText(['Apple dip']);
   await expect(boxRows(page)).toHaveText(['Apple pie', 'Apple crumble']);
   expect(asked).toHaveLength(1);

@@ -18,7 +18,7 @@ import './RecipeFind.css';
 import { untypedBanner } from '../../lib/foodType.js';
 import { monthKey } from '../../lib/grocery.js';
 import { inLibraryTab, libraryEmptyNote, libraryHave } from '../../lib/libraryRows.js';
-import { SOURCES, countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts } from '../../lib/recipeMerged.js';
+import { SOURCES, countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts, yourHeadingShown } from '../../lib/recipeMerged.js';
 import { comboIds, comboTabCounts, expandedRows, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
@@ -312,7 +312,7 @@ export default function Recipes() {
       {!yours && !boxOn && <p className="note">The library has nothing for this tab or category.</p>}
       <div className={pane && yours ? 'rc-split' : undefined}>
         <div className="rc-merged">
-          {yours && recipes.length > 0 && <h3 className="rc-grp">Your recipes ({shown.length})</h3>}
+          {yourHeadingShown(boxOn, yours, recipes.length > 0) && <h3 className="rc-grp">Your recipes ({shown.length})</h3>}
           {yours && (
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
