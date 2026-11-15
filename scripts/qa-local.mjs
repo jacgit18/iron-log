@@ -13,7 +13,7 @@
 // (the `npm run db:start` container). The database named in it is never written to: only a new database next to it is.
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, openSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, openSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -150,25 +150,40 @@ const stateFile = process.env.QA_LOCAL_STATE_FILE ?? join(tmpdir(), `qa-local-${
 const readState = () => (existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : null);
 /** The address of the stack this script started for this checkout, or null (no password: the QA Runner's hook reads only this). */
 export const readStackUrl = () => { try { const url = readState()?.url; return typeof url === 'string' ? url : null; } catch { return null; } }; // an unreadable state file means no stack: the hook then refuses navigate, and status and stop still run
-/** Whether a recorded stack is one this script started and that is still up: a 127.0.0.1 http address whose port is the recorded port, and a pid that is alive (and, where /proc exists, still a server/index.ts process). `isAlive` is replaceable for tests. */
-export function liveStackUrl(state, isAlive = pidIsAlive) {
+/** Whether a recorded stack is one this script started and that is still up: a 127.0.0.1 http address whose port is the recorded port (not a reserved one), and a pid that is really that stack's server. `isAlive(pid, port)` is replaceable for tests. */
+export function liveStackUrl(state, isAlive = pidIsStackServer) {
   try {
     if (!state || typeof state.url !== 'string' || !Number.isInteger(state.port) || !Number.isInteger(state.pid) || state.pid <= 0) return null;
     const u = new URL(state.url);
     if (u.protocol !== 'http:' || u.hostname !== '127.0.0.1' || u.port !== String(state.port) || RESERVED_PORTS.has(state.port)) return null;
-    return isAlive(state.pid) ? u.origin : null;
+    return isAlive(state.pid, state.port) === true ? u.origin : null;
   } catch { return null; }
 }
-function pidIsAlive(pid) {
-  try { process.kill(pid, 0); } catch { return false; }
-  try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes('server/index.ts'); } catch { return true; } // no /proc: the signal check is all there is
+/** Whether a process is a stack server for `port`: its command line names server/index.ts, its working folder is a checkout (has scripts/qa-local.mjs), and its PORT variable is the recorded port. Any missing piece is no. Pure; the readings are passed in. */
+export function stackServerProblem({ cmdline, cwd, environ }, port, isCheckout) {
+  if (typeof cwd !== 'string' || !pidIsStack(cmdline, cwd, cwd)) return 'not a server/index.ts process';
+  if (!isCheckout(cwd)) return 'its working folder is not a checkout';
+  if (typeof environ !== 'string' || !environ.split('\0').includes(`PORT=${port}`)) return 'its PORT is not the recorded port';
+  return null;
 }
-/** The addresses of every live stack this script started, from any checkout or worktree (each keeps its own state file in the temp folder). The hook runs from the main checkout while the Runner's `start` may run in a worktree, so it cannot read just its own checkout's file. The variable names one file (tests). Only a state file written by `start` with a live pid counts, so another local service is never an address. */
-export const readStackUrls = () => {
+/** Reads /proc for the pid and applies stackServerProblem; fails closed (false) when /proc cannot be read or the process is gone. */
+function pidIsStackServer(pid, port) {
+  try {
+    const at = f => readFileSync(`/proc/${pid}/${f}`, 'utf8');
+    return stackServerProblem({ cmdline: at('cmdline').replaceAll('\0', ' '), cwd: readlinkSync(`/proc/${pid}/cwd`), environ: at('environ') }, port, d => existsSync(join(d, 'scripts', 'qa-local.mjs'))) === null;
+  } catch { return false; }
+}
+const STATE_MAX_BYTES = 4096;
+/** Whether a path may be read as a state file: a regular file (not a link, pipe or device) owned by this user and small. `lstat` and `uid` are replaceable for tests. */
+export function stateFileOk(path, lstat = lstatSync, uid = process.getuid?.()) {
+  try { const st = lstat(path); return st.isFile() && !st.isSymbolicLink() && st.uid === uid && st.size <= STATE_MAX_BYTES; } catch { return false; }
+}
+/** The addresses of every live stack this script started, from any checkout or worktree (each keeps its own state file in the temp folder). The hook runs from the main checkout while the Runner's `start` may run in a worktree, so it cannot read just its own checkout's file. The variable names one file (tests). Only a state file written by `start` for a still-running server counts, so another local service is never an address. */
+export const readStackUrls = (uid = process.getuid?.()) => {
   let files;
   try { files = process.env.QA_LOCAL_STATE_FILE ? [process.env.QA_LOCAL_STATE_FILE] : readdirSync(tmpdir()).filter(f => /^qa-local-[0-9a-f]{10}\.json$/.test(f)).map(f => join(tmpdir(), f)); } catch { return []; }
   const urls = [];
-  for (const f of files) { try { const u = liveStackUrl(JSON.parse(readFileSync(f, 'utf8'))); if (u) urls.push(u); } catch { /* unreadable: not a stack */ } }
+  for (const f of files) { try { if (!stateFileOk(f, lstatSync, uid)) continue; const u = liveStackUrl(JSON.parse(readFileSync(f, 'utf8'))); if (u) urls.push(u); } catch { /* unreadable: not a stack */ } }
   return urls;
 };
 /** Where the agent saves evidence: the one folder it may write, named the same way the hook names it. */
@@ -183,7 +198,7 @@ async function main() {
   const given = process.env.QA_LOCAL_PG ?? process.env.DATABASE_URL ?? 'postgres://ironlog:ironlog@127.0.0.1:5433/ironlog';
 
   if (cmd === 'check-url') {
-    const why = originProblem(arg ?? '', readState()?.url);
+    const why = originProblem(arg ?? '', readStackUrls()); // the same rule as the Runner's hook: any live stack
     if (why) fail(`refused: ${why}`);
     console.log('ok');
     return;

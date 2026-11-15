@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
-import { liveStackUrl, originProblem, readStackUrls } from './qa-local.mjs';
+import { liveStackUrl, originProblem, readStackUrls, stackServerProblem, stateFileOk } from './qa-local.mjs';
 import { bashProblem, decide, pathProblem, underEvidence, words } from './qa-runner-guard.mjs';
 
 const root = '/tmp/qa-runs';
@@ -102,7 +102,7 @@ describe('the hook process', () => {
   const script = fileURLToPath(new URL('./qa-runner-guard.mjs', import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'qa-guard-test-'));
   // A stand-in for the stack's server: a live process whose command line names server/index.ts, as the guard's pid check wants.
-  const server = spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore' });
+  const server = spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore', cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...process.env, PORT: '41234' } });
   afterAll(() => { server.kill(); });
   const state = (text: string) => { const f = join(dir, `state-${Math.random().toString(36).slice(2)}.json`); writeFileSync(f, text); return f; };
   // Started from another directory with a fake state file, as Claude Code starts it from wherever the session is.
@@ -132,7 +132,7 @@ describe('the hook process', () => {
 });
 
 describe('a stack started from another checkout (worktree)', () => {
-  const alive = () => true;
+  const alive = () => true as const;
   const rec = { url: stackUrl, port: 41234, pid: 4242 };
   it('is allowed when the recorded pid is alive', () => expect(originProblem(`${stackUrl}/#/daily`, [liveStackUrl(rec, alive)])).toBeNull());
   it('is refused when the pid is dead', () => expect(liveStackUrl(rec, () => false)).toBeNull());
@@ -150,7 +150,7 @@ describe('a stack started from another checkout (worktree)', () => {
   });
   it('reads a state file from the temp folder that another checkout wrote, and ignores a dead one', () => {
     const d = mkdtempSync(join(tmpdir(), 'qa-guard-tmp-'));
-    const server = spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore' });
+    const server = spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore', cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...process.env, PORT: '41234' } });
     const prev = process.env.TMPDIR; const prevState = process.env.QA_LOCAL_STATE_FILE;
     try {
       process.env.TMPDIR = d; delete process.env.QA_LOCAL_STATE_FILE;
@@ -159,5 +159,41 @@ describe('a stack started from another checkout (worktree)', () => {
       writeFileSync(join(d, 'other.json'), JSON.stringify({ url: 'http://127.0.0.1:41236', port: 41236, pid: process.pid }));
       expect(readStackUrls()).toEqual([stackUrl]); // the live one from the 'other checkout' only: not the dead pid, not a file with another name
     } finally { server.kill(); if (prev === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = prev; if (prevState !== undefined) process.env.QA_LOCAL_STATE_FILE = prevState; rmSync(d, { recursive: true, force: true }); }
+  });
+});
+
+describe('what counts as a live stack server', () => {
+  const cmd = 'npx tsx server/index.ts';
+  const ok = { cmdline: cmd, cwd: '/work/wt', environ: 'A=1\0PORT=41234\0' };
+  const checkout = (d: string) => d === '/work/wt';
+  it('accepts the stack server of any checkout', () => expect(stackServerProblem(ok, 41234, checkout)).toBeNull());
+  it('refuses a live process that is not server/index.ts', () => expect(stackServerProblem({ ...ok, cmdline: 'node other.js' }, 41234, checkout)).not.toBeNull());
+  it('refuses a server with a different PORT', () => expect(stackServerProblem({ ...ok, environ: 'PORT=5173\0' }, 41234, checkout)).not.toBeNull());
+  it('refuses a server whose folder is not a checkout', () => expect(stackServerProblem({ ...ok, cwd: '/elsewhere' }, 41234, checkout)).not.toBeNull());
+  it('fails closed when a reading is missing (unreadable /proc)', () => {
+    for (const bad of [{ ...ok, environ: null }, { ...ok, cwd: null }, { ...ok, cmdline: null }]) expect(stackServerProblem(bad as never, 41234, checkout)).not.toBeNull();
+  });
+  it('refuses a pid that is alive but not a stack (this test process) and a pid that is gone', () => {
+    const rec = { url: stackUrl, port: 41234 };
+    expect(liveStackUrl({ ...rec, pid: process.pid })).toBeNull();
+    expect(liveStackUrl({ ...rec, pid: 2 ** 22 + 12345 })).toBeNull();
+  });
+  it('treats a non-true answer from the liveness check as not live', () => expect(liveStackUrl({ url: stackUrl, port: 41234, pid: 4242 }, (() => 'yes') as never)).toBeNull());
+});
+
+describe('which state files are read', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qa-guard-files-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const file = (name: string, text: string) => { const f = join(dir, name); writeFileSync(f, text); return f; };
+  it('reads a small regular file of this user', () => expect(stateFileOk(file('a.json', '{}'))).toBe(true));
+  it('ignores an oversize file', () => expect(stateFileOk(file('big.json', ' '.repeat(5000)))).toBe(false));
+  it('ignores a directory (not a regular file)', () => expect(stateFileOk(dir)).toBe(false));
+  it('ignores a pipe', () => { const f = join(dir, 'pipe.json'); expect(spawnSync('mkfifo', [f]).status).toBe(0); expect(stateFileOk(f)).toBe(false); });
+  it('ignores a file owned by another uid', () => expect(stateFileOk(file('o.json', '{}'), undefined, (process.getuid?.() ?? 0) + 1)).toBe(false));
+  it('ignores a missing file', () => expect(stateFileOk(join(dir, 'nope.json'))).toBe(false));
+  it('readStackUrls skips every file when the uid does not match', () => {
+    const prev = process.env.QA_LOCAL_STATE_FILE;
+    process.env.QA_LOCAL_STATE_FILE = file('s.json', JSON.stringify({ url: stackUrl, port: 41234, pid: process.pid }));
+    try { expect(readStackUrls((process.getuid?.() ?? 0) + 1)).toEqual([]); } finally { if (prev === undefined) delete process.env.QA_LOCAL_STATE_FILE; else process.env.QA_LOCAL_STATE_FILE = prev; }
   });
 });
