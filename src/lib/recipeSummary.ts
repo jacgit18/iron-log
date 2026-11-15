@@ -70,6 +70,9 @@ export function wholePackFor(o: { mine: boolean; recipe: Pick<Recipe, 'cat' | 's
   return pack !== null && pack <= ateMax(o.recipe) ? pack : null;
 }
 
+/** Whether the entry "Add to today" made is still in the log: the page reads "Added" only while it is, so a delete elsewhere (the Nutrition board) brings "Add to today" back. */
+export const stillAdded = (diet: readonly Pick<DietEntry, 'id'>[], id: string | null): string | null => (id !== null && diet.some(e => e.id === id) ? id : null);
+
 /** The day "Plan…" opens on. */
 export const planDay = (today: string): string => shiftDay(today, 1);
 

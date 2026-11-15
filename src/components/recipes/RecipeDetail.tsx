@@ -13,7 +13,7 @@ import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { macroLine } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
-import { addState, addToToday, planDay, summaryCells, wholePackFor, type StripCell } from '../../lib/recipeSummary.js';
+import { addState, addToToday, planDay, stillAdded, summaryCells, wholePackFor, type StripCell } from '../../lib/recipeSummary.js';
 import { undoUsualOutcome, usualChange, type UsualChange } from '../../lib/usualPortion.js';
 import { scaleAmount } from '../../lib/recipeScale.js';
 import { linkedRecipe } from '../../lib/recipeSuggest.js';
@@ -50,7 +50,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const maybes = mine ? suggestionPins(status).length : 0;
   const diet = useAppStore(s => s.diet);
   const today = ymd(useToday(s => s.today));
-  const [added, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo or leaving the page
+  const [addedId, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo, leaving the page or the entry's deletion elsewhere
+  const added = stillAdded(diet, addedId); // read from the store, so deleting the entry on the board brings "Add to today" back
   const [usualSaved, setUsualSaved] = useState<UsualChange | null>(null); // the usual a whole pack saved, for Undo to take back
   const pack = wholePackFor({ mine, recipe });
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import type { DietEntry } from '../types.ts';
 import type { AddEntry, NewEntry } from './instantLog.js';
-import { addState, addToToday, eatenDayText, lastEaten, planDay, summaryCells, wholePackFor } from './recipeSummary.js';
+import { addState, addToToday, eatenDayText, lastEaten, planDay, stillAdded, summaryCells, wholePackFor } from './recipeSummary.js';
 
 const today = '2026-11-15'; // a Sunday
 const stew = { id: 'stew', n: 'Stew', cat: 'protein' as const, servings: 4, kcal: 400, p: 30 };
@@ -156,5 +156,13 @@ describe('addToToday with an amount', () => {
     const r = addToToday(adder(log), { id: 'g', n: 'Gnocchi', cat: 'ready', servings: 12, kcal: 210, p: 6, usual: 2 }, today, 12);
     expect(r).toEqual({ ok: true, id: 'n1', text: 'Logged Gnocchi, 12 portions, for today.' });
     expect(log[0]).toMatchObject({ kcal: 2520, p: 72, x: 12 });
+  });
+});
+
+describe('stillAdded', () => {
+  it('keeps the id while the entry is in the log and drops it once it is gone', () => {
+    expect(stillAdded([e('a', today)], 'a')).toBe('a');
+    expect(stillAdded([e('b', today)], 'a')).toBeNull();
+    expect(stillAdded([], null)).toBeNull();
   });
 });
