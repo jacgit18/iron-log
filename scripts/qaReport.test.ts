@@ -48,7 +48,7 @@ describe('buildReport', () => {
     expect(dev?.device).toBe(true);
     expect(dev?.agentRunnable).toBe(false);
     expect(r.agentRunnableNotRun).toBe(3);
-    expect(r.device).toEqual({ total: 1, notTried: 1, ownerRecorded: 0 });
+    expect(r.device).toEqual({ total: 1, notTried: 1, emulated: 0, ownerRecorded: 0 });
   });
 
   it('keeps proposals (by claude) apart from owner-confirmed results, and counts those awaiting a spot-check', () => {
@@ -61,7 +61,7 @@ describe('buildReport', () => {
     expect(r.awaitingSpotCheck).toBe(2); // the claude pass and the claude blocked
     expect(r.recorded).toBe(4);
     expect(r.totals).toEqual({ scenarios: 4, pass: 3, fail: 0, blocked: 1, notRun: 0 });
-    expect(r.device).toEqual({ total: 1, notTried: 0, ownerRecorded: 1 });
+    expect(r.device).toEqual({ total: 1, notTried: 0, emulated: 0, ownerRecorded: 1 });
     expect(r.lastDate).toBe('2026-11-06');
   });
 
@@ -108,7 +108,59 @@ describe('phone checklist', () => {
     const r = buildReport(l, () => undefined, [entry('S-01', 'pass', '2026-11-03', 'owner'), entry('S-02', 'fail', '2026-11-04', 'owner', 'back-swipe broken')]);
     expect(r.phone.map(x => [x.id, x.state])).toEqual([['S-03', 'not tried'], ['S-01', 'passed, confirmed']]);
     expect(r.attention.map(x => x.id)).toEqual(['S-02']);
-    expect(r.device).toEqual({ total: 3, notTried: 1, ownerRecorded: 2 });
+    expect(r.device).toEqual({ total: 3, notTried: 1, emulated: 0, ownerRecorded: 2 });
+  });
+});
+
+describe('emulated phone runs', () => {
+  const emu = (id: string, outcome: string, date: string, note = '') => ({ ...entry(id, outcome, date, 'claude', note), emulated: true });
+  const l = [sc('S-01', 'A', { device: true }), sc('S-02', 'A', { device: true }), sc('S-03', 'B', { device: true }), sc('S-04', 'B')];
+
+  it('shows an emulated-only pass in the phone checklist as emulated, and keeps it out of every pass count and the spot-check count', () => {
+    const r = buildReport(l, () => undefined, [emu('S-01', 'pass', '2026-11-14')]);
+    expect(r.phone.map(x => [x.id, x.state])).toEqual([['S-02', 'not tried'], ['S-03', 'not tried'], ['S-01', 'emulated pass']]);
+    expect(r.totals).toEqual({ scenarios: 4, pass: 0, fail: 0, blocked: 0, notRun: 4 });
+    expect(r.proposed).toEqual([]);
+    expect(r.awaitingSpotCheck).toBe(0);
+    expect(r.device).toEqual({ total: 3, notTried: 2, emulated: 1, ownerRecorded: 0 });
+    expect(r.attention).toEqual([]);
+  });
+
+  it('puts an emulated fail or blocked under attention (not in the fail count) and keeps it in the phone checklist', () => {
+    const r = buildReport(l, () => undefined, [emu('S-01', 'fail', '2026-11-14', 'layout broke'), emu('S-02', 'blocked', '2026-11-13')]);
+    expect(r.attention.map(x => [x.id, x.outcome, x.emulated])).toEqual([['S-01', 'fail', true], ['S-02', 'blocked', true]]);
+    expect(r.totals.fail).toBe(0);
+    expect(r.totals.blocked).toBe(0);
+    expect(r.phone.map(x => [x.id, x.state]).sort()).toEqual([['S-01', 'emulated fail'], ['S-02', 'emulated blocked'], ['S-03', 'not tried']]);
+  });
+
+  it('the owner phone pass wins over a newer emulated pass', () => {
+    const r = buildReport(l, () => undefined, [entry('S-01', 'pass', '2026-11-10', 'owner'), emu('S-01', 'pass', '2026-11-14')]);
+    expect(r.phone.find(x => x.id === 'S-01')?.state).toBe('passed, confirmed');
+    expect(r.totals.pass).toBe(1);
+    expect(r.device.ownerRecorded).toBe(1);
+    expect(r.device.emulated).toBe(0);
+  });
+
+  it('a newer emulated fail is shown under attention beside the owner pass, but the phone state stays passed', () => {
+    const r = buildReport(l, () => undefined, [entry('S-01', 'pass', '2026-11-10', 'owner'), emu('S-01', 'fail', '2026-11-14', 'now broken')]);
+    expect(r.attention.map(x => [x.id, x.emulated])).toEqual([['S-01', true]]);
+    expect(r.phone.find(x => x.id === 'S-01')?.state).toBe('passed, confirmed');
+    expect(r.totals).toMatchObject({ pass: 1, fail: 0 });
+  });
+
+  it('an older emulated fail does not resurface once the owner has tried it on the phone since', () => {
+    const r = buildReport(l, () => undefined, [emu('S-01', 'fail', '2026-11-09'), entry('S-01', 'pass', '2026-11-10', 'owner')]);
+    expect(r.attention).toEqual([]);
+  });
+
+  it('draws it with the not-yet-checked-on-your-phone wording and never as a confirmed or proposed pass', () => {
+    const out = renderReport(buildReport(l, () => undefined, [emu('S-01', 'pass', '2026-11-14'), emu('S-02', 'fail', '2026-11-14', 'x')]), { generatedOn: '2026-11-14' });
+    expect(out).toContain('emulated by agent, not yet checked on your phone');
+    expect(out).toContain('Emulated pass');
+    expect(out).toContain('Emulated fail');
+    const proposedPart = out.slice(out.indexOf('data-sec="proposed"'), out.indexOf('data-sec="confirmed"'));
+    expect(proposedPart).not.toContain('S-01');
   });
 });
 

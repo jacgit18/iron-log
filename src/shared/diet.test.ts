@@ -16,6 +16,13 @@ describe('normDietEntry', () => {
     ['zero calories', { ...ok, kcal: 0 }], ['too many calories', { ...ok, kcal: 10000 }], ['negative protein', { ...ok, p: -1 }], ['text calories', { ...ok, kcal: '200' }],
     ['not an object', 'rice'],
   ])('refuses %s', (_w, v) => { expect(normDietEntry(v)).toBeNull(); });
+  it('keeps the portion count x within 0.5 to 99 (two decimals) and drops anything else; an entry without it stays without it', () => {
+    expect(normDietEntry({ ...ok, x: 1.5 })).toEqual({ ...ok, x: 1.5 });
+    expect(normDietEntry({ ...ok, x: 0.5 })).toMatchObject({ x: 0.5 });
+    expect(normDietEntry({ ...ok, x: 99 })).toMatchObject({ x: 99 });
+    for (const bad of [0.49, 0, -1, 100, NaN, '2', null]) expect(normDietEntry({ ...ok, x: bad })).toEqual(ok);
+    expect('x' in normDietEntry(ok)!).toBe(false);
+  });
   it('allows zero protein', () => { expect(normDietEntry({ ...ok, p: 0 })).toMatchObject({ p: 0 }); });
   it('keeps optional carbs and fat, one decimal, and leaves an unusable one out (the entry is still good)', () => {
     expect(normDietEntry({ ...ok, c: 44.26, f: 0 })).toEqual({ ...ok, c: 44.3, f: 0 });

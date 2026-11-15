@@ -1,3 +1,7 @@
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../server/qa/scenarios.ts';
 import { buildDoc, docIssues, recordedResults, resultsOf } from './qa-scenarios-doc.mjs';
@@ -114,6 +118,51 @@ describe('QA scenarios page', () => {
         expect(got.find(r => r.startsWith(`| ${a} |`))).toContain('| passed |');
         expect(got.find(r => r.startsWith(`| ${b} |`))).toContain('| failed | 2026-11-06 fail: crashed |');
         expect(got.find(r => r.startsWith(`| ${c} |`))).toContain('| noted by hand | 2026-11-02 looked fine |');
+      });
+
+      it('shows an agent emulated run as emulated, never passed, and the owner result as the state with the emulated run beside it', () => {
+        const [a, b] = phone.map(s => s.id);
+        const recorded = recordedResults(JSON.stringify([
+          { id: a, outcome: 'pass', date: '2026-11-14', by: 'claude', emulated: true, build: 'abc123', note: 'phone view' },
+          { id: b, outcome: 'pass', date: '2026-11-10', by: 'owner' },
+          { id: b, outcome: 'fail', date: '2026-11-14', by: 'claude', emulated: true, note: 'x' },
+        ]));
+        const got = rows(buildDoc('', recorded));
+        expect(got.find(r => r.startsWith(`| ${a} |`))).toContain('| emulated pass | 2026-11-14 pass (claude, emulated, abc123): phone view |');
+        const rb = got.find(r => r.startsWith(`| ${b} |`)) ?? '';
+        expect(rb).toContain('| passed | 2026-11-10 pass');
+        expect(rb).toContain('emulated: 2026-11-14 fail (claude, emulated): x');
+      });
+
+      it('keeps the owner\'s hand-written Result when an agent only has an emulated run, shows the run beside it, and keeps it on the next write', () => {
+        const id = phone[0].id;
+        const hand = doc.replace(new RegExp(`(### ${id}\\. [\\s\\S]*?- \\*\\*Result\\*\\* \\(date, pass or fail, note\\): )\\\\_\\\\_\\\\_`), '$12026-11-02 owner looked fine');
+        const recorded = recordedResults(JSON.stringify([{ id, outcome: 'pass', date: '2026-11-14', by: 'claude', emulated: true, note: 'phone view' }]));
+        const page = buildDoc(hand, recorded);
+        expect(resultsOf(page).get(id)?.line).toBe('2026-11-02 owner looked fine');
+        const row = rows(page).find(r => r.startsWith(`| ${id} |`)) ?? '';
+        expect(row).toContain('| noted by hand | 2026-11-02 owner looked fine; emulated: 2026-11-14 pass (claude, emulated): phone view |');
+        const again = buildDoc(page, recorded);
+        expect(resultsOf(again).get(id)?.line).toBe('2026-11-02 owner looked fine');
+        expect(again).toBe(page);
+      });
+
+      it('shows a real entry as the Result when an emulated run sits beside it', () => {
+        const id = phone[0].id;
+        const page = buildDoc('', recordedResults(JSON.stringify([{ id, outcome: 'pass', date: '2026-11-10', by: 'owner' }, { id, outcome: 'fail', date: '2026-11-14', by: 'claude', emulated: true }])));
+        expect(resultsOf(page).get(id)?.cell).toBe('2026-11-10 pass');
+        expect(rows(page).find(r => r.startsWith(`| ${id} |`))).toContain('| passed | 2026-11-10 pass; emulated: 2026-11-14 fail (claude, emulated) |');
+      });
+
+      it('refuses --record by claude on a phone scenario unless --emulated, and stores the flag', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'qa-emu-'));
+        const file = join(dir, 'results.json');
+        const run = (...a: string[]) => spawnSync('node', ['scripts/qa-scenarios-doc.mjs', '--record', phone[0].id, 'pass', 'n', '--by', 'claude', '--results', file, ...a], { encoding: 'utf8' });
+        expect(run().status).toBe(2);
+        expect(run('--emulated').status).toBe(0);
+        expect(JSON.parse(readFileSync(file, 'utf8'))[0]).toMatchObject({ id: phone[0].id, by: 'claude', emulated: true });
+        const plain = SCENARIOS.find(s => !s.device && !s.retired)!.id;
+        expect(spawnSync('node', ['scripts/qa-scenarios-doc.mjs', '--record', plain, 'pass', '--by', 'claude', '--emulated', '--results', file], { encoding: 'utf8' }).status).toBe(2);
       });
 
       it('shows a hand-written Result that sits only in the Summary cell, unescaped', () => {
