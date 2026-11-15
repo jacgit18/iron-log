@@ -49,7 +49,7 @@ const PANE_CHOICES = [{ key: 'auto', label: 'Beside the list' }, { key: 'closed'
 const FILTER_CHOICES = [{ key: 'closed', label: 'Closed' }, { key: 'open', label: 'Open' }] as const;
 const EMPTY_CHIPS = new Map<string, ComboChip[]>();
 const openedThisVisit: string[] = []; // recipes opened in the list this visit, newest last (Recent chips; not stored)
-type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean; key: string } | { status: 'failed'; reason: string };
+type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean; key: string } | { status: 'failed'; reason: string; key: string };
 const LIB_LOADING: Library = { status: 'loading' }; // one value, so the memos that read the library do not rerun on every render
 
 export default function Recipes() {
@@ -117,14 +117,15 @@ export default function Recipes() {
   const shown = recentOn ? recentRows(narrowed, picks) : sortRecipes(mineList.rows, mineSort, recipes, makeable);
   const chipRows = recentOn ? EMPTY_CHIPS : mineList.chips; // Recent lists recipes as they are
   // The library box (lib/recipeMerged.ts): yours first, then library recipes you do not have yet. A library page for an older search is not shown.
-  const boxOn = libraryBoxShown({ source: src, q, browse, tab, recent: recentOn, cat });
-  const boxAllowed = libraryBoxShown({ source: src, q, browse: true, tab, recent: recentOn, cat }); // the box could open here: the Browse button is offered
-  const libNow: Library = lib.status === 'ready' && lib.key !== asked.current ? LIB_LOADING : lib;
+  const boxOn = libraryBoxShown({ source: src, q, browse, tab, recent: recentOn && src !== 'library', cat }); // the Library filter is not the Recent list
+  const boxAllowed = libraryBoxShown({ source: src, q, browse: true, tab, recent: recentOn && src !== 'library', cat }); // the box could open here: the Browse button is offered
+  const libNow: Library = lib.status !== 'loading' && lib.key !== asked.current ? LIB_LOADING : lib; // an answer, or a failure, for an older search is not shown
   const libReady = boxOn && syncing && libNow.status === 'ready';
   const libItems = useMemo(() => (libNow.status === 'ready' ? libNow.items.filter(it => inLibraryTab(it, tab)) : []), [libNow, tab]);
-  const groups = useMemo(() => mergedGroups(shown, recipes, libItems), [shown, recipes, libItems]);
+  const libGroup = useMemo(() => mergedGroups([], recipes, libItems).library, [recipes, libItems]); // not rebuilt on every keystroke
+  const groups = { mine: shown, library: libGroup };
   const srcCounts = sourceCounts(groups, libReady, libNow.status === 'ready' && libNow.more);
-  const libHave = useMemo(() => new Map(groups.library.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [groups, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
+  const libHave = useMemo(() => new Map(libGroup.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libGroup, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   // The rows with "+N more" pressed. Held here, not in the chip line, so they stay open while a combo's page replaces the list on a phone;
   // folded when the tab changes (owner rule, 2026-11-14) or the row has nothing more to show. No search text, tab or filter is touched.
   const [openChips, setOpenChips] = useState<{ tab: typeof tab; ids: readonly string[] }>({ tab, ids: [] });
@@ -140,7 +141,7 @@ export default function Recipes() {
     const t = setTimeout(() => {
       setLib({ status: 'loading' });
       const key = `${q}|${cat}|${libSort}|${tries}`;
-      void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason }); });
+      void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more, key } : { status: 'failed', reason: r.reason, key }); });
     }, q ? 300 : 0);
     return () => { live = false; clearTimeout(t); };
   }, [boxOn, syncing, q, cat, libSort, tries]);
@@ -253,7 +254,7 @@ export default function Recipes() {
       <div className="rc-src" role="group" aria-label="Recipe source">
         {SOURCES.map(o => {
           const n = countText(o.key, srcCounts);
-          return <button type="button" key={o.key} id={`recipes-${o.key}`} className="pillbtn" aria-pressed={src === o.key} onClick={() => { setSrc(o.key); if (o.key === 'library' && cat === 'ready') setCat(null); }}>{o.label}{n && <span className="rc-count">{n}</span>}</button>;
+          return <button type="button" key={o.key} id={`recipes-${o.key}`} className="pillbtn" aria-pressed={src === o.key} onClick={() => { setSrc(o.key); if (o.key === 'library') { setRecent(false); if (cat === 'ready') setCat(null); } }}>{o.label}{n && <span className="rc-count">{n}</span>}</button>;
         })}
       </div>
       <RecipeTypeTabs value={recentOn && yours ? null : tab} {...(yours ? { counts } : {})} onChange={t => { setRecent(false); setTab(t); }} {...(picks.length && yours ? { recent: { on: recentOn, onToggle: () => setRecent(!recentOn) } } : {})} />

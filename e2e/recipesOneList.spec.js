@@ -87,3 +87,48 @@ test('signed out the box is the sign-in line, and it says the nutrition and tag 
   await page.getByRole('searchbox', { name: 'Search recipes' }).fill('');
   await expect(page.locator('#recipes-library-box')).toHaveCount(0); // folded again with no text
 });
+
+test('the Library filter shows the box even while Recent was on', async ({ page }) => {
+  await page.goto('/');
+  await openRecipes(page);
+  await make(page, 'Soup');
+  await page.locator('.rc-row', { hasText: 'Soup' }).first().click();
+  await page.getByRole('button', { name: 'Star Soup' }).click();
+  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.click('#recipes-recent');
+  await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('#recipes-library');
+  await expect(page.locator('#recipes-library-box')).toBeVisible(); // Recent is switched off by the Library filter, so it cannot hide the box
+  await expect(page.locator('#recipes-recent')).toHaveCount(0);
+});
+
+test('the filter and search are kept while another Daily section is open; the box is folded again on return', async ({ page }) => {
+  await page.goto('/');
+  await openRecipes(page);
+  await make(page, 'Soup');
+  await page.getByRole('searchbox', { name: 'Search recipes' }).fill('so');
+  await page.click('#recipes-library');
+  await page.click('#daily-grocery');
+  await page.click('#daily-recipes');
+  await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('so');
+  await page.click('#recipes-all');
+  await page.getByRole('searchbox', { name: 'Search recipes' }).fill('');
+  await page.getByRole('button', { name: 'Browse the library' }).click();
+  await expect(page.locator('#recipes-library-box')).toBeVisible();
+  await page.click('#daily-grocery');
+  await page.click('#daily-recipes');
+  await expect(page.getByRole('button', { name: 'Browse the library' })).toBeVisible(); // whether Browse is open is not kept
+});
+
+test('a failed library search shows the failure line with Try again, and your recipes are unaffected', async ({ page }) => {
+  await signedIn(page, []);
+  await page.route('**/api/catalog/search?*', json(500, { ok: false }));
+  await page.goto('/');
+  await openRecipes(page);
+  await make(page, 'Soup');
+  await page.getByRole('searchbox', { name: 'Search recipes' }).fill('soup');
+  await expect(page.locator('#recipes-library-box').getByRole('alert')).toContainText('Couldn’t load the library.');
+  await expect(page.locator('#recipes-library-box').getByRole('button', { name: 'Try again' })).toBeVisible();
+  await expect(mineRows(page)).toHaveText(['Soup']);
+});
