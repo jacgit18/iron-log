@@ -8,11 +8,12 @@ import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import { SEED_EXERCISE_IDS } from './seedPersona.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from './personas.ts';
 import { BUILTIN_PROGRAMS } from './builtinPrograms.ts';
+import { BUILTIN, slotsFor } from '../../src/lib/data.ts';
 import { buildPersonaRows, cardsByExercise, DIET_TARGETS } from './seedPlan.ts';
 
 const TODAY = new Date('2026-10-27T12:00:00Z');
-// The card ids of program A as the app sees them (a slot's own id, else `A-d<day>s<slot>`, as `slotsFor` in src/lib/data.ts).
-const REAL_SLOT_IDS = new Set(BUILTIN_PROGRAMS.A.days.flatMap((day, di) => day.slots.map((sl, si) => (typeof sl.id === 'string' && sl.id ? sl.id : `A-d${di + 1}s${si + 1}`))));
+// The card ids of program A as the app builds them (`slotsFor`, the real function, so a change to its numbering fails here).
+const REAL_SLOT_IDS = new Set(slotsFor(BUILTIN.A).map(sl => sl.id));
 const EXERCISES = ['latpd', 'chestpress', 'zercher', 'hipthrust', 'dip', 'legext'];
 
 describe('QA personas', () => {
