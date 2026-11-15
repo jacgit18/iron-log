@@ -164,7 +164,7 @@ const ActionRow = ({ recipe, mine, state, msg, canUndo, pack, onWholePack, onAdd
       {state === 'to-mine' && <button type="button" className="btn primary" onClick={onAddMine}>Add to Mine</button>}
       {state === 'needs-numbers' && <button type="button" className="btn primary" onClick={onEdit}>Add them</button>}
       {(state === 'add' || state === 'added') && <button type="button" className="btn primary" disabled={state === 'added'} onClick={onAddToday}>{state === 'added' ? 'Added' : 'Add to today'}</button>}
-      {state === 'add' && pack !== null && <button type="button" className="btn primary" onClick={onWholePack}>Whole pack ({pack})</button>}
+      {state === 'add' && pack !== null && <button type="button" className="btn" onClick={onWholePack}>Whole pack ({pack})</button>}
       {(state === 'add' || state === 'added') && <button type="button" className="btn" onClick={onPlan}>Plan…</button>}
       {children}
     </div>
