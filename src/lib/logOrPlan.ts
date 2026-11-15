@@ -2,7 +2,6 @@ import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import type { DietEntry, PlanItem, PlanSlot, Recipe } from '../types.ts';
 import { amountText, usualStart } from './foodUnit.js';
 import { ateEntry, oldestDay, shiftDay } from './dietLog.js';
-import { logEntry } from './logAtUsual.js';
 import { inWindow } from './dietPlan.js';
 import { SLOT_LABEL } from './weekBoard.js';
 
@@ -34,6 +33,14 @@ export interface Ports {
 }
 
 export type Made = { ok: true; text: string; undo: () => void } | { ok: false; error: string };
+
+/** The one write every log makes (one tap, the portion sheet's Log, a past food): add `entry`, then answer with `text` and an Undo that removes exactly the entry this call made. The store's own words win when it refuses. */
+export function logEntry(ports: Pick<Ports, 'addDietEntry' | 'removeDietEntry'>, entry: Omit<DietEntry, 'id'>, text: string): Made {
+  const r = ports.addDietEntry(entry);
+  if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
+  const id = r.id;
+  return { ok: true, text, undo: () => ports.removeDietEntry(id, false) };
+}
 
 const fail = (error: string): Made => ({ ok: false, error });
 

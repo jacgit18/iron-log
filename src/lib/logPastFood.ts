@@ -2,8 +2,7 @@ import type { Recipe } from '../types.ts';
 import { amountText } from './foodUnit.js';
 import { ateDayError, entryFromFood, servingNumbers } from './dietLog.js';
 import type { Food } from './foodMacros.js';
-import { logEntry } from './logAtUsual.js';
-import type { Made, Ports } from './logOrPlan.js';
+import { logEntry, type Made, type Ports } from './logOrPlan.js';
 
 /* ---------- A food you logged before with no recipe behind it (brief nutrition-recipes-ownership-leftovers, 4c): it goes through the same portion sheet and LogControl as a recipe, log only. Pure: the store is passed in as `Ports`, the same slice `logOrPlan` takes. ---------- */
 

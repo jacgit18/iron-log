@@ -1,7 +1,7 @@
-import type { DietEntry, Recipe } from '../types.ts';
+import type { Recipe } from '../types.ts';
 import { amountText, usualStart } from './foodUnit.js';
 import { ateEntry, ateDayError, entryFromFood, hasMacros, servingNumbers } from './dietLog.js';
-import type { Made, Ports } from './logOrPlan.js';
+import { logEntry, type Made, type Ports } from './logOrPlan.js';
 
 /* ---------- One tap logs at the usual portion (brief nutrition-log-first-portion-row, PR b): Quick add, Log in the Recipes way and a food picked in Find food. Pure: the store is passed in as `Ports`. A day ahead is not handled here: it plans through the portion sheet. ---------- */
 
@@ -10,14 +10,6 @@ type Food = Pick<Recipe, 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'cat' | 'ser
 
 /** The sentence after a log: "Logged Oats, 1.5 portions." */
 export const loggedText = (name: string, amount: string): string => `Logged ${name}, ${amount}.`;
-
-/** The one write every log makes (one tap, the portion sheet's Log, a past food): add `entry`, then answer with `text` and an Undo that removes exactly the entry this call made. The store's own words win when it refuses. */
-export function logEntry(ports: Logger, entry: Omit<DietEntry, 'id'>, text: string): Made {
-  const r = ports.addDietEntry(entry);
-  if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
-  const id = r.id;
-  return { ok: true, text, undo: () => ports.removeDietEntry(id, false) };
-}
 
 /** Log a recipe at its usual portion on `day` (today or earlier). The answer carries the sentence and an Undo that removes exactly the entry this call made. */
 export function logRecipeAtUsual(ports: Logger, recipe: Pick<Recipe, 'id'> & Food, day: string, today: string): Made {
