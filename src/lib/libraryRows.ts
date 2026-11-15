@@ -10,15 +10,16 @@ export const LIBRARY_TABS = [{ key: 'all', label: 'All' }, { key: 'meals', label
 export type LibraryTab = typeof LIBRARY_TABS[number]['key'];
 
 /** The line under a Library tab with nothing in it: "No ingredients among these. Show more to load others." (a tab's name is already plural, so no "recipe" after it). */
-export const libraryEmptyNote = (tab: LibraryTab, more: boolean): string =>
-  `${tab === 'all' ? 'Nothing' : `No ${LIBRARY_TABS.find(t => t.key === tab)?.label.toLowerCase()}`} among these${more ? '. Show more to load others' : ''}.`;
+export const libraryEmptyNote = (tab: RecipeTab, more: boolean): string =>
+  `${tab === 'all' ? 'Nothing' : `No ${LIBRARY_TABS.find(t => t.key === tab)?.label.toLowerCase() ?? 'foods'}`} among these${more ? '. Show more to load others' : ''}.`;
 
 /** The recipe a Library item would become (nothing is written), or null for an item with no recipe. */
 const asRecipe = (it: CatalogItem): Recipe | null => recipeFromCatalog(it, []);
 
-/** Whether a Library item shows under a tab, by what its copy would be used as. */
-export function inLibraryTab(it: CatalogItem, tab: LibraryTab): boolean {
+/** Whether a Library item shows under a type tab (the one set of tabs, brief recipes-mine-library-merge), by what its copy would be used as; nothing shows under Foods. */
+export function inLibraryTab(it: CatalogItem, tab: RecipeTab): boolean {
   if (tab === 'all') return true;
+  if (tab === 'foods') return false; // the library has no ready-made foods
   const r = asRecipe(it);
   return !!r && inTab(r, tab);
 }

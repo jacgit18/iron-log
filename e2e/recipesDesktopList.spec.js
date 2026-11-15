@@ -67,14 +67,14 @@ test('the search, type tab and open recipe are kept while Groceries is open, and
   await expect(page.locator('.rc-item')).toHaveCount(6);
 });
 
-test('the Library signed out shows one Sign in prompt and no search box or filters', async ({ page }) => {
+test('the Library signed out shows one Sign in prompt in the library box, and your own search and filters stay', async ({ page }) => {
   await open(page, { width: 1280, height: 800 });
   await page.click('#recipes-library');
   await expect(page.locator('#recipes-library-signin')).toContainText('Sign in to browse the recipe library.');
   await expect(page.locator('#recipes-library-signin').getByRole('button', { name: 'Sign in' })).toBeVisible();
-  await expect(page.getByLabel('Search recipes')).toHaveCount(0);
-  await expect(page.locator('#recipes-filters')).toHaveCount(0);
-  await expect(page.locator('.rc-tabs')).toHaveCount(0);
+  await expect(page.locator('#recipes-library-box #recipes-library-signin')).toBeVisible();
+  await expect(page.getByLabel('Search recipes')).toBeVisible(); // one search for both lists, so it stays
   await page.click('#recipes-mine');
+  await expect(page.locator('#recipes-library-box')).toHaveCount(0);
   await expect(page.getByLabel('Search recipes')).toBeVisible();
 });

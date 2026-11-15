@@ -43,7 +43,7 @@ test('empty Recipes shows two tiles that open the form and the Library (the food
   await expect(page.locator('#rc-tile-ready')).toHaveCount(0);
   await noViolations(page);
   await page.click('#rc-tile-library');
-  await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#recipes-library-box')).toBeVisible(); // the tile opens the library box under the tiles (Recipes as one list)
   await page.click('#recipes-mine');
   await page.click('#recipes-new');
   await page.getByRole('button', { name: /Add a food by hand/ }).click();
