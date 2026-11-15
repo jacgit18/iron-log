@@ -25,6 +25,25 @@ export const SCRATCH_MARK = 'iron-log qa-local scratch';
 export const TEST_PASSWORD = 'correct horse battery staple'; // a test value the server stores only for seeded accounts on the scratch database
 // What e2e-qa/persona.js sets before sign-in: without apiSync the app shows this browser's own (empty) data, not the seeded account's.
 export const BROWSER_FLAGS = { 'ironlog:hidetip': '1', 'ironlog:hidelocal': '1', 'ironlog:flag:apiSync': 'true', 'ironlog:session/known': '1' };
+export const SIGNIN_PAGE = 'qa-signin.html';
+const SIGNIN_SCRIPT = 'qa-signin.js';
+
+/** The script of the sign-in page: sets the flags the app needs to load the account from the server (without ironlog:flag:apiSync it shows an empty, browser-only account), signs in on the stack's own origin, opens /. The page is written by this script so the QA Runner needs no page code (javascript_tool) of its own. */
+export function signInScript(flags, email, password) {
+  return `const flags = ${JSON.stringify(flags)};
+for (const [k, v] of Object.entries(flags)) localStorage.setItem(k, v);
+fetch('/api/auth/sign-in/email', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: ${JSON.stringify(email)}, password: ${JSON.stringify(password)} }) })
+  .then(r => { if (r.ok) location.replace('/'); else document.title = 'sign-in failed ' + r.status; })
+  .catch(() => { document.title = 'sign-in failed (no answer)'; });
+`;
+}
+export const signInHtml = `<!doctype html><meta charset="utf-8"><title>QA sign-in</title><script src="/${SIGNIN_SCRIPT}"></script>\n`;
+
+/** Writes the sign-in page into the built app (the server serves it; the CSP allows a script file of its own origin, not an inline one). */
+function writeSignInPage(distDir, email) {
+  writeFileSync(join(distDir, SIGNIN_SCRIPT), signInScript(BROWSER_FLAGS, email, TEST_PASSWORD));
+  writeFileSync(join(distDir, SIGNIN_PAGE), signInHtml);
+}
 const SCRATCH_NAME = /^iron_qa_run_[0-9a-f]{8}$/;
 const RESERVED_PORTS = new Set([4173, 3103, 3104, 5433]); // other sessions' preview server, the two e2e-qa servers, the shared Postgres
 
@@ -106,8 +125,12 @@ export async function freePort() {
 }
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const stateFile = join(tmpdir(), `qa-local-${createHash('sha1').update(root).digest('hex').slice(0, 10)}.json`); // one stack per checkout
+const stateFile = process.env.QA_LOCAL_STATE_FILE ?? join(tmpdir(), `qa-local-${createHash('sha1').update(root).digest('hex').slice(0, 10)}.json`); // one stack per checkout (the variable is for tests)
 const readState = () => (existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : null);
+/** The address of the stack this script started for this checkout, or null (no password: the QA Runner's hook reads only this). */
+export const readStackUrl = () => { try { const url = readState()?.url; return typeof url === 'string' ? url : null; } catch { return null; } }; // an unreadable state file means no stack: the hook then refuses navigate, and status and stop still run
+/** Where the agent saves evidence: the one folder it may write, named the same way the hook names it. */
+export const evidenceRoot = () => join(tmpdir(), 'qa-runs');
 const fail = (msg, code = 1) => { console.error(`qa-local: ${msg}`); process.exit(code); };
 
 async function main() {
@@ -152,7 +175,7 @@ async function main() {
       child.unref();
       writeFileSync(stateFile, JSON.stringify({ ...readState(), pid: child.pid }), { mode: 0o600 });
       for (let i = 0; i < 90; i++) {
-        try { if ((await fetch(`${url}/api/health/db`)).ok) { console.log(JSON.stringify({ url, port, database: db, pid: child.pid, log: readState().log })); return; } } catch { /* not up yet */ }
+        try { if ((await fetch(`${url}/api/health/db`)).ok) { console.log(JSON.stringify({ url, port, database: db, pid: child.pid, log: readState().log, evidence: evidenceRoot() })); return; } } catch { /* not up yet */ }
         await new Promise(r => setTimeout(r, 1000));
       }
       throw new Error(`the server did not answer on ${url} in 90 s (log: ${readState().log})`);
@@ -184,16 +207,23 @@ async function main() {
       await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
         on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), await hashPassword(TEST_PASSWORD)]);
     });
-    console.log(JSON.stringify({ url: state.url, persona: persona.id, email: personaEmail(persona.id), password: TEST_PASSWORD, localStorage: BROWSER_FLAGS, signIn: 'on a page of the url: set each localStorage key (the app only loads the account\'s data from the server with ironlog:flag:apiSync), POST /api/auth/sign-in/email {email,password}, then reload /' }));
+    writeSignInPage(join(root, 'dist'), personaEmail(persona.id));
+    console.log(JSON.stringify({ url: state.url, persona: persona.id, email: personaEmail(persona.id), signInUrl: `${state.url}/${SIGNIN_PAGE}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
     return;
   }
 
-  if (cmd === 'status') { const st = readState(); console.log(JSON.stringify(st ? { url: st.url, port: st.port, database: st.db, pid: st.pid, log: st.log } : { running: false })); return; } // no passwords: the state file holds the scratch login's
+  if (cmd === 'status') { // no passwords: the state file holds the scratch login's
+    let st = null; let unreadable = false;
+    try { st = readState(); } catch { unreadable = true; }
+    console.log(JSON.stringify(st ? { url: st.url, port: st.port, database: st.db, pid: st.pid, log: st.log, evidence: evidenceRoot() } : { running: false, evidence: evidenceRoot(), ...(unreadable ? { unreadableStateFile: stateFile } : {}) }));
+    return;
+  }
   if (cmd === 'stop') { await stop(); return; }
   fail('usage: qa-local.mjs start [--no-build] | seed <persona-id> | check-url <url> | status | stop', 2);
 
   async function stop() {
-    const state = readState();
+    let state = null;
+    try { state = readState(); } catch { fail(`the state file ${stateFile} cannot be read, so nothing is stopped or dropped: look at it, then delete it by hand`); }
     if (!state) { console.error('qa-local: nothing to stop'); return; }
     if (state.pid) {
       // Only a process that is still this checkout's server is killed: after a crash or reboot the pid may belong to something else.
@@ -205,6 +235,7 @@ async function main() {
     const why = await dropScratch(state, withClient);
     if (why) { console.error(`qa-local: not dropped: ${why}`); process.exitCode = 1; return; }
     rmSync(stateFile, { force: true });
+    for (const f of [SIGNIN_PAGE, SIGNIN_SCRIPT]) rmSync(join(root, 'dist', f), { force: true });
     console.error(`qa-local: stopped; dropped ${state.db} and ${state.login}`);
   }
 }
