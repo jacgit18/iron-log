@@ -75,21 +75,37 @@ const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 /** The Sunday of the week holding `d`: the app's weeks run Sunday to Saturday (`weekStartOf`, src/shared/dates.ts) and `wk` is stored as that Sunday. */
 const sunday = (d: Date) => addDays(d, -d.getUTCDay());
 
-/** Program A's card id by exercise: the card a log entry for that exercise ticks. A slot's own `id` wins (the built-in days start with a sled card, `A-sled1`, so the slot at index 1 is `A-d1s1`); only a slot with no id is numbered `A-d<day>s<slot>`, as `slotsFor` (src/lib/data.ts) does. */
-export const CARD_OF: Record<string, string> = {};
-BUILTIN_PROGRAMS.A.days.forEach((day, di) => day.slots.forEach((sl, si) => sl.items.forEach(it => { CARD_OF[it.ex] ??= typeof sl.id === 'string' && sl.id ? sl.id : `A-d${di + 1}s${si + 1}`; })));
+/** Program A's card for each exercise (the first card holding it): its id, kind and how many items it has, and the exercise's item number. A slot's own `id` wins (the built-in days start with a sled card, `A-sled1`, so the slot at index 1 is `A-d1s1`); only a slot with no id is numbered `A-d<day>s<slot>`, as `slotsFor` (src/lib/data.ts) does. */
+export function cardsByExercise(): Record<string, { id: string; type: unknown; idx: number; n: number }> {
+  const out: Record<string, { id: string; type: unknown; idx: number; n: number }> = {};
+  BUILTIN_PROGRAMS.A.days.forEach((day, di) => day.slots.forEach((sl, si) => sl.items.forEach((it, idx) => {
+    out[it.ex] ??= { id: typeof sl.id === 'string' && sl.id ? sl.id : `A-d${di + 1}s${si + 1}`, type: sl.type, idx, n: sl.items.length };
+  })));
+  return out;
+}
 
-/** One saved week per past week with log entries, the cards of the exercises logged that week ticked (current week left to the app). */
+/** One saved week per past week with log entries, with what was logged that week ticked (current week left to the app). A single card is ticked whole; a superset or either/or card is ticked per item (`<id>#<item>`, as the app stores it), and a superset with every item logged as the whole card. Each week also records the program it ran (`ran`, ADR 022) so the app does not write one back on first load. */
 function buildWeeks(logs: SeedLog[], today: Date): SeedWeek[] {
   const thisWk = iso(sunday(today));
-  const byWeek = new Map<string, Set<string>>();
+  const cards = cardsByExercise();
+  const byWeek = new Map<string, Map<string, { c: (typeof cards)[string]; items: Set<number> }>>();
   for (const l of logs) {
-    if (l.wk >= thisWk || !CARD_OF[l.exerciseId]) continue;
-    (byWeek.get(l.wk) ?? byWeek.set(l.wk, new Set()).get(l.wk)!).add(CARD_OF[l.exerciseId]!);
+    const c = cards[l.exerciseId];
+    if (l.wk >= thisWk || !c) continue;
+    let week = byWeek.get(l.wk);
+    if (!week) byWeek.set(l.wk, week = new Map());
+    let hit = week.get(c.id);
+    if (!hit) week.set(c.id, hit = { c, items: new Set() });
+    hit.items.add(c.idx);
   }
-  return [...byWeek].sort(([a], [b]) => (a < b ? -1 : 1)).map(([weekStart, cards]) => ({
-    weekStart, data: normWeek({ prog: 'A', done: Object.fromEntries([...cards].sort().map(c => [c, true])) }),
-  }));
+  return [...byWeek].sort(([x], [y]) => (x < y ? -1 : 1)).map(([weekStart, week]) => {
+    const done: Record<string, true> = {};
+    for (const { c, items } of week.values()) {
+      if (c.type === 'superset' ? items.size === c.n : c.type !== 'either') done[c.id] = true;
+      else for (const i of [...items].sort((x, y) => x - y)) done[`${c.id}#${i}`] = true;
+    }
+    return { weekStart, data: normWeek({ prog: 'A', done, ran: { prog: 'A', program: BUILTIN_PROGRAMS.A } }) };
+  });
 }
 
 export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[], today: Date): PersonaRows {
