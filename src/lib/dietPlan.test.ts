@@ -100,7 +100,7 @@ describe('planLog', () => {
   const e = (d: string): DietEntry => ({ id: Math.random().toString(), d, n: 'F', kcal: 1, p: 0 });
   it('a recipe logs one entry at its portion with the recipe link', () => {
     const out = planLog(resolve(r('r1', 2), recipes, meals), [], today);
-    expect(out).toEqual({ add: [{ n: 'Chili', kcal: 1200, p: 80, c: 102, f: 22, from: 'r1' }], left: 0 });
+    expect(out).toEqual({ add: [{ n: 'Chili', kcal: 1200, p: 80, c: 102, f: 22, from: 'r1', x: 2 }], left: 0 }); // the planned portion is stored, so the Edit sheet opens per portion (brief portion-scaled-micros)
   });
   it('a meal logs each food and stops at the per-day limit', () => {
     expect('add' in planLog(resolve(m('m1'), recipes, meals), [], today) && (planLog(resolve(m('m1'), recipes, meals), [], today) as { add: unknown[] }).add).toHaveLength(2);

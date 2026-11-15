@@ -384,7 +384,7 @@ export interface DailySnack { id: string; x?: number }
 /** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
 export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]>; /** The daily snack list, at most 6 (brief daily-snacks). */ snacks?: DailySnack[]; /** Day to the ids of listed snacks skipped on that day only. */ snackSkips?: Record<string, string[]> }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
-export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro }
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro; /** The portions the stored totals are for (0.5 to 99; brief portion-scaled-micros). Absent on an entry logged before it: one portion of its numbers. */ x?: number }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

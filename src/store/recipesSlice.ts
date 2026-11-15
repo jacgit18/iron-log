@@ -3,6 +3,7 @@ import { linkError, settleMeals } from '../lib/mealRollup.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { withUsual } from '../lib/usualPortion.js';
+import { cleanMicro } from '../shared/foodMicro.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
 import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
@@ -18,6 +19,18 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   recipesLoaded: false,
 
   saveRecipes() { get().saveDoc(MAIN, { items: get().recipes }); },
+
+  // One serving's amounts onto a recipe with none (the Edit sheet's "also save to the recipe" tick, brief portion-scaled-micros): nothing else changes, and a recipe that has amounts is never overwritten.
+  setRecipeMicro(id, micro) {
+    const r = get().recipes.find(x => x.id === id);
+    if (!r) return 'That food is gone.';
+    if (r.micro && Object.keys(r.micro).length) return 'That recipe already has amounts.';
+    const m = cleanMicro(micro);
+    if (!m) return 'No amounts to save.';
+    set({ recipes: get().recipes.map(x => (x.id === id ? { ...x, micro: m } : x)) });
+    get().saveRecipes();
+    return null;
+  },
 
   // The usual portion alone (brief nutrition-usual-portion): no edited mark, no meal re-settling, nothing else on the recipe changes. An error text, or null.
   setRecipeUsual(id, usual) {
