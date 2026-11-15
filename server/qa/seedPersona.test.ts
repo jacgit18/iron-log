@@ -62,4 +62,17 @@ describe('seeding the three-year veteran', () => {
     await run();
     expect(await n(`select count(*) n from weeks where ${mine}`)).toBe(rows.weeks.length);
   }, 120_000);
+
+  it('writes more weeks than one batch holds, in order, with no gap in seq, and the same again on a re-run', async () => {
+    const first = Date.UTC(2000, 0, 2); // a Sunday
+    const many = { ...rows, weeks: Array.from({ length: 1200 }, (_, i) => ({ weekStart: new Date(first + i * 7 * 86_400_000).toISOString().slice(0, 10), data: rows.weeks[0]!.data })) };
+    const runMany = () => seedPersona(client, CLEAR, p, many, TODAY);
+    const check = async () => {
+      expect(await n(`select count(*) n from weeks where ${mine}`)).toBe(1200);
+      // seq follows the week order and the weeks' seqs are consecutive (batches carry on from one another).
+      expect(await n(`select count(*) n from (select seq - row_number() over (order by week_start) as g from weeks where ${mine}) t where g <> (select min(seq) - 1 from weeks where ${mine})`)).toBe(0);
+    };
+    await runMany(); await check();
+    await runMany(); await check();
+  }, 120_000);
 });
