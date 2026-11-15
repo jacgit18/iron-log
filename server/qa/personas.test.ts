@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { normDietCfg, normDietEntries } from '../../src/shared/diet.ts';
 import { normConfig } from '../../src/shared/config.ts';
+import { normWeek } from '../../src/shared/week.ts';
 import { normStretchItem, normSupplementItem } from '../../src/shared/listItems.ts';
 import { normRecipes } from '../../src/shared/recipes.ts';
 import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import { SEED_EXERCISE_IDS } from './seedPersona.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from './personas.ts';
-import { buildPersonaRows, DIET_TARGETS } from './seedPlan.ts';
+import { BUILTIN_PROGRAMS } from './builtinPrograms.ts';
+import { buildPersonaRows, cardsByExercise, DIET_TARGETS } from './seedPlan.ts';
 
 const TODAY = new Date('2026-10-27T12:00:00Z');
+// The card ids of program A as the app sees them (a slot's own id, else `A-d<day>s<slot>`, as `slotsFor` in src/lib/data.ts).
+const REAL_SLOT_IDS = new Set(BUILTIN_PROGRAMS.A.days.flatMap((day, di) => day.slots.map((sl, si) => (typeof sl.id === 'string' && sl.id ? sl.id : `A-d${di + 1}s${si + 1}`))));
 const EXERCISES = ['latpd', 'chestpress', 'zercher', 'hipthrust', 'dip', 'legext'];
 
 describe('QA personas', () => {
@@ -71,9 +75,42 @@ describe('QA personas', () => {
       expect(l.weightLb).toBeGreaterThanOrEqual(0);
       expect(l.weightLb).toBeLessThan(5000);
       expect(l.d <= '2026-10-27').toBe(true);
-      expect(new Date(`${l.wk}T00:00:00Z`).getUTCDay()).toBe(1);
+      expect(new Date(`${l.wk}T00:00:00Z`).getUTCDay()).toBe(0); // weeks run Sunday to Saturday
     }
+    for (const b of rows.body) expect(new Date(`${b.wk}T00:00:00Z`).getUTCDay()).toBe(0);
     expect(new Set(rows.body.map(b => b.wk)).size).toBe(rows.body.length);
+  });
+
+  it('seeds one past week per Sunday that has log entries, with the logged cards ticked', () => {
+    const rows = buildPersonaRows(personaById('three-year-veteran')!, EXERCISES, TODAY);
+    const logWeeks = new Set(rows.logs.map(l => l.wk));
+    const cards = cardsByExercise();
+    const thisWk = new Date(TODAY.getTime() - TODAY.getUTCDay() * 86_400_000).toISOString().slice(0, 10);
+    expect(rows.weeks.length).toBe(new Set([...logWeeks].filter(w => w < thisWk && [...rows.logs].some(l => l.wk === w && cards[l.exerciseId]))).size);
+    expect(rows.weeks.length).toBeGreaterThan(0);
+    expect(new Set(rows.weeks.map(w => w.weekStart)).size).toBe(rows.weeks.length);
+    for (const w of rows.weeks) {
+      expect(new Date(`${w.weekStart}T00:00:00Z`).getUTCDay()).toBe(0);
+      expect(logWeeks.has(w.weekStart)).toBe(true);
+      expect(w.weekStart < thisWk).toBe(true);
+      const done = Object.keys((w.data as { done: object }).done);
+      expect(done.length).toBeGreaterThan(0);
+      for (const k of done) expect(REAL_SLOT_IDS.has(k.split('#')[0]!), `${k} is not a card of program A`).toBe(true);
+      // Exactly the cards of the exercises logged that week (the exercises with a card in program A).
+      const logged = new Set(rows.logs.filter(l => l.wk === w.weekStart && cards[l.exerciseId]).map(l => cards[l.exerciseId]!.id));
+      expect(new Set(done.map(k => k.split('#')[0]))).toEqual(logged);
+      // A superset or either/or card is ticked item by item unless every item of a superset was logged.
+      for (const id of done.filter(k => !k.includes('#'))) {
+        const type = Object.values(cards).find(c => c.id === id)!;
+        expect(type.type === 'either').toBe(false);
+        if (type.type === 'superset') expect(new Set(rows.logs.filter(l => l.wk === w.weekStart && cards[l.exerciseId]?.id === id).map(l => cards[l.exerciseId]!.idx)).size).toBe(type.n);
+      }
+      expect((w.data as { ran?: { prog: string } }).ran?.prog).toBe('A'); // the app writes no record back on first load
+      expect(normWeek(w.data)).toEqual(w.data);
+    }
+    expect(rows.weeks.some(w => Object.keys((w.data as { done: object }).done).some(k => k.includes('#')))).toBe(true); // the per-item path is exercised
+    expect(buildPersonaRows(personaById('three-year-veteran')!, EXERCISES, TODAY).weeks).toEqual(rows.weeks);
+    expect(buildPersonaRows(PERSONAS.find(p => p.data.logEntries === 0)!, EXERCISES, TODAY).weeks).toEqual([]);
   });
 
   it('puts the grocery-at-cap persona on the catalogue cap and the shopper under it', () => {

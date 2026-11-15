@@ -23,6 +23,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import GoesWith from './GoesWith.js';
 import MealMicroBars from './MealMicroBars.js';
+import RecipeMicro from './RecipeMicro.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
 import './RecipeDesktop.css';
@@ -91,6 +92,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Food</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
         {strip}
         {bar}
+        <RecipeMicro key={recipe.id} recipe={recipe} />
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
         <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
@@ -107,7 +109,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {strip}
       {bar}
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used.${rollText ? ` The parts add up to ${rollText}.` : ' The parts need numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
-      {breakdown && <MealMicroBars key={recipe.id} breakdown={breakdown} />}
+      {breakdown ? <MealMicroBars key={recipe.id} breakdown={breakdown} /> : <RecipeMicro key={recipe.id} recipe={recipe} />}
       <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}
       <div className="rc-col">
       <div className="rc-ingrow"><h3>Ingredients</h3>{recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}</div>

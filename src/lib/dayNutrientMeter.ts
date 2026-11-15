@@ -16,17 +16,19 @@ export interface MeterItem {
   status: LimitStatus;
   /** Bar width, 0 to 100. */
   percent: number;
+  /** The estimated part of food in this row, as a whole percent of the limit (brief recipe-auto-nutrition); 0 when none. */
+  estShare: number;
   /** The sheet's own words for this row, for the bar's accessible name. */
   name: string;
 }
 export type DayMeterView =
-  | { kind: 'rows'; top: MeterItem[]; subs: MeterItem[]; tracked: number; hidden: number; closed: string }
+  | { kind: 'rows'; top: MeterItem[]; subs: MeterItem[]; tracked: number; hidden: number; closed: string; /** True when a listed bar has an estimated part: the open list says so. */ estimated: boolean }
   | { kind: 'none' };
 
 const item = (r: TotalRow): MeterItem => ({
   key: r.key, label: r.label, status: r.status, percent: r.percent,
-  text: r.status === 'over' ? 'Over' : `${r.share}%`,
-  name: `${r.label}: ${r.figure}. ${r.statusText}. ${r.limitText}`,
+  text: r.status === 'over' ? 'Over' : `${r.share}%`, estShare: r.estShare,
+  name: `${r.label}: ${r.figure}. ${r.statusText}. ${r.limitText}${r.estShare > 0 ? '. Part of this is estimated from recipes' : ''}`,
 });
 
 /** `null` draws nothing (no nutrient data, or only nutrients without a limit); `none` is "Nothing ticked yet" (data exists but nothing is counted on this day); otherwise the nearest limits. */
@@ -36,7 +38,8 @@ export function dayNutrientMeter(v: TotalsView): DayMeterView | null {
   if (v.rows.length === 0) return null;
   const ranked = [...v.rows].sort((a, b) => Number(b.status === 'over') - Number(a.status === 'over') || b.share - a.share).map(item); // over first (a total a hair past its limit rounds to 100%, level with one exactly at it), then by share; a tie keeps the limits table's order (the sort is stable)
   const top = ranked.slice(0, CLOSED_NAMES);
-  return { kind: 'rows', top, subs: ranked.slice(0, SUB_LIMIT), tracked: ranked.length, hidden: Math.max(0, ranked.length - SUB_LIMIT), closed: top.map(t => `${t.label} ${t.status === 'over' ? 'over' : t.text}`).join(' · ') };
+  const subs = ranked.slice(0, SUB_LIMIT);
+  return { kind: 'rows', top, subs, estimated: subs.some(x => x.estShare > 0), tracked: ranked.length, hidden: Math.max(0, ranked.length - SUB_LIMIT), closed: top.map(t => `${t.label} ${t.status === 'over' ? 'over' : t.text}`).join(' · ') };
 }
 
 /** Whether the Supplements section keeps its own Totals button (brief nutrition-manage-cleanup). `hasTotals` is what the button needed before: something scheduled, or a food eaten with vitamin or mineral data.

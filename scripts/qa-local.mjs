@@ -213,6 +213,7 @@ async function main() {
     const { personaAuthId, personaById, personaEmail } = await import('../server/qa/personas.ts');
     const { SEED_EXERCISE_IDS, seedPersona } = await import('../server/qa/seedPersona.ts');
     const { buildPersonaRows } = await import('../server/qa/seedPlan.ts');
+    const { localSeedDay } = await import('../server/qa/seedDay.ts');
     const { hashPassword } = await import('better-auth/crypto');
     const persona = personaById(arg ?? '');
     if (!persona) fail(`no test account ${JSON.stringify(arg)} in server/qa/personas.ts`, 2);
@@ -222,7 +223,7 @@ async function main() {
       const { rows: [{ comment }] } = await c.query(`select shobj_description(oid, 'pg_database') as comment from pg_database where datname = current_database()`);
       const m = markProblem(comment);
       if (m) throw new Error(m);
-      await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, now), now);
+      await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
       await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
         on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), await hashPassword(TEST_PASSWORD)]);
     });

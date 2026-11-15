@@ -85,3 +85,27 @@ describe('recipeFromCatalog at other servings', () => {
     expect(recipeFromCatalog(none, [], 8)).not.toHaveProperty('edited');
   });
 });
+
+describe('estimate mark and hand edits (brief recipe-auto-nutrition)', () => {
+  const prev: Recipe = { id: 'r1', n: 'Stew', cat: 'protein', ing: [{ n: 'Beef' }], steps: [], kcal: 400, p: 30, c: 10, f: 12, micro: { zinc: 4 }, est: { of: 3, n: 4 } };
+  const formSave = (over: Partial<Recipe> = {}): Recipe => { const { est: _e, ...rest } = prev; return { ...rest, ...over }; }; // the form never carries est
+  it('keeps the mark when the form saves the numbers as they were', () => {
+    expect(withEditedMark(prev, formSave()).est).toEqual({ of: 3, n: 4 });
+    expect(withEditedMark(prev, formSave({ n: 'Beef stew', steps: ['Simmer.'] })).est).toEqual({ of: 3, n: 4 });
+  });
+  it('clears it when kcal, protein, carbs, fat or vitamins change by hand', () => {
+    for (const over of [{ kcal: 410 }, { p: 31 }, { c: 11 }, { f: 13 }, { micro: { zinc: 5 } }]) expect(withEditedMark(prev, formSave(over)).est).toBeUndefined();
+  });
+  it('clears it when the vitamins are removed', () => {
+    const { micro: _m, ...noMicro } = formSave();
+    expect(withEditedMark(prev, noMicro).est).toBeUndefined();
+  });
+  it('keeps it on a recipe whose estimate found no vitamins, while the macros are as they were', () => {
+    const { micro: _m, ...bare } = prev;
+    expect(withEditedMark(bare, { ...bare, est: undefined, n: 'Beef stew' }).est).toEqual({ of: 3, n: 4 });
+  });
+  it('leaves a mark the new recipe brings (a Fill), and a recipe that never had one', () => {
+    expect(withEditedMark(prev, { ...formSave({ kcal: 500 }), est: { of: 5, n: 5 } }).est).toEqual({ of: 5, n: 5 });
+    expect(withEditedMark(undefined, formSave()).est).toBeUndefined();
+  });
+});
