@@ -85,7 +85,7 @@ export function pathProblem(p, { write = false, root = evidenceRoot(), repo = RE
   return abs === rr || abs.startsWith(rr + sep) ? null : `${abs} is outside this checkout and ${root}`;
 }
 
-/** The decision for one hook call: a reason to refuse it, or null. `stackUrl` is the running stack's address (null when none). */
+/** The decision for one hook call: a reason to refuse it, or null. `stackUrl` is the address of every live stack (an array; empty or null when none). */
 export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(), stackUrl = null, repo = REPO } = {}) {
   const input = tool_input && typeof tool_input === 'object' ? tool_input : {};
   switch (tool) {
