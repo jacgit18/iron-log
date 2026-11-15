@@ -247,7 +247,7 @@ export default function Recipes() {
         <RecipeNewMenu onChoose={choose} />
       </div>
       <div className="rc-top">
-        <input type="search" aria-label="Search recipes" placeholder="Search yours and the library" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
+        <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
         <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
       </div>
       <div className="rc-src" role="group" aria-label="Recipe source">

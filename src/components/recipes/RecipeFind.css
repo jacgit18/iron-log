@@ -159,6 +159,9 @@
 .rc-src .rc-count {
   margin-inline-start: var(--sp-6);
 }
+.rc-src [aria-pressed='true'] .rc-count {
+  color: inherit;
+}
 .rc-merged {
   display: flex;
   flex-direction: column;
