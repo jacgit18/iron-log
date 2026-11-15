@@ -163,7 +163,7 @@ test('+ New offers every way to add and each opens its flow', async ({ page }) =
   await page.goBack();
   await page.click('#recipes-library');
   await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#recipes-new')).toHaveCount(0); // the menu belongs to Mine
+  await expect(page.locator('#recipes-new')).toBeVisible(); // + New is there under every filter (Recipes as one list)
   await page.click('#recipes-mine');
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Scan to fill a food form' }).click();
   await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible(); // the barcode sheet opens over the ready-made form

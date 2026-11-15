@@ -1,14 +1,14 @@
 import type { RecipeCategory } from '../types.js';
-import type { LibraryTab } from './libraryRows.js';
+import type { RecipeSource } from './recipeMerged.js';
 import type { NutritionKey } from './recipeNutrition.js';
 import type { RecipeTab } from './recipeList.js';
 
 /* What the Recipes list shows is kept while the person visits another Daily section and comes back (brief recipes-desktop-layouts, 2b):
-   search, type tab, Recent, category, Can make, tags, nutrition, Mine / Library, the Library tab and the recipe open in the pane.
+   search, type tab, Recent, category, Can make, tags, nutrition, the All / Mine / Library filter and the recipe open in the pane.
    It lives in memory for this visit: not on the device, not in the address, not in the app store (so no sync or AppState change). A reload clears it.
-   The loaded Library page is not kept; it loads again. */
+   The loaded Library page and whether "Browse the library" is open are not kept; the box is folded again and loads when opened. */
 export interface RecipesViewState {
-  src: 'mine' | 'library';
+  src: RecipeSource; // the filter over the one list: All, Mine or Library
   q: string;
   tab: RecipeTab;
   recent: boolean;
@@ -16,11 +16,10 @@ export interface RecipesViewState {
   canMake: boolean;
   tagSel: string[];
   nutSel: NutritionKey[];
-  libTab: LibraryTab;
   selId: string | null;
 }
 
-export const INITIAL_VIEW_STATE: Readonly<RecipesViewState> = { src: 'mine', q: '', tab: 'all', recent: false, cat: null, canMake: false, tagSel: [], nutSel: [], libTab: 'all', selId: null };
+export const INITIAL_VIEW_STATE: Readonly<RecipesViewState> = { src: 'all', q: '', tab: 'all', recent: false, cat: null, canMake: false, tagSel: [], nutSel: [], selId: null };
 
 let state: RecipesViewState = { ...INITIAL_VIEW_STATE };
 const listeners = new Set<() => void>();
@@ -43,6 +42,6 @@ export function resetRecipesViewState(): void {
 
 /** After Save on a screen with the pane: back to the list with the saved recipe open, shown under All with no search or filter hiding it. */
 export function showSavedRecipe(id: string): void {
-  state = { ...state, src: 'mine', q: '', tab: 'all', recent: false, cat: null, canMake: false, tagSel: [], nutSel: [], selId: id };
+  state = { ...state, src: 'all', q: '', tab: 'all', recent: false, cat: null, canMake: false, tagSel: [], nutSel: [], selId: id };
   listeners.forEach(fn => fn());
 }
