@@ -14,14 +14,14 @@ const openStew = async page => { await page.click('#tab-daily'); await page.clic
 const box = (page, sel) => page.locator(sel).first().boundingBox();
 
 for (const width of [1024, 1280, 1920]) {
-  test(`at ${width}px the recipe page puts ingredients beside the steps, caps steps and notes, and keeps the day field narrow`, async ({ page }) => {
+  test(`at ${width}px the recipe page puts ingredients beside the steps, caps steps and notes, with the strip above them`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     await seed(page);
     await openStew(page);
     const ings = await box(page, '.rc-col:first-child .rc-ings'), steps = await box(page, '.rc-steps');
     expect(steps.x).toBeGreaterThan(ings.x + ings.width - 1); // the steps column starts where the ingredients column ends
     expect(Math.abs((await box(page, '.rc-col:last-child h3')).y - (await box(page, '.rc-col:first-child h3')).y)).toBeLessThan(12); // side by side, not stacked
-    expect((await box(page, '.lc input[type="date"]')).width).toBeLessThan(360);
+    expect((await box(page, '.rc-strip')).y).toBeLessThan((await box(page, '.rc-cols')).y); // the strip and action row sit above the two columns
     const cap = await page.locator('.rc-steps li').first().evaluate(e => e.getBoundingClientRect().width);
     expect(cap).toBeLessThanOrEqual(70 * 12); // 70 characters of this font are well under 12 px each
     const note = await page.locator('.rc-detail > .note', { hasText: 'Stir the pot' }).first().evaluate(e => e.getBoundingClientRect().width);

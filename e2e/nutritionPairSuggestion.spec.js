@@ -26,22 +26,27 @@ test('after Log it, the partner with numbers is offered, one tap logs it, Undo r
   await expect(page.getByText(/Logged .* to today/)).toBeVisible(); // the chili entry is still there
 });
 
-test('The log control on the recipe page offers it too, and a recipe with no pairing offers nothing', async ({ page }) => {
+test('The log control in the portion sheet opened from the recipe page offers it too', async ({ page }) => {
   await seed(page);
   await row(page, 'Chili').click();
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await page.getByRole('button', { name: 'Plan…' }).click(); // the sheet opens on tomorrow; today logs
+  await page.getByRole('dialog').getByLabel('Day').fill('2026-09-24');
+  await page.getByRole('dialog').getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByRole('group', { name: 'Goes with it' }).getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
 });
 
 test('The log control twice offers the partner again after the second log', async ({ page }) => {
   await seed(page);
   await row(page, 'Chili').click();
-  await page.getByRole('button', { name: 'Log', exact: true }).click();
+  await page.getByRole('button', { name: 'Plan…' }).click();
+  const dlg = page.getByRole('dialog');
+  await dlg.getByLabel('Day').fill('2026-09-24');
+  await dlg.getByRole('button', { name: 'Log', exact: true }).click();
   const offer = page.getByRole('group', { name: 'Goes with it' });
   await offer.getByRole('button', { name: '+ Rice, also log it' }).click();
   await expect(offer.getByText(/Logged .* of Rice/)).toBeVisible();
-  await page.getByRole('button', { name: 'Log another' }).click();
-  await page.getByRole('button', { name: 'Log', exact: true }).click(); // a second log of the chili is a new log: Rice is on offer again
+  await dlg.getByRole('button', { name: 'Log another' }).click();
+  await dlg.getByRole('button', { name: 'Log', exact: true }).click(); // a second log of the chili is a new log: Rice is on offer again
   await expect(offer.getByRole('button', { name: '+ Rice, also log it' })).toBeVisible();
 });
 
