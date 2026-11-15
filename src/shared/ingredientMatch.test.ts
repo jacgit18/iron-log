@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracketGrams, hasAmount, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.js';
+import { bracketGrams, hasAmount, termMatchesLine, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.js';
 
 const hit = { id: 7, name: 'Flour, wheat', kcal: 360, p: 10, c: 76, f: 1, micro: { iron: 4.6 } };
 const ok = { status: 'matched', fdcId: 7, food: 'Flour, wheat', grams: 100, gramsFrom: 'text', confidence: 'high', per100: hit };
@@ -46,6 +46,14 @@ describe('grams from the text', () => {
 
 describe('hasAmount', () => {
   it.each([['2 eggs', true], ['½ cup milk', true], ['a pinch of salt', false], ['an onion', false], ['One medium onion', true], ['Olive oil', false], ['Salt', false]])('%s', (line, yes) => expect(hasAmount(line)).toBe(yes));
+});
+
+describe('termMatchesLine', () => {
+  it.each([['eggs', '2 large eggs', true], ['egg, whole, raw', '2 large eggs', true], ['onions, raw', '1 medium onion', true], ['lard', '2 large eggs', false], [null, 'eggs', false], ['ab', 'ab', false]])('%s for %s', (term, line, yes) => expect(termMatchesLine(term, line)).toBe(yes));
+  it('keeps the retry flag on none and nowhere else', () => {
+    expect(cleanLineMatch({ status: 'none', retry: true }, 'l')).toEqual({ line: 'l', status: 'none', retry: true });
+    expect(cleanLineMatch({ status: 'skip', retry: true }, 'l')).toEqual({ line: 'l', status: 'skip' });
+  });
 });
 
 describe('confidenceOf', () => {

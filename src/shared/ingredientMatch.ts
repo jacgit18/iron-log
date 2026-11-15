@@ -25,6 +25,8 @@ export interface LineMatch {
   confidence?: 'high' | 'low';
   /** The USDA row per 100 g (kcal, p, c, f, micro), matched only. */
   per100?: FoodHit;
+  /** none only: true when this line could not be worked out this time (a food search failed, or the model gave no usable answer), as opposed to "no USDA food fits". Never cached; asking again may match. */
+  retry?: true;
 }
 
 /** The request's lines, cleaned: 1 to MAX_LINES strings, each squeezed and cut at MAX_LINE characters. Null when it is not that (the route answers 422); an empty line is refused, not dropped, so the answer stays one per line sent. */
@@ -109,6 +111,16 @@ export const textGrams = (line: string): number | null => leadingGrams(line) ?? 
 /** Whether the line states any amount at all (a digit, a fraction glyph, or a number word; a bare "a" or "an" is not one). A line with none ("Olive oil", "Salt") can only have guessed grams, whatever the model says. */
 export const hasAmount = (line: string): boolean => /[\d¼-¾⅓-⅞]|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|half|dozen)\b/i.test(line);
 
+const words = (t: string): Set<string> => new Set((t.toLowerCase().match(/[a-z]{3,}/g) ?? []).map(w => w.replace(/(?:es|s)$/, '')));
+
+/** Whether a search term the model wrote for a line shares a word with that line ("eggs" for "2 large eggs"; "lard" for "2 large eggs" does not). A result is cached for everyone under the line's own key, so a row whose term has nothing to do with its line (a crafted line steering another row) is answered but never cached. */
+export function termMatchesLine(term: string | null, line: string): boolean {
+  if (!term) return false;
+  const l = words(line);
+  for (const w of words(term)) if (l.has(w)) return true;
+  return false;
+}
+
 /** The server's confidence: high only when the grams came from the text or a unit conversion and the pick is not approximate. */
 export const confidenceOf = (gramsFrom: 'text' | 'converted' | 'guess', approximate: boolean): 'high' | 'low' => (gramsFrom !== 'guess' && !approximate ? 'high' : 'low');
 
@@ -156,7 +168,7 @@ export function cleanPicks(raw: unknown, shown: Map<number, Set<number>>): Map<n
 export function cleanLineMatch(raw: unknown, line: string): LineMatch {
   const o = obj(raw);
   if (o?.status === 'skip') return { line, status: 'skip' };
-  if (o?.status !== 'matched') return { line, status: 'none' };
+  if (o?.status !== 'matched') return o?.status === 'none' && o.retry === true ? { line, status: 'none', retry: true } : { line, status: 'none' };
   const per100 = cleanHits({ hits: [o.per100] })[0];
   const gramsFrom = FROM.find(f => f === o.gramsFrom);
   const grams = typeof o.grams === 'number' && Number.isFinite(o.grams) && o.grams >= MIN_GRAMS && o.grams <= MAX_GRAMS ? o.grams : null;

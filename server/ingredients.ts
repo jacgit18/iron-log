@@ -7,7 +7,7 @@ import { dayCap } from './dayCap.ts';
 import type { DB } from './db/types.ts';
 import { askPlainFoods } from './foodSearch.ts';
 import { jsonFromReply } from '../src/shared/scan.ts';
-import { cleanLineMatch, cleanLines, cleanPicks, cleanPlan, confidenceOf, normalizeLine, hasAmount, textGrams, MAX_LINE, MAX_LINES, type LineMatch } from '../src/shared/ingredientMatch.ts';
+import { cleanLineMatch, cleanLines, cleanPicks, cleanPlan, confidenceOf, normalizeLine, hasAmount, termMatchesLine, textGrams, MAX_LINE, MAX_LINES, type LineMatch } from '../src/shared/ingredientMatch.ts';
 import type { FoodHit } from '../src/shared/foods.ts';
 
 // Fill nutrition's resolver (brief recipe-auto-nutrition, ADR 133): ingredient lines in, one `LineMatch` per line out, mounted at /api/ingredients behind sign-in and a
@@ -87,11 +87,13 @@ export async function resolveLines(lines: string[], deps: ResolveDeps): Promise<
   const keys = lines.map(cacheKey);
   const hit = await deps.cache.get([...new Set(keys)]);
   const results = new Map<string, Stored>();
-  for (const [k, v] of hit) results.set(k, stored(cleanLineMatch(v, '')));
-  const todo: { key: string; line: string }[] = [];
-  for (let i = 0; i < lines.length; i++) if (!results.has(keys[i]!) && !todo.some(t => t.key === keys[i])) todo.push({ key: keys[i]!, line: lines[i]! });
+  // A cached row that no longer reads back as what it says (damaged, or from a changed shape) is a miss: it is resolved again for this answer, never served as a plain "no match".
+  for (const [k, v] of hit) { const c = cleanLineMatch(v, ''); if (c.status === (v as { status?: unknown } | null)?.status && !c.retry) results.set(k, stored(c)); }
+  const todoByKey = new Map<string, string>();
+  lines.forEach((l, i) => { if (!results.has(keys[i]!) && !todoByKey.has(keys[i]!)) todoByKey.set(keys[i]!, l); });
+  const todo = [...todoByKey].map(([key, line]) => ({ key, line }));
   const usage: Usage = { calls: 0, inputTokens: 0, outputTokens: 0 };
-  const cached = lines.filter((_l, i) => results.has(keys[i]!)).length;
+  const cached = results.size; // distinct lines answered from the cache
   if (todo.length > 0) {
     const gate = deps.gate?.();
     if (gate && !gate.ok) return { ok: false, retryAfterSec: gate.retryAfterSec };
@@ -111,9 +113,11 @@ export async function resolveLines(lines: string[], deps: ResolveDeps): Promise<
     todo.forEach((t, i) => {
       const p = plan[i]!;
       let m: Stored = { status: 'none' };
-      let keep = true;
+      // Cached for everyone under this line's own key only when the row is this line's own answer: its term shares a word with the line, so a crafted line cannot steer another row into the shared cache. A row that is not worked out (a failed search, no usable term or grams, no pick for a shown food) is answered `none` with retry and never cached.
+      let keep = termMatchesLine(p.term, t.line);
       if (p.skip) m = { status: 'skip' };
-      else if (p.term && failed.has(p.term.toLowerCase())) keep = false;
+      else if (!p.term) { m = { status: 'none', retry: true }; keep = false; }
+      else if (failed.has(p.term.toLowerCase())) { m = { status: 'none', retry: true }; keep = false; }
       else {
         const pick = picks.get(i);
         const food = pick?.id != null ? shown.get(i)?.get(pick.id) : undefined;
@@ -122,7 +126,9 @@ export async function resolveLines(lines: string[], deps: ResolveDeps): Promise<
         const grams = fromText ?? p.grams;
         // A line with no amount at all can only be a guess, whatever the model says: confidence must not rest on its word.
         const gramsFrom = fromText !== null ? 'text' : !hasAmount(t.line) ? 'guess' : p.gramsFrom === 'text' ? 'converted' : p.gramsFrom;
-        if (pick && food && grams !== null) m = { status: 'matched', fdcId: food.id, food: food.name, grams, gramsFrom, confidence: confidenceOf(gramsFrom, pick.approximate), per100: food };
+        if (shown.has(i) && !pick) { m = { status: 'none', retry: true }; keep = false; }
+        else if (pick && food && grams === null) { m = { status: 'none', retry: true }; keep = false; }
+        else if (pick && food && grams !== null) m = { status: 'matched', fdcId: food.id, food: food.name, grams, gramsFrom, confidence: confidenceOf(gramsFrom, pick.approximate), per100: food };
       }
       results.set(t.key, m);
       if (keep) write.push({ key: t.key, result: m });
@@ -180,6 +186,8 @@ export function ingredientRoutes(db: Kysely<DB>, { key, usdaKey, model = DEFAULT
     const who = `ingredients:${userId}`;
     // Counted before the model call, and only when something is not cached: person first, then the whole server (dayCap.ts: per instance, so the spend limit on the key is the real ceiling).
     const gate = () => {
+      // The server's ceiling is looked at first, so a request it refuses does not cost this person one of their fills.
+      if (daily.left('ingredients', dailyMax) <= 0) return daily.take('ingredients', dailyMax);
       const mine = daily.take(who, userDailyMax);
       if (!mine.ok) return mine;
       return daily.take('ingredients', dailyMax);
