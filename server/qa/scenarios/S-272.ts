@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-272', feature: 'Large history', title: 'Three years of history still opens and exports', persona: 'three-year-veteran', brief: 'feature-map',
   steps: [
-    'Open Progress and read the Body weight table, then open Training trends (#/progress/trends) and read Sets logged per week, Weekly volume and Muscles trained per week, then open Weekly history and press All 12 weeks.',
+    'Open Training trends (#/progress/trends; on a desktop the Progress page shows the same sections) and read Sets logged per week, Weekly volume, Muscles trained per week and the Body weight table at the bottom. Then open Weekly history: on a phone press All 12 weeks on the Progress hub; on a desktop it already lists 12.',
     'In Settings, Data, press Export all data and wait for it to finish (it downloads a file: a Runner needs the owner\'s yes first; if it has none, record the export as not run, not as a pass).',
     'Open the Board and move between two days.',
   ],
