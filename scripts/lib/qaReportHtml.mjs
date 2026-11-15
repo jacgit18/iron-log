@@ -11,17 +11,19 @@ const KIND_LABEL = { fail: 'Fail', blocked: 'Blocked', proposed: 'Pass, proposed
 const kindOf = r => (r.outcome === 'fail' ? 'fail' : r.outcome === 'blocked' ? 'blocked' : r.proposed ? 'proposed' : 'confirmed');
 
 const tags = r => [
-  r.device ? '<span class="tag tag-device" title="Needs a real phone, only the owner can record it">phone</span>' : '',
+  r.device ? '<span class="tag tag-device" title="Needs a real phone; an agent can only try it emulated, and only you record the real result">phone</span>' : '',
+  r.emulated ? '<span class="tag tag-device" title="An agent walked it in an emulated phone view, not on a real phone">emulated</span>' : '',
   r.edge ? '<span class="tag">edge</span>' : '',
   `<span class="tag tag-auto" title="How automation covers it">${esc(r.auto)}</span>`,
 ].join('');
 
 function recordedRow(r) {
   const kind = kindOf(r);
-  const who = r.proposed ? 'agent result, awaiting your spot-check' : 'recorded by you';
+  const who = r.emulated ? 'emulated by agent, not yet checked on your phone' : r.proposed ? 'agent result, awaiting your spot-check' : 'recorded by you';
+  const label = r.emulated ? `Emulated ${r.outcome}` : KIND_LABEL[kind];
   const note = r.note ? `<p class="note" tabindex="0" role="button" aria-expanded="false">${esc(r.note)}</p>` : '<p class="note none">No note recorded. No screenshot recorded.</p>';
   return `<li class="row k-${kind}" data-kind="${kind}" data-feature="${esc(r.feature)}">
-<div class="rowhead"><span class="pill p-${kind}">${KIND_LABEL[kind]}</span><span class="id">${esc(r.id)}</span><span class="title">${esc(r.title)}</span></div>
+<div class="rowhead"><span class="pill p-${kind}">${label}</span><span class="id">${esc(r.id)}</span><span class="title">${esc(r.title)}</span></div>
 <div class="meta"><span>${esc(r.feature)}</span><span>${esc(r.date)}</span><span>${who}${r.build ? `, build ${esc(r.build)}` : ''}</span>${tags(r)}</div>
 ${note}</li>`;
 }
@@ -29,7 +31,7 @@ ${note}</li>`;
 function notRunRow(r) {
   return `<li class="row k-notrun" data-kind="notrun" data-feature="${esc(r.feature)}">
 <div class="rowhead"><span class="id">${esc(r.id)}</span><span class="title">${esc(r.title)}</span></div>
-<div class="meta">${tags(r)}${r.agentRunnable ? '' : '<span class="owner-only">only you can run this</span>'}</div></li>`;
+<div class="meta">${tags(r)}${r.agentRunnable ? '' : `<span class="owner-only">${r.device ? 'only you can check this on a phone' : 'only you can run this'}</span>`}</div></li>`;
 }
 
 const section = (key, title, hint, count, body, open, empty) => `<details class="sec" data-sec="${key}"${open ? ' open' : ''}>
@@ -155,7 +157,7 @@ ${bar(t)}
 <ul class="facts">
 <li><b>${totals.scenarios}</b> live scenarios</li>
 <li><b>${report.awaitingSpotCheck}</b> results awaiting your spot-check</li>
-<li><b>${device.total}</b> need a real phone (<b>${device.notTried}</b> not tried, <b>${device.ownerRecorded}</b> recorded by you)</li>
+<li><b>${device.total}</b> need a real phone (<b>${device.notTried}</b> not tried, <b>${device.emulated}</b> only emulated by an agent, <b>${device.ownerRecorded}</b> recorded by you)</li>
 <li><b>${report.agentRunnableNotRun}</b> not-run scenarios an agent may try</li>
 <li>Last result <b>${report.lastDate ? esc(report.lastDate) : 'none yet'}</b></li>
 </ul>
@@ -165,7 +167,7 @@ ${bar(t)}
 <span class="showing" id="showing" aria-live="polite"></span>
 </div>
 ${section('attention', 'Needs attention', 'Failing or blocked, newest first. The note says what happened.', report.attention.length, `<ul class="rows">${attention}</ul>`, true, 'Nothing is failing or blocked.')}
-${section('phone', 'Phone checklist', 'Scenarios that need a real phone, grouped by feature (a phone one that fails or is blocked is under Needs attention). Only you record these; an agent result on one is refused, and you retest on your phone either way.', report.phone.length, phone, true, 'No scenario needs a real phone.')}
+${section('phone', 'Phone checklist', 'Scenarios that need a real phone, grouped by feature (a phone one that fails or is blocked is under Needs attention). An agent may try one in an emulated phone view; that is marked emulated and never counts as your phone check. Only your own result does, and you retest on your phone either way.', report.phone.length, phone, true, 'No scenario needs a real phone.')}
 ${section('proposed', 'Proposed by an agent', 'Passes an agent recorded. Spot-check a few, then record your own result to confirm it.', proposedRows.length, `<ul class="rows">${proposed}</ul>`, true, 'No agent pass is waiting for a spot-check.')}
 ${section('confirmed', 'Confirmed by you', 'Passes you recorded yourself.', confirmedRows.length, `<ul class="rows">${confirmed}</ul>`, true, 'You have not recorded a pass yet.')}
 ${section('notrun', 'Not run', 'No result recorded, grouped by feature (phone-only scenarios are in the Phone checklist). The tag shows how automation covers it.', notRunCount, notRun, false, 'Every live scenario that does not need a phone has a result.')}

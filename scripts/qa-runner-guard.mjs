@@ -59,7 +59,8 @@ export function bashProblem(cmd, root = evidenceRoot()) {
     const seen = {};
     for (; i < opts.length; i += 2) {
       const [k, v] = [opts[i], opts[i + 1]];
-      if (!['--by', '--build', '--results'].includes(k) || v === undefined || seen[k]) return `--record: only --by, --build and --results, each once. ${no}`;
+      if (k === '--emulated' && !seen[k]) { seen[k] = true; i -= 1; continue; } // a flag with no value: the run was in an emulated phone view
+      if (!['--by', '--build', '--results'].includes(k) || v === undefined || seen[k]) return `--record: only --by, --build, --results and --emulated, each once. ${no}`;
       seen[k] = v;
     }
     if (seen['--by'] !== 'claude') return '--record: --by must be claude';
@@ -104,6 +105,10 @@ export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(),
       return originProblem(input.url ?? '', stackUrl);
     }
     case 'mcp__Claude_Browser__javascript_tool': return 'javascript_tool is not a tool of the QA Runner: sign in by navigating to the page `seed` printed';
+    case 'mcp__Claude_Browser__resize_window': { // the emulated phone view for a phone scenario, and back; no custom size, no other tab
+      const keys = Object.keys(input);
+      return keys.every(k => k === 'preset') && (input.preset === 'mobile' || input.preset === 'desktop') ? null : 'resize_window may only set preset mobile (the emulated phone view) or desktop (to put it back)';
+    }
     case 'mcp__Claude_Browser__read_page': case 'mcp__Claude_Browser__find': case 'mcp__Claude_Browser__computer': case 'mcp__Claude_Browser__get_page_text': return null;
     default: return `${tool} is not a tool of the QA Runner`;
   }
