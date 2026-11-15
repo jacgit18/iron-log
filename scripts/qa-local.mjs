@@ -18,16 +18,13 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv, seedLocalAdmin } from '../server/qa/localAdmin.ts';
 
 const LOCAL_HOSTS = ['127.0.0.1', 'localhost', '[::1]'];
 export const SCRATCH_PREFIX = 'iron_qa_run_';
 export const SCRATCH_MARK = 'iron-log qa-local scratch';
-// The one admin of the scratch stack (brief: qa-runner-test-admin): the QA test-accounts picker is admin-only, so S-35 needs one. It exists only in the scratch database
-// and only this address is in the spawned server's ADMIN_EMAILS; .invalid can never be a real address.
-export const LOCAL_ADMIN_ID = 'qa-local-admin';
-export const LOCAL_ADMIN_EMAIL = 'qa-local-admin@qa.invalid';
-/** What the spawned server needs for the picker (Switch and Reset): the setting, the one test admin, and the scratch database as the owner URL Reset seeds through. */
-export const pickerEnv = scratchUrl => ({ QA_PERSONAS: 'true', ADMIN_EMAILS: LOCAL_ADMIN_EMAIL, QA_OWNER_DATABASE_URL: scratchUrl });
+// The test admin of the scratch stack lives in server/qa/localAdmin.ts (the server test seeds it the same way); re-exported here for the tests and the guard.
+export { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv, seedLocalAdmin };
 export const TEST_PASSWORD = 'correct horse battery staple'; // a test value the server stores only for seeded accounts on the scratch database
 // What e2e-qa/persona.js sets before sign-in: without apiSync the app shows this browser's own (empty) data, not the seeded account's.
 export const BROWSER_FLAGS = { 'ironlog:hidetip': '1', 'ironlog:hidelocal': '1', 'ironlog:flag:apiSync': 'true', 'ironlog:session/known': '1' };
@@ -230,11 +227,13 @@ async function main() {
       const { rows: [{ comment }] } = await c.query(`select shobj_description(oid, 'pg_database') as comment from pg_database where datname = current_database()`);
       const m = markProblem(comment);
       if (m) throw new Error(m);
-      const authId = admin ? LOCAL_ADMIN_ID : personaAuthId(persona.id);
-      if (admin) await c.query(`insert into auth."user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt") values ($1, 'QA test admin', $2, true, null, now(), now()) on conflict (id) do nothing`, [authId, LOCAL_ADMIN_EMAIL]);
-      else await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
-      await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
-        on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, authId, await hashPassword(TEST_PASSWORD)]);
+      const hash = await hashPassword(TEST_PASSWORD);
+      if (admin) await seedLocalAdmin(c, hash);
+      else {
+        await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
+        await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
+          on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), hash]);
+      }
     });
     const token = seedToken();
     const email = admin ? LOCAL_ADMIN_EMAIL : personaEmail(persona.id);

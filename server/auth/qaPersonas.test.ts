@@ -4,8 +4,11 @@ import type { AddressInfo } from 'node:net';
 import { sql, type Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
+import { hashPassword } from 'better-auth/crypto';
+import { adminsFrom } from '../admin.ts';
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
+import { LOCAL_ADMIN_EMAIL, pickerEnv, seedLocalAdmin } from '../qa/localAdmin.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from '../qa/personas.ts';
 import { scenariosForPersona } from '../qa/scenarios.ts';
 import { SEED_EXERCISE_IDS } from '../qa/seedPersona.ts';
@@ -23,12 +26,13 @@ const GOOGLE = { clientId: 'test-client.apps.googleusercontent.com', clientSecre
 const BASE = 'http://localhost:3999';
 const ADMIN = 'admin@example.com';
 const PASSWORD = 'correct horse battery staple';
+const LOCAL_PASSWORD = PASSWORD; // any test value: qa-local seeds the admin with its own TEST_PASSWORD hash
 
 const running: { close: () => Promise<void> }[] = [];
 const ownerPools: pg.Pool[] = [];
-async function serve(over: Partial<AuthConfig> = {}) {
+async function serve(over: Partial<AuthConfig> = {}, admins: ReadonlySet<string> = new Set([ADMIN])) {
   const auth = createAuth({ baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, testSignIn: true, capExempt: new Set([ADMIN]), qaPersonas: true, ...over }, 'test');
-  const server: Server = createApp({ db, auth, admins: new Set([ADMIN]) }).listen(0); // production passes the same ADMIN_EMAILS list to both
+  const server: Server = createApp({ db, auth, admins }).listen(0); // production passes the same ADMIN_EMAILS list to both
   await new Promise(done => server.once('listening', done));
   running.push({ close: async () => { await new Promise<void>(done => server.close(() => done())); await auth.pool.end(); } });
   return { auth, base: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
@@ -96,6 +100,29 @@ describe('the environment locks', () => {
     expect(listed.status).toBe(200);
     expect(((await listed.json()) as { personas: unknown[] }).personas.length).toBeGreaterThan(0);
     expect((await call(base, other, 'GET', '/qa/personas')).status).toBe(403);
+  });
+
+  it('the scratch stack\'s own test admin (seeded by qa-local, ADMIN_EMAILS from pickerEnv) signs in, lists the accounts, switches to Diet and returns', async () => {
+    await mark(QA_LOCAL_MARK);
+    const env = pickerEnv(url); // what qa-local start gives the server
+    const admins = adminsFrom(env.ADMIN_EMAILS);
+    const { base } = await serve({ capExempt: admins }, admins);
+    const client = new pg.Client({ connectionString: url });
+    await client.connect();
+    try { await seedLocalAdmin(client, await hashPassword(LOCAL_PASSWORD)); } finally { await client.end(); }
+    await seedPersona('diet-on-target');
+    const jar = new Jar();
+    expect((await call(base, jar, 'POST', '/sign-in/email', { email: LOCAL_ADMIN_EMAIL, password: LOCAL_PASSWORD })).status).toBe(200);
+    expect(await me(base, jar)).toBe(LOCAL_ADMIN_EMAIL);
+    const listed = await call(base, jar, 'GET', '/qa/personas');
+    expect(listed.status).toBe(200);
+    const body = (await listed.json()) as { personas: { id: string; seeded: boolean }[] };
+    expect(body.personas.length).toBeGreaterThan(0);
+    expect(body.personas.find(p => p.id === 'diet-on-target')?.seeded).toBe(true);
+    expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'diet-on-target' })).status).toBe(200);
+    expect(await me(base, jar)).toBe(personaEmail('diet-on-target'));
+    expect((await call(base, jar, 'POST', '/qa/personas/return')).status).toBe(200);
+    expect(await me(base, jar)).toBe(LOCAL_ADMIN_EMAIL);
   });
 
   it('has no such routes when the setting is off, even on a marked database', async () => {
