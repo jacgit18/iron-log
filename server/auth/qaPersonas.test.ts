@@ -12,7 +12,7 @@ import { SEED_EXERCISE_IDS } from '../qa/seedPersona.ts';
 import { buildPersonaRows } from '../qa/seedPlan.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 import { createAuth, type AuthConfig } from './betterAuth.ts';
-import { QA_MARK } from './qaPersonas.ts';
+import { QA_LOCAL_MARK, QA_MARK } from './qaPersonas.ts';
 
 // The QA test accounts (brief: qa-persona-picker). Real routes, real cookies and sessions, a throwaway Postgres.
 let db: Kysely<DB>;
@@ -80,6 +80,17 @@ describe('the environment locks', () => {
     expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'new-user' })).status).toBe(404);
     expect((await call(base, jar, 'POST', '/qa/personas/return')).status).toBe(404);
     expect(((await (await fetch(`${base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(false);
+  });
+
+  it('answers on the QA Runner\'s scratch database mark too, and on no other mark', async () => {
+    await mark(QA_LOCAL_MARK);
+    const on = await serve();
+    expect(((await (await fetch(`${on.base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(true);
+    expect((await call(on.base, await signUp(on.base, ADMIN), 'GET', '/qa/personas')).status).toBe(200);
+    await mark('iron-log staging');
+    const off = await serve();
+    expect(((await (await fetch(`${off.base}/api/auth-options`)).json()) as { qaPersonas: boolean }).qaPersonas).toBe(false);
+    expect((await call(off.base, (await call(off.base, new Jar(), 'POST', '/sign-in/email', { email: ADMIN, password: PASSWORD }).then(r => { const j = new Jar(); j.take(r); return j; })), 'GET', '/qa/personas')).status).toBe(404);
   });
 
   it('has no such routes when the setting is off, even on a marked database', async () => {
