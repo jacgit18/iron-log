@@ -101,6 +101,12 @@ export interface GroceryMonths {
   version: Generated<number>;
 }
 
+export interface IngredientMatches {
+  created_at: Generated<Timestamp>;
+  key: string;
+  result: Json;
+}
+
 export interface Issues {
   fingerprint: string;
   first_seen: Generated<Timestamp>;
@@ -115,12 +121,6 @@ export interface Issues {
   page: Generated<string>;
   status: Generated<string>;
   top_frame: Generated<string>;
-}
-
-export interface IngredientMatches {
-  created_at: Generated<Timestamp>;
-  key: string;
-  result: Json;
 }
 
 export interface LibraryItems {
@@ -314,8 +314,8 @@ export interface DB {
   catalog_items: CatalogItems;
   config: Config;
   grocery_months: GroceryMonths;
-  issues: Issues;
   ingredient_matches: IngredientMatches;
+  issues: Issues;
   library_items: LibraryItems;
   list_items: ListItems;
   log_entries: LogEntries;
