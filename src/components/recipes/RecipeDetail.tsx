@@ -11,7 +11,7 @@ import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
-import { macroLine } from '../../lib/macroLine.js';
+import { macroLine, macroWords } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
 import { addState, addToToday, atHomeText, lastEatenText, planDay, stripMacros } from '../../lib/recipeSummary.js';
 import { scaleAmount } from '../../lib/recipeScale.js';
@@ -50,16 +50,15 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const diet = useAppStore(s => s.diet);
   const today = ymd(useToday(s => s.today));
   const [added, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo or leaving the page
-  useEffect(() => { setAdded(null); setMsg(''); }, [recipe.id]);
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   const addToDay = () => {
     const st = useAppStore.getState();
-    const r = addToToday(st.addDietEntry, recipe, ymd(new Date()));
+    const r = addToToday(st.addDietEntry, recipe, today);
     if (r.ok) setAdded(r.id);
     setMsg(r.ok ? r.text : r.error);
   };
   const undoAdd = () => { if (added) useAppStore.getState().removeDietEntry(added, false); setAdded(null); setMsg(`Removed ${recipe.n} from today.`); };
-  const strip = <Summary recipe={recipe} mine={mine} per={stripMacros(recipe, roll && roll.counted > 0 ? roll.per : null)} home={atHomeText(status.have, status.total, grocery.items.length)} last={lastEatenText(recipe, diet, today, mine)} />;
+  const strip = <Summary recipe={recipe} mine={mine} per={stripMacros(recipe, roll && roll.counted > 0 ? roll.per : null)} perWords={macroWords(roll && roll.counted > 0 ? roll.per : recipe)} home={atHomeText(status.have, status.total, grocery.items.length)} last={lastEatenText(recipe, diet, today, mine)} />;
   const bar = <ActionRow recipe={recipe} mine={mine} state={addState({ mine, recipe, added: added !== null })} msg={msg} canUndo={added !== null} onAddToday={addToDay} onUndo={undoAdd} onPlan={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id, day: planDay(today) })} onEdit={onEdit} onAddMine={() => onAdd(shown ?? undefined)}>
     {mine && recipe.cat !== 'ready' && <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to Shopping` : 'Add missing to Shopping'}</button>}
   </ActionRow>;
@@ -126,8 +125,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
 }
 
 // The summary strip (brief recipe-page-after-log): per-serving numbers, what is at home, and when it was last eaten. A cell with nothing to say is left out.
-const Summary = ({ recipe, mine, per, home, last }: { recipe: Recipe; mine: boolean; per: string; home: string | null; last: string | null }) => {
-  const cells = [per && { k: 'per', v: `${per} per serving` }, home && { k: 'home', v: home }, last && { k: 'last', v: last }].filter(Boolean) as { k: string; v: string }[];
+const Summary = ({ recipe, mine, per, perWords, home, last }: { recipe: Recipe; mine: boolean; per: string; perWords: string; home: string | null; last: string | null }) => {
+  const cells = [per && { k: 'per', v: <><span aria-hidden="true">{per} per serving</span><span className="vh">{perWords} per serving</span></> }, home && { k: 'home', v: home }, last && { k: 'last', v: last }].filter(Boolean) as { k: string; v: React.ReactNode }[];
   return (
     <>
       {cells.length > 0 && <ul className="rc-strip" aria-label="Summary">{cells.map(c => <li key={c.k} className={c.k === 'per' ? 'rc-strip-per' : undefined}>{c.v}</li>)}</ul>}
