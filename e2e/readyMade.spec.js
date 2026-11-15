@@ -109,9 +109,9 @@ test('Enter in the lookup box does not save the form, and the Ready-made filter 
   await expect(page.getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Food' });
-  await page.getByRole('button', { name: 'Library', exact: true }).click();
-  await expect(page.locator('#recipes-library-signin')).toBeVisible(); // signed out: the Library has no filters, so the dropped filter is checked back on Mine
-  await page.getByRole('button', { name: 'Mine', exact: true }).click();
+  await page.locator('#recipes-library').click(); // the buttons carry counts now, so they are found by id
+  await expect(page.locator('#recipes-library-signin')).toBeVisible(); // signed out: the library box is the sign-in line, and the dropped filter is checked back on Mine
+  await page.locator('#recipes-mine').click();
   await expect(page.getByLabel('Category', { exact: true })).toHaveValue('');
 });
 
