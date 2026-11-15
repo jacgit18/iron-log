@@ -54,6 +54,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const added = stillAdded(diet, addedId); // read from the store, so deleting the entry on the board brings "Add to today" back
   const [usualSaved, setUsualSaved] = useState<UsualChange | null>(null); // the usual a whole pack saved, for Undo to take back
   const pack = wholePackFor({ mine, recipe });
+  useEffect(() => { if (addedId !== null && added === null) { setAdded(null); setMsg(''); setUsualSaved(null); } }, [addedId, added]); // the entry was deleted elsewhere: the old "Logged …" line goes with it
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   const addToDay = () => {
     setUsualSaved(null); // a usual saved by an earlier whole pack is not this log's to take back
