@@ -19,7 +19,7 @@ const tags = r => [
 function recordedRow(r) {
   const kind = kindOf(r);
   const who = r.proposed ? 'agent result, awaiting your spot-check' : 'recorded by you';
-  const note = r.note ? `<p class="note">${esc(r.note)}</p>` : '<p class="note none">No note recorded. No screenshot recorded.</p>';
+  const note = r.note ? `<p class="note" tabindex="0" role="button" aria-expanded="false">${esc(r.note)}</p>` : '<p class="note none">No note recorded. No screenshot recorded.</p>';
   return `<li class="row k-${kind}" data-kind="${kind}" data-feature="${esc(r.feature)}">
 <div class="rowhead"><span class="pill p-${kind}">${KIND_LABEL[kind]}</span><span class="id">${esc(r.id)}</span><span class="title">${esc(r.title)}</span></div>
 <div class="meta"><span>${esc(r.feature)}</span><span>${esc(r.date)}</span><span>${who}${r.build ? `, build ${esc(r.build)}` : ''}</span>${tags(r)}</div>
@@ -192,7 +192,11 @@ ${section('notrun', 'Not run', 'No result recorded, grouped by feature. The tag 
       if (sec) { sec.open = true; sec.scrollIntoView({ block: 'start' }); }
     });
   });
-  [].forEach.call(document.querySelectorAll('.note:not(.none)'), function (p) { p.addEventListener('click', function () { p.classList.toggle('open'); }); });
+  [].forEach.call(document.querySelectorAll('.note:not(.none)'), function (p) {
+    function toggle() { p.setAttribute('aria-expanded', String(p.classList.toggle('open'))); }
+    p.addEventListener('click', toggle);
+    p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  });
   apply();
 })();
 </script>`;

@@ -20,7 +20,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = arg('--out');
   const file = arg('--results');
   if (!out) fail('usage: qa-report.mjs --results "<qa-results.json>" --out <file.html> [--standalone]');
-  if (process.argv.includes('--results') && !file) fail('--results needs the path of the results file (an empty value would show every scenario as not run).');
+  if (process.argv.includes('--results') && (!file || file.startsWith('--'))) fail('--results needs the path of the results file (an empty value would show every scenario as not run).');
   if (file && !existsSync(file)) fail(`${file} does not exist. Record a run first, or leave out --results to see every scenario as not run.`);
   let entries = [];
   try { entries = [...recordedResults(file ? readFileSync(file, 'utf8') : '').values()].map(r => r.entry); } catch (e) { fail(e.message); }
