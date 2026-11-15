@@ -79,6 +79,9 @@ describe('summaryCells', () => {
   it('uses the rolled-up numbers of a meal built from parts', () => {
     expect(summaryCells({ ...base, rolled: { kcal: 520, p: 41 } })[0]).toMatchObject({ head: '520 kcal', sub: 'P 41 g per serving' });
   });
+  it('bolds only a calorie figure: with protein and no calories the bold line is the label', () => {
+    expect(summaryCells({ ...base, recipe: { ...stew, kcal: undefined } })[0]).toMatchObject({ key: 'per', head: 'Per serving', sub: 'P 30 g' });
+  });
   it('says "No numbers yet" for a recipe of yours without any, and nothing for a library recipe', () => {
     expect(summaryCells({ ...base, recipe: { ...stew, kcal: undefined, p: undefined } })[0]).toEqual({ key: 'nonum', head: 'No numbers yet', sub: 'Calories and protein per serving are missing' });
     expect(keys({ ...base, mine: false, recipe: { ...stew, kcal: undefined, p: undefined } })).toEqual(['home']);

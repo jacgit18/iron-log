@@ -30,12 +30,14 @@ export interface StripCell { key: 'per' | 'nonum' | 'home' | 'last'; head: strin
 
 const NO_NUMBERS_SUB = 'Calories and protein per serving are missing';
 
-/** The macro line cut after its first part: "520 kcal" over "P 38 · C 41 · F 19 g per serving". */
+/** The macro line cut after its first part: "520 kcal" over "P 38 · C 41 · F 19 g per serving". With no calories the bold line is the label "Per serving" over the grams (a bold "P 38 g" would read as the headline number). */
 function perCell(m: MacroParts): StripCell | null {
   const line = macroLine(m);
   if (!line) return null;
-  const [head = '', ...rest] = line.split(' · ');
-  return { key: 'per', head, sub: `${rest.join(' · ')} per serving`.trim(), words: `${macroWords(m)} per serving` };
+  const [first = '', ...rest] = line.split(' · ');
+  const words = `${macroWords(m)} per serving`;
+  if (!first.endsWith(' kcal')) return { key: 'per', head: 'Per serving', sub: line, words }; // no calories: only a calorie figure is bold
+  return { key: 'per', head: first, sub: `${rest.join(' · ')} per serving`.trim(), words };
 }
 
 /** The boxes the page shows, left to right. Per serving (a meal built from parts uses its rolled-up numbers), or "No numbers yet" for a recipe of yours with none; "N of M at home" over "N missing" (left out with no ingredients or no inventory items);
