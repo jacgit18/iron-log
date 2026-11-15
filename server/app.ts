@@ -22,6 +22,7 @@ import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { barcodeRoutes } from './foodBarcode.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { ingredientRoutes, type IngredientDeps } from './ingredients.ts';
 import { supplementBarcodeRoutes } from './supplementBarcode.ts';
 import { supplementLabelRoutes, type SupplementLabelDeps } from './supplementLabel.ts';
 import { receiptsRoutes } from './receipts.ts';
@@ -83,6 +84,8 @@ export interface AppDeps {
   supplementLabel?: SupplementLabelDeps;
   /** Label photo scan (brief label-photo-scan): the Anthropic key, model and daily ceiling. Unset key: the route answers 503. Admin only. */
   scan?: ScanDeps;
+  /** Fill nutrition's ingredient resolver (brief recipe-auto-nutrition): the Anthropic and USDA keys, model and daily ceiling. Unset keys: the route answers 503. */
+  ingredients?: IngredientDeps;
   /** The most accounts that may exist (SIGNUP_CAP), shown on the admin accounts screen; unset means no cap. */
   signupCap?: number;
   /** Opens the sealed emails the admin accounts screen masks (ADR 046); unset in development, where they are stored in the clear. */
@@ -121,6 +124,8 @@ const LIMITS = {
   supplementLabel: { max: 20, windowMs: 60_000 } as Limit,
   // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
   scan: { max: 10, windowMs: 60_000 } as Limit,
+  // Fill nutrition (brief recipe-auto-nutrition): a person pressing Fill now and then, each uncached fill costs two model calls; the per-person and server daily caps are in ingredients.ts.
+  ingredients: { max: 5, windowMs: 60_000 } as Limit,
   // Saved receipt photos (brief receipt-save-photo): a person keeping a photo, reading the list, opening one; a loop is what this stops.
   receipts: { max: 30, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
@@ -158,7 +163,7 @@ async function purgeCodesFor(auth: Auth, email: string): Promise<void> {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, supplementLabel, scan, appLabel, signupCap, pii }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, supplementLabel, scan, ingredients, appLabel, signupCap, pii }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -262,6 +267,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/supplement-barcode', rateLimit(limits.foods, undefined, byUser), supplementBarcodeRoutes({ ...foods, db }));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): everyone signed in (owner, 2026-11-08), per-user limit and daily caps in scan.ts; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
+  // Fill nutrition (brief recipe-auto-nutrition, ADR 118): everyone signed in, per-user limit, 5 model-backed fills a person and 200 a server a day (ingredients.ts); the app-wide 100 kb parser has already read the body.
+  if (db) app.use('/api/ingredients', rateLimit(limits.ingredients, undefined, byUser), ingredientRoutes(db, ingredients));
   // Saved receipt photos (brief receipt-save-photo): everyone signed in (owner, 2026-11-10), per-user limit, 200 receipts and 60 MB per account; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
   if (db) app.use('/api/receipts', rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));

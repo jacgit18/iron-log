@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracketGrams, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.ts';
+import { bracketGrams, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.js';
 
 const hit = { id: 7, name: 'Flour, wheat', kcal: 360, p: 10, c: 76, f: 1, micro: { iron: 4.6 } };
 const ok = { status: 'matched', fdcId: 7, food: 'Flour, wheat', grams: 100, gramsFrom: 'text', confidence: 'high', per100: hit };

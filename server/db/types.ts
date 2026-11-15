@@ -117,6 +117,12 @@ export interface Issues {
   top_frame: Generated<string>;
 }
 
+export interface IngredientMatches {
+  created_at: Generated<Timestamp>;
+  key: string;
+  result: Json;
+}
+
 export interface LibraryItems {
   client_id: string;
   client_updated_at: Timestamp | null;
@@ -309,6 +315,7 @@ export interface DB {
   config: Config;
   grocery_months: GroceryMonths;
   issues: Issues;
+  ingredient_matches: IngredientMatches;
   library_items: LibraryItems;
   list_items: ListItems;
   log_entries: LogEntries;
