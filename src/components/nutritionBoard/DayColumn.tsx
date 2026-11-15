@@ -4,12 +4,13 @@ import type { PlanSlot } from '../../types.ts';
 import DayMeters from './DayMeters.js';
 import HydrationSection from './HydrationSection.js';
 import MealSections from './MealSections.js';
+import type { Say } from '../../lib/eatenStep.js';
 import NotInMeal from './EatenRows.js';
 import SupplementsSection from './SupplementsSection.js';
 
 // One day of the board: its name (tap to pick it as the day the toolbar adds to), meters, its meals with the food eaten in them, a "Not in a meal" group for food with no meal, Supplements and Hydration.
 // Last week has no meals (the plan holds no past days): its food is one "Not in a meal" group; food can be added to it (brief nutrition-any-day-add), so its rows open the row sheet to edit or delete like today's.
-export default function DayColumn({ v, today, selected, onPick, onLog, onMsg, onAdd }: { v: DayView; today: string; selected: boolean; onPick: () => void; onLog: (r: Resolved, index: number) => void; onMsg: (t: string) => void; onAdd: (meal: PlanSlot) => void }) {
+export default function DayColumn({ v, today, selected, onPick, onLog, onMsg, onAdd }: { v: DayView; today: string; selected: boolean; onPick: () => void; onLog: (r: Resolved, index: number) => void; onMsg: Say; onAdd: (meal: PlanSlot) => void }) {
   const editable = foodEditable(v.day, today);
   return (
     <div className={`wb-col nb-col${v.day === today ? ' today' : ''}${v.kind === 'past' ? ' past' : ''}${selected ? ' sel' : ''}`} data-day={v.day}>

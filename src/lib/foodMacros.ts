@@ -26,7 +26,7 @@ export function findFoods(entries: DietEntry[], recipes: Recipe[], query: string
   for (let i = byDay.length - 1; i >= 0; i--) {
     const e = byDay[i]!;
     if (e.from) continue; // logged from a recipe: the recipe itself is offered
-    add({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}), ...withMicro(e.micro) });
+    add({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}), ...withMicro(e.micro), ...(e.x !== undefined ? { x: e.x } : {}) }); // the totals are for `x` portions: carried, so a re-log keeps the count
   }
   const starts = all.filter(x => x.n.toLowerCase().startsWith(q)), has = all.filter(x => !x.n.toLowerCase().startsWith(q) && x.n.toLowerCase().includes(q));
   return [...starts, ...has].slice(0, limit);

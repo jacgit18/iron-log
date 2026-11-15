@@ -31,6 +31,9 @@ describe('findFoods', () => {
     expect(findFoods(entries, recipes, 'RICE').map(x => x.n)).toEqual(['Rice pudding', 'Rice', 'Brown rice bowl']);
     expect(findFoods(entries, recipes, 'rice')[1]).toEqual({ n: 'Rice', kcal: 200, p: 4, c: 44, f: 0.5 });
   });
+  it('a food logged at several portions is offered with its portion count, so a re-log keeps it', () => {
+    expect(findFoods([{ ...e('9', 'Stew', 900, 60), x: 3 }], [], 'stew')).toEqual([{ n: 'Stew', kcal: 900, p: 60, x: 3 }]);
+  });
   it('a recipe logged before is offered as the recipe', () => {
     expect(findFoods(entries, recipes, 'chi')).toEqual([{ n: 'Chili', kcal: 610, p: 41, from: 'r1' }]);
   });

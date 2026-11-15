@@ -15,10 +15,12 @@ import { useToday } from '../../store/useToday.js';
 import type { FoodHit } from '../../shared/foods.js';
 import type { PlanSlot } from '../../types.ts';
 import Icon from '../Icon.jsx';
+import UndoButton from '../UndoButton.js';
 import WeekDayCard from '../WeekDayCard.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
+import type { Say } from '../../lib/eatenStep.js';
 import ShoppingButton from './ShoppingButton.js';
 import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
@@ -40,7 +42,9 @@ export default function NutritionBoard() {
   const kept = usePickedDay(); // the picked day lives outside this component so leaving for Recipes and coming back keeps it (lib/nutritionDayPick.ts); a reload shows today
   const setPicked = setPickedDay;
   const [anchor, setAnchor] = useState(today); // the first day of the 1 to 3 day window; tapping a column inside it keeps the window still, only the stepper moves it
-  const [msg, setMsg] = useState('');
+  const [msg, setMsgText] = useState('');
+  const [undo, setUndo] = useState<(() => void) | null>(null); // the status line's Undo (a log, a saved usual portion); any new sentence without one clears it
+  const setMsg: Say = (t, u) => { setMsgText(t); setUndo(u ? () => u : null); };
   const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
   const day = dayToShow(kept, today);
   const offset = weekOf(today, day);
@@ -102,7 +106,7 @@ export default function NutritionBoard() {
       {phone && toolbar}
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
-      <p className="note nb-msg" role="status">{msg}</p>
+      <p className="note nb-msg" role="status">{msg}{undo && <UndoButton onUndo={() => { setMsg('Undone.'); undo(); }} />}</p>
       {shown === 7 ? (
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (

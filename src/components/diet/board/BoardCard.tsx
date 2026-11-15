@@ -1,8 +1,11 @@
 import { isEaten } from '../../../lib/dietPlan.js';
+import { eatenMax, loggedEntry, plannedEntryStep, plannedStep } from '../../../lib/eatenStep.js';
+import { amountText } from '../../../lib/foodUnit.js';
 import { macroLine } from '../../../lib/macroLine.js';
 import type { BoardItem } from '../../../lib/weekBoard.js';
 import { useAppStore } from '../../../store/useAppStore.js';
 import ArmedButton from '../../ArmedButton.jsx';
+import PortionStepper from '../../PortionStepper.js';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Copy to, Move to and Remove. Copy to and Move to open a sheet with the day picker (PlanMoveSheet, brief nutrition-multi-day-picker).
 // A listed daily snack that is only shown on this day (`item.virtual`, brief daily-snacks) is stored as a real item of the day first when it is ticked, changed or moved; its Remove skips it for this day only; it is not dragged.
@@ -13,6 +16,9 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   const { r, index } = item;
   const st = () => useAppStore.getState();
   const eaten = useAppStore(s => isEaten(r.item, s.diet));
+  const entry = useAppStore(s => (isEaten(r.item, s.diet) && r.item.k === 'r' ? loggedEntry(r.item.e, s.diet) : undefined)); // the one entry a ticked recipe card logged: Less and More change it together with the plan
+  const lessT = entry ? plannedEntryStep(entry, -1, eatenMax(r.recipe)) : null, moreT = entry ? plannedEntryStep(entry, 1, eatenMax(r.recipe)) : null; // a ticked card steps its entry's own count (an edit to the entry is kept) and the plan follows
+  const less = entry ? lessT?.count ?? null : plannedStep(r.portion, -1), more = entry ? moreT?.count ?? null : plannedStep(r.portion, 1);
   const checkable = day === today && !r.gone;
   const name = r.item.k === 'm' ? `${r.name} (meal)` : r.name;
   // The item's place in the stored plan: a shown daily snack is stored now (never refused for a full day: snacks do not count toward the 8).
@@ -33,6 +39,14 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   // Copy to and Move to open the picker sheet; a shown daily snack is stored only when the sheet's button is pressed (`prepare`), so closing the sheet leaves nothing behind.
   const pick = (mode: 'copy' | 'move') => { st().openModal({ type: 'nbplanmove', mode, day, name: r.name, slot: r.item.s, prepare: stillHere, onMsg }); onOpen(); }; // the card folds as the sheet opens
   const portion = (to: number) => { const at = real(); if (at >= 0) st().setPlanPortion(day, at, to); };
+  const tickedStep = (step: { count: number; plan: number | null } | null) => {
+    if (!entry || !step) return;
+    const at = real();
+    if (at < 0) return;
+    const err = st().setDietPortion(entry.id, step.count, eatenMax(r.recipe)); // the entry first, so a refusal leaves the plan unchanged
+    if (err) { onMsg(err); return; }
+    if (step.plan !== null) st().setPlanPortion(day, at, step.plan);
+  };
   const tick = () => {
     if (eaten) { st().uncheckPlanItem(day, index); return; }
     const at = real();
@@ -50,10 +64,13 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
         <span className="wb-cm">{r.gone ? 'Removed' : macroLine({ ...(r.kcal !== undefined ? { kcal: r.kcal } : {}), ...(r.p !== undefined ? { p: r.p } : {}) }) || 'Needs numbers'}</span>
       </button>
       </div>
+      {entry && r.recipe && ( // a ticked recipe card: the same stepper line as an eaten row (brief nutrition-log-first-portion-row); it steps the plan's portion and the logged entry together
+        <PortionStepper name={r.name} text={amountText(entry.x ?? 1, r.recipe)} less={less} more={more} onLess={() => tickedStep(lessT)} onMore={() => tickedStep(moreT)} />
+      )}
       {open && (
         <div className="wb-acts">
-          {r.item.k === 'r' && !r.gone && <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={r.portion <= 0.5} onClick={() => portion(r.portion - 0.5)}>Less</button>}
-          {r.item.k === 'r' && !r.gone && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={r.portion >= 10} onClick={() => portion(r.portion + 0.5)}>More</button>}
+          {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={less === null} onClick={() => less !== null && portion(less)}>Less</button>}
+          {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={more === null} onClick={() => more !== null && portion(more)}>More</button>}
           <button type="button" className="btn sm" aria-label={`Copy ${r.name}`} aria-haspopup="dialog" onClick={() => pick('copy')}>Copy to…</button>
           <button type="button" className="btn sm" aria-label={`Move ${r.name}`} aria-haspopup="dialog" onClick={() => pick('move')}>Move to…</button>
           {item.virtual

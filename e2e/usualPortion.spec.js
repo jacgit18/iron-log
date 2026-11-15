@@ -14,37 +14,29 @@ const logHere = page => dlg(page).getByRole('button', { name: 'Log', exact: true
 const finish = page => dlg(page).getByRole('button', { name: 'Done' }).click();
 const eaten = page => todayCol(page).locator('.nb-eat');
 
-test('a food never changed opens at its default portion and logging it says nothing about a usual', async ({ page }) => {
+test('a food never changed logs at one portion with one tap and says nothing about a usual', async ({ page }) => {
   await seed(page);
-  await openChiliSheet(page);
-  await expect(dlg(page).getByText('1 portion').first()).toBeVisible();
-  await logHere(page).click();
-  await expect(dlg(page).getByText(/Logged Chili: 1 portion to today\./)).toBeVisible();
+  await openChiliSheet(page); // the Add sheet's Recipes way logs at once (brief nutrition-log-first-portion-row)
+  await expect(dlg(page).getByText('Logged Chili, 1 portion.')).toBeVisible();
   await expect(dlg(page).getByText(/Usual portion saved/)).toHaveCount(0);
 });
 
-test('a changed portion becomes the usual: the sheet opens on it next time, Undo restores the old one and keeps the entry', async ({ page }) => {
+test('More on a row logged today becomes the usual, Undo restores the old one and keeps the entry; the next one-tap log uses it', async ({ page }) => {
   await seed(page);
   await openChiliSheet(page);
-  await dlg(page).getByRole('button', { name: 'More', exact: true }).click(); // 1.5 portions
-  await logHere(page).click();
-  await expect(dlg(page).getByText('Usual portion saved: 1.5 portions.')).toBeVisible();
   await finish(page);
-  await openChiliSheet(page); // opens on the usual
-  await expect(dlg(page).getByText('1.5 portions').first()).toBeVisible();
-  await logHere(page).click(); // at the usual: no new notice, no rewrite
-  await expect(dlg(page).getByText(/Usual portion saved/)).toHaveCount(0);
+  const row = eaten(page).filter({ hasText: 'Chili' });
+  await row.getByRole('button', { name: 'More Chili' }).click(); // 1.5 portions
+  await expect(page.locator('.nb-msg')).toContainText('Usual portion saved: Chili, 1.5 portions.');
+  await openChiliSheet(page); // opens... logs at the usual
+  await expect(dlg(page).getByText('Logged Chili, 1.5 portions.')).toBeVisible();
   await finish(page);
+  await eaten(page).filter({ hasText: 'Chili' }).first().getByRole('button', { name: 'More Chili' }).click(); // 2 portions
+  await expect(page.locator('.nb-msg')).toContainText('Usual portion saved: Chili, 2 portions.');
+  await page.locator('.nb-msg').getByRole('button', { name: 'Undo' }).click();
+  await expect(eaten(page)).toHaveCount(2); // Undo of the usual removed no entry
   await openChiliSheet(page);
-  await dlg(page).getByRole('button', { name: 'More', exact: true }).click(); // 2 portions
-  await logHere(page).click();
-  await expect(dlg(page).getByText('Usual portion saved: 2 portions.')).toBeVisible();
-  await dlg(page).getByRole('button', { name: 'Undo', exact: true }).last().click(); // the notice's Undo (the entry's Undo comes first)
-  await expect(dlg(page).getByText(/Usual portion saved/)).toHaveCount(0);
-  await finish(page);
-  await expect(eaten(page)).toHaveCount(3); // Undo of the usual removed no entry
-  await openChiliSheet(page);
-  await expect(dlg(page).getByText('1.5 portions').first()).toBeVisible(); // back to the previous usual
+  await expect(dlg(page).getByText('Logged Chili, 1.5 portions.')).toBeVisible(); // back to the previous usual
 });
 
 test('the same sheet from a Recipes row remembers the portion too', async ({ page }) => {

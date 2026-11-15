@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { usualStart } from './foodUnit.js';
-import { undoUsual, usualChange, withUsual } from './usualPortion.js';
+import { undoUsual, undoUsualOutcome, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
 
 const rice = { cat: 'ready' as const, servings: 4, kcal: 200, p: 4 };
 
@@ -55,5 +55,34 @@ describe('withUsual', () => {
     const plain: { n: string; usual?: number } = { n: 'Rice' };
     expect('usual' in withUsual(plain, undefined)).toBe(false);
     expect(r).toEqual({ n: 'Rice', usual: 3 });
+  });
+});
+
+describe('undoUsualOutcome', () => {
+  const change = { previous: 3, next: 1.5 };
+  it('writes the previous usual back while the stored one is still what the step wrote', () => {
+    expect(undoUsualOutcome({ usual: 1.5 }, change)).toEqual({ kind: 'write', usual: 3 });
+    expect(undoUsualOutcome({ usual: 1.5 }, { previous: undefined, next: 1.5 })).toEqual({ kind: 'write', usual: undefined });
+  });
+  it('leaves it alone when it was changed since', () => expect(undoUsualOutcome({ usual: 2 }, change)).toEqual({ kind: 'changed' }));
+  it('says the food is gone when the recipe was removed', () => expect(undoUsualOutcome(undefined, change)).toEqual({ kind: 'gone' }));
+});
+
+describe('usualAfterStep (Less or More on an eaten row)', () => {
+  const TODAY = '2026-11-15';
+  it('a food logged today from a recipe saves the stepped amount as its usual', () => {
+    expect(usualAfterStep(TODAY, TODAY, rice, 1.5)).toEqual({ previous: undefined, next: 1.5 });
+  });
+  it('an earlier day leaves the usual alone', () => {
+    expect(usualAfterStep('2026-11-14', TODAY, rice, 1.5)).toBeNull();
+  });
+  it('a food with no recipe behind it saves no usual', () => {
+    expect(usualAfterStep(TODAY, TODAY, undefined, 1.5)).toBeNull();
+  });
+  it('a step back to where the usual already is changes nothing', () => {
+    expect(usualAfterStep(TODAY, TODAY, { ...rice, usual: 1.5 }, 1.5)).toBeNull();
+  });
+  it('stepping back to 1 clears a usual', () => {
+    expect(usualAfterStep(TODAY, TODAY, { ...rice, usual: 1.5 }, 1)).toEqual({ previous: 1.5, next: undefined });
   });
 });

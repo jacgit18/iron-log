@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // The one log-or-plan control (brief log-or-plan-control). What it writes for each case is a node test (src/lib/logOrPlan.test.ts); this covers what needs the real
 // screens: one control on the recipe page, the same entry from every door, a day ahead planning on the board, the usual amount in Find food, and Undo. The fixed clock is Thursday 2026-09-24.
@@ -36,13 +36,13 @@ test('every door writes the same entry for the same recipe, portion and day', as
   await openNutrition(page);
   let sheet = await openAdd(page, 'Recipes'); // 3: Nutrition > Add food > Recipes
   await sheet.getByRole('button', { name: 'Log Chili' }).click();
-  await page.getByRole('dialog').last().getByRole('button', { name: 'Log', exact: true }).click();
-  await page.getByRole('dialog').last().getByRole('button', { name: 'Done' }).click();
-  sheet = await openAdd(page, 'Find food'); // 4: Find food
+  await expect(sheet.getByRole('status').last()).toContainText('Logged Chili, 1 portion.'); // one tap logs; no portion sheet in between (brief nutrition-log-first-portion-row)
+  await sheet.getByRole('button', { name: 'Back to ways of adding' }).click();
+  await sheet.getByRole('button', { name: /^Find food/ }).click(); // 4: Find food
   await sheet.getByLabel('Search your past meals and recipes').fill('chili');
-  await sheet.getByRole('button', { name: /^Chili/ }).click();
-  await page.getByRole('dialog').last().getByRole('button', { name: 'Log', exact: true }).click();
-  await page.getByRole('dialog').last().getByRole('button', { name: 'Done' }).click();
+  await sheet.getByRole('list', { name: 'Matches' }).getByRole('button', { name: /^Chili/ }).first().click();
+  await expect(sheet.getByRole('status').last()).toContainText('Logged Chili, 1 portion.');
+  await closeSheet(page);
   await expect(eaten(page)).toHaveCount(4);
   for (const row of await eaten(page).all()) await expect(row).toContainText('400 kcal');
   await expect(eaten(page).first()).toContainText('Chili');
@@ -79,18 +79,15 @@ test('tomorrow asks Which meal?, the button reads Plan, and the recipe lands und
   await expect(col(page, TOMORROW).locator('.wb-slot', { hasText: 'Lunch' }).locator('.wb-card')).toHaveCount(0);
 });
 
-test('Find food opens a recipe at its usual amount, and Undo removes only the entry it made', async ({ page }) => {
+test('Find food logs a recipe at its usual amount at once, and Undo removes only the entry it made', async ({ page }) => {
   await seed(page);
   await openNutrition(page);
   const sheet = await openAdd(page, 'Find food');
   await sheet.getByLabel('Search your past meals and recipes').fill('egg');
-  await sheet.getByRole('button', { name: /^Egg/ }).click();
-  const portion = page.getByRole('dialog').last();
-  await expect(portion.getByText('3 eggs').first()).toBeVisible();
-  await portion.getByRole('button', { name: 'Log', exact: true }).click();
-  await expect(portion.getByText(/Logged .+: 3 eggs to today\./)).toBeVisible();
-  await portion.getByRole('button', { name: 'Undo' }).click();
-  await expect(portion.getByText(/Logged .+: 3 eggs/)).toHaveCount(0);
-  await portion.getByRole('button', { name: 'Cancel' }).click();
+  await sheet.getByRole('list', { name: 'Matches' }).getByRole('button', { name: /^Egg/ }).click();
+  await expect(sheet.getByRole('status').last()).toContainText('Logged Egg, 3 eggs.');
+  await sheet.getByRole('button', { name: 'Undo' }).click();
+  await expect(sheet.getByRole('status').last()).toHaveText('Undone.');
+  await closeSheet(page);
   await expect(eaten(page)).toHaveCount(0);
 });
