@@ -8,7 +8,7 @@ const scenario: Scenario = {
     'Press Ingredients, open the filters above the list and set Category to Dessert (no loaded ingredient is a dessert).',
   ],
   expected: [
-    'With the Library pill on, the type pills are All, Meals, Ingredients and Drinks (no Foods, no Recent) and show no counts. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
+    'With the Library pill on, the type pills are All, Foods, Meals, Ingredients and Drinks (no Recent) and show no counts; Foods lists no Library rows. A row says how many of its ingredients are at home, for example "2 of 5 at home".',
     'An empty tab says "No ingredients among these. Show more to load others." and offers Show more.',
   ],
 };
