@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import type { DietEntry } from '../types.ts';
 import type { AddEntry, NewEntry } from './instantLog.js';
-import { addState, addToToday, eatenDayText, lastEaten, planDay, summaryCells } from './recipeSummary.js';
+import { addState, addToToday, eatenDayText, lastEaten, planDay, summaryCells, wholePackFor } from './recipeSummary.js';
 
 const today = '2026-11-15'; // a Sunday
 const stew = { id: 'stew', n: 'Stew', cat: 'protein' as const, servings: 4, kcal: 400, p: 30 };
@@ -130,5 +130,31 @@ describe('addToToday', () => {
     const log: NewEntry[] = [];
     expect(addToToday(adder(log), { ...stew, kcal: undefined, p: undefined }, today).ok).toBe(false);
     expect(log).toHaveLength(0);
+  });
+});
+
+describe('wholePackFor', () => {
+  const gnocchi = { cat: 'ready' as const, servings: 12, kcal: 210, p: 6 };
+  it('is the pack size for a ready-made food of yours with numbers', () => {
+    expect(wholePackFor({ mine: true, recipe: gnocchi })).toBe(12);
+  });
+  it('is null with no pack size, a pack of 1, not yours, no numbers, or not ready-made', () => {
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, servings: undefined } })).toBeNull();
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, servings: 1 } })).toBeNull();
+    expect(wholePackFor({ mine: false, recipe: gnocchi })).toBeNull();
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, kcal: undefined } })).toBeNull();
+    expect(wholePackFor({ mine: true, recipe: { ...gnocchi, cat: 'protein' } })).toBeNull();
+  });
+  it('is null when the pack is more than one entry can hold', () => {
+    expect(wholePackFor({ mine: true, recipe: { cat: 'ready', servings: 40, kcal: 900, p: 20 } })).toBeNull();
+  });
+});
+
+describe('addToToday with an amount', () => {
+  it('logs the amount it is given (a whole pack) and words it', () => {
+    const log: NewEntry[] = [];
+    const r = addToToday(adder(log), { id: 'g', n: 'Gnocchi', cat: 'ready', servings: 12, kcal: 210, p: 6, usual: 2 }, today, 12);
+    expect(r).toEqual({ ok: true, id: 'n1', text: 'Logged Gnocchi, 12 portions, for today.' });
+    expect(log[0]).toMatchObject({ kcal: 2520, p: 72, x: 12 });
   });
 });
