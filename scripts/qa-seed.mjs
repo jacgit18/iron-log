@@ -12,6 +12,7 @@
 import { createPiiCrypto, parsePiiKey } from '../server/auth/piiCrypto.ts';
 import { PERSONAS, personaAuthId, personaEmail } from '../server/qa/personas.ts';
 import { SEED_EXERCISE_IDS, seedPersona } from '../server/qa/seedPersona.ts';
+import { localSeedDay } from '../server/qa/seedDay.ts';
 import { buildPersonaRows } from '../server/qa/seedPlan.ts';
 import { connect, fail, guardHost, readMark } from './lib/db-script.mjs';
 
@@ -37,7 +38,7 @@ if (apply) {
 await guardHost(url, host, 'QA_DATABASE_URL');
 
 const exerciseIds = SEED_EXERCISE_IDS;
-const today = new Date();
+const today = localSeedDay(new Date()); // noon UTC of this machine's calendar date (server/qa/seedDay.ts)
 const client = await connect(url, 'QA');
 let code = 0;
 try {

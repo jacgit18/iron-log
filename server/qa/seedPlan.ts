@@ -110,8 +110,8 @@ function buildWeeks(logs: SeedLog[], today: Date): SeedWeek[] {
 
 export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[], today: Date): PersonaRows {
   const rand = rng(hash(persona.id));
-  // The calendar date on the machine that seeds, not its UTC date: the app's weeks start on the local Sunday (`weekStartOf`), so on a Saturday evening west of UTC the UTC date is already Sunday and every week key would be a week ahead. (The in-app reset route runs on the server, whose clock is UTC.)
-  const t = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  // `today` is read by its UTC date, so a caller that means a calendar day passes noon UTC of it (`seedToday`, `localSeedDay` in seedDay.ts); the result then does not depend on the machine's time zone.
+  const t = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   const spec = persona.data;
   const logs: SeedLog[] = [];
   if (spec.logEntries > 0 && exerciseIds.length) {
