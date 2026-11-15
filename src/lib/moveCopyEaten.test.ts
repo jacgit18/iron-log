@@ -126,6 +126,9 @@ describe('copyEatenMany', () => {
   it('keeps the portion the calories suggest, and skips a recipe that is gone', () => {
     const two = { ...rice, kcal: 400 };
     expect(copyEatenMany([two], 'a', [day(13)], today, ids(), false, recipes).planAdds[0]!.item).toEqual({ k: 'r', id: 'r1', x: 2 });
+    const stored = { ...rice, kcal: 400, x: 1.5 }; // calories would say 2; the stored portion wins
+    expect(copyEatenMany([stored], 'a', [day(13)], today, ids(), false, recipes).planAdds[0]!.item).toEqual({ k: 'r', id: 'r1', x: 1.5 });
+    expect(copyEatenMany([{ ...rice, x: 1 }], 'a', [day(13)], today, ids(), false, recipes).planAdds[0]!.item).toEqual({ k: 'r', id: 'r1' });
     const gone = copyEatenMany([rice], 'a', [day(13)], today, ids(), true, []);
     expect(gone.skipped).toEqual([{ day: day(13), reason: 'recipe is gone' }]);
     expect(gone.list).toEqual([rice]); // a move that plans nothing keeps the original
