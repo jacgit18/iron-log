@@ -77,7 +77,8 @@ describe('QA scenario results', () => {
     const emu = e({ id: 'S-03', by: 'claude', emulated: true, outcome: 'pass' });
     expect(deviceState(undefined, false, emu)).toBe('emulated pass');
     expect(deviceState(undefined, false, { ...emu, outcome: 'fail' })).toBe('emulated fail');
-    expect(deviceState(undefined, true, { ...emu, outcome: 'blocked' })).toBe('emulated blocked');
+    expect(deviceState(undefined, false, { ...emu, outcome: 'blocked' })).toBe('emulated blocked');
+    expect(deviceState(undefined, true, emu)).toBe('noted by hand'); // the owner's own written Result outranks an agent's emulated run
     expect(deviceState(e({ outcome: 'fail' }), false, emu)).toBe('failed');
   });
 });

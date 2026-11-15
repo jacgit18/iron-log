@@ -25,13 +25,13 @@ const DEVICES = new Set(SCENARIOS.filter(s => s.device).map(s => s.id));
 export const allResults = text => parseResults(text, KNOWN, DEVICES);
 
 /** The recorded Result text per scenario id from the results file's text (empty text is none; a malformed file throws). `entry` is the latest real result;
- * a phone scenario an agent walked emulated also has `emulated` (the latest such run), and with no real result its `text` is that run's text (it says emulated) and `entry` is undefined. */
+ * a phone scenario an agent walked emulated also has `emulated` (the latest such run), and with no real result its `text` and `entry` are undefined, so a Result the owner wrote by hand is kept and the emulated run is only shown beside it. */
 export function recordedResults(text) {
   const entries = parseResults(text, KNOWN, DEVICES);
   const out = new Map([...latestById(entries)].map(([id, e]) => [id, { text: formatResult(e), entry: e }]));
   for (const [id, m] of latestEmulatedById(entries)) {
     const emulated = { text: formatResult(m), entry: m };
-    out.set(id, out.has(id) ? { ...out.get(id), emulated } : { text: emulated.text, entry: undefined, emulated });
+    out.set(id, out.has(id) ? { ...out.get(id), emulated } : { text: undefined, entry: undefined, emulated });
   }
   return out;
 }
@@ -128,7 +128,7 @@ Steps are written from each shipped brief's Done when lines and the feature map.
     const emulated = recorded.get(s.id)?.emulated;
     const state = deviceState(latest, Boolean(kept.get(s.id)), emulated?.entry);
     const last = recorded.get(s.id)?.text ?? kept.get(s.id)?.line ?? kept.get(s.id)?.cell?.replaceAll('\\|', '|') ?? ''; // the Summary cell is stored escaped
-    return { s, state, last: latest && emulated ? `${last}; emulated: ${emulated.text}` : last }; // an emulated run next to the owner's result never replaces it
+    return { s, state, last: emulated ? (last ? `${last}; emulated: ${emulated.text}` : emulated.text) : last }; // an emulated run next to the owner's result never replaces it
   });
   const tally = {};
   for (const { state } of phone) tally[state] = (tally[state] ?? 0) + 1;
@@ -137,7 +137,7 @@ Steps are written from each shipped brief's Done when lines and the feature map.
   for (const { s, state, last } of phone) out.push(`| ${s.id} | ${cell(s.feature)} | ${state} | ${cell(last)} |`);
   out.push('');
   out.push('## Summary\n\n| Id | Feature | Account | Device | Result |\n|---|---|---|---|---|');
-  for (const s of SCENARIOS) out.push(`| ${s.id} | ${cell(s.feature)} | \`${s.persona}\` | ${s.device ? 'yes' : ''} | ${recorded.has(s.id) ? cell(recorded.get(s.id).text) : (kept.get(s.id)?.cell ?? '')} |`);
+  for (const s of SCENARIOS) out.push(`| ${s.id} | ${cell(s.feature)} | \`${s.persona}\` | ${s.device ? 'yes' : ''} | ${recorded.get(s.id)?.text !== undefined ? cell(recorded.get(s.id).text) : (kept.get(s.id)?.cell ?? '')} |`);
   return out.join('\n') + '\n';
 }
 

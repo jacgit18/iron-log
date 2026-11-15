@@ -82,9 +82,10 @@ export function appendEntry(text: string, entry: ResultEntry, known: ReadonlySet
 
 export type DeviceState = 'not tried' | 'passed' | 'failed' | 'blocked' | 'noted by hand' | 'emulated pass' | 'emulated fail' | 'emulated blocked';
 
-/** Where a phone scenario stands: the latest real entry decides (`latest`, from `latestById`); with none, an agent's emulated run shows as `emulated ...` (never `passed`), and with neither a Result written by hand only says it was noted. */
+/** Where a phone scenario stands: the latest real entry decides (`latest`, from `latestById`); with none, a Result the owner wrote by hand says it was noted (an agent's emulated run never replaces it), then an emulated run shows as `emulated ...` (never `passed`). */
 export function deviceState(latest: ResultEntry | undefined, handWritten: boolean, emulated?: ResultEntry): DeviceState {
   if (latest) return latest.outcome === 'pass' ? 'passed' : latest.outcome === 'fail' ? 'failed' : 'blocked';
+  if (handWritten) return 'noted by hand';
   if (emulated) return `emulated ${emulated.outcome === 'pass' ? 'pass' : emulated.outcome === 'fail' ? 'fail' : 'blocked'}`;
   return handWritten ? 'noted by hand' : 'not tried';
 }

@@ -55,6 +55,7 @@ export function buildReport(scenarios, automationOf, results) {
     else if (e.by === 'claude') proposed.push(row);
     else confirmed.push(row);
     // The owner's pass stays the phone state, but an emulated fail or blocked recorded after it is a possible regression: shown under attention too.
+    // Strictly later: on the same day the owner's pass wins, a tie is deliberate (the owner's phone result stands).
     if (emRow && emRow.outcome !== 'pass' && e.outcome === 'pass' && emRow.date > e.date) attention.push(emRow);
   }
 

@@ -134,6 +134,26 @@ describe('QA scenarios page', () => {
         expect(rb).toContain('emulated: 2026-11-14 fail (claude, emulated): x');
       });
 
+      it('keeps the owner\'s hand-written Result when an agent only has an emulated run, shows the run beside it, and keeps it on the next write', () => {
+        const id = phone[0].id;
+        const hand = doc.replace(new RegExp(`(### ${id}\\. [\\s\\S]*?- \\*\\*Result\\*\\* \\(date, pass or fail, note\\): )\\\\_\\\\_\\\\_`), '$12026-11-02 owner looked fine');
+        const recorded = recordedResults(JSON.stringify([{ id, outcome: 'pass', date: '2026-11-14', by: 'claude', emulated: true, note: 'phone view' }]));
+        const page = buildDoc(hand, recorded);
+        expect(resultsOf(page).get(id)?.line).toBe('2026-11-02 owner looked fine');
+        const row = rows(page).find(r => r.startsWith(`| ${id} |`)) ?? '';
+        expect(row).toContain('| noted by hand | 2026-11-02 owner looked fine; emulated: 2026-11-14 pass (claude, emulated): phone view |');
+        const again = buildDoc(page, recorded);
+        expect(resultsOf(again).get(id)?.line).toBe('2026-11-02 owner looked fine');
+        expect(again).toBe(page);
+      });
+
+      it('shows a real entry as the Result when an emulated run sits beside it', () => {
+        const id = phone[0].id;
+        const page = buildDoc('', recordedResults(JSON.stringify([{ id, outcome: 'pass', date: '2026-11-10', by: 'owner' }, { id, outcome: 'fail', date: '2026-11-14', by: 'claude', emulated: true }])));
+        expect(resultsOf(page).get(id)?.cell).toBe('2026-11-10 pass');
+        expect(rows(page).find(r => r.startsWith(`| ${id} |`))).toContain('| passed | 2026-11-10 pass; emulated: 2026-11-14 fail (claude, emulated) |');
+      });
+
       it('refuses --record by claude on a phone scenario unless --emulated, and stores the flag', () => {
         const dir = mkdtempSync(join(tmpdir(), 'qa-emu-'));
         const file = join(dir, 'results.json');
