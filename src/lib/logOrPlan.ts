@@ -2,6 +2,7 @@ import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import type { DietEntry, PlanItem, PlanSlot, Recipe } from '../types.ts';
 import { amountText, usualStart } from './foodUnit.js';
 import { ateEntry, oldestDay, shiftDay } from './dietLog.js';
+import { logEntry } from './logAtUsual.js';
 import { inWindow } from './dietPlan.js';
 import { SLOT_LABEL } from './weekBoard.js';
 
@@ -42,10 +43,7 @@ export function logOrPlan(ports: Ports, recipe: Pick<Recipe, 'id' | 'n' | 'kcal'
   if (!isAhead(day, today)) {
     const made = ateEntry(recipe, servings, day, today);
     if ('error' in made) return fail(made.error);
-    const r = ports.addDietEntry(made.entry);
-    if (r.error || !r.id) return fail(r.error ?? 'Couldn’t log that.');
-    const id = r.id;
-    return { ok: true, text: `Logged ${recipe.n}: ${amount} to ${day === today ? 'today' : day}.`, undo: () => ports.removeDietEntry(id, false) };
+    return logEntry(ports, made.entry, `Logged ${recipe.n}: ${amount} to ${day === today ? 'today' : day}.`);
   }
   if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
   if (!meal) return fail('Pick a meal.');

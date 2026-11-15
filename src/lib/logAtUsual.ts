@@ -1,6 +1,7 @@
 import type { Recipe } from '../types.ts';
 import { amountText, usualStart } from './foodUnit.js';
 import { ateEntry, ateDayError, entryFromFood, hasMacros, servingNumbers } from './dietLog.js';
+import type { DietEntry } from '../types.ts';
 import type { Made, Ports } from './logOrPlan.js';
 
 /* ---------- One tap logs at the usual portion (brief nutrition-log-first-portion-row, PR b): Quick add, Log in the Recipes way and a food picked in Find food. Pure: the store is passed in as `Ports`. A day ahead is not handled here: it plans through the portion sheet. ---------- */
@@ -11,16 +12,21 @@ type Food = Pick<Recipe, 'n' | 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'cat' | 'ser
 /** The sentence after a log: "Logged Oats, 1.5 portions." */
 export const loggedText = (name: string, amount: string): string => `Logged ${name}, ${amount}.`;
 
+/** The one write every log makes (one tap, the portion sheet's Log, a past food): add `entry`, then answer with `text` and an Undo that removes exactly the entry this call made. The store's own words win when it refuses. */
+export function logEntry(ports: Logger, entry: Omit<DietEntry, 'id'>, text: string): Made {
+  const r = ports.addDietEntry(entry);
+  if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
+  const id = r.id;
+  return { ok: true, text, undo: () => ports.removeDietEntry(id, false) };
+}
+
 /** Log a recipe at its usual portion on `day` (today or earlier). The answer carries the sentence and an Undo that removes exactly the entry this call made. */
 export function logRecipeAtUsual(ports: Logger, recipe: Pick<Recipe, 'id'> & Food, day: string, today: string): Made {
   if (!hasMacros(recipe)) return { ok: false, error: 'Add calories and protein per serving to log this.' };
   const x = usualStart(recipe);
   const made = ateEntry(recipe, x, day, today);
   if ('error' in made) return { ok: false, error: made.error };
-  const r = ports.addDietEntry(made.entry);
-  if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
-  const id = r.id;
-  return { ok: true, text: loggedText(recipe.n, amountText(x, recipe)), undo: () => ports.removeDietEntry(id, false) };
+  return logEntry(ports, made.entry, loggedText(recipe.n, amountText(x, recipe)));
 }
 
 /** Log a food that has no recipe behind it (a Find food match from the log) as it was eaten before: its numbers are totals for `food.x` portions (1 when not recorded), kept as they are with that count, so Less then halves the right amount. The entry carries no recipe link. */
@@ -30,8 +36,5 @@ export function logFoodAtUsual(ports: Logger, food: { n: string; kcal: number; p
   if (!nums) return { ok: false, error: 'Those numbers are out of range.' };
   const bad = ateDayError(day, today);
   if (bad) return { ok: false, error: bad };
-  const r = ports.addDietEntry(entryFromFood(day, { n: food.n, ...nums, x }));
-  if (r.error || !r.id) return { ok: false, error: r.error ?? 'Couldn’t log that.' };
-  const id = r.id;
-  return { ok: true, text: loggedText(food.n, amountText(x, food as Food)), undo: () => ports.removeDietEntry(id, false) };
+  return logEntry(ports, entryFromFood(day, { n: food.n, ...nums, x }), loggedText(food.n, amountText(x, food as Food)));
 }
