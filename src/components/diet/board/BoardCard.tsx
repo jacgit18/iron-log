@@ -2,10 +2,12 @@ import { isEaten } from '../../../lib/dietPlan.js';
 import { eatenMax, loggedEntry, plannedEntryStep, plannedStep } from '../../../lib/eatenStep.js';
 import { amountText } from '../../../lib/foodUnit.js';
 import { macroLine } from '../../../lib/macroLine.js';
+import { cardVitamins } from '../../../lib/microLine.js';
 import type { BoardItem } from '../../../lib/weekBoard.js';
 import { useAppStore } from '../../../store/useAppStore.js';
 import ArmedButton from '../../ArmedButton.jsx';
 import PortionStepper from '../../PortionStepper.js';
+import { MicroLine, MicroList } from '../../nutritionBoard/MicroLine.js';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Copy to, Move to and Remove. Copy to and Move to open a sheet with the day picker (PlanMoveSheet, brief nutrition-multi-day-picker).
 // A listed daily snack that is only shown on this day (`item.virtual`, brief daily-snacks) is stored as a real item of the day first when it is ticked, changed or moved; its Remove skips it for this day only; it is not dragged.
@@ -19,6 +21,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   const entry = useAppStore(s => (isEaten(r.item, s.diet) && r.item.k === 'r' ? loggedEntry(r.item.e, s.diet) : undefined)); // the one entry a ticked recipe card logged: Less and More change it together with the plan
   const lessT = entry ? plannedEntryStep(entry, -1, eatenMax(r.recipe)) : null, moreT = entry ? plannedEntryStep(entry, 1, eatenMax(r.recipe)) : null; // a ticked card steps its entry's own count (an edit to the entry is kept) and the plan follows
   const less = entry ? lessT?.count ?? null : plannedStep(r.portion, -1), more = entry ? moreT?.count ?? null : plannedStep(r.portion, 1);
+  const vit = cardVitamins(r.item.k, entry, r.recipe, r.portion); // a saved meal card and a food with no vitamins draw nothing (lib/microLine.ts)
   const checkable = day === today && !r.gone;
   const name = r.item.k === 'm' ? `${r.name} (meal)` : r.name;
   // The item's place in the stored plan: a shown daily snack is stored now (never refused for a full day: snacks do not count toward the 8).
@@ -62,11 +65,13 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
         onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ day, index })); e.dataTransfer.effectAllowed = 'move'; }}>
         <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}</span>
         <span className="wb-cm">{r.gone ? 'Removed' : macroLine({ ...(r.kcal !== undefined ? { kcal: r.kcal } : {}), ...(r.p !== undefined ? { p: r.p } : {}) }) || 'Needs numbers'}</span>
+        {vit && !r.gone && <MicroLine micro={vit.micro} factor={vit.factor} est={vit.est} />}
       </button>
       </div>
       {entry && r.recipe && ( // a ticked recipe card: the same stepper line as an eaten row (brief nutrition-log-first-portion-row); it steps the plan's portion and the logged entry together
         <PortionStepper name={r.name} text={amountText(entry.x ?? 1, r.recipe)} less={less} more={more} onLess={() => tickedStep(lessT)} onMore={() => tickedStep(moreT)} />
       )}
+      {open && vit && !r.gone && <MicroList micro={vit.micro} factor={vit.factor} est={vit.est} />}
       {open && (
         <div className="wb-acts">
           {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={less === null} onClick={() => less !== null && portion(less)}>Less</button>}
