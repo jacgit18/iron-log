@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import type { DietEntry } from '../../types.ts';
 import Icon from '../Icon.jsx';
+import PortionStepper from '../PortionStepper.js';
 import { stepEatenRow } from './stepEatenRow.js';
 import './EatenRows.css';
 
@@ -30,11 +31,7 @@ export function EatenRow({ e, onMsg }: { e: DietEntry; onMsg: Say }) {
     <li className="nb-eat">
       <button type="button" className="nb-eatrow" aria-haspopup="dialog" onClick={() => useAppStore.getState().openModal({ type: 'nbeaten', id: e.id, onMsg })}>{body}</button>
       {hasStepper(e.d, today) && (
-        <div className="nb-step" role="group" aria-label={`Portion of ${e.n}`}>
-          <button type="button" className="btn sm" aria-label={`Less ${e.n}`} disabled={step.less === null} onClick={() => step.less !== null && stepEatenRow(e, step.less, recipe, today, onMsg)}>Less</button>
-          <span className="nb-stepamt">{step.text}</span>
-          <button type="button" className="btn sm" aria-label={`More ${e.n}`} disabled={step.more === null} onClick={() => step.more !== null && stepEatenRow(e, step.more, recipe, today, onMsg)}>More</button>
-        </div>
+        <PortionStepper name={e.n} text={step.text} less={step.less} more={step.more} onLess={to => stepEatenRow(e, to, recipe, today, onMsg)} onMore={to => stepEatenRow(e, to, recipe, today, onMsg)} />
       )}
     </li>
   );

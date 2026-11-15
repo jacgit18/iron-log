@@ -5,6 +5,7 @@ import type { BoardItem } from '../../../lib/weekBoard.js';
 import { useAppStore } from '../../../store/useAppStore.js';
 import { amountText } from '../../../lib/foodUnit.js';
 import ArmedButton from '../../ArmedButton.jsx';
+import PortionStepper from '../../PortionStepper.js';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Copy to, Move to and Remove. Copy to and Move to open a sheet with the day picker (PlanMoveSheet, brief nutrition-multi-day-picker).
 // A listed daily snack that is only shown on this day (`item.virtual`, brief daily-snacks) is stored as a real item of the day first when it is ticked, changed or moved; its Remove skips it for this day only; it is not dragged.
@@ -60,11 +61,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
       </button>
       </div>
       {entry && r.recipe && ( // a ticked recipe card: the same stepper line as an eaten row (brief nutrition-log-first-portion-row); it steps the plan's portion and the logged entry together
-        <div className="nb-step" role="group" aria-label={`Portion of ${r.name}`}>
-          <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={less === null} onClick={() => less !== null && portion(less)}>Less</button>
-          <span className="nb-stepamt">{amountText(r.portion, r.recipe)}</span>
-          <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={more === null} onClick={() => more !== null && portion(more)}>More</button>
-        </div>
+        <PortionStepper name={r.name} text={amountText(r.portion, r.recipe)} less={less} more={more} onLess={portion} onMore={portion} />
       )}
       {open && (
         <div className="wb-acts">

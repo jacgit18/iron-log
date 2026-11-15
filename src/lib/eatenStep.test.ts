@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
+import { entryTotalsAt } from './portionBasis.js';
 import { eatenAmount, eatenMax, hasStepper, loggedEntry, plannedStep, rowStepper } from './eatenStep.js';
 
 const entry = (o: Partial<DietEntry> = {}): DietEntry => ({ id: 'e1', d: '2026-11-15', n: 'Oats', kcal: 300, p: 10, ...o });
@@ -39,10 +40,13 @@ describe('rowStepper', () => {
     expect(eatenMax({ ...oats, usual: 20 })).toBeGreaterThanOrEqual(10);
     expect(rowStepper(entry({ x: 10, kcal: 3000 }), { ...oats, usual: 20 }).more).toBeNull();
   });
-  it('Less from 1.5 steps down to 1 (Less then More may differ by about 1 kcal: calories are stored whole, so no exact-equality test)', () => {
+  it('Less then More lands within 1 kcal of the start (calories are stored whole, so never exact equality)', () => {
     const start = entry({ x: 1.5, kcal: 451 });
-    const down = rowStepper(start).less!;
-    expect(down).toBe(1);
+    const less = rowStepper(start).less!;
+    const down = entryTotalsAt(start, less)!;
+    const back = entryTotalsAt({ ...start, kcal: down.kcal, p: down.p, x: down.x }, rowStepper({ ...start, kcal: down.kcal, p: down.p, x: down.x }).more!)!;
+    expect(less).toBe(1);
+    expect(Math.abs(back.kcal - start.kcal)).toBeLessThanOrEqual(1);
   });
 });
 
