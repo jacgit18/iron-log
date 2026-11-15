@@ -239,7 +239,8 @@ async function main() {
     const why = await dropScratch(state, withClient);
     if (why) { console.error(`qa-local: not dropped: ${why}`); process.exitCode = 1; return; }
     rmSync(stateFile, { force: true });
-    for (const f of readdirSync(join(root, 'dist')).filter(n => SIGNIN_FILE.test(n))) rmSync(join(root, 'dist', f), { force: true });
+    const built = existsSync(join(root, 'dist')) ? readdirSync(join(root, 'dist')) : []; // a start that failed before the build leaves no dist
+    for (const f of built.filter(n => SIGNIN_FILE.test(n))) rmSync(join(root, 'dist', f), { force: true });
     console.error(`qa-local: stopped; dropped ${state.db} and ${state.login}`);
   }
 }
