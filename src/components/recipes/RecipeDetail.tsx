@@ -92,7 +92,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Food</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
         {strip}
         {bar}
-        <RecipeMicro recipe={recipe} />
+        <RecipeMicro key={recipe.id} recipe={recipe} />
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
         <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />

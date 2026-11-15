@@ -24,7 +24,7 @@ export function MicroList({ micro, factor = 1, est = false }: { micro: Micro | u
   if (!list.length) return null;
   return (
     <div className="nb-microlist">
-      <ul aria-label="Vitamins and minerals, per day's recommended amount">{list.map(l => <li key={l.key}>{l.text}</li>)}</ul>
+      <ul aria-label="Vitamins and minerals, as a share of a day's recommended amount">{list.map(l => <li key={l.key}>{l.text}</li>)}</ul>
       {est && <p className="note">{ESTIMATED}: worked out from the recipe’s ingredients, not from a label.</p>}
     </div>
   );
