@@ -44,7 +44,7 @@ test('untyped foods show a banner; Review types suggests from the name, a change
   await expect(page).toHaveURL(/#\/daily\/recipes$/);
   await page.getByRole('button', { name: 'Review types' }).click();
   await page.goBack();
-  await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Recipes', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Review types' }).click();
   await page.getByRole('group', { name: 'Used as for Frozen lasagna' }).getByRole('button', { name: 'Drink' }).click();
   await page.getByRole('button', { name: 'Looks right' }).click();
