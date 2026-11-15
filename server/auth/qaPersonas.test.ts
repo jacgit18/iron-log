@@ -8,7 +8,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { adminsFrom } from '../admin.ts';
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
-import { LOCAL_ADMIN_EMAIL, pickerEnv, seedLocalAdmin } from '../qa/localAdmin.ts';
+import { LOCAL_ADMIN_EMAIL, pickerEnv, seedLocalAdmin, TEST_PASSWORD as LOCAL_PASSWORD } from '../qa/localAdmin.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from '../qa/personas.ts';
 import { scenariosForPersona } from '../qa/scenarios.ts';
 import { SEED_EXERCISE_IDS } from '../qa/seedPersona.ts';
@@ -26,7 +26,6 @@ const GOOGLE = { clientId: 'test-client.apps.googleusercontent.com', clientSecre
 const BASE = 'http://localhost:3999';
 const ADMIN = 'admin@example.com';
 const PASSWORD = 'correct horse battery staple';
-const LOCAL_PASSWORD = PASSWORD; // any test value: qa-local seeds the admin with its own TEST_PASSWORD hash
 
 const running: { close: () => Promise<void> }[] = [];
 const ownerPools: pg.Pool[] = [];

@@ -3,6 +3,8 @@ import type pg from 'pg';
 /* The one admin of the QA Runner's scratch stack (brief: qa-runner-test-admin). The QA test-accounts picker is admin-only, so S-35 needs one. It exists only in the
    scratch database that scripts/qa-local.mjs makes, and only this address is in the spawned server's ADMIN_EMAILS; .invalid can never be a real address. */
 export const LOCAL_ADMIN_ID = 'qa-local-admin';
+/** A test value the scratch server stores only for seeded accounts (scripts/qa-local.mjs signs the sign-in page in with it; the server test uses the same). */
+export const TEST_PASSWORD = 'correct horse battery staple';
 export const LOCAL_ADMIN_EMAIL = 'qa-local-admin@qa.invalid';
 
 /** What the spawned server needs for the picker (Switch and Reset): the setting, the one test admin, and the scratch database as the owner URL Reset seeds through. */

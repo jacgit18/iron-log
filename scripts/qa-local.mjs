@@ -18,14 +18,11 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv, seedLocalAdmin } from '../server/qa/localAdmin.ts';
 
 const LOCAL_HOSTS = ['127.0.0.1', 'localhost', '[::1]'];
 export const SCRATCH_PREFIX = 'iron_qa_run_';
 export const SCRATCH_MARK = 'iron-log qa-local scratch';
-// The test admin of the scratch stack lives in server/qa/localAdmin.ts (the server test seeds it the same way); re-exported here for the tests and the guard.
-export { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv, seedLocalAdmin };
-export const TEST_PASSWORD = 'correct horse battery staple'; // a test value the server stores only for seeded accounts on the scratch database
+// The scratch stack's test admin, its password and the picker settings live in server/qa/localAdmin.ts, imported inside `start` and `seed` only (a TypeScript file: status, stop and check-url, which the Runner's hook relies on, must not need Node's TypeScript support).
 // What e2e-qa/persona.js sets before sign-in: without apiSync the app shows this browser's own (empty) data, not the seeded account's.
 export const BROWSER_FLAGS = { 'ironlog:hidetip': '1', 'ironlog:hidelocal': '1', 'ironlog:flag:apiSync': 'true', 'ironlog:session/known': '1' };
 // One page and one script per persona: the server sends static files with `Cache-Control: max-age=3600`, so a shared name made the browser reuse the previous persona's
@@ -54,9 +51,9 @@ fetch('/api/auth/sign-in/email', { method: 'POST', headers: { 'content-type': 'a
 export const signInHtml = (scriptName, token) => `<!doctype html><meta charset="utf-8"><title>QA sign-in</title><script src="/${scriptName}?s=${token}"></script>\n`;
 
 /** Writes the sign-in page into the built app (the server serves it; the CSP allows a script file of its own origin, not an inline one). */
-function writeSignInPage(distDir, personaId, email, token) {
+function writeSignInPage(distDir, personaId, email, token, password) {
   const { page, script } = signInNames(personaId);
-  writeFileSync(join(distDir, script), signInScript(BROWSER_FLAGS, email, TEST_PASSWORD));
+  writeFileSync(join(distDir, script), signInScript(BROWSER_FLAGS, email, password));
   writeFileSync(join(distDir, page), signInHtml(script, token));
   return page;
 }
@@ -170,6 +167,7 @@ async function main() {
   }
 
   if (cmd === 'start') {
+    const { pickerEnv } = await import('../server/qa/localAdmin.ts');
     if (readState()) fail(`a stack is already running for this checkout (${stateFile}); run stop first`);
     const bad = serverProblem(given);
     if (bad) fail(`refused: ${bad}`, 2);
@@ -213,6 +211,7 @@ async function main() {
     if (!state) fail('no stack is running: run start first');
     const why = urlProblem(state.url) ?? serverProblem(state.scratch);
     if (why) fail(`refused: ${why}`, 2);
+    const { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, seedLocalAdmin, TEST_PASSWORD } = await import('../server/qa/localAdmin.ts');
     const { personaAuthId, personaById, personaEmail } = await import('../server/qa/personas.ts');
     const { SEED_EXERCISE_IDS, seedPersona } = await import('../server/qa/seedPersona.ts');
     const { buildPersonaRows } = await import('../server/qa/seedPlan.ts');
@@ -237,7 +236,7 @@ async function main() {
     });
     const token = seedToken();
     const email = admin ? LOCAL_ADMIN_EMAIL : personaEmail(persona.id);
-    const page = writeSignInPage(join(root, 'dist'), persona.id, email, token);
+    const page = writeSignInPage(join(root, 'dist'), persona.id, email, token, TEST_PASSWORD);
     console.log(JSON.stringify({ url: state.url, persona: persona.id, email, signInUrl: `${state.url}/${page}?s=${token}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
     return;
   }

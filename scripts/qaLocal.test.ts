@@ -2,9 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv } from '../server/qa/localAdmin.ts';
 import { QA_LOCAL_MARK } from '../server/auth/qaPersonas.ts';
 import { join } from 'node:path';
-import { BROWSER_FLAGS, dropProblem, dropScratch, finishStop, freePort, LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, markProblem, newScratchName, originProblem, pickerEnv, pidIsStack, removeSignInFiles, SCRATCH_MARK, seedToken, serverProblem, signInFilesIn, signInHtml, signInNames, signInScript, urlProblem } from './qa-local.mjs';
+import { BROWSER_FLAGS, dropProblem, dropScratch, finishStop, freePort, markProblem, newScratchName, originProblem, pidIsStack, removeSignInFiles, SCRATCH_MARK, seedToken, serverProblem, signInFilesIn, signInHtml, signInNames, signInScript, urlProblem } from './qa-local.mjs';
 
 describe('urlProblem', () => {
   it.each(['http://127.0.0.1:41234', 'http://localhost:41234/', 'http://[::1]:41234/settings'])('allows %s', url => expect(urlProblem(url)).toBeNull());
