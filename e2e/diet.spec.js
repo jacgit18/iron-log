@@ -127,7 +127,8 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   await page.getByLabel('Carbs per serving (g), optional').fill('51');
   await page.getByLabel('Fat per serving (g), optional').fill('11');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.locator('.rc-strip').getByText('600 kcal · P 40 · C 51 · F 11 g per serving')).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('600 kcal', { exact: true })).toBeVisible();
+  await expect(page.locator('.rc-strip').getByText('P 40 · C 51 · F 11 g per serving')).toBeVisible();
   await page.getByRole('button', { name: 'Add to today' }).click(); // the usual portion (1) in one tap
   await expect(page.getByText('Logged Chili, 1 portion, for today.')).toBeVisible();
   await nutrition(page);

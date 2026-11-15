@@ -21,8 +21,10 @@ const strip = page => page.locator('.rc-strip');
 test('the strip shows the per-serving numbers and "Not eaten yet", and at-home only when there are inventory items', async ({ page }) => {
   await seed(page, [stew]);
   await open(page);
-  await expect(strip(page)).toContainText('400 kcal · P 30 g per serving');
-  await expect(strip(page)).toContainText('Not eaten yet');
+  await expect(strip(page).locator('li')).toHaveCount(2); // per serving, last eaten: separate small boxes
+  await expect(strip(page).getByText('400 kcal', { exact: true })).toBeVisible();
+  await expect(strip(page).getByText('P 30 g per serving')).toBeVisible();
+  await expect(strip(page).getByText('Not eaten yet')).toBeVisible();
   await expect(strip(page)).not.toContainText('at home'); // no inventory items yet
   await expect(page.getByText('Add items under Groceries, Inventory to see what you have.')).toBeVisible();
 });
@@ -30,7 +32,9 @@ test('the strip shows the per-serving numbers and "Not eaten yet", and at-home o
 test('with inventory items the strip says how many ingredients are at home', async ({ page }) => {
   await seed(page, [stew], { 'ironlog:grocery/main': { stores: ['x'], items: [{ id: 'g1', n: 'Flour', store: 'x', qty: 1, every: true, out: false }], groups: [] } });
   await open(page);
-  await expect(strip(page)).toContainText(/\d+ of 24 at home/);
+  await expect(strip(page).locator('li')).toHaveCount(3);
+  await expect(strip(page).getByText('0 of 24 at home')).toBeVisible();
+  await expect(strip(page).getByText('24 missing')).toBeVisible();
 });
 
 test('Add to today logs the usual portion in one tap, reads Added until Undo, and Undo removes only that entry', async ({ page }) => {
@@ -41,7 +45,8 @@ test('Add to today logs the usual portion in one tap, reads Added until Undo, an
   const added = page.getByRole('button', { name: 'Added', exact: true });
   await expect(added).toBeDisabled(); // a second tap cannot log twice
   await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(0);
-  await expect(strip(page)).toContainText('Last eaten today, usual 2 portions');
+  await expect(strip(page)).toContainText('Last eaten today');
+  await expect(strip(page)).toContainText('Usual 2 portions');
   await openNutrition(page);
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1);
   await expect(todayCol(page).locator('.nb-eat')).toContainText('800 kcal');
@@ -92,7 +97,8 @@ test('a recipe with no calories and protein shows "Add them" in place of Add to 
 test('a ready-made food gets the strip and the action row, and no ingredients, steps or Cook for', async ({ page }) => {
   await seed(page, [food('a', 'Oat cereal', { kcal: 150, p: 5 })]);
   await open(page, 'Oat cereal');
-  await expect(strip(page)).toContainText('150 kcal · P 5 g per serving');
+  await expect(strip(page).getByText('150 kcal', { exact: true })).toBeVisible();
+  await expect(strip(page).locator('li')).toHaveCount(2); // per serving and last eaten; no at-home box
   await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Plan…' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
@@ -112,6 +118,20 @@ test('on a phone nothing is fixed over the tab bar and the action row is in the 
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const last = await box(page, '.rc-steps li:last-child'), tabs = await box(page, '#tab-daily');
   expect(last.y + last.height).toBeLessThanOrEqual(tabs.y + 1);
+});
+
+test('the strip boxes stack on a narrow phone and sit side by side on a desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await seed(page, [stew], { 'ironlog:grocery/main': { stores: ['x'], items: [{ id: 'g1', n: 'Flour', store: 'x', qty: 1, every: true, out: false }], groups: [] } });
+  await open(page);
+  const boxes = async () => strip(page).locator('li').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) }; }));
+  const narrow = await boxes();
+  expect(new Set(narrow.map(b => b.x)).size).toBe(1); // one column
+  expect(narrow[1].y).toBeGreaterThan(narrow[0].y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const wide = await boxes();
+  expect(new Set(wide.map(b => b.y)).size).toBe(1); // one row
 });
 
 test('at 1280px the strip sits under the title and nothing on the page is fixed', async ({ page }) => {

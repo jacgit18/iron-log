@@ -36,25 +36,37 @@
 .rc-ingrow .rc-scale {
   margin: 0;
 }
-/* The summary strip: per-serving numbers, what is at home, when it was last eaten. Cells stack on a narrow screen. */
+/* The summary strip (preview option A): small boxes, a bold line over a muted one, side by side from about 130 px each and stacked on a narrow phone. */
 .rc-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
-  gap: var(--sp-8) var(--sp-12);
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
+  gap: var(--sp-8);
   margin: var(--sp-8) 0;
-  padding: var(--sp-10) var(--sp-12);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  font-size: var(--fs-md);
+  padding: 0;
   list-style: none;
 }
 .rc-strip li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
   min-width: 0;
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
   overflow-wrap: anywhere;
 }
-.rc-strip-per {
-  font-weight: 600;
+.rc-strip li > span[aria-hidden] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.rc-strip b {
+  font-size: var(--fs-lg);
+}
+.rc-strip-sub {
+  color: var(--muted);
+  font-size: var(--fs-sm);
 }
 .rc-actionrow .rc-actions {
   margin: var(--sp-8) 0;

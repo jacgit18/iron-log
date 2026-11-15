@@ -13,7 +13,7 @@ import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { macroLine, macroWords } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
-import { addState, addToToday, atHomeText, lastEatenText, planDay, stripMacros } from '../../lib/recipeSummary.js';
+import { addState, addToToday, planDay, summaryCells, type StripCell } from '../../lib/recipeSummary.js';
 import { scaleAmount } from '../../lib/recipeScale.js';
 import { linkedRecipe } from '../../lib/recipeSuggest.js';
 import { ymd } from '../../shared/dates.js';
@@ -58,7 +58,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     setMsg(r.ok ? r.text : r.error);
   };
   const undoAdd = () => { if (added) useAppStore.getState().removeDietEntry(added, false); setAdded(null); setMsg(`Removed ${recipe.n} from today.`); };
-  const strip = <Summary recipe={recipe} mine={mine} per={stripMacros(recipe, roll && roll.counted > 0 ? roll.per : null)} perWords={macroWords(roll && roll.counted > 0 ? roll.per : recipe)} home={atHomeText(status.have, status.total, grocery.items.length)} last={lastEatenText(recipe, diet, today, mine)} />;
+  const cells = summaryCells({ recipe, rolled: roll && roll.counted > 0 ? roll.per : null, mine, have: status.have, total: status.total, inventoryItems: grocery.items.length, diet, today });
+  const strip = <Summary recipe={recipe} mine={mine} cells={cells} />;
   const bar = <ActionRow recipe={recipe} mine={mine} state={addState({ mine, recipe, added: added !== null })} msg={msg} canUndo={added !== null} onAddToday={addToDay} onUndo={undoAdd} onPlan={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id, day: planDay(today) })} onEdit={onEdit} onAddMine={() => onAdd(shown ?? undefined)}>
     {mine && recipe.cat !== 'ready' && <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to Shopping` : 'Add missing to Shopping'}</button>}
   </ActionRow>;
@@ -124,16 +125,17 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   );
 }
 
-// The summary strip (brief recipe-page-after-log): per-serving numbers, what is at home, and when it was last eaten. A cell with nothing to say is left out.
-const Summary = ({ recipe, mine, per, perWords, home, last }: { recipe: Recipe; mine: boolean; per: string; perWords: string; home: string | null; last: string | null }) => {
-  const cells = [per && { k: 'per', v: <><span aria-hidden="true">{per} per serving</span><span className="vh">{perWords} per serving</span></> }, home && { k: 'home', v: home }, last && { k: 'last', v: last }].filter(Boolean) as { k: string; v: React.ReactNode }[];
-  return (
-    <>
-      {cells.length > 0 && <ul className="rc-strip" aria-label="Summary">{cells.map(c => <li key={c.k} className={c.k === 'per' ? 'rc-strip-per' : undefined}>{c.v}</li>)}</ul>}
-      {!mine && !per && <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>}
-    </>
-  );
-};
+// The summary strip (brief recipe-page-after-log, preview option A): small boxes, a bold line over a muted one; they stack on a narrow phone. A box with nothing to say is left out (`summaryCells`).
+const Summary = ({ recipe, mine, cells }: { recipe: Recipe; mine: boolean; cells: StripCell[] }) => (
+  <>
+    {cells.length > 0 && <ul className="rc-strip" aria-label="Summary">{cells.map(c => (
+      <li key={c.key}>
+        {c.words ? <><span aria-hidden="true"><b>{c.head}</b><span className="rc-strip-sub">{c.sub}</span></span><span className="vh">{c.words}</span></> : <><b>{c.head}</b>{c.sub && <span className="rc-strip-sub">{c.sub}</span>}</>}
+      </li>
+    ))}</ul>}
+    {!mine && !cells.some(c => c.key === 'per') && <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>}
+  </>
+);
 
 // The action row: Add to today (one tap, usual portion), Plan… (the portion sheet on tomorrow), and what else the page does (`children`: Add missing to Shopping). A library recipe's only action is Add to Mine; one with no calories and protein asks for them.
 const ActionRow = ({ recipe, mine, state, msg, canUndo, onAddToday, onUndo, onPlan, onEdit, onAddMine, children }: { recipe: Recipe; mine: boolean; state: ReturnType<typeof addState>; msg: string; canUndo: boolean; onAddToday: () => void; onUndo: () => void; onPlan: () => void; onEdit: () => void; onAddMine: () => void; children?: React.ReactNode }) => (

@@ -22,7 +22,7 @@ const plan = page => page.getByRole('button', { name: 'Plan…' }).click();
 
 test('The recipe page and the portion sheet use the usual amount in the unit name, and Add to today logs it in those words', async ({ page }) => {
   await make(page, 'Egg (large)', { usual: '4', unit: 'egg' });
-  await expect(page.locator('.rc-strip')).toContainText('usual 4 eggs');
+  await expect(page.locator('.rc-strip')).toContainText('Usual 4 eggs');
   await plan(page);
   await expect(page.getByText('Per egg: 72 kcal · P 6 g')).toBeVisible();
   await expect(amount(page)).toHaveText('4 eggs');
@@ -44,7 +44,7 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await expect(page.getByLabel('Plural, only if adding s is wrong')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
   await make(page, 'Bread', { usual: '2', unit: 'loaf', plural: 'loaves' });
-  await expect(page.locator('.rc-strip')).toContainText('usual 2 loaves');
+  await expect(page.locator('.rc-strip')).toContainText('Usual 2 loaves');
   await plan(page);
   await expect(amount(page)).toHaveText('2 loaves');
   await page.getByRole('dialog').getByRole('button', { name: 'Less' }).click();
@@ -62,7 +62,7 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await plan(page);
   await expect(amount(page)).toHaveText('1 portion'); // blank boxes: back to the plain wording
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.locator('.rc-strip')).not.toContainText('usual');
+  await expect(page.locator('.rc-strip')).not.toContainText('Usual');
 });
 
 test('a usual amount off the half steps and a unit with a digit are refused in plain words', async ({ page }) => {

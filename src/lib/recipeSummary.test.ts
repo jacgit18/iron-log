@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
 import type { DietEntry } from '../types.ts';
 import type { AddEntry, NewEntry } from './instantLog.js';
-import { addState, addToToday, atHomeText, eatenDayText, lastEaten, lastEatenText, planDay, stripMacros } from './recipeSummary.js';
+import { addState, addToToday, eatenDayText, lastEaten, planDay, summaryCells } from './recipeSummary.js';
 
 const today = '2026-11-15'; // a Sunday
 const stew = { id: 'stew', n: 'Stew', cat: 'protein' as const, servings: 4, kcal: 400, p: 30 };
@@ -45,38 +45,43 @@ describe('eatenDayText', () => {
   });
 });
 
-describe('lastEatenText', () => {
-  it('says when it was last eaten, with the usual portion', () => {
-    expect(lastEatenText({ ...stew, usual: 1.5 }, [e('a', '2026-11-13', 'stew')], today, true)).toBe('Last eaten Fri, usual 1.5 portions');
-    expect(lastEatenText(stew, [e('a', '2026-11-03', 'stew')], today, true)).toBe('Last eaten 3 Nov, usual 1 portion');
+describe('summaryCells', () => {
+  const base = { recipe: stew, rolled: null, mine: true, have: 3, total: 5, inventoryItems: 12, diet: [] as DietEntry[], today };
+  const keys = (o: Parameters<typeof summaryCells>[0]) => summaryCells(o).map(c => c.key);
+  it('shows per serving, at home and never eaten for a recipe of yours', () => {
+    expect(summaryCells({ ...base, recipe: { ...stew, c: 20, f: 9 } })).toEqual([
+      { key: 'per', head: '400 kcal', sub: 'P 30 · C 20 · F 9 g per serving', words: '400 calories, 30 grams protein, 20 grams carbs, 9 grams fat per serving' },
+      { key: 'home', head: '3 of 5 at home', sub: '2 missing' },
+      { key: 'last', head: 'Not eaten yet', sub: '' },
+    ]);
   });
-  it('says "Not eaten yet", and the usual only when one is saved', () => {
-    expect(lastEatenText(stew, [], today, true)).toBe('Not eaten yet');
-    expect(lastEatenText({ ...stew, usual: 2 }, [], today, true)).toBe('Not eaten yet, usual 2 portions');
+  it('keeps the unit on the second line of the macro box', () => {
+    expect(summaryCells(base)[0]).toMatchObject({ head: '400 kcal', sub: 'P 30 g per serving' });
+    expect(summaryCells({ ...base, recipe: { ...stew, p: undefined } })[0]).toMatchObject({ head: '400 kcal', sub: 'per serving' });
   });
-  it('is left out for a recipe that is not in Mine', () => {
-    expect(lastEatenText(stew, [e('a', '2026-11-13', 'stew')], today, false)).toBeNull();
+  it('words the last eaten day over the usual portion', () => {
+    const cells = summaryCells({ ...base, recipe: { ...stew, usual: 1.5 }, diet: [e('a', '2026-11-13', 'stew')] });
+    expect(cells.at(-1)).toEqual({ key: 'last', head: 'Last eaten Fri', sub: 'Usual 1.5 portions' });
+    expect(summaryCells({ ...base, diet: [e('a', '2026-11-03', 'stew')] }).at(-1)).toEqual({ key: 'last', head: 'Last eaten 3 Nov', sub: 'Usual 1 portion' });
   });
-  it('uses the food’s own unit', () => {
-    expect(lastEatenText({ ...stew, cat: 'ready', unit: 'egg', usual: 3 }, [], today, true)).toBe('Not eaten yet, usual 3 eggs');
+  it('says "Not eaten yet", with the usual only when one is saved', () => {
+    expect(summaryCells({ ...base, recipe: { ...stew, usual: 2 } }).at(-1)).toEqual({ key: 'last', head: 'Not eaten yet', sub: 'Usual 2 portions' });
+    expect(summaryCells({ ...base, recipe: { ...stew, cat: 'ready', unit: 'egg', usual: 3 } }).at(-1)?.sub).toBe('Usual 3 eggs');
   });
-});
-
-describe('atHomeText', () => {
-  it('reads "N of M at home"', () => expect(atHomeText(3, 5, 12)).toBe('3 of 5 at home'));
-  it('is left out with no ingredients or no inventory items', () => {
-    expect(atHomeText(0, 0, 12)).toBeNull();
-    expect(atHomeText(0, 5, 0)).toBeNull();
+  it('has no last eaten for a recipe that is not in Mine', () => {
+    expect(keys({ ...base, mine: false, diet: [e('a', '2026-11-13', 'stew')] })).toEqual(['per', 'home']);
   });
-});
-
-describe('stripMacros', () => {
+  it('leaves at-home out with no ingredients or no inventory items, and no sub line when nothing is missing', () => {
+    expect(keys({ ...base, total: 0 })).toEqual(['per', 'last']);
+    expect(keys({ ...base, inventoryItems: 0 })).toEqual(['per', 'last']);
+    expect(summaryCells({ ...base, have: 5 })[1]).toEqual({ key: 'home', head: '5 of 5 at home', sub: '' });
+  });
   it('uses the rolled-up numbers of a meal built from parts', () => {
-    expect(stripMacros({ kcal: 400, p: 30 }, { kcal: 520, p: 41 })).toBe('520 kcal · P 41 g');
+    expect(summaryCells({ ...base, rolled: { kcal: 520, p: 41 } })[0]).toMatchObject({ head: '520 kcal', sub: 'P 41 g per serving' });
   });
-  it('uses the recipe’s own otherwise, and is empty without numbers', () => {
-    expect(stripMacros({ kcal: 400, p: 30, c: 20, f: 9 }, null)).toBe('400 kcal · P 30 · C 20 · F 9 g');
-    expect(stripMacros({}, null)).toBe('');
+  it('says "No numbers yet" for a recipe of yours without any, and nothing for a library recipe', () => {
+    expect(summaryCells({ ...base, recipe: { ...stew, kcal: undefined, p: undefined } })[0]).toEqual({ key: 'nonum', head: 'No numbers yet', sub: 'Calories and protein per serving are missing' });
+    expect(keys({ ...base, mine: false, recipe: { ...stew, kcal: undefined, p: undefined } })).toEqual(['home']);
   });
 });
 

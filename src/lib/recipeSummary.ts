@@ -3,7 +3,7 @@ import { MON, parseDate } from '../shared/dates.js';
 import { ateEntry, hasMacros, shiftDay } from './dietLog.js';
 import { amountText, usualStart } from './foodUnit.js';
 import { runInstantLog, type AddEntry } from './instantLog.js';
-import { macroLine, type MacroParts } from './macroLine.js';
+import { macroLine, macroWords, type MacroParts } from './macroLine.js';
 
 /* ---------- The recipe page's summary strip and "Add to today" (brief recipe-page-after-log). Pure: the page passes in what it read and keeps only state and markup. ---------- */
 
@@ -25,20 +25,35 @@ export function eatenDayText(day: string, today: string): string {
   return `${d.getDate()} ${MON[d.getMonth()]}`;
 }
 
-/** The strip's last-eaten cell: "Last eaten Tue, usual 1.5 portions", or "Not eaten yet" (with the usual when one is saved). A recipe not in Mine has none (null). The usual shown is what "Add to today" logs. */
-export function lastEatenText(recipe: Basis, diet: readonly DietEntry[], today: string, mine: boolean): string | null {
-  if (!mine) return null;
-  const last = lastEaten(diet, recipe.id);
-  const usual = amountText(usualStart(recipe), recipe);
-  if (last) return `Last eaten ${eatenDayText(last.d, today)}, usual ${usual}`;
-  return recipe.usual !== undefined ? `Not eaten yet, usual ${usual}` : 'Not eaten yet';
+/** One small box of the summary strip (preview 2026-11-15, option A): a bold line over a muted one. `words` is what a screen reader gets for the numbers ("P 38" would be read as a letter). */
+export interface StripCell { key: 'per' | 'nonum' | 'home' | 'last'; head: string; sub: string; words?: string }
+
+const NO_NUMBERS_SUB = 'Calories and protein per serving are missing';
+
+/** The macro line cut after its first part: "520 kcal" over "P 38 · C 41 · F 19 g per serving". */
+function perCell(m: MacroParts): StripCell | null {
+  const line = macroLine(m);
+  if (!line) return null;
+  const [head = '', ...rest] = line.split(' · ');
+  return { key: 'per', head, sub: `${rest.join(' · ')} per serving`.trim(), words: `${macroWords(m)} per serving` };
 }
 
-/** "3 of 5 at home", or null when the recipe has no ingredients or there are no inventory items to check them against. */
-export const atHomeText = (have: number, total: number, inventoryItems: number): string | null => (total > 0 && inventoryItems > 0 ? `${have} of ${total} at home` : null);
-
-/** The per-serving numbers for the strip: a meal's rolled-up numbers when it has parts, else the recipe's own. "" when there are none. */
-export const stripMacros = (recipe: MacroParts, rolled: MacroParts | null): string => macroLine(rolled ?? recipe);
+/** The boxes the page shows, left to right. Per serving (a meal built from parts uses its rolled-up numbers), or "No numbers yet" for a recipe of yours with none; "N of M at home" over "N missing" (left out with no ingredients or no inventory items);
+ *  "Last eaten <day>" over "Usual <amount>", or "Not eaten yet" (with the usual when one is saved), for a recipe in Mine only. The usual shown is what Add to today logs. */
+export function summaryCells(o: { recipe: Basis; rolled: MacroParts | null; mine: boolean; have: number; total: number; inventoryItems: number; diet: readonly DietEntry[]; today: string }): StripCell[] {
+  const cells: StripCell[] = [];
+  const per = perCell(o.rolled ?? o.recipe);
+  if (per) cells.push(per);
+  else if (o.mine) cells.push({ key: 'nonum', head: 'No numbers yet', sub: NO_NUMBERS_SUB });
+  if (o.total > 0 && o.inventoryItems > 0) cells.push({ key: 'home', head: `${o.have} of ${o.total} at home`, sub: o.total > o.have ? `${o.total - o.have} missing` : '' });
+  if (o.mine) {
+    const last = lastEaten(o.diet, o.recipe.id);
+    const usual = `Usual ${amountText(usualStart(o.recipe), o.recipe)}`;
+    if (last) cells.push({ key: 'last', head: `Last eaten ${eatenDayText(last.d, o.today)}`, sub: usual });
+    else cells.push({ key: 'last', head: 'Not eaten yet', sub: o.recipe.usual !== undefined ? usual : '' });
+  }
+  return cells;
+}
 
 /** What the first action reads: `add` (Add to today), `added` (until Undo or leaving the page), `needs-numbers` (Add them: no calories and protein to log), `to-mine` (a library recipe: Add to Mine). */
 export type AddState = 'add' | 'added' | 'needs-numbers' | 'to-mine';
