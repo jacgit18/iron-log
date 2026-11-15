@@ -37,12 +37,6 @@
 .rc-detail .note {
   max-width: 70ch;
 }
-/* The day field of the log control is a date, not a line: it does not stretch across a wide page. */
-@media (min-width: 641px) {
-  .rc-detail .lc input[type='date'] {
-    max-width: 22rem;
-  }
-}
 /* The forms: two columns from 1024 px, each at most 900 px wide (Done when 2). Below that the columns vanish and the form is the one column it was (`display: contents`). */
 .rcf-cols,
 .rcf-col {

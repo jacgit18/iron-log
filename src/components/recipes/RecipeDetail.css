@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* Recipe page (RecipeDetail.tsx; brief recipe-page-layout): More actions beside the star and the "Scale the amounts" link in the Ingredients heading. */
+/* Recipe page (RecipeDetail.tsx; brief recipe-page-layout): More actions beside the star. */
 .rc-more {
   position: relative;
   flex: none;
@@ -25,44 +25,57 @@
 .rc-morelist .btn {
   min-height: 44px;
 }
-.rc-ingh {
+/* "Cook for N" sits in the Ingredients heading row, always shown (brief recipe-page-after-log). */
+.rc-ingrow {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--sp-4) var(--sp-8);
 }
-.rc-scalelink {
-  min-height: 44px;
-  margin-left: auto;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  font-size: var(--fs-sm);
-  cursor: pointer;
+.rc-ingrow .rc-scale {
+  margin: 0;
 }
-/* The log-or-plan control (LogControl) stays in view on a phone: fixed above the tab bar, scrolling inside itself when tall, below sheets (--z-sheet; --z-sticky is lower). The page gets room under its last line so the bar never covers it; the bar hides while an ingredient field has focus (the keyboard is open). From 700 px it is an ordinary block under the title and nothing is fixed. */
-@media (max-width: 700px) and (min-height: 501px) {
-  /* a short landscape phone keeps the control in the page instead of fixed */
-  .rc-detail:has(.rc-logbar) {
-    padding-bottom: calc(var(--sp-16) + var(--rc-bar-h, 0px));
-  }
-  .rc-logbar {
-    position: fixed;
-    right: 0;
-    bottom: calc(var(--tabbar) + env(safe-area-inset-bottom, 0px));
-    left: 0;
-    z-index: var(--z-sticky);
-    max-height: min(45vh, 22rem);
-    overflow-y: auto;
-    padding: var(--sp-8) var(--sp-12);
-    border-top: 1px solid var(--line);
-    background: var(--bg);
-  }
-  .rc-detail:has(:is(input, select, textarea):focus) .rc-logbar:not(:focus-within) {
-    display: none;
-  }
+/* The summary strip (preview option A): small boxes, a bold line over a muted one, side by side from about 130 px each and stacked on a narrow phone. */
+.rc-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+  padding: 0;
+  list-style: none;
+}
+.rc-strip li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.rc-strip li > span[aria-hidden] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.rc-strip b {
+  font-size: var(--fs-lg);
+}
+.rc-strip-sub {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rc-actionrow .rc-actions {
+  margin: var(--sp-8) 0;
+}
+.rc-actionrow .note {
+  margin: var(--sp-4) 0;
+}
+.rc-actionrow .note:empty {
+  margin: 0;
 }
 /* Missing (and Have, Have some, On your list) sit beside the ingredient's name, in its own cell, instead of a column of their own. `.rc-detail` out-ranks the list's own `.rc-ing` grid in Recipes.css. */
 @media (min-width: 641px) {

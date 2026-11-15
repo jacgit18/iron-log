@@ -12,7 +12,7 @@ const OWED: Record<string, number[]> = {
   'components/board/DayHeader.css': [320], // the Board's day header (20em): hands off, stays
   'components/nutritionBoard/NutritionBoard.css': [699], // slice 6 (700 / 701 with the phone header)
   'components/nutritionBoard/useWideBoard.ts': [699], // slice 6, with NutritionBoard.css: the phone header hook reads the same break
-  'components/recipes/RecipeDesktop.css': [641, 1024], // slice 6
+  'components/recipes/RecipeDesktop.css': [1024], // slice 6
   'components/recipes/RecipeDetail.css': [641], // slice 6
   'components/recipes/Recipes.css': [640], // slice 6
   'components/settings/Settings.css': [600, 900, 901], // slice 6 (the file is owned by the chips and Nutrition items builds until they merge)

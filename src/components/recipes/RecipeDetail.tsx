@@ -2,22 +2,24 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
 import Icon from '../Icon.js';
-import { hasMacros, packServings } from '../../lib/dietLog.js';
+import { packServings } from '../../lib/dietLog.js';
 import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
 import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
-import { macroLine } from '../../lib/macroLine.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
+import { macroLine } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
+import { addState, addToToday, planDay, summaryCells, type StripCell } from '../../lib/recipeSummary.js';
 import { scaleAmount } from '../../lib/recipeScale.js';
 import { linkedRecipe } from '../../lib/recipeSuggest.js';
+import { ymd } from '../../shared/dates.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import UsualLogControl from '../diet/UsualLogControl.js';
+import { useToday } from '../../store/useToday.js';
 import GoesWith from './GoesWith.js';
 import MealMicroBars from './MealMicroBars.js';
 import RecipeStar from './RecipeStar.js';
@@ -34,8 +36,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const months = useAppStore(s => s.groceryMonths);
   const grocery = useMemo(() => withoutUsed(groceryAll, months), [groceryAll, months]); // a used one-time item is no longer something you have
   const [msg, setMsg] = useState('');
-  const [scaling, setScaling] = useState(false); // the servings stepper is hidden until "Scale the amounts" is tapped
-  const [tonight, setTonight] = useState<number | null>(null); // servings for tonight; the amounts shown scale to it, nothing is saved
+  const [tonight, setTonight] = useState<number | null>(null); // "Cook for": servings to cook; the amounts shown scale to it, nothing is saved
   const shown = recipe.servings ? tonight ?? recipe.servings : null;
   const month = monthKey(new Date());
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes), [recipe, grocery, months, month, recipes]);
@@ -43,20 +44,33 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const roll = useMemo(() => (hasParts(recipe) ? mealRollup(recipe, recipes) : null), [recipe, recipes]); // a meal built from linked foods: what its parts add up to
   const rollText = roll && roll.counted > 0 ? macroLine(roll.per) : '';
   const breakdown = useMemo(() => mealMicroBreakdown(recipe, recipes), [recipe, recipes]); // its vitamins and minerals, part by part
-  const macros = macroLine(recipe);
-  const scaled = !!recipe.servings && tonight !== null && tonight !== recipe.servings; // a scaled recipe keeps its stepper in view, so the amounts never look like the written ones
   const missing = missingParts(status);
   const toAdd = missing.add.length;
   const maybes = mine ? suggestionPins(status).length : 0;
+  const diet = useAppStore(s => s.diet);
+  const today = ymd(useToday(s => s.today));
+  const [added, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo or leaving the page
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
+  const addToDay = () => {
+    const st = useAppStore.getState();
+    const r = addToToday(st.addDietEntry, recipe, today);
+    if (r.ok) setAdded(r.id);
+    setMsg(r.ok ? r.text : r.error);
+  };
+  const undoAdd = () => { if (added) useAppStore.getState().removeDietEntry(added, false); setAdded(null); setMsg(`Removed ${recipe.n} from today.`); };
+  const cells = summaryCells({ recipe, rolled: roll && roll.counted > 0 ? roll.per : null, mine, have: status.have, total: status.total, inventoryItems: grocery.items.length, diet, today });
+  const strip = <Summary recipe={recipe} mine={mine} cells={cells} />;
+  const bar = <ActionRow recipe={recipe} mine={mine} state={addState({ mine, recipe, added: added !== null })} msg={msg} canUndo={added !== null} onAddToday={addToDay} onUndo={undoAdd} onPlan={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id, day: planDay(today) })} onEdit={onEdit} onAddMine={() => onAdd(shown ?? undefined)}>
+    {mine && recipe.cat !== 'ready' && <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to Shopping` : 'Add missing to Shopping'}</button>}
+  </ActionRow>;
   if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and the log control
     return (
       <section className="panel rc-detail" aria-labelledby="rc-h">
         <BackBar onBack={onBack} />
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Food</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
-        <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
+        {strip}
+        {bar}
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
-        {recipe.usual !== undefined && <p className="note">Usual: {amountText(recipe.usual, recipe)}</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
         <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
       </section>
@@ -67,16 +81,15 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       <BackBar onBack={onBack} />
       <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />}</div>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
-      {!roll && macros && <p className="note rc-macros">{macros} per serving</p>}
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
-      <LogArea recipe={recipe} mine={mine} onEdit={onEdit} />
+      {strip}
+      {bar}
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used.${rollText ? ` The parts add up to ${rollText}.` : ' The parts need numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
       {breakdown && <MealMicroBars key={recipe.id} breakdown={breakdown} />}
       <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}
       <div className="rc-col">
-      <h3 className="rc-ingh">Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}{recipe.servings && shown && <button type="button" className="rc-scalelink" aria-expanded={scaling || scaled} onClick={() => setScaling(o => !o)}>Scale the amounts</button>}</h3>
-      {(scaling || scaled) && recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
+      <div className="rc-ingrow"><h3>Ingredients</h3>{recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}</div>
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, Inventory to see what you have.</p>}
       {maybes > 0 && <div className="rc-actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().acceptSuggestions(recipe.id, month)}>Accept all suggestions</button></div>}
       <ul className="rc-ings">
@@ -102,44 +115,42 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
           </li>
         ))}
       </ul>
-      {mine && (
-        <div className="rc-actions">
-          <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to Shopping` : 'Add missing to Shopping'}</button>
-        </div>
-      )}
-      <p className="note" role="status">{msg}</p>
       </div>
       {recipe.steps.length > 0 && (<div className="rc-col"><h3>Steps</h3><ol className="rc-steps">{recipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></div>)}
       </div>
       {recipe.note && <p className="note">{recipe.note}</p>}
       {credit && <p className="rc-attrib">{credit}</p>}
       <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
-      {!mine && <LogBar><button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button></LogBar>}
     </section>
   );
 }
 
-// The one log-or-plan control (brief log-or-plan-control), or the note that says why there is none: not in Mine yet, or no calories and protein to log.
-const LogArea = ({ recipe, mine, onEdit }: { recipe: Recipe; mine: boolean; onEdit: () => void }) => {
-  if (!mine) return <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>;
-  if (!hasMacros(recipe)) return <div className="rc-actions"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
-  return <LogBar><UsualLogControl recipe={recipe} /></LogBar>; // fixed above the tab bar on a phone, under the title from 700 px (RecipeDetail.css)
-};
+// The summary strip (brief recipe-page-after-log, preview option A): small boxes, a bold line over a muted one; they stack on a narrow phone. A box with nothing to say is left out (`summaryCells`).
+const Summary = ({ recipe, mine, cells }: { recipe: Recipe; mine: boolean; cells: StripCell[] }) => (
+  <>
+    {cells.length > 0 && <ul className="rc-strip" aria-label="Summary">{cells.map(c => (
+      <li key={c.key}>
+        {c.words ? <><span aria-hidden="true"><b>{c.head}</b><span className="rc-strip-sub">{c.sub}</span></span><span className="vh">{c.words}</span></> : <><b>{c.head}</b>{c.sub && <span className="rc-strip-sub">{c.sub}</span>}</>}
+      </li>
+    ))}</ul>}
+    {!mine && !cells.some(c => c.key === 'per') && <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>}
+  </>
+);
 
-// The bar's own height goes to the page as `--rc-bar-h`, so the page keeps exactly that much room under its last line while the bar is fixed.
-const LogBar = ({ children }: { children: React.ReactNode }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const bar = ref.current, page = bar?.parentElement;
-    if (!bar || !page) return;
-    const set = () => page.style.setProperty('--rc-bar-h', `${bar.offsetHeight}px`);
-    set();
-    const ro = new ResizeObserver(set);
-    ro.observe(bar);
-    return () => ro.disconnect();
-  }, []);
-  return <div className="rc-logbar" ref={ref}>{children}</div>;
-};
+// The action row: Add to today (one tap, usual portion), Plan… (the portion sheet on tomorrow), and what else the page does (`children`: Add missing to Shopping). A library recipe's only action is Add to Mine; one with no calories and protein asks for them.
+const ActionRow = ({ recipe, mine, state, msg, canUndo, onAddToday, onUndo, onPlan, onEdit, onAddMine, children }: { recipe: Recipe; mine: boolean; state: ReturnType<typeof addState>; msg: string; canUndo: boolean; onAddToday: () => void; onUndo: () => void; onPlan: () => void; onEdit: () => void; onAddMine: () => void; children?: React.ReactNode }) => (
+  <div className="rc-actionrow">
+    <div className="rc-actions">
+      {state === 'to-mine' && <button type="button" className="btn primary" onClick={onAddMine}>Add to Mine</button>}
+      {state === 'needs-numbers' && <button type="button" className="btn primary" onClick={onEdit}>Add them</button>}
+      {(state === 'add' || state === 'added') && <button type="button" className="btn primary" disabled={state === 'added'} onClick={onAddToday}>{state === 'added' ? 'Added' : 'Add to today'}</button>}
+      {(state === 'add' || state === 'added') && <button type="button" className="btn" onClick={onPlan}>Plan…</button>}
+      {children}
+    </div>
+    {state === 'needs-numbers' && <p className="note">Add calories and protein per serving to log this {recipe.cat === 'ready' ? 'food' : 'recipe'}.</p>}
+    {mine && <p className="note" role="status">{msg}{canUndo && <> <button type="button" className="btn sm ghost" onClick={onUndo}>Undo</button></>}</p>}
+  </div>
+);
 
 // Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to More actions (Edit and Delete) reaches both.
 const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
