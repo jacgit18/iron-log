@@ -98,6 +98,16 @@ describe('setDietPortion (Less and More)', () => {
     st().setDietPortion(id!, 1.5);
     expect(st().diet[0]).toMatchObject({ kcal: 300, p: 6, x: 1.5 });
   });
+  it('the same count writes nothing', () => {
+    const { id } = st().addDietEntry({ ...rice, x: 2 });
+    const before = st().diet;
+    expect(st().setDietPortion(id!, 2)).toBeNull();
+    expect(st().setDietPortion(id!, 2.001)).toBeNull();
+    expect(st().diet).toBe(before);
+    const { id: id2 } = st().addDietEntry(rice); const b2 = st().diet;
+    expect(st().setDietPortion(id2!, 1)).toBeNull(); // no count reads as 1
+    expect(st().diet).toBe(b2);
+  });
   it('refuses a gone entry, half a portion down, the limit and 9,999 kcal; changes nothing', () => {
     const { id } = st().addDietEntry({ ...rice, kcal: 4000 });
     expect(st().setDietPortion('nope', 2)).toMatch(/gone/);
