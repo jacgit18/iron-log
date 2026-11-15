@@ -75,9 +75,9 @@ const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 /** The Sunday of the week holding `d`: the app's weeks run Sunday to Saturday (`weekStartOf`, src/shared/dates.ts) and `wk` is stored as that Sunday. */
 const sunday = (d: Date) => addDays(d, -d.getUTCDay());
 
-/** Program A's card ids by exercise (`A-d<day>s<slot>`, as `slotsFor` numbers them): the card a log entry for that exercise ticks. */
-const CARD_OF: Record<string, string> = {};
-BUILTIN_PROGRAMS.A.days.forEach((day, di) => day.slots.forEach((sl, si) => sl.items.forEach(it => { CARD_OF[it.ex] ??= `A-d${di + 1}s${si + 1}`; })));
+/** Program A's card id by exercise: the card a log entry for that exercise ticks. A slot's own `id` wins (the built-in days start with a sled card, `A-sled1`, so the slot at index 1 is `A-d1s1`); only a slot with no id is numbered `A-d<day>s<slot>`, as `slotsFor` (src/lib/data.ts) does. */
+export const CARD_OF: Record<string, string> = {};
+BUILTIN_PROGRAMS.A.days.forEach((day, di) => day.slots.forEach((sl, si) => sl.items.forEach(it => { CARD_OF[it.ex] ??= typeof sl.id === 'string' && sl.id ? sl.id : `A-d${di + 1}s${si + 1}`; })));
 
 /** One saved week per past week with log entries, the cards of the exercises logged that week ticked (current week left to the app). */
 function buildWeeks(logs: SeedLog[], today: Date): SeedWeek[] {

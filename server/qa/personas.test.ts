@@ -6,9 +6,12 @@ import { normRecipes } from '../../src/shared/recipes.ts';
 import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import { SEED_EXERCISE_IDS } from './seedPersona.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from './personas.ts';
-import { buildPersonaRows, DIET_TARGETS } from './seedPlan.ts';
+import { BUILTIN_PROGRAMS } from './builtinPrograms.ts';
+import { buildPersonaRows, CARD_OF, DIET_TARGETS } from './seedPlan.ts';
 
 const TODAY = new Date('2026-10-27T12:00:00Z');
+// The card ids of program A as the app sees them (a slot's own id, else `A-d<day>s<slot>`, as `slotsFor` in src/lib/data.ts).
+const REAL_SLOT_IDS = new Set(BUILTIN_PROGRAMS.A.days.flatMap((day, di) => day.slots.map((sl, si) => (typeof sl.id === 'string' && sl.id ? sl.id : `A-d${di + 1}s${si + 1}`))));
 const EXERCISES = ['latpd', 'chestpress', 'zercher', 'hipthrust', 'dip', 'legext'];
 
 describe('QA personas', () => {
@@ -87,7 +90,12 @@ describe('QA personas', () => {
       expect(new Date(`${w.weekStart}T00:00:00Z`).getUTCDay()).toBe(0);
       expect(logWeeks.has(w.weekStart)).toBe(true);
       expect(w.weekStart < thisWk).toBe(true);
-      expect(Object.keys((w.data as { done: object }).done).length).toBeGreaterThan(0);
+      const done = Object.keys((w.data as { done: object }).done);
+      expect(done.length).toBeGreaterThan(0);
+      for (const id of done) expect(REAL_SLOT_IDS.has(id), `${id} is not a card of program A`).toBe(true);
+      // Exactly the cards of the exercises logged that week (the exercises with a card in program A).
+      const logged = new Set(rows.logs.filter(l => l.wk === w.weekStart && CARD_OF[l.exerciseId]).map(l => CARD_OF[l.exerciseId]!));
+      expect(new Set(done)).toEqual(logged);
     }
     expect(buildPersonaRows(personaById('three-year-veteran')!, EXERCISES, TODAY).weeks).toEqual(rows.weeks);
     expect(buildPersonaRows(PERSONAS.find(p => p.data.logEntries === 0)!, EXERCISES, TODAY).weeks).toEqual([]);
