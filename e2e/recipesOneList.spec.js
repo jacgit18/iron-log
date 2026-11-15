@@ -137,3 +137,22 @@ test('a failed library search shows the failure line with Try again, and your re
   await expect(page.locator('#recipes-library-box').getByRole('button', { name: 'Try again' })).toBeVisible();
   await expect(mineRows(page)).toHaveText(['Soup']);
 });
+
+test('going back to an earlier search, or reopening the box, reuses its result while Recipes stays open (one request per search)', async ({ page }) => {
+  const asked = await signedIn(page, [item(1, 'Apple pie'), item(2, 'Apple crumble')]);
+  await page.goto('/');
+  await openRecipes(page);
+  const search = page.getByRole('searchbox', { name: 'Search recipes' });
+  await search.fill('apple');
+  await expect(boxRows(page)).toHaveText(['Apple pie', 'Apple crumble']);
+  expect(asked).toHaveLength(1);
+  await search.fill('pear');
+  await expect(page.getByRole('heading', { name: /Library/ })).toBeVisible();
+  await expect.poll(() => asked.length).toBe(2);
+  await search.fill(''); // the box folds
+  await expect(page.locator('#recipes-library-box')).toHaveCount(0);
+  await search.fill('apple'); // reopened: the earlier answer, no third request
+  await expect(boxRows(page)).toHaveText(['Apple pie', 'Apple crumble']);
+  await page.waitForTimeout(500); // longer than the typing delay, so a request that was going to be made has been
+  expect(asked).toHaveLength(2);
+});
