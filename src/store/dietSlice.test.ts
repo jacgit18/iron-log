@@ -108,6 +108,20 @@ describe('setDietPortion (Less and More)', () => {
     expect(st().setDietPortion(id2!, 1)).toBeNull(); // no count reads as 1
     expect(st().diet).toBe(b2);
   });
+  it('Less works on an entry above the food\'s limit; More does not', () => {
+    const { id } = st().addDietEntry({ ...rice, kcal: 1200, x: 8 });
+    expect(st().setDietPortion(id!, 8.5, 5)).toMatch(/range/);
+    expect(st().setDietPortion(id!, 7.5, 5)).toBeNull();
+    expect(st().diet[0]).toMatchObject({ kcal: 1125, x: 7.5 });
+  });
+  it('Less then More keeps amounts and lands on a count the cleaner accepts', () => {
+    const { id } = st().addDietEntry({ ...rice, kcal: 300, x: 3, micro: { calcium: 100 } });
+    st().setDietPortion(id!, 1.333);
+    expect(st().diet[0]).toMatchObject({ x: 1.33 });
+    st().setDietPortion(id!, 2.5);
+    st().setDietPortion(id!, 3);
+    expect(st().diet[0]).toMatchObject({ x: 3, micro: { calcium: 100 } });
+  });
   it('refuses a gone entry, half a portion down, the limit and 9,999 kcal; changes nothing', () => {
     const { id } = st().addDietEntry({ ...rice, kcal: 4000 });
     expect(st().setDietPortion('nope', 2)).toMatch(/gone/);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canSaveToRecipe, portionAmounts, portionBasis, portionMaxFor, portionValues, portionWords, recipeSaveBlock, shownPer, stepPortionCount, totalsAt } from './portionBasis.js';
+import { canSaveToRecipe, entryTotalsAt, portionAmounts, portionBasis, portionMaxFor, portionValues, portionWords, recipeSaveBlock, shownPer, stepEntryCount, stepPortionCount, totalsAt } from './portionBasis.js';
 import { rowsFromMicro } from './foodAmountRows.js';
 import { ateEntry } from './dietLog.js';
 import { normDietEntry } from '../shared/diet.js';
@@ -132,5 +132,177 @@ describe('the portion is stored', () => {
     expect(normDietEntry({ ...base, x: 0.1 })).not.toHaveProperty('x');
     expect(normDietEntry({ ...base, x: 100 })).not.toHaveProperty('x');
     expect(normDietEntry({ ...base, x: 'two' })).not.toHaveProperty('x');
+  });
+});
+
+/* ---------- Less and More on an eaten entry (brief nutrition-log-first-portion-row; one source with the Edit sheet, ADR 123) ---------- */
+const eat = (o: Partial<DietEntry> = {}): DietEntry => ({ id: 'e1', d: '2026-11-14', n: 'Rice', kcal: 520, p: 42, c: 60, f: 12, ...o });
+/** The entry at x portions, as the slice stores it (numbers scaled, x recorded), or null. */
+const at = <T extends DietEntry>(en: T, x: number, max?: number): T | null => {
+  const t = entryTotalsAt(en, x, max);
+  if (!t) return null;
+  const { c: _c, f: _f, micro: _m, ...rest } = en;
+  return { ...rest, kcal: t.kcal, p: t.p, ...(t.c !== null ? { c: t.c } : {}), ...(t.f !== null ? { f: t.f } : {}), ...(t.micro ? { micro: t.micro } : {}), x: t.x } as T;
+};
+
+describe('entryTotalsAt: the entry\'s own numbers scaled by new count over old count', () => {
+  it('an entry with no count reads as 1 and doubles at 2', () => {
+    expect(portionBasis(eat()).x).toBe(1);
+    expect(at(eat(), 2)).toEqual(eat({ kcal: 1040, p: 84, c: 120, f: 24, x: 2 }));
+  });
+  it('uses the stored count as the base, not 1', () => {
+    expect(at(eat({ kcal: 780, p: 63, c: 90, f: 18, x: 1.5 }), 1)).toMatchObject({ kcal: 520, p: 42, c: 60, f: 12, x: 1 });
+  });
+  it('scales micro and drops nothing; leaves out carbs and fat the entry never had', () => {
+    const r = at(eat({ c: undefined, f: undefined, micro: { calcium: 100 } }), 1.5)!;
+    expect(r.micro).toEqual({ calcium: 150 });
+    expect('c' in r).toBe(false); expect('f' in r).toBe(false);
+  });
+  it('keeps other fields (id, day, name, from, hour)', () => {
+    expect(at(eat({ from: 'r1', t: 9 }), 2)).toMatchObject({ id: 'e1', d: '2026-11-14', n: 'Rice', from: 'r1', t: 9 });
+  });
+});
+
+describe('limits', () => {
+  it('the limit is the Edit sheet\'s (10), and a count scales by what is stored (two decimals)', () => {
+    expect(at(eat({ kcal: 10, p: 1 }), 10.5)).toBeNull();
+    expect(at(eat({ kcal: 10, p: 1 }), 10)).not.toBeNull();
+    expect(at(eat({ kcal: 300 }), 1.333)).toMatchObject({ kcal: 399, x: 1.33 });
+  });
+  it('refuses a step that would drop an amount over its cap', () => {
+    expect(at(eat({ micro: { calcium: 15000 } }), 2)).toBeNull();
+    expect(at(eat({ micro: { calcium: 100 } }), 2)).not.toBeNull();
+  });
+  it('refuses below half a portion and above the limit', () => {
+    expect(at(eat(), 0.25)).toBeNull();
+    expect(at(eat(), 3, 2.5)).toBeNull();
+    expect(at(eat(), 2.5, 2.5)).not.toBeNull();
+    expect(at(eat({ kcal: 10, p: 1 }), 100)).toBeNull();
+    expect(at(eat(), NaN)).toBeNull();
+  });
+  it('never makes calories above 9,999', () => {
+    const big = eat({ kcal: 2000, p: 10, c: undefined, f: undefined });
+    expect(entryTotalsAt(big, 5)).toBeNull(); // 10,000 kcal
+    expect(entryTotalsAt(big, 4.5)!.kcal).toBe(9000);
+  });
+  it('Less stops at 0.5 and More at the ceiling', () => {
+    expect(stepEntryCount(eat({ x: 0.5 }), -1)).toBeNull();
+    expect(stepEntryCount(eat({ x: 1 }), -1)).toBe(0.5);
+    expect(stepEntryCount(eat({ x: 1 }), 1)).toBe(1.5);
+    expect(stepEntryCount(eat(), 1, 1)).toBeNull();
+    expect(stepEntryCount(eat({ kcal: 9000, p: 10, x: 4.5 }), 1)).toBeNull();
+  });
+});
+
+describe('rounding rule: Less then More returns the starting numbers within 1 kcal', () => {
+  it('holds for whole kcal from 1 to 3000 (every 7th, plus the edges) and every half step, from either direction', () => {
+    let worst = 0; // the largest gap seen, asserted once (60,000 expects would be slow)
+    const gap = (start: DietEntry, to: number | null, x: number) => {
+      if (to === null) return;
+      const back = at(at(start, to)!, x)!;
+      worst = Math.max(worst, Math.abs(back.kcal - start.kcal));
+    };
+    for (let kcal = 1; kcal <= 3000; kcal += kcal === 1 ? 6 : 7) {
+      for (let x = 0.5; x <= 10; x += 0.5) {
+        const start = eat({ kcal: Math.round(kcal * x) || 1, p: 10, c: undefined, f: undefined, x });
+        if (start.kcal > 9999) continue; // not a storable entry; the cap itself (9,999) is now included
+        gap(start, stepEntryCount(start, -1), x);
+        gap(start, stepEntryCount(start, 1), x);
+      }
+    }
+    expect(worst).toBeLessThanOrEqual(1);
+  });
+  it('a run of Less and More taps drifts by at most 1 kcal per tap', () => {
+    let cur = eat({ kcal: 521 });
+    for (let tap = 1; tap <= 10; tap++) {
+      cur = at(cur, stepEntryCount(cur, tap % 2 ? -1 : 1)!)!;
+      expect(Math.abs(cur.kcal - 521 * portionBasis(cur).x)).toBeLessThanOrEqual(tap);
+    }
+  });
+  it('a worked case: 521 kcal at 1 portion, Less then More', () => {
+    const less = at(eat({ kcal: 521 }), 0.5)!;
+    expect(less.kcal).toBe(261);
+    expect(at(less, 1)!.kcal).toBe(522);
+  });
+});
+
+describe('Less above the food\'s limit', () => {
+  it('Less works on an entry above the limit; More does not', () => {
+    const over = eat({ kcal: 1200, p: 10, c: undefined, f: undefined, x: 8 });
+    expect(stepEntryCount(over, -1, 5)).toBe(7.5);
+    expect(stepEntryCount(over, 1, 5)).toBeNull();
+  });
+});
+
+describe('the 9,999 kcal cap', () => {
+  it('Less then More from 9,999 kcal at 9 portions comes back to 9,999, not a refusal', () => {
+    const top = eat({ kcal: 9999, p: 10, c: undefined, f: undefined, x: 9 });
+    const less = at(top, 8.5)!;
+    expect(less.kcal).toBe(9444);
+    expect(at(less, 9)!.kcal).toBe(9999);
+  });
+  it('a count that is really over the cap is still refused', () => {
+    expect(at(eat({ kcal: 9000, p: 10, c: undefined, f: undefined, x: 4.5 }), 5)).toBeNull();
+  });
+});
+
+describe('one source for Less and More (PR 995 review)', () => {
+  it('Less is allowed above the food\'s limit, and above the ceiling an entry already has; More is not', () => {
+    const over = eat({ kcal: 1200, p: 10, c: undefined, f: undefined, x: 8 });
+    expect(entryTotalsAt(over, 7.5, 5)).toMatchObject({ kcal: 1125, x: 7.5 }); // refused before: 7.5 is above the limit 5
+    expect(entryTotalsAt(over, 8.5, 5)).toBeNull();
+    const synced = eat({ kcal: 120, p: 1, c: undefined, f: undefined, x: 12 }); // the cleaner accepts up to 99
+    expect(stepEntryCount(synced, -1)).toBe(11.5);
+    expect(stepEntryCount(synced, 1)).toBeNull();
+  });
+  it('a stored count is what the cleaner accepts, so what is stored is what was scaled by', () => {
+    const t = entryTotalsAt(eat({ kcal: 300, c: undefined, f: undefined }), 1.333)!;
+    expect(t.x).toBe(1.33);
+    expect(normDietEntry({ ...eat(), kcal: t.kcal, p: t.p, x: t.x })).toMatchObject({ kcal: t.kcal, x: 1.33 });
+  });
+  it('Less then More keeps every amount (rounded display never feeds the scale)', () => {
+    const start = eat({ kcal: 900, c: undefined, f: undefined, micro: { calcium: 100, iron: 3 }, x: 3 });
+    const back = at(at(start, 2.5)!, 3)!;
+    expect(back.micro).toEqual({ calcium: 100, iron: 3 });
+  });
+  it('scales from the entry\'s own one-portion basis for any recorded count', () => {
+    expect(entryTotalsAt(eat({ kcal: 780, p: 63, c: 90, f: 18, x: 1.5 }), 3)).toMatchObject({ kcal: 1560, p: 126, c: 180, f: 36, x: 3 });
+  });
+});
+
+describe('Less then More (review of PR 999)', () => {
+  it('Less then More is exact whenever whole kcal can come back, and off by at most 1 when they cannot (521 at 1 portion)', () => {
+    let impossible = 0;
+    for (let kcal = 1; kcal <= 400; kcal++) {
+      for (const [x, to] of [[1, 0.5], [1.5, 1], [2, 1.5], [3, 2.5], [1.5, 0.5], [2, 1]] as const) {
+        const less = at(eat({ kcal, p: 10, c: undefined, f: undefined, x }), to);
+        if (!less) continue; // under 1 kcal: refused
+        const gap = Math.abs(at(less, x)!.kcal - kcal), exact = (kcal / x) * to;
+        const possible = [Math.floor(exact), Math.ceil(exact)].some(v => v >= 1 && Math.round((v / to) * x) === kcal);
+        if (possible) expect(gap).toBe(0); else { impossible++; expect(gap).toBe(1); }
+      }
+    }
+    expect(impossible).toBeGreaterThan(0);
+  });
+  it('More then Less always returns the starting numbers', () => {
+    for (let kcal = 1; kcal <= 600; kcal++) for (const [x, to] of [[0.5, 1], [1, 1.5], [1, 2], [2.5, 3]] as const) {
+      const start = eat({ kcal, p: 10, c: undefined, f: undefined, x });
+      if (!at(start, to)) continue;
+      expect(at(at(start, to)!, x)!.kcal).toBe(kcal);
+    }
+  });
+  it('grams come back the same way (one decimal)', () => {
+    for (let p = 1; p <= 200; p++) {
+      const start = eat({ kcal: 500, p: p / 10, c: undefined, f: undefined, x: 3 });
+      const back = at(at(start, 2.5)!, 3)!;
+      expect(Math.abs(back.p - start.p)).toBeLessThanOrEqual(0.1 + 1e-9);
+    }
+  });
+  it('the sheet\'s most portions agrees with the row at the 9,999 kcal cap', () => {
+    const per = { kcal: 9999.4 / 9, p: 10, c: null, f: null }; // 9 portions is 9,999.4 kcal, 9.5 is over
+    expect(portionMaxFor(per)).toBe(9);
+    const exactCap = { kcal: 9999.5 / 9, p: 10, c: null, f: null }; // 9,999.5 kcal at 9 portions is the cap, not a refusal
+    expect(totalsAt(exactCap, 9)!.kcal).toBe(9999);
+    expect(totalsAt({ kcal: 10000 / 9, p: 10, c: null, f: null }, 9)).toBeNull();
   });
 });
