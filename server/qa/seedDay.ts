@@ -12,3 +12,8 @@ export function seedToday(now: Date, claimed: unknown): Date {
   const utcDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return Math.abs(noon.getTime() - DAY_MS / 2 - utcDay) <= DAY_MS ? noon : now;
 }
+
+/** Noon UTC of the calendar date on this machine's clock: what a script that seeds from a developer's machine passes, so its "today" and its Sunday week keys are the date and week the local browser shows (the reset route does the same from the browser's claim). */
+export function localSeedDay(now: Date): Date {
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12));
+}
