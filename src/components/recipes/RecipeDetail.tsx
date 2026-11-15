@@ -130,7 +130,7 @@ const Summary = ({ recipe, mine, per, home, last }: { recipe: Recipe; mine: bool
   const cells = [per && { k: 'per', v: `${per} per serving` }, home && { k: 'home', v: home }, last && { k: 'last', v: last }].filter(Boolean) as { k: string; v: string }[];
   return (
     <>
-      {cells.length > 0 && <ul className="rc-strip" aria-label="Summary">{cells.map(c => <li key={c.k} className={`rc-strip-${c.k}`}>{c.v}</li>)}</ul>}
+      {cells.length > 0 && <ul className="rc-strip" aria-label="Summary">{cells.map(c => <li key={c.k} className={c.k === 'per' ? 'rc-strip-per' : undefined}>{c.v}</li>)}</ul>}
       {!mine && !per && <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>}
     </>
   );
