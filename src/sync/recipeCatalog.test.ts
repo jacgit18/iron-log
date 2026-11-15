@@ -7,6 +7,16 @@ describe('cleanLibraryRecipe', () => {
   it('keeps what is usable and trims the rest', () => {
     expect(cleanLibraryRecipe(row)).toEqual({ id: 'c:wbc:r1', name: 'Dip', data: { recipe: { cat: 'sauces', ing: ['1 cup yogurt'], steps: ['Stir.'], servings: 4 } } });
   });
+  it('keeps the estimated numbers when all are there, and drops them when the answer has none or a half set (older API)', () => {
+    const est = { kcal: 310.4, p: 20.5, c: 30, f: 11, micro: { iron: 2.5, bogus: 1 }, est: { of: 7, n: 8, sEst: true } };
+    const withEst = (extra: object) => cleanLibraryRecipe({ ...row, data: { recipe: { ...row.data.recipe, ...extra } } })?.data.recipe;
+    expect(withEst(est)).toMatchObject({ kcal: 310, p: 20.5, c: 30, f: 11, micro: { iron: 2.5 }, est: { of: 7, n: 8, sEst: true } });
+    expect(withEst({ ...est, est: { of: 8, n: 8 } })?.est).toEqual({ of: 8, n: 8 });
+    expect(cleanLibraryRecipe(row)?.data.recipe).not.toHaveProperty('est');
+    expect(withEst({ ...est, f: undefined })).not.toHaveProperty('kcal');
+    expect(withEst({ ...est, est: { of: 9, n: 8 } })).not.toHaveProperty('est');
+    expect(withEst({ ...est, kcal: -1 })).not.toHaveProperty('est');
+  });
   it('turns an unknown category into Other and refuses a row with no ingredients, steps, c: id or recipe', () => {
     expect(cleanLibraryRecipe({ ...row, data: { recipe: { ...row.data.recipe, cat: 'soup' } } })?.data.recipe?.cat).toBe('other');
     expect(cleanLibraryRecipe({ ...row, data: { recipe: { ...row.data.recipe, steps: [] } } })).toBeNull();
