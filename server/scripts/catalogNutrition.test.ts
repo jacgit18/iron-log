@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../db/types.ts';
 import type { LineMatch } from '../../src/shared/ingredientMatch.ts';
 import { cleanLineMatch, normalizeLine } from '../../src/shared/ingredientMatch.ts';
-import { cacheKey, type Resolved } from '../ingredients.ts';
+import { cacheKey, RESOLVER_VERSION, type Resolved } from '../ingredients.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 import {
   applyResults, costUsd, emptyResults, estimatorError, MAX_PASSES, MAX_RUNS, memoryCache, needsRetry, outcomeOf, parseResults, portionMedians, project, resolveRecipes, rollUp, sampleOf, type BatchRecipe,
@@ -77,6 +77,17 @@ describe('resolveRecipes', () => {
     const third = await resolveRecipes({ recipes, results: fresh, resolve: f.resolve, price: PRICE, ceilingUsd: 50 });
     expect(third.runUsd).toBe(0);
     expect(fresh.records).toEqual(results.records);
+  });
+
+  it('a results file from an older resolver version drops its records and no-match recipes and redoes them', async () => {
+    const f = fake({}, food), results = emptyResults();
+    await resolveRecipes({ recipes, results, resolve: f.resolve, price: PRICE, ceilingUsd: 50 });
+    results.resolver = RESOLVER_VERSION - 1;
+    results.none['c:wbc:old'] = 'too few lines counted';
+    const rep = await resolveRecipes({ recipes, results, resolve: f.resolve, price: PRICE, ceilingUsd: 50 });
+    expect(rep).toMatchObject({ attempted: 2, alreadyDone: 0, records: 2 });
+    expect(results.resolver).toBe(RESOLVER_VERSION);
+    expect(results.none).toEqual({});
   });
 
   it('stops before the next recipe once the total spend (across runs) reaches the ceiling', async () => {

@@ -79,6 +79,16 @@ describe('rankForTerm: USDA answers ordered for the term (names as USDA gave the
     const usda = ['Rolls, dinner, oat bran', 'Oats, whole grain, rolled, old fashioned', 'Oats, puffed', 'Oil, oat', 'Rolls, french', 'Bagels, oat bran'];
     expect(top('oats, rolled', usda, 1)).toEqual(['Oats, whole grain, rolled, old fashioned']);
   });
+  it('meets singular and plural terms, and sinks a lead that is a made-over form (apple juice, tomato powder)', () => {
+    const apples = ['Apple juice, canned', 'Applesauce, canned', 'Apples, raw, with skin', 'Apples, dehydrated (low moisture)'];
+    expect(top('apple, raw', apples, 1)).toEqual(['Apples, raw, with skin']);
+    expect(top('apples, raw', apples, 1)).toEqual(['Apples, raw, with skin']);
+    expect(top('olive oil', ['Olives, ripe, canned', 'Oil, olive, salad or cooking', 'Olive oil'], 1)).toEqual(['Olive oil']);
+    expect(top('tomatoes, raw', ['Tomato powder', 'Tomatoes, sun-dried', 'Tomatoes, red, ripe, raw, year round average'], 1)).toEqual(['Tomatoes, red, ripe, raw, year round average']);
+  });
+  it('does not prefer a short name: equal scores keep USDA\'s order', () => {
+    expect(top('tomatoes, raw', ['Tomatoes, red, ripe, raw, year round average', 'Tomatoes, green, raw'], 1)).toEqual(['Tomatoes, red, ripe, raw, year round average']);
+  });
   it('keeps a part or form the term asks for, keeps USDA\'s order between equals, and never drops a food', () => {
     expect(termScore('milk, dry', 'Milk, dry, whole, with added vitamin D')).toBeGreaterThan(termScore('milk, dry', 'Milk, whole, 3.25% milkfat, with added vitamin D'));
     expect(top('eggs', ['Egg, whole, raw, fresh', 'Egg, whole, raw, frozen'], 2)[0]).toBe('Egg, whole, raw, fresh');
