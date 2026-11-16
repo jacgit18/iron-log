@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { macroLine } from '../../lib/macroLine.js';
 import { resolveLines, type Resolve } from '../../lib/ingredientsClient.js';
-import { applyFill, breakdownFor, countedLines, countedText, couldCount, failureText, fillLines, fillNumbers, fillRows, hasNumbers, savedText, validServings, type FillMode, type RowState } from '../../lib/recipeFill.js';
+import { applyFill, breakdownFor, countedLines, countedText, couldCount, failureText, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, savedText, validServings, type FillMode, type RowState } from '../../lib/recipeFill.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
 import MealMicroBars from './MealMicroBars.js';
@@ -40,6 +40,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
   const total = got ? couldCount(got) : 0;
   const anyCountable = rows.some(r => r.countable);
   const choose = hasNumbers(recipe);
+  const blanksWrite = !!filled && fillWrites(recipe, filled, 'blanks'); // false: every number is already typed, so "blanks" would change nothing
   const toggle = (i: number) => setOff(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
 
   const save = (mode: FillMode) => {
@@ -85,11 +86,12 @@ export default function FillNutritionSheet({ id }: { id: string }) {
           {answer?.ok && answer.left !== null && <p className="note">{answer.left} fill{answer.left === 1 ? '' : 's'} left today.</p>}
         </>
       )}
+      {got && anyCountable && choose && filled && !blanksWrite && <p className="note" role="status">Every number is already filled in, so there are no blanks. Replace all would change them.</p>}
       {error && <p className="note" role="alert">{error}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={closeModal}>{answer && !answer.ok ? 'Close' : 'Cancel'}</button>
         {got && anyCountable && choose && <button type="button" className="btn" disabled={!filled} onClick={() => save('replace')}>Replace all</button>}
-        {got && anyCountable && choose && <button type="button" className="btn primary" disabled={!filled} onClick={() => save('blanks')}>Fill only the blanks</button>}
+        {got && anyCountable && choose && <button type="button" className="btn primary" disabled={!blanksWrite} onClick={() => save('blanks')}>Fill only the blanks</button>}
         {got && anyCountable && !choose && <button type="button" className="btn primary" disabled={!filled} onClick={() => save('blanks')}>Save</button>}
       </div>
     </Sheet>

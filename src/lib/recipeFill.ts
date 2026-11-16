@@ -87,20 +87,34 @@ const has = (n: number | undefined) => n !== undefined;
 export const hasNumbers = (r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro'>): boolean => has(r.kcal) || has(r.p) || has(r.c) || has(r.f) || Object.keys(r.micro ?? {}).length > 0;
 
 /** The fields to write. `replace` takes every filled value (and drops an old vitamin the fill does not list); `blanks` keeps each typed number and each existing `micro` key and only adds what is missing. The mark is set in both. Servings are written only when the recipe has none. */
-export function applyFill(recipe: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'servings'>, filled: Filled, mode: FillMode, servings: number): FillFields {
+export function applyFill(recipe: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'servings' | 'est'>, filled: Filled, mode: FillMode, servings: number): FillFields {
   const keep = mode === 'blanks';
   const pick = (old: number | undefined, nu: number | undefined) => (keep && has(old) ? old : nu);
   const micro = keep ? { ...filled.micro, ...recipe.micro } : filled.micro;
-  const out: FillFields = { est: filled.est };
+  const out: FillFields = {};
   const kcal = pick(recipe.kcal, filled.kcal), p = pick(recipe.p, filled.p), c = pick(recipe.c, filled.c), f = pick(recipe.f, filled.f);
   if (kcal !== undefined) out.kcal = kcal;
   if (p !== undefined) out.p = p;
   if (c !== undefined) out.c = c;
   if (f !== undefined) out.f = f;
   if (micro && Object.keys(micro).length) out.micro = micro;
+  // A fill that wrote no value (every number already typed, "blanks") leaves the recipe as it was: no mark, no servings (review finding 3).
+  if (!wroteValue(recipe, out)) return fieldsOfPick(recipe);
   out.servings = recipe.servings ?? servings;
+  out.est = filled.est;
   return out;
 }
+
+const keyed = (m: Micro | undefined) => Object.entries(m ?? {}).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join(',');
+const wroteValue = (r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro'>, out: FillFields): boolean => out.kcal !== r.kcal || out.p !== r.p || out.c !== r.c || out.f !== r.f || keyed(out.micro) !== keyed(r.micro);
+
+/** Whether saving in this mode would change any value; the sheet turns the button off (and says why) when it would not. */
+export const fillWrites = (recipe: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'servings' | 'est'>, filled: Filled, mode: FillMode): boolean => {
+  const { est: _e, servings: _s, ...v } = applyFill(recipe, filled, mode, 1);
+  return wroteValue(recipe, v);
+};
+
+const fieldsOfPick = (r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'servings' | 'est'>): FillFields => ({ ...(has(r.kcal) ? { kcal: r.kcal! } : {}), ...(has(r.p) ? { p: r.p! } : {}), ...(has(r.c) ? { c: r.c! } : {}), ...(has(r.f) ? { f: r.f! } : {}), ...(r.micro ? { micro: r.micro } : {}), ...(r.servings ? { servings: r.servings } : {}), ...(r.est ? { est: r.est } : {}) });
 
 /** The recipe's current values of the Fill fields, for Undo. */
 export const fieldsOf = (r: Recipe): FillFields => ({ ...(has(r.kcal) ? { kcal: r.kcal! } : {}), ...(has(r.p) ? { p: r.p! } : {}), ...(has(r.c) ? { c: r.c! } : {}), ...(has(r.f) ? { f: r.f! } : {}), ...(r.micro ? { micro: r.micro } : {}), ...(r.servings ? { servings: r.servings } : {}), ...(r.est ? { est: r.est } : {}) });

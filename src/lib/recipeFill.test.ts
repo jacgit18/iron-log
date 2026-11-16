@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LineMatch } from '../shared/ingredientMatch.js';
 import type { Recipe } from '../types.ts';
-import { applyFill, breakdownFor, canFill, countedLines, couldCount, fieldsOf, fillLines, fillNumbers, fillRows, hasNumbers, validServings, withFields } from './recipeFill.js';
+import { applyFill, breakdownFor, canFill, countedLines, couldCount, fieldsOf, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, validServings, withFields } from './recipeFill.js';
 
 const m = (line: string, grams: number, per100: LineMatch['per100'], over: Partial<LineMatch> = {}): LineMatch => ({ line, status: 'matched', fdcId: 1, food: line, grams, gramsFrom: 'text', confidence: 'high', per100, ...over });
 const rice = m('200 g rice', 200, { id: 1, name: 'Rice', kcal: 130, p: 2.7, c: 28, f: 0.3, micro: { iron: 1, zinc: 1 } });
@@ -96,6 +96,17 @@ describe('applyFill (Done when 4)', () => {
   it('with nothing typed both modes agree, and a recipe with no servings gets the typed value', () => {
     expect(applyFill({}, filled, 'blanks', 3)).toEqual(applyFill({}, filled, 'replace', 3));
     expect(applyFill({}, filled, 'blanks', 3).servings).toBe(3);
+  });
+  it('a fill that writes no value leaves the recipe as it was: no mark, no servings (review finding 3)', () => {
+    const typed = { kcal: 500, p: 20, c: 60, f: 10, micro: { iron: 9, zinc: 3 } };
+    const out = applyFill(typed, filled, 'blanks', 4);
+    expect(out).toEqual(typed);
+    expect(out.est).toBeUndefined();
+    expect(fillWrites(typed, filled, 'blanks')).toBe(false);
+    expect(fillWrites(typed, filled, 'replace')).toBe(true);
+    expect(fillWrites({ ...typed, f: undefined } as never, filled, 'blanks')).toBe(true);
+    const had = { ...typed, est: { of: 1, n: 2 } };
+    expect(applyFill(had, filled, 'blanks', 4).est).toEqual({ of: 1, n: 2 }); // an earlier mark is not touched either
   });
   it('an existing zero is a typed number and kept', () => {
     expect(applyFill({ f: 0 }, filled, 'blanks', 1).f).toBe(0);
