@@ -22,6 +22,15 @@ describe('setGroceryReceiptShare', () => {
     expect(line()?.share).toEqual({ with: ['sam'] });
     expect(st().grocery.items.find(i => i.id === riceId())?.share).toBeUndefined(); // setGroceryLineShare would have made this the usual
   });
+  it('takes the packs too: a pack\'s own split would otherwise beat the receipt split', () => {
+    st().setGroceryGot('2026-11', riceId(), true);
+    st().setGroceryPrices('2026-11', riceId(), [500, 520]);
+    st().setGroceryPackShare('2026-11', riceId(), 0, { with: ['alex'] });
+    expect(line()?.packShares?.[0]).toEqual({ with: ['alex'] });
+    st().setGroceryReceiptShare('2026-11', riceId(), { with: ['sam'] });
+    expect(line()?.packShares).toBeUndefined();
+    expect(line()?.share).toEqual({ with: ['sam'] });
+  });
   it('null clears it, and a missing item is ignored', () => {
     st().setGroceryReceiptShare('2026-11', riceId(), { with: ['sam'] });
     st().setGroceryReceiptShare('2026-11', riceId(), null);

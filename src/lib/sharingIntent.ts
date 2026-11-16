@@ -12,3 +12,10 @@ export const wantsSharing = (): boolean => want;
 /** The receipt to reopen after Done; null when Sharing was not opened from a receipt. */
 export const resumeModal = (): Record<string, unknown> | null => stash;
 export function clearSharingIntent(): void { want = false; stash = null; }
+
+/** After Done, Inventory hands the receipt to Shopping's scan code, which reopens it with its own callbacks (so Apply there shows the Applied notice and Undo). It expires after a few
+ *  seconds, so a receipt that was never reopened cannot come back later by surprise. */
+let ready: { modal: Record<string, unknown>; at: number } | null = null;
+export const READY_MS = 8000;
+export function readyResume(modal: Record<string, unknown>, now = Date.now()): void { ready = { modal, at: now }; }
+export function takeReadyResume(now = Date.now()): Record<string, unknown> | null { const r = ready; ready = null; return r && now - r.at < READY_MS ? r.modal : null; }

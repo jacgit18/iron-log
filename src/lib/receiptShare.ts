@@ -48,10 +48,31 @@ export function shareWrites(c: ShareChoices, rows: readonly ShareRow[], ids: Rea
   return out;
 }
 
-/** What the shown picker says for the whole receipt: the whole split when one is chosen, else the first ticked row's usual (the picker needs people to tick). */
-export function wholeParties(g: Grocery, c: ShareChoices, usual: readonly (string[] | undefined)[]): string[] {
+/** What the shown picker says for the whole receipt: the whole split when one is chosen; else the usual split the ticked rows all share; else (their usual splits differ, or there are none) just you,
+ *  so ticking a person starts from a plain base instead of copying one row's split onto every row. */
+export function wholeParties(g: Grocery, c: ShareChoices, usual: readonly (readonly string[])[]): string[] {
   if (c.whole) return partiesOf(c.whole, undefined, knownPeople(g));
-  return usual.find((p): p is string[] => !!p) ?? [ME];
+  const first = usual[0];
+  return first && usual.every(p => p.length === first.length && p.every((id, i) => id === first[i])) ? [...first] : [ME];
+}
+
+/** The sheet's rows that count for the split: ticked, matched to an item and priced. `choices` is the sheet's per-line choices (a row takes its first line's). */
+export interface SheetRow { key: string; lines: readonly number[]; grossCents: number; netCents: number }
+export function tickedRows(rows: readonly SheetRow[], choices: readonly { itemId: string | null; include: boolean }[]): ShareRow[] {
+  return rows.flatMap(r => {
+    const c = choices[r.lines[0]!];
+    return c && c.itemId && c.include && r.grossCents > 0 ? [{ key: r.key, itemId: c.itemId, include: true, cents: r.netCents }] : [];
+  });
+}
+
+/** What the owed line counts: one entry per item, the cents of all its rows and the split of its first row, the same row Apply writes for it, so the line says what Who owes who will say. */
+export function owedRows(rows: readonly ShareRow[], partiesOf: (row: ShareRow) => readonly string[]): { cents: number; parties: readonly string[] }[] {
+  const byItem = new Map<string, { cents: number; parties: readonly string[] }>();
+  for (const r of rows) {
+    const had = byItem.get(r.itemId ?? r.key);
+    if (had) had.cents += r.cents; else byItem.set(r.itemId ?? r.key, { cents: r.cents, parties: partiesOf(r) });
+  }
+  return [...byItem.values()];
 }
 
 /** The live line over the sheet: what each person owes you and your share of the ticked rows. If someone else paid for the store, only your share is said (the settle-up on Who owes who

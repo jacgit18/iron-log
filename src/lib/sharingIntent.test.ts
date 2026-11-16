@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { askSharing, clearSharingIntent, resumeModal, wantsSharing } from './sharingIntent.js';
+import { READY_MS, askSharing, clearSharingIntent, readyResume, resumeModal, takeReadyResume, wantsSharing } from './sharingIntent.js';
 
 afterEach(clearSharingIntent);
 
@@ -19,5 +19,18 @@ describe('sharing intent', () => {
     clearSharingIntent();
     expect(wantsSharing()).toBe(false);
     expect(resumeModal()).toBeNull();
+  });
+});
+
+describe('ready resume', () => {
+  it('is handed to the scan screen once', () => {
+    const modal = { type: 'receipt' };
+    readyResume(modal, 1000);
+    expect(takeReadyResume(2000)).toBe(modal);
+    expect(takeReadyResume(2000)).toBeNull();
+  });
+  it('expires, so an old receipt never comes back by surprise', () => {
+    readyResume({ type: 'receipt' }, 1000);
+    expect(takeReadyResume(1000 + READY_MS)).toBeNull();
   });
 });

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import type { Modal } from '../../store/types.js';
 import { byStore, emptyMonth, groupTag, haveOf, lineOf, lineTotal, withoutUsed } from '../../lib/grocery.js';
 import { itemHistory, lastBoughtText } from '../../lib/itemHistory.js';
 import { DEFAULT_GROCERY_SORT, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
@@ -10,7 +9,7 @@ import { editSummaryText } from '../../lib/groceryListSummary.js';
 import { ALL_CHIP, chipGroups, chipsOf, haveCount, resolveChip, showChips } from '../../lib/groceryChips.js';
 import { boughtMonthText, homeFilterChips, homeFilterEmpty, homeFilterItems, toBuyText, type HomeFilter } from '../../lib/groceryHomeState.js';
 import { dailyFix } from '../../lib/route.js';
-import { clearSharingIntent, resumeModal, wantsSharing } from '../../lib/sharingIntent.js';
+import { clearSharingIntent, readyResume, resumeModal, wantsSharing } from '../../lib/sharingIntent.js';
 import EmptyTiles from '../EmptyTiles.js';
 import { navigate } from '../useRoute.js';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
@@ -97,7 +96,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
       {!hasSharing(g) && !sharingOpen && g.items.length > 0 && (
         <p className="note gshareprompt">Buy groceries with other people? <button type="button" className="btn sm ghost" id="groc-sharing-prompt" onClick={() => setSharingOpen(true)}>Set up sharing</button></p>
       )}
-      {sharingOpen && <SharingGroups g={g} onDone={() => { focusAfter.current = 'groc-sharing'; setSharingOpen(false); setSharingSaved(true); const back = resume.current; if (back) { resume.current = null; navigate('daily/grocery/shopping', 'replace'); useAppStore.getState().openModal(back as unknown as Modal); } }} />}
+      {sharingOpen && <SharingGroups g={g} onDone={() => { focusAfter.current = 'groc-sharing'; setSharingOpen(false); setSharingSaved(true); const back = resume.current; if (back) { resume.current = null; readyResume(back); navigate('daily/grocery/shopping', 'replace'); } }} />}
       {sharingSaved && !sharingOpen && <p className="note" role="status">Sharing saved.</p>}
       <RemovedNotice scope="grocery" />
       {haveErr && <p className="note gerr" role="alert">{haveErr}</p>}

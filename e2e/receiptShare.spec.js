@@ -63,6 +63,19 @@ test.describe('with a sharing group', () => {
   });
 });
 
+test('Who owes who reads the shares Apply wrote', async ({ page }) => {
+  await open(page, { group: true });
+  const sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Shared with, for this receipt: Just me').click();
+  await sheet.getByRole('group', { name: 'Split this receipt' }).getByLabel('Sam').check();
+  await sheet.getByRole('button', { name: /^Apply/ }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.click('#groc-view-bought');
+  const toggle = page.locator('.gsplittoggle');
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
+  await expect(page.getByRole('region', { name: 'Who owes who' })).toContainText('Sam owes you');
+});
+
 test.describe('with no sharing group', () => {
   test('the offer shows, Not now folds it to a link, and Split it brings it back', async ({ page }) => {
     await open(page, { group: false });
@@ -91,6 +104,25 @@ test.describe('with no sharing group', () => {
     await expect(back.getByRole('heading', { name: 'Receipt', exact: true })).toBeVisible();
     await expect(back.getByRole('group', { name: 'Split this receipt' })).toContainText('All yours');
     await expect(back.getByLabel('Shared with, for this receipt: Just me')).toBeVisible();
+  });
+
+  test('after the round trip the sheet keeps its edits, and Apply shows the Applied notice with Undo', async ({ page }) => {
+    await open(page, { group: false });
+    const sheet = page.getByRole('dialog');
+    await sheet.getByLabel('Item for RICE 5LB').selectOption({ label: 'Not on your list' }); // an edit made before leaving
+    await sheet.getByRole('button', { name: 'Make a sharing group' }).click();
+    await page.getByLabel('New group', { exact: true }).fill('Home');
+    await page.getByLabel('People in the new group, separated by commas').fill('Sam');
+    await page.getByRole('button', { name: 'Add group' }).click();
+    await page.getByRole('region', { name: 'Sharing' }).getByRole('button', { name: 'Done' }).click();
+    const back = page.getByRole('dialog');
+    await expect(back.getByRole('heading', { name: 'Receipt', exact: true })).toBeVisible();
+    await expect(back.getByLabel('Item for RICE 5LB')).toHaveValue(''); // still unmatched, as it was left
+    await back.getByRole('button', { name: /^Apply/ }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible(); // the reopened sheet has this screen's own callbacks
+    await page.getByRole('button', { name: 'Undo' }).click();
+    expect(Object.keys(await monthLines(page))).toEqual([]);
   });
 
   test('opening Sharing any other way does not reopen a receipt', async ({ page }) => {

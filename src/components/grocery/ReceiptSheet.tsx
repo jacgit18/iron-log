@@ -4,7 +4,8 @@ import { aliasAddsFor, applyNames, movedFrom, resolveName, savedNamesText, type 
 import { MAX_STORES, RESERVED_STORE, isReservedName, money, monthLabel, withoutUsed } from '../../lib/grocery.js';
 import { allPeople, hasSharing } from '../../lib/grocerySettle.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
-import { NO_CHOICES, applyShares, isOwnRow, owedText, rowParties, setRow, setWhole, shareForRow, shareWrites, wholeParties, wholeIsSet, type ShareChoices } from '../../lib/receiptShare.js';
+import { ME } from '../../lib/grocerySplit.js';
+import { NO_CHOICES, applyShares, isOwnRow, owedRows, owedText, rowParties, setRow, setWhole, shareForRow, shareWrites, tickedRows, wholeParties, wholeIsSet, type ShareChoices } from '../../lib/receiptShare.js';
 import { earlierText, missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
@@ -21,6 +22,9 @@ import SharePicker from './SharePicker.js';
 import type { Applied } from './ReceiptScan.js';
 import './ReceiptScan.css';
 
+/** The sheet's own edits, carried through Make a sharing group so the receipt comes back as it was left (the split choices are not kept: there was no group to choose with). */
+interface Restore { choices: Choice[]; renames: Record<string, string>; touched: string[]; noRemember: string[]; separate: string[]; pickedStore: string; staged: Staged[]; seq: number }
+
 // The receipt review sheet (brief receipt-scan): each line with the item it matched, its quantity and its price after any discount; change a match, untick a
 // line, check the total, then Apply. The plan and the checks are pure (lib/groceryReceipt.ts); this only holds the choices. Nothing is written before Apply.
 // A line with no item can be added to the list (brief receipt-add-item): the item is staged here, shown as New, and created only at Apply.
@@ -36,22 +40,23 @@ export default function ReceiptSheet() {
   const canKeep = !!modal?.image; // the photo is held by Scan receipt only for an account that has Receipts (brief receipt-save-photo)
   const onKeep = modal?.onKeep as ((meta: KeepMeta) => void) | undefined;
   const remembered = (modal?.remembered ?? {}) as Record<number, string>; // line index to the item a saved receipt name matched it to (brief receipt-rename-memory)
-  const [renames, setRenames] = useState<Record<string, string>>({}); // item id to the name typed on the sheet; the item takes it at Apply
-  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set()); // row keys whose name or item the person changed: only those can be remembered
-  const [noRemember, setNoRemember] = useState<ReadonlySet<string>>(() => new Set()); // row keys whose Remember tick is off (on by default)
+  const restore = modal?.restore as Restore | undefined; // the sheet's own edits, kept while the person made a sharing group and came back (brief receipt-share)
+  const [renames, setRenames] = useState<Record<string, string>>(() => restore?.renames ?? {}); // item id to the name typed on the sheet; the item takes it at Apply
+  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set(restore?.touched)); // row keys whose name or item the person changed: only those can be remembered
+  const [noRemember, setNoRemember] = useState<ReadonlySet<string>>(() => new Set(restore?.noRemember)); // row keys whose Remember tick is off (on by default)
   const [keep, setKeep] = useState(false); // off for every receipt: nothing is uploaded unless this is ticked and Apply is pressed
-  const [separate, setSeparate] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-merge-lines: text keys whose lines the person split back into their own rows (sheet only)
-  const [choices, setChoices] = useState<Choice[]>(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId }))); // the lines of one row share a match (groupLines), so they start with one choice
-  const [pickedStore, setPickedStore] = useState('');
+  const [separate, setSeparate] = useState<ReadonlySet<string>>(() => new Set(restore?.separate)); // brief receipt-merge-lines: text keys whose lines the person split back into their own rows (sheet only)
+  const [choices, setChoices] = useState<Choice[]>(() => (restore?.choices?.length === receipt?.lines.length ? restore!.choices : (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId })))); // the lines of one row share a match (groupLines), so they start with one choice
+  const [pickedStore, setPickedStore] = useState(restore?.pickedStore ?? '');
   const [usual, setUsual] = useState<boolean | null>(null); // null until the box is touched: then ticked only when every moved item has no usual store; ticked, Apply also makes the receipt's store the items' usual store
   const monthLines = useAppStore(s => s.groceryMonths[mk]?.lines);
   const monthData = useAppStore(s => s.groceryMonths[mk]);
   const [shareChoices, setShareChoices] = useState<ShareChoices>(NO_CHOICES); // brief receipt-share: who shares what this receipt buys (null: each line keeps its usual)
   const [splitHidden, setSplitHidden] = useState(false); // Not now on the offer to make a sharing group
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-reconcile-ticked: ticked items the receipt does not show that the person chose to untick (off for every receipt)
-  const [stagedRaw, setStaged] = useState<Staged[]>([]);
+  const [stagedRaw, setStaged] = useState<Staged[]>(() => restore?.staged ?? []);
   const [form, setForm] = useState<{ line: number; draft: ItemDraft; error: string } | null>(null); // one form open at a time
-  const seq = useRef(0);
+  const seq = useRef(restore?.seq ?? 0);
   const [addOn, setAddOn] = useState(true); // brief receipt-add-store: ticked by default, and only offered when the receipt names a store the list does not have
   const [storeError, setStoreError] = useState(''); // the store could not be added: Apply stops here and nothing else is written
   const [typedName, setTypedName] = useState<string | null>(null); // null: the tidied name read from the photo, untouched
@@ -74,10 +79,10 @@ export default function ReceiptSheet() {
   const people = allPeople(g);
   const sharing = hasSharing(g) && people.length > 0; // the split shows where sharing shows today: once a group exists
   const withItem = [...listed, ...staged.map(x => ({ ...x, every: false, out: false }))];
-  const shareRows = rows.flatMap(r => { const c = choices[r.lines[0]!]!; return c.itemId && c.include && r.grossCents > 0 ? [{ key: r.key, itemId: c.itemId, include: true, cents: r.netCents }] : []; });
-  const partiesOfRow = (key: string, itemId: string | null) => rowParties(g, withItem.find(x => x.id === itemId), itemId ? monthLines?.[itemId] : undefined, shareForRow(shareChoices, key));
-  const owed = sharing ? owedText(g, monthData, taxStore, shareRows.map(r => ({ cents: r.cents, parties: partiesOfRow(r.key, r.itemId) })), people) : '';
-  const makeGroup = () => { askSharing(modal as unknown as Record<string, unknown>); leaveSheet(window.history, window, () => navigate('daily/grocery/inventory', 'push'), closeModal); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
+  const shareRows = tickedRows(rows, choices);
+  const partiesByKey = new Map(shareRows.map(r => [r.key, rowParties(g, withItem.find(x => x.id === r.itemId), monthLines?.[r.itemId!], shareForRow(shareChoices, r.key))] as const)); // once per render: the box, the chips and the owed line all read it
+  const owed = sharing ? owedText(g, monthData, taxStore, owedRows(shareRows, r => partiesByKey.get(r.key)!), people) : '';
+  const makeGroup = () => { askSharing({ ...(modal as unknown as Record<string, unknown>), restore: { choices, renames, touched: [...touched], noRemember: [...noRemember], separate: [...separate], pickedStore, staged: stagedRaw, seq: seq.current } satisfies Restore }); leaveSheet(window.history, window, () => navigate('daily/grocery/inventory', 'push'), closeModal); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
 
   const check = checkText(plan.check);
   const dateMonth = receipt.date ? receipt.date.slice(0, 7) : null;
@@ -178,7 +183,7 @@ export default function ReceiptSheet() {
         <div className="rcnums"><span>Lines {money(plan.check.linesCents)}</span><span>Tax {money(plan.check.taxCents)}</span>{plan.check.totalCents !== null && <span>Receipt total {money(plan.check.totalCents)}</span>}</div>
         <small>{check.text}</small>
       </div>
-      {sharing && shareRows.length > 0 && <ReceiptSplitBox people={people} parties={wholeParties(g, shareChoices, shareRows.map(r => partiesOfRow(r.key, r.itemId)))} own={wholeIsSet(shareChoices)} owed={owed} onChange={sh => setShareChoices(c => setWhole(c, sh))} />}
+      {sharing && shareRows.length > 0 && <ReceiptSplitBox people={people} parties={wholeParties(g, shareChoices, shareRows.map(r => partiesByKey.get(r.key)!))} own={wholeIsSet(shareChoices)} owed={owed} onChange={sh => setShareChoices(c => setWhole(c, sh))} />}
       {!sharing && !hasSharing(g) && shareRows.length > 0 && <ReceiptSplitOffer hidden={splitHidden} onMake={makeGroup} onHide={() => setSplitHidden(true)} onShow={() => setSplitHidden(false)} />}
       <ul className="rclines" aria-label="Receipt lines">
         {rows.map((l, i) => {
@@ -209,7 +214,7 @@ export default function ReceiptSheet() {
                 matched={l.lines.some(j => remembered[j] !== undefined && choices[j]!.itemId === remembered[j])} movedFrom={c.itemId ? movedFrom(g.items, l.text, c.itemId)?.n : undefined} onCommit={t => commitName(i, t)} />
               {sharing && !off && priced && (
                 <span className="rcshare">
-                  <SharePicker name={l.text} people={people} parties={partiesOfRow(l.key, c.itemId)} own={isOwnRow(shareChoices, l.key)} resetLabel={wholeIsSet(shareChoices) ? 'Same as the whole receipt' : 'Use the usual'} onChange={sh => setShareChoices(x => setRow(x, l.key, sh))} />
+                  <SharePicker name={l.text} people={people} parties={partiesByKey.get(l.key) ?? [ME]} own={isOwnRow(shareChoices, l.key)} resetLabel={wholeIsSet(shareChoices) ? 'Same as the whole receipt' : 'Use the usual'} onChange={sh => setShareChoices(x => setRow(x, l.key, sh))} />
                 </span>
               )}
               {merged && (

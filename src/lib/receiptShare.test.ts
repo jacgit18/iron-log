@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_CHOICES, applyShares, isOwnRow, owedText, rowParties, setRow, setWhole, shareForRow, shareWrites, wholeParties } from './receiptShare.js';
+import { NO_CHOICES, applyShares, isOwnRow, owedRows, owedText, rowParties, setRow, setWhole, shareForRow, shareWrites, tickedRows, wholeParties } from './receiptShare.js';
 import { ME } from './grocerySplit.js';
 import type { Grocery, GroceryItem, GroceryMonth } from '../types.ts';
 
@@ -40,9 +40,10 @@ describe('rowParties and wholeParties', () => {
     expect(rowParties(home, item('milk'), undefined, null)).toEqual([ME, 'sam', 'alex']);
     expect(rowParties(g(), undefined, undefined, null)).toEqual([ME]);
   });
-  it('the whole picker shows the whole split, else the first ticked row usual', () => {
+  it('the whole picker shows the whole split, else the usual split every ticked row shares, else just you', () => {
     expect(wholeParties(g(), setWhole(NO_CHOICES, { with: ['alex'] }), [[ME]])).toEqual([ME, 'alex']);
-    expect(wholeParties(g(), NO_CHOICES, [undefined, [ME, 'sam']])).toEqual([ME, 'sam']);
+    expect(wholeParties(g(), NO_CHOICES, [[ME, 'sam'], [ME, 'sam']])).toEqual([ME, 'sam']);
+    expect(wholeParties(g(), NO_CHOICES, [[ME, 'sam'], [ME]])).toEqual([ME]); // differing usual splits: ticking a person must not copy one row onto the others
     expect(wholeParties(g(), NO_CHOICES, [])).toEqual([ME]);
   });
 });
@@ -94,5 +95,23 @@ describe('shareWrites and applyShares', () => {
     const n = applyShares([{ id: 'milk', share: { with: ['sam'] } }, { id: 'bread', share: { with: [] } }], '2026-11', { setGroceryReceiptShare: (m, id, s) => { calls.push(`${m} ${id} ${JSON.stringify(s)}`); } });
     expect(n).toBe(2);
     expect(calls).toEqual(['2026-11 milk {"with":["sam"]}', '2026-11 bread {"with":[]}']);
+  });
+});
+
+describe('tickedRows and owedRows', () => {
+  const rows = [
+    { key: 'a', lines: [0], grossCents: 429, netCents: 429 },
+    { key: 'b', lines: [1], grossCents: 399, netCents: 399 },
+    { key: 'c', lines: [2], grossCents: 0, netCents: 0 },
+    { key: 'd', lines: [3], grossCents: 100, netCents: 100 },
+  ];
+  const choices = [{ itemId: 'milk', include: true }, { itemId: 'bread', include: false }, { itemId: 'eggs', include: true }, { itemId: null, include: true }];
+  it('counts only ticked, matched, priced rows, at their net price', () => {
+    expect(tickedRows(rows, choices)).toEqual([{ key: 'a', itemId: 'milk', include: true, cents: 429 }]);
+  });
+  it('two rows on one item are one entry that takes the first row split, as Apply writes it', () => {
+    const two = [{ key: 'a', itemId: 'milk', include: true, cents: 400 }, { key: 'b', itemId: 'milk', include: true, cents: 100 }, { key: 'c', itemId: 'rice', include: true, cents: 50 }];
+    const parties: Record<string, string[]> = { a: [ME, 'sam'], b: [ME], c: [ME] };
+    expect(owedRows(two, r => parties[r.key]!)).toEqual([{ cents: 500, parties: [ME, 'sam'] }, { cents: 50, parties: [ME] }]);
   });
 });
