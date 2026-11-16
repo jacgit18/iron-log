@@ -74,6 +74,9 @@ export interface ResolveDeps {
 }
 export type Resolved = { ok: true; lines: LineMatch[]; usage: Usage; cached: number } | { ok: false; retryAfterSec: number };
 
+/** Added to the plan prompt for the second try after a wrong-length answer. */
+const planCountHint = (n: number): string => `Your last answer had the wrong number of entries. There are ${n} lines: answer exactly ${n} entries, one for each line in order, even when a line names two foods (take the first).`;
+
 /** Output limits of the two model calls. The model thinks before it answers (adaptive thinking is on by default) and those tokens count against the limit, so a limit sized
  *  for the JSON alone cut real answers off (`stopped: max_tokens`: the whole fill failed, on a recipe that had worked a minute before). Only tokens used are billed, never the limit,
  *  so the room is generous: at 40 lines it is 10,000 and 8,000. For scale, the owner's eval run of 2026-11-16 used 1,882 output tokens for 23 lines over both calls, thinking included (about 80 a line on average; single calls ran well over that). */
@@ -119,10 +122,15 @@ async function resolveInner(lines: string[], deps: ResolveDeps, usage: Usage): P
     const gate = deps.gate?.();
     if (gate && !gate.ok) return { ok: false, retryAfterSec: gate.retryAfterSec };
     const planUser = JSON.stringify(todo.map((t, i) => ({ i, line: t.line })));
-    let plan = cleanPlan(await call(deps, SYSTEM_PLAN, planUser, PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
+    const askPlan = async (system: string) => cleanPlan(await call(deps, system, planUser, PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
+    let plan = await askPlan(SYSTEM_PLAN);
     // The model sometimes answers with another number of entries than lines (owner eval 2026-11-16: 1 recipe of 20, a line naming two foods, "butter or olive oil", is the likely cause), and the whole fill then failed.
-    // One more try, told the count, usually settles it; both tries are counted in `usage`. A second wrong answer is still a failed request.
-    if (!plan) plan = cleanPlan(await call(deps, `${SYSTEM_PLAN} Your last answer had the wrong number of entries. There are ${todo.length} lines: answer exactly ${todo.length} entries, one for each line in order, even when a line names two foods (take the first).`, planUser, PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
+    // One more try, told the count, usually settles it; both tries are counted in `usage`. A second wrong answer is still a failed request. The first prompt stays as it is: a change to it is unproven and would need its own eval run.
+    if (!plan) {
+      // A count only, never the line text (lines are data and are not logged), so how often this happens shows in the logs.
+      console.warn(JSON.stringify({ msg: 'ingredient plan had the wrong number of entries, asking once more', lines: todo.length }));
+      plan = await askPlan(`${SYSTEM_PLAN} ${planCountHint(todo.length)}`);
+    }
     if (!plan) throw new Error('plan has the wrong length');
     // USDA: one plain-food search per distinct term. A failed search leaves its line `none` for this answer and is not cached; every search failing is a failed request.
     const terms = [...new Set(plan.flatMap(p => (!p.skip && p.term ? [p.term.toLowerCase()] : [])))];

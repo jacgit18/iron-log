@@ -233,6 +233,7 @@ describe('resolveLines', () => {
   });
 
   it('a plan with the wrong number of entries is asked for once more, told the count (owner eval 2026-11-16: Fried Eggs failed the whole fill)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const base = fakeFetch({ plan: PLAN, picks: PICKS });
     const plans: string[] = [];
     const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
@@ -249,9 +250,15 @@ describe('resolveLines', () => {
     expect(out.ok && out.lines.map(l => l.status)).toEqual(['matched', 'matched', 'matched', 'skip', 'none']);
     // Three model calls in all (plan, plan again, pick), every one counted.
     expect(out.ok && out.usage).toEqual({ calls: 3, inputTokens: 300, outputTokens: 150 });
+    // The retry leaves one log line with the count and none of the recipe's text.
+    expect(warn).toHaveBeenCalledTimes(1);
+    const logged = String(warn.mock.calls[0]![0]);
+    expect(JSON.parse(logged)).toEqual({ msg: 'ingredient plan had the wrong number of entries, asking once more', lines: 5 });
+    expect(logged).not.toMatch(/flour|eggs|butter/i);
   });
 
   it('a second wrong plan is still a failed request that writes nothing, and both tries are counted', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const cache = memCache();
     const fn = vi.fn(async () => reply({ lines: PLAN.lines.slice(0, 4) })) as unknown as typeof fetch;
     const err = await resolveLines(LINES, deps(fn, cache)).catch((e: unknown) => e);
