@@ -42,6 +42,9 @@ const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>) =>
 const skipsAfterLeaving = (get: StoreGet, day: string, item: { k: string; id: string; s?: string } | undefined): Record<string, string[]> | undefined =>
   item && item.k === 'r' && item.s === 'snack' && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
 
+const keyedMicro = (m: unknown): string => Object.entries((m && typeof m === 'object' ? m : {}) as Record<string, number>).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join(',');
+const sameMicro = (a: unknown, b: unknown): boolean => keyedMicro(a) === keyedMicro(b);
+
 export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   diet: [],
 
@@ -126,7 +129,8 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (merged.f === null) delete merged.f;
     // An explicit `micro` (the typed rows of brief type-food-amounts; null clears) is the person's say. Without one, changed calories mean a changed portion: the amounts would no longer match (the One-off form's rule).
     // The `est` mark says the amounts were estimated from recipe lines; a hand edit of them (or their going away with a changed portion) makes them the person's own (PR 1009 review).
-    if (patch.micro !== undefined) { delete merged.est; if (patch.micro === null) delete merged.micro; }
+    // The row sheet sends its `micro` on every save, so the mark goes only when the amounts differ from what was stored (review finding 8).
+    if (patch.micro !== undefined) { if (!sameMicro(patch.micro, cur.micro)) delete merged.est; if (patch.micro === null) delete merged.micro; }
     else if (patch.kcal !== undefined && patch.kcal !== cur.kcal) { delete merged.micro; delete merged.est; }
     const e = normDietEntry(merged);
     if (!e) return bad();

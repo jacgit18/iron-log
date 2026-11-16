@@ -152,6 +152,11 @@ describe('the stored portion x (brief portion-scaled-micros)', () => {
     expect(st().diet[0]).toMatchObject({ est: true });
     st().updateDietEntry(id!, { micro: { calcium: 150 } });
     expect(st().diet[0]!.est).toBeUndefined();
+    useAppStore.setState({ diet: st().diet.map(e => ({ ...e, est: true as const })) });
+    st().updateDietEntry(id!, { n: 'Rice again', micro: { calcium: 150 } }); // same amounts sent again by the row sheet: the mark stays (review finding 8)
+    expect(st().diet[0]).toMatchObject({ est: true });
+    st().updateDietEntry(id!, { micro: { calcium: 151 } });
+    expect(st().diet[0]!.est).toBeUndefined();
     const b = st().addDietEntry({ ...rice, micro: { calcium: 100 } }).id!;
     useAppStore.setState({ diet: st().diet.map(e => (e.id === b ? { ...e, est: true as const } : e)) });
     st().updateDietEntry(b, { kcal: 250 });
