@@ -7,16 +7,32 @@ export const AGENTS = ['qa-scenario-keeper', 'qa-scenario-runner', 'qa-results-r
 export const LOG_MAX_BYTES = 64 * 1024;
 
 const SAFE_NAME = /^[A-Za-z0-9_.-]{1,80}$/;
-/** A reason as one short line: no address (credentials in one included), no path that is not a plain word run, at most 100 characters. */
-export const shortReason = text => String(text ?? '').replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, '[url]').replace(/\s+/g, ' ').trim().slice(0, 100);
+/**
+ * The log never holds what the agent chose (a path, a search pattern, an address, a command): a refusal is logged as one fixed code picked from the guard's reason.
+ * Order matters: the first matching rule wins; anything unknown is `other`.
+ */
+const REASON_CODES = [
+  [/secret or credentials file|names a secret/, 'secret-file'],
+  [/could not read its input|hook failed/, 'hook-input'],
+  [/javascript_tool/, 'javascript-tool'],
+  [/resize_window/, 'resize-window'],
+  [/is not a tool of the QA Runner/, 'tool-not-allowed'],
+  [/Glob pattern with \.\./, 'glob-dotdot'],
+  [/outside this checkout|writes are only allowed/, 'path-outside'],
+  [/live stack|plain http|origin|address|port|host/i, 'address'],
+  [/--record|--by|--build|--results|--emulated/, 'record-args'],
+  [/not allowed \(|is not allowed|an empty command|unclosed quote/, 'shell-syntax'],
+  [/qa-local\.mjs|command not allowed|Bash may only/, 'bash-command'],
+];
+export const reasonCode = text => (REASON_CODES.find(([re]) => re.test(String(text ?? '')))?.[1] ?? 'other');
 
-/** `2026-11-16T10:00:00.000Z Bash refused <reason>` or `... allowed`. `why` is the guard's refusal reason, or null. */
+/** `2026-11-16T10:00:00.000Z Bash refused <code>` or `... allowed`. `why` is the guard's refusal reason, or null; only its code is written. */
 export function guardLogLine(now, tool, why) {
   const name = SAFE_NAME.test(String(tool)) ? tool : 'unknown';
-  return `${now.toISOString()} ${name} ${why ? `refused ${shortReason(why)}` : 'allowed'}`;
+  return `${now.toISOString()} ${name} ${why ? `refused ${reasonCode(why)}` : 'allowed'}`;
 }
 
-/** Appends a line to `path`: owner-only (mode 600), never through a link, and past `max` bytes the older half is dropped. Throws on failure; callers that must not fail catch it. */
+/** Appends a line to `path`: owner-only (mode 600), never through a link, and past `max` bytes the older half is dropped. Throws on failure; callers that must not fail catch it. Two processes trimming at the cap at once can duplicate or lose lines: the log is for counts and is never read to make a decision. */
 export function appendCapped(path, line, { max = LOG_MAX_BYTES, mode = 0o600 } = {}) {
   const fd = openSync(path, constants.O_RDWR | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW, mode);
   try {
@@ -68,6 +84,17 @@ export function summarizeActivity(text) {
   return out;
 }
 
+/** The directory `gh pr create` runs in: a leading `cd <dir> &&` (or `;`) in the command, resolved against the session's cwd, else the session's cwd. */
+export function commandCwd(command, cwd, resolvePath) {
+  const m = /^\s*cd\s+(?:"([^"$`]*)"|'([^']*)'|([^\s;&|$`"']+))\s*(?:&&|;)/.exec(String(command ?? ''));
+  const dir = m ? (m[1] ?? m[2] ?? m[3]) : null;
+  return dir ? resolvePath(cwd, dir) : cwd;
+}
+/** Whether a Bash tool result shows the PR was created: gh prints the new pull request's address. A failed create prints an error and no address. */
+export function createdPr(response) {
+  const text = typeof response === 'string' ? response : `${response?.stdout ?? ''}\n${response?.stderr ?? ''}`;
+  return /github\.com\/[^\s/]+\/[^\s/]+\/pull\/\d+/.test(text);
+}
 const PR_CREATE = /(^|[;&|(])\s*(cd [^;&|]*(&&|;)\s*)?gh pr create/;
 const FEATURE_CODE = /^(src|server)\/(?!qa\/).*\.(ts|tsx|css)$/;
 const isTest = f => /\.test\.|(^|\/)test\//.test(f);

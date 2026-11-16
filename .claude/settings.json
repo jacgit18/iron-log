@@ -1,13 +1,37 @@
 {
   "hooks": {
     "SubagentStart": [
-      { "matcher": "qa-scenario-keeper|qa-scenario-runner|qa-results-reporter", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/qa-agent-activity.mjs\"" }] }
+      {
+        "matcher": "qa-scenario-keeper|qa-scenario-runner|qa-results-reporter",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/qa-agent-activity.mjs\"; [ -f \"$f\" ] || exit 0; node \"$f\"; exit 0"
+          }
+        ]
+      }
     ],
     "SubagentStop": [
-      { "matcher": "qa-scenario-keeper|qa-scenario-runner|qa-results-reporter", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/qa-agent-activity.mjs\"" }] }
+      {
+        "matcher": "qa-scenario-keeper|qa-scenario-runner|qa-results-reporter",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/qa-agent-activity.mjs\"; [ -f \"$f\" ] || exit 0; node \"$f\"; exit 0"
+          }
+        ]
+      }
     ],
     "PostToolUse": [
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/qa-keeper-reminder.mjs\"" }] }
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/qa-keeper-reminder.mjs\"; [ -f \"$f\" ] || exit 0; p=$(cat); case \"$p\" in *\"gh pr create\"*) printf '%s' \"$p\" | node \"$f\";; esac; exit 0"
+          }
+        ]
+      }
     ]
   }
 }

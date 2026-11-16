@@ -11,7 +11,6 @@ import { fileURLToPath } from 'node:url';
 import { automationOf } from '../server/qa/scenarioAutomation.ts';
 import { SCENARIOS } from '../server/qa/scenarios.ts';
 import { allResults } from './qa-scenarios-doc.mjs';
-import { readFileSync as readText } from 'node:fs';
 import { activityFile } from './qa-agent-activity.mjs';
 import { summarizeActivity } from './lib/qaActivity.mjs';
 import { buildReport } from './lib/qaReport.mjs';
@@ -28,7 +27,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let entries = [];
   try { entries = allResults(file ? readFileSync(file, 'utf8') : ''); } catch (e) { fail(e.message); }
   let activity = null; // the SubagentStart/Stop hook's file (--activity overrides the default); no file means no record, not "never run"
-  try { activity = summarizeActivity(readText(arg('--activity') || activityFile(), 'utf8')); } catch { /* not recorded */ }
+  try { activity = summarizeActivity(readFileSync(arg('--activity') || activityFile(), 'utf8')); } catch { /* not recorded */ }
   const today = new Date().toISOString().slice(0, 10); // UTC, like the date `--record` stamps on a result
   const report = buildReport(SCENARIOS, automationOf, entries, { today, activity });
   const body = renderReport(report, { generatedOn: today, source: file ? basename(file) : undefined });
