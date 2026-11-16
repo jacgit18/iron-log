@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LineMatch } from '../shared/ingredientMatch.js';
 import type { Recipe } from '../types.ts';
-import { applyFill, breakdownFor, canFill, countedLines, couldCount, failureText, fieldsOf, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, unsentCount, validServings, withFields } from './recipeFill.js';
+import { applyFill, breakdownFor, canFill, countedLines, couldCount, failureText, fieldsOf, fillLines, forLines, mergeRetry, retryIndexes, fillNumbers, fillRows, fillWrites, hasNumbers, unsentCount, validServings, withFields } from './recipeFill.js';
 
 const m = (line: string, grams: number, per100: LineMatch['per100'], over: Partial<LineMatch> = {}): LineMatch => ({ line, status: 'matched', fdcId: 1, food: line, grams, gramsFrom: 'text', confidence: 'high', per100, ...over });
 const rice = m('200 g rice', 200, { id: 1, name: 'Rice', kcal: 130, p: 2.7, c: 28, f: 0.3, micro: { iron: 1, zinc: 1 } });
@@ -129,6 +129,24 @@ describe('fieldsOf and withFields (Undo)', () => {
     expect(after.micro).toBeDefined(); expect(after.est).toBeDefined();
     const back = withFields(after, fieldsOf(before));
     expect(back).toEqual(before);
+  });
+});
+
+describe('retry and held answers (review findings 2 and 7)', () => {
+  it('finds the retry lines and merges a second answer into only those positions', () => {
+    const lines = [rice, none, retry, skip, retry];
+    expect(retryIndexes(lines)).toEqual([2, 4]);
+    const saffron = m('saffron', 1, { id: 9, name: 'Saffron', kcal: 310, p: 11 });
+    const merged = mergeRetry(lines, [2, 4], [saffron, retry]);
+    expect(merged[2]).toBe(saffron);
+    expect(merged[4]).toBe(retry); // asked again, still not worked out: stays retry
+    expect(merged[0]).toBe(rice); expect(merged[1]).toBe(none);
+    expect(retryIndexes([rice, none, skip])).toEqual([]); // a plain none is not offered again
+  });
+  it('an answer or unticked set is used only for the lines it was made for', () => {
+    expect(forLines({ sig: 'a\nb', v: 1 }, 'a\nb')).toBe(1);
+    expect(forLines({ sig: 'a\nb', v: 1 }, 'a\nc')).toBeNull();
+    expect(forLines(null, 'a')).toBeNull();
   });
 });
 

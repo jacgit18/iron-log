@@ -72,6 +72,26 @@ test.describe('Fill nutrition', () => {
     expect(await saved(page)).toMatchObject({ kcal: 192, p: 2.7 }) // a new sheet counts both lines again, over 2 servings;
   });
 
+  test('a Try again line has a control that asks again for only that line (review finding 2)', async ({ page }) => {
+    const sent = [];
+    await page.route('**/api/ingredients/resolve', route => {
+      const lines = JSON.parse(route.request().postData() || '{}').lines || [];
+      sent.push(lines);
+      const body = lines.length === 4 ? ANSWER(lines) : { ok: true, left: 3, max: 5, lines: [matched(lines[0], 'Saffron', 1, 'guess', 'low', { id: 9, name: 'Saffron', kcal: 310, p: 11 })] };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    });
+    await seed(page, [mk('r1', 'Rice bowl', { servings: 2 })]);
+    await open(page, 'Rice bowl');
+    await page.getByRole('button', { name: 'Fill nutrition' }).click();
+    const s = sheet(page);
+    await expect(s.getByRole('listitem').filter({ hasText: 'saffron' })).toContainText('Try again');
+    await s.getByRole('button', { name: 'Try the 1 line again' }).click();
+    await expect(s.getByRole('listitem').filter({ hasText: 'saffron' })).toContainText('Check');
+    await expect(s.getByRole('button', { name: /again$/ })).toHaveCount(0);
+    expect(sent[1]).toEqual(['saffron']);
+    await expect(s.getByText('3 fills left today.')).toBeVisible();
+  });
+
   test('the cap, an unavailable service and Cancel save nothing', async ({ page }) => {
     await stub(page, 503, { ok: false, why: 'cap', retryAfterSec: 7200 });
     await seed(page, [mk('r1', 'Rice bowl')]);

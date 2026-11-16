@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { macroLine } from '../../lib/macroLine.js';
 import { resolveLines, type Resolve } from '../../lib/ingredientsClient.js';
-import { applyFill, breakdownFor, countedLines, countedText, couldCount, failureText, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, savedText, unsentCount, validServings, type FillMode, type RowState } from '../../lib/recipeFill.js';
+import { applyFill, breakdownFor, countedLines, countedText, couldCount, failureText, fillLines, fillNumbers, fillRows, fillWrites, forLines, hasNumbers, mergeRetry, retryIndexes, savedText, unsentCount, validServings, type FillMode, type RowState } from '../../lib/recipeFill.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
 import MealMicroBars from './MealMicroBars.js';
 import './FillNutritionSheet.css';
 
 const STATE_TEXT: Record<RowState, string> = { sure: 'Sure', check: 'Check', none: 'No match', retry: 'Try again', skip: 'Left out' };
+const NONE_OFF: ReadonlySet<number> = new Set();
 const GRAMS_FROM = { text: 'from the text', converted: 'converted', guess: 'a guess' } as const;
 
 // Fill nutrition (brief recipe-auto-nutrition, preview flow A): the recipe's ingredient lines go to the server, the matched USDA foods come back as one row per line, and Save writes the numbers per serving.
@@ -18,16 +19,21 @@ export default function FillNutritionSheet({ id }: { id: string }) {
   const recipe = useAppStore(s => s.recipes.find(r => r.id === id));
   const lines = useMemo(() => (recipe ? fillLines(recipe) : []), [recipe]);
   const unsent = recipe ? unsentCount(recipe) : 0;
-  const [answer, setAnswer] = useState<Resolve | null>(null);
-  const [off, setOff] = useState<ReadonlySet<number>>(new Set());
+  const sig = lines.join('\n');
+  const [held, setHeld] = useState<{ sig: string; v: Resolve } | null>(null); // the answer belongs to the lines it was asked for: new lines (a synced copy arrived) show "Working out…" again
+  const [heldOff, setHeldOff] = useState<{ sig: string; v: ReadonlySet<number> } | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const answer = forLines(held, sig);
+  const off = forLines(heldOff, sig) ?? NONE_OFF;
+  const setOff = (f: (p: ReadonlySet<number>) => ReadonlySet<number>) => setHeldOff({ sig, v: f(off) });
   const [servingsText, setServingsText] = useState('');
   const [error, setError] = useState('');
   useEffect(() => {
     if (!lines.length) return;
     const ctl = new AbortController();
-    void resolveLines(lines, ctl.signal).then(r => { if (!ctl.signal.aborted) setAnswer(r); });
+    void resolveLines(lines, ctl.signal).then(r => { if (!ctl.signal.aborted) setHeld({ sig, v: r }); });
     return () => ctl.abort(); // Cancel (or any close) ends the request; nothing is saved
-  }, [lines.join('\n')]); // eslint-disable-line react-hooks/exhaustive-deps -- the request is for the lines the sheet opened with
+  }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps -- `lines` is derived from `sig`
   if (!recipe) return <Sheet className="fillsheet"><h2 className="cond">Fill nutrition</h2><p className="note">That recipe is gone.</p><div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Close</button></div></Sheet>;
 
   const needServings = !recipe.servings;
@@ -44,6 +50,15 @@ export default function FillNutritionSheet({ id }: { id: string }) {
   const blanksWrite = !!filled && fillWrites(recipe, filled, 'blanks'); // false: every number is already typed, so "blanks" would change nothing
   const toggle = (i: number) => setOff(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
 
+  const retryIdx = got ? retryIndexes(got) : [];
+  const retry = async () => { // asks again for the lines the server could not work out, and nothing else
+    if (!got || !retryIdx.length || retrying) return;
+    setRetrying(true);
+    const r = await resolveLines(retryIdx.map(i => lines[i]!));
+    setRetrying(false);
+    if (r.ok && answer?.ok) setHeld({ sig, v: { ...answer, lines: mergeRetry(answer.lines, retryIdx, r.lines), left: r.left ?? answer.left, max: r.max ?? answer.max } });
+    else setError(r.ok ? '' : failureText(r.reason, r.reason === 'cap' ? r.retryAfterSec : null));
+  };
   const save = (mode: FillMode) => {
     if (!filled) return;
     const r = useAppStore.getState().fillRecipeNumbers(recipe.id, applyFill(recipe, filled, mode, servings));
@@ -84,6 +99,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
               </li>
             ))}
           </ul>
+          {retryIdx.length > 0 && <p className="note"><button type="button" className="btn sm" disabled={retrying} onClick={() => void retry()}>{retrying ? 'Trying again…' : `Try ${retryIdx.length === 1 ? 'the 1 line' : `the ${retryIdx.length} lines`} again`}</button> A line marked Try again could not be worked out this time. This asks only for those lines and may use another fill.</p>}
           {bars && <MealMicroBars breakdown={bars} />}
           {answer?.ok && answer.left !== null && <p className="note">{answer.left} fill{answer.left === 1 ? '' : 's'} left today.</p>}
         </>

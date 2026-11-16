@@ -40,6 +40,19 @@ export interface FillRow {
   countable: boolean;
 }
 
+/** A value that belongs to the lines it was made for: null once the lines have changed (a synced copy of the recipe arrived while the sheet was open), so an old answer and old unticked positions are never applied to new lines (review finding 7). */
+export const forLines = <T>(held: { sig: string; v: T } | null, sig: string): T | null => (held && held.sig === sig ? held.v : null);
+
+/** The line indexes the server flagged `retry` (could not be worked out this time). */
+export const retryIndexes = (lines: readonly LineMatch[]): number[] => lines.flatMap((m, i) => (m.status === 'none' && m.retry ? [i] : []));
+
+/** The answer with the retried lines replaced by the new answer (same order as `idx`); a line that comes back retry again stays retry (review finding 2). */
+export function mergeRetry(prev: readonly LineMatch[], idx: readonly number[], next: readonly LineMatch[]): LineMatch[] {
+  const out = [...prev];
+  idx.forEach((i, k) => { if (next[k]) out[i] = next[k]!; });
+  return out;
+}
+
 /** One sheet row per line. A `none` with `retry` is offered again, never shown as "No match". */
 export function fillRows(lines: readonly LineMatch[]): FillRow[] {
   return lines.map(m => {
