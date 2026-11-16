@@ -54,6 +54,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const today = ymd(useToday(s => s.today));
   const [addedId, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo, leaving the page or the entry's deletion elsewhere
   const added = stillAdded(diet, addedId); // read from the store, so deleting the entry on the board brings "Add to today" back
+  const [addMsg, setAddMsg] = useState(''); // what the page said when Add to today logged: said again if Undo of a Fill leaves the add standing
   const [fillUndo, setFillUndo] = useState<(() => boolean) | null>(null); // Undo of the Fill that just saved, for the status line
   const [usualSaved, setUsualSaved] = useState<UsualChange | null>(null); // the usual a whole pack saved, for Undo to take back
   const pack = wholePackFor({ mine, recipe });
@@ -65,7 +66,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     const st = useAppStore.getState();
     const r = addToToday(st.addDietEntry, recipe, today);
     if (r.ok) setAdded(r.id);
-    setMsg(r.ok ? r.text : r.error);
+    setMsg(r.ok ? r.text : r.error); setAddMsg(r.ok ? r.text : '');
   };
   const addPack = () => { // the portion sheet's Log saves a changed portion as the usual (`usualChange`); a whole pack does the same here, and Undo takes it back
     if (pack === null) return;
@@ -77,9 +78,10 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     setAdded(r.id);
     const change = usualChange(recipe, pack);
     if (change && !st.setRecipeUsual(recipe.id, change.next)) { setUsualSaved(change); setMsg(`${r.text} Usual portion saved: ${amountText(pack, recipe)}.`); } else setMsg(r.text);
+    setAddMsg(r.text);
   };
-  const openFill = () => useAppStore.getState().openModal({ type: 'fillnutrition', id: recipe.id, onSaved: (text: string, undo: () => boolean) => { setAdded(null); setUsualSaved(null); setFillUndo(() => undo); setMsg(text); } });
-  const undoFill = () => { const ok = fillUndo?.() ?? false; setFillUndo(null); setMsg(ok ? 'Put the numbers back.' : 'Can’t undo: the recipe changed since.'); };
+  const openFill = () => useAppStore.getState().openModal({ type: 'fillnutrition', id: recipe.id, onSaved: (text: string, undo: () => boolean) => { setFillUndo(() => undo); setMsg(text); } });
+  const undoFill = () => { const ok = fillUndo?.() ?? false; setFillUndo(null); setMsg(`${ok ? 'Put the numbers back.' : 'Can’t undo: the recipe changed since.'}${added !== null && addMsg ? ` ${addMsg}` : ''}`); };
   const undoAdd = () => {
     const st = useAppStore.getState();
     if (added) st.removeDietEntry(added, false);

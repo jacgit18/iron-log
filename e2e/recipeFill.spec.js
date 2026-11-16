@@ -92,6 +92,22 @@ test.describe('Fill nutrition', () => {
     await expect(s.getByText('3 fills left today.')).toBeVisible();
   });
 
+  test('Add to today stays Added after a Fill, and each Undo undoes its own action (review finding 1)', async ({ page }) => {
+    await stub(page);
+    await seed(page, [mk('r1', 'Rice bowl', { servings: 2, kcal: 400, p: 20 })]);
+    await open(page, 'Rice bowl');
+    await page.getByRole('button', { name: 'Add to today' }).click();
+    await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Fill nutrition' }).click();
+    await sheet(page).getByRole('button', { name: 'Fill only the blanks' }).click();
+    await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled(); // not flipped back: a second tap would log twice
+    await page.getByRole('button', { name: 'Undo' }).click(); // the Fill's
+    expect((await saved(page)).est).toBeUndefined();
+    await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Undo' }).click(); // the add's
+    await expect(page.getByRole('button', { name: 'Add to today' })).toBeEnabled();
+  });
+
   test('the cap, an unavailable service and Cancel save nothing', async ({ page }) => {
     await stub(page, 503, { ok: false, why: 'cap', retryAfterSec: 7200 });
     await seed(page, [mk('r1', 'Rice bowl')]);
