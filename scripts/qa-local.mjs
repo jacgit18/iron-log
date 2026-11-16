@@ -220,12 +220,23 @@ export const readStackUrls = (uid = process.getuid?.()) => {
   for (const f of files) { try { const u = liveStackUrl(JSON.parse(readStateText(f, uid))); if (u) urls.push(u); } catch { /* unreadable: not a stack */ } }
   return urls;
 };
+/** The Runner hook's call log (one line per call; brief qa-agent-activity-log): one per checkout, named like the state file (the variable is for tests). */
+export const hookLogFile = () => process.env.QA_HOOK_LOG_FILE ?? join(tmpdir(), `qa-runner-hook-${createHash('sha1').update(root).digest('hex').slice(0, 10)}.log`);
 /** Where the agent saves evidence: the one folder it may write, named the same way the hook names it. */
 export const evidenceRoot = () => join(tmpdir(), 'qa-runs');
 const fail = (msg, code = 1) => { console.error(`qa-local: ${msg}`); process.exit(code); };
 
 async function main() {
   const [cmd, arg] = process.argv.slice(2);
+  if (cmd === 'hook-log') { // what the Runner's hook did: calls, refusals, first and last time. `--clear` starts a fresh log before a run.
+    const { describeGuardLog, summarizeGuardLog } = await import('./lib/qaActivity.mjs');
+    const file = hookLogFile();
+    if (arg === '--clear') { rmSync(file, { force: true }); console.log(`hook log cleared: ${file}`); return; }
+    let text = '';
+    try { text = readFileSync(file, 'utf8'); } catch (e) { if (e?.code !== 'ENOENT') fail(`cannot read ${file}: ${e.message}`); }
+    console.log(describeGuardLog(summarizeGuardLog(text)));
+    return;
+  }
   const pgModule = await import('pg');
   const pg = pgModule.default;
   const withClient = async (url, fn) => { const c = new pg.Client({ connectionString: url }); await c.connect(); try { return await fn(c); } finally { await c.end(); } };
@@ -324,7 +335,7 @@ async function main() {
     return;
   }
   if (cmd === 'stop') { await stop(); return; }
-  fail('usage: qa-local.mjs start [--no-build] | seed <persona-id> | check-url <url> | status | stop', 2);
+  fail('usage: qa-local.mjs start [--no-build] | seed <persona-id> | check-url <url> | status | stop | hook-log [--clear]', 2);
 
   async function stop() {
     let state = null;

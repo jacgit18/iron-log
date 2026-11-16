@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SubagentStart": [
+      { "matcher": "qa-scenario-keeper|qa-scenario-runner|qa-results-reporter", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/qa-agent-activity.mjs\"" }] }
+    ],
+    "SubagentStop": [
+      { "matcher": "qa-scenario-keeper|qa-scenario-runner|qa-results-reporter", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/qa-agent-activity.mjs\"" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/qa-keeper-reminder.mjs\"" }] }
+    ]
+  }
+}

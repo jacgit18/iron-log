@@ -11,6 +11,38 @@ const OUTCOME_ORDER = { fail: 0, blocked: 1 };
 /** A note is free text written by a person or an agent and sometimes quotes a test account's address (`name@qa.invalid`, or masked `n***@qa.invalid`). The page shows none. */
 const redact = text => text.replace(/[\w.*+-]+@[\w-]+(\.[\w-]+)+/g, '[email]').replace(/\b(?:[\w-]+\.)+invalid\b/gi, '[test domain]').replace(/\s+/g, ' ').trim();
 
+const DAY_MS = 86400000;
+export const STALE_DAYS = 30;
+/**
+ * The "agent activity" block (brief qa-agent-activity-log): when agents last recorded, how many entries each side recorded, and the live scenarios nothing has been
+ * recorded for in 30 days. `today` is `YYYY-MM-DD` (null skips the stale count); `activity` is `summarizeActivity` output, or null when no activity file exists.
+ */
+export function buildAgentActivity(scenarios, results, { today = null, activity = null } = {}) {
+  const live = scenarios.filter(s => !s.retired);
+  const by = { claude: 0, owner: 0 };
+  const newest = new Map();
+  let lastRunnerResult = null;
+  for (const e of results) {
+    if (e.by in by) by[e.by] += 1;
+    if (e.by === 'claude' && (!lastRunnerResult || e.date > lastRunnerResult)) lastRunnerResult = e.date;
+    if (!newest.has(e.id) || e.date > newest.get(e.id)) newest.set(e.id, e.date);
+  }
+  const age = d => (today ? Math.floor((Date.parse(today) - Date.parse(d)) / DAY_MS) : null);
+  const stale = today ? live.filter(s => !newest.has(s.id) || age(newest.get(s.id)) > STALE_DAYS).length : null;
+  const seen = name => (activity ? activity[name] : null);
+  return {
+    lastRunnerResult,
+    entriesBy: by,
+    staleScenarios: stale,
+    staleDays: STALE_DAYS,
+    /** Last start of each agent from the SubagentStart hook's file; `recorded` false means there is no such file (the hook never ran here), not that the agent never ran. */
+    recorded: activity !== null,
+    keeperLastRun: seen('qa-scenario-keeper')?.lastStart ?? null,
+    runnerLastRun: seen('qa-scenario-runner')?.lastStart ?? null,
+    reporterLastRun: seen('qa-results-reporter')?.lastStart ?? null,
+  };
+}
+
 /**
  * @param scenarios every scenario (retired ones are left out of everything)
  * @param automationOf id -> `{ auto }` or undefined (untagged)
@@ -18,7 +50,7 @@ const redact = text => text.replace(/[\w.*+-]+@[\w-]+(\.[\w-]+)+/g, '[email]').r
  * @returns totals, owner-facing counts and four sorted sections: `attention` (latest result fail or blocked, whoever recorded it), `proposed` (passes an agent
  * recorded, waiting for the owner's spot-check), `confirmed` (passes the owner recorded) and `notRun` (grouped by feature).
  */
-export function buildReport(scenarios, automationOf, results) {
+export function buildReport(scenarios, automationOf, results, ctx = {}) {
   const live = scenarios.filter(s => !s.retired);
   const latest = latestById(results); // real results only: an emulated phone run never stands in for one
   const emulatedLatest = latestEmulatedById(results);
@@ -86,6 +118,7 @@ export function buildReport(scenarios, automationOf, results) {
     /** Not-run scenarios an agent may record a real result for: everything that is not phone-only (a phone one can only be tried emulated). */
     agentRunnableNotRun: notRunGroups.reduce((n, g) => n + g.rows.filter(r => r.agentRunnable).length, 0),
     lastDate,
+    agentActivity: buildAgentActivity(scenarios, results, ctx),
     features,
     attention,
     /** Phone-only scenarios not failing or blocked, each with a `state`; the renderer lists them in their own section and leaves them out of the others. */

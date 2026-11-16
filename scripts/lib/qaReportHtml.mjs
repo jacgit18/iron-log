@@ -46,6 +46,18 @@ function bar(t) {
   return `<div class="bar" role="img" aria-label="${parts.map(([k, n]) => `${n} ${KIND_LABEL[k].toLowerCase()}`).join(', ')}">${segs}</div>`;
 }
 
+/** The "Agent activity" block: plain facts about agent use, nothing about what an agent wrote. */
+function activityBlock(a) {
+  if (!a) return '';
+  const when = d => (d ? esc(d.slice(0, 10)) : a.recorded ? 'never' : 'not recorded');
+  return `<section class="activity" aria-labelledby="act-h"><h2 id="act-h">Agent activity</h2><ul class="facts">
+<li>Last agent result <b>${a.lastRunnerResult ? esc(a.lastRunnerResult) : 'none yet'}</b></li>
+<li>Last Runner start <b>${when(a.runnerLastRun)}</b>, Keeper <b>${when(a.keeperLastRun)}</b>, Reporter <b>${when(a.reporterLastRun)}</b></li>
+<li>Entries recorded by an agent <b>${a.entriesBy.claude}</b>, by you <b>${a.entriesBy.owner}</b></li>
+<li><b>${a.staleScenarios === null ? 'unknown' : a.staleScenarios}</b> scenarios with no result in ${a.staleDays} days</li>
+</ul></section>`;
+}
+
 /** The page body for the Artifact tool. `opts.generatedOn` is `YYYY-MM-DD`; `opts.source` names the results file (a file name, not a path). */
 export function renderReport(report, opts = {}) {
   const { totals, device, recorded } = report;
@@ -110,6 +122,7 @@ h2 { font-size: 1.15rem; }
 .seg { min-width: 3px; }
 .s-confirmed { background: var(--pass); } .s-proposed { background: var(--prop); } .s-fail { background: var(--fail); } .s-blocked { background: var(--warn); } .s-notrun { background: var(--none); opacity: 0.45; }
 .facts { color: var(--muted); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.activity { display: grid; gap: 6px; } .activity h2 { font-size: 1rem; }
 .facts b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding-block: 8px; z-index: 5; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
@@ -161,6 +174,7 @@ ${bar(t)}
 <li><b>${report.agentRunnableNotRun}</b> not-run scenarios an agent may try</li>
 <li>Last result <b>${report.lastDate ? esc(report.lastDate) : 'none yet'}</b></li>
 </ul>
+${activityBlock(report.agentActivity)}
 <div class="filters">
 <label for="f-kind">Show<select id="f-kind"><option value="all">Everything</option><option value="fail">Fail</option><option value="blocked">Blocked</option><option value="proposed">Pass, proposed</option><option value="confirmed">Pass, confirmed</option><option value="notrun">Not run</option></select></label>
 <label for="f-feature">Feature<select id="f-feature"><option value="all">All features</option>${featureOptions}</select></label>
