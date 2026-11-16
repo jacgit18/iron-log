@@ -58,7 +58,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
       <h2 className="cond">{recipe.est ? 'Fill again' : 'Fill nutrition'}: {recipe.n}</h2>
       {!answer && <p className="note" role="status">Working out {lines.length} ingredient{lines.length === 1 ? '' : 's'}…</p>}
       {answer && unsent > 0 && <p className="note">Only the first {lines.length} of {lines.length + unsent} ingredients were looked at; the other {unsent} count as not matched.</p>}
-      {answer && !answer.ok && <p className="note" role="alert">{failureText(answer.reason)}</p>}
+      {answer && !answer.ok && <p className="note" role="alert">{failureText(answer.reason, answer.reason === 'cap' ? answer.retryAfterSec : null)}</p>}
       {got && !anyCountable && <p className="note" role="status">None of the ingredients matched a food. Use Calculate from ingredients in the form.</p>}
       {got && (
         <>

@@ -142,9 +142,16 @@ export const countedText = (of: number, n: number): string => `${of} of ${n} cou
 /** The status line after Save. */
 export const savedText = (of: number, n: number): string => `Saved. Filled from ${of} of ${n} ingredient${n === 1 ? '' : 's'}.`;
 
-/** The sheet's words for a failed or refused request. */
-export function failureText(reason: 'offline' | 'cap' | 'unavailable'): string {
-  if (reason === 'cap') return 'You have used today’s 5 fills. Try again tomorrow.';
+/** "about 3 hours", "about 20 minutes": the wait the server named, rounded up. */
+export function waitText(sec: number): string {
+  if (sec >= 3600) { const h = Math.ceil(sec / 3600); return `about ${h} hour${h === 1 ? '' : 's'}`; }
+  const m = Math.max(1, Math.ceil(sec / 60));
+  return `about ${m} minute${m === 1 ? '' : 's'}`;
+}
+
+/** The sheet's words for a failed or refused request. The limit is not worded as "your 5 fills": the server's own cap says the same thing (review finding 6). */
+export function failureText(reason: 'offline' | 'cap' | 'unavailable', retryAfterSec: number | null = null): string {
+  if (reason === 'cap') return `Fill nutrition has reached its daily limit. Try again in ${retryAfterSec && retryAfterSec > 0 ? waitText(retryAfterSec) : 'a while'}.`;
   if (reason === 'offline') return 'You are offline. You can still type the numbers.';
   return 'Fill nutrition is not available right now.';
 }

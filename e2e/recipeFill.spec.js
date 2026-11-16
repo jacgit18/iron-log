@@ -73,11 +73,11 @@ test.describe('Fill nutrition', () => {
   });
 
   test('the cap, an unavailable service and Cancel save nothing', async ({ page }) => {
-    await stub(page, 503, { ok: false, why: 'cap', retryAfterSec: 60 });
+    await stub(page, 503, { ok: false, why: 'cap', retryAfterSec: 7200 });
     await seed(page, [mk('r1', 'Rice bowl')]);
     await open(page, 'Rice bowl');
     await page.getByRole('button', { name: 'Fill nutrition' }).click();
-    await expect(sheet(page).getByRole('alert')).toHaveText('You have used today’s 5 fills. Try again tomorrow.');
+    await expect(sheet(page).getByRole('alert')).toHaveText('Fill nutrition has reached its daily limit. Try again in about 2 hours.');
     await sheet(page).getByRole('button', { name: 'Close' }).click();
     await page.unroute('**/api/ingredients/resolve');
     await stub(page, 503, { ok: false, why: 'no-key' });

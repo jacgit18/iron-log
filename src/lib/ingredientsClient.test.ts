@@ -27,7 +27,7 @@ describe('resolveLines', () => {
   });
   it('says cap on a 503 with why cap, unavailable on other errors and unreadable answers, offline without a network', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.stubGlobal('fetch', answer(503, { ok: false, why: 'cap', retryAfterSec: 60 })); expect(await resolveLines(['x'])).toEqual({ ok: false, reason: 'cap' });
+    vi.stubGlobal('fetch', answer(503, { ok: false, why: 'cap', retryAfterSec: 60 })); expect(await resolveLines(['x'])).toEqual({ ok: false, reason: 'cap', retryAfterSec: 60 });
     vi.stubGlobal('fetch', answer(503, { ok: false, why: 'no-key' })); expect(await resolveLines(['x'])).toEqual({ ok: false, reason: 'unavailable' });
     vi.stubGlobal('fetch', answer(404, '<html>')); expect(await resolveLines(['x'])).toEqual({ ok: false, reason: 'unavailable' });
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); })); expect(await resolveLines(['x'])).toEqual({ ok: false, reason: 'offline' });

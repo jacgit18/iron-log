@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LineMatch } from '../shared/ingredientMatch.js';
 import type { Recipe } from '../types.ts';
-import { applyFill, breakdownFor, canFill, countedLines, couldCount, fieldsOf, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, unsentCount, validServings, withFields } from './recipeFill.js';
+import { applyFill, breakdownFor, canFill, countedLines, couldCount, failureText, fieldsOf, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, unsentCount, validServings, withFields } from './recipeFill.js';
 
 const m = (line: string, grams: number, per100: LineMatch['per100'], over: Partial<LineMatch> = {}): LineMatch => ({ line, status: 'matched', fdcId: 1, food: line, grams, gramsFrom: 'text', confidence: 'high', per100, ...over });
 const rice = m('200 g rice', 200, { id: 1, name: 'Rice', kcal: 130, p: 2.7, c: 28, f: 0.3, micro: { iron: 1, zinc: 1 } });
@@ -129,6 +129,16 @@ describe('fieldsOf and withFields (Undo)', () => {
     expect(after.micro).toBeDefined(); expect(after.est).toBeDefined();
     const back = withFields(after, fieldsOf(before));
     expect(back).toEqual(before);
+  });
+});
+
+describe('failureText (review finding 6)', () => {
+  it('names the wait the server gave and never says 5 fills', () => {
+    expect(failureText('cap', 10800)).toBe('Fill nutrition has reached its daily limit. Try again in about 3 hours.');
+    expect(failureText('cap', 60)).toContain('about 1 minute.');
+    expect(failureText('cap', 3601)).toContain('about 2 hours');
+    expect(failureText('cap')).toContain('in a while');
+    expect(failureText('cap', 99)).not.toMatch(/\b5\b/);
   });
 });
 
