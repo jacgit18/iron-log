@@ -86,6 +86,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
           {answer?.ok && answer.left !== null && <p className="note">{answer.left} fill{answer.left === 1 ? '' : 's'} left today.</p>}
         </>
       )}
+      {got && anyCountable && choose && filled && <p className="note">Replace all changes the numbers the fill found; a number it could not find stays as you typed it.</p>}
       {got && anyCountable && choose && filled && !blanksWrite && <p className="note" role="status">Every number is already filled in, so there are no blanks. Replace all would change them.</p>}
       {error && <p className="note" role="alert">{error}</p>}
       <div className="actions">

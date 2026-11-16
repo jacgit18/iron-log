@@ -88,10 +88,13 @@ describe('applyFill (Done when 4)', () => {
     expect(out).toMatchObject({ kcal: 500, p: 20, c: 56, f: 0.6, servings: 4, est: filled.est });
     expect(out.micro).toEqual({ iron: 9, zinc: 2 });
   });
-  it('replace takes every filled value and drops a vitamin the fill does not list', () => {
+  it('replace takes every filled value and keeps a typed value the fill did not find (review finding 5)', () => {
     const out = applyFill({ kcal: 500, p: 20, micro: { calcium: 9 }, servings: 4 }, filled, 'replace', 1);
     expect(out).toMatchObject({ kcal: 260, p: 5.4, servings: 4 });
-    expect(out.micro).toEqual({ iron: 2, zinc: 2 });
+    expect(out.micro).toEqual({ calcium: 9, iron: 2, zinc: 2 });
+    const noMacros = fillNumbers([m('x', 100, { id: 3, name: 'X', kcal: 100, p: 10 })], new Set(), 1)!; // lists no carbs or fat
+    const kept = applyFill({ kcal: 500, p: 20, c: 60, f: 10 }, noMacros, 'replace', 1);
+    expect(kept).toMatchObject({ kcal: 100, p: 10, c: 60, f: 10 });
   });
   it('with nothing typed both modes agree, and a recipe with no servings gets the typed value', () => {
     expect(applyFill({}, filled, 'blanks', 3)).toEqual(applyFill({}, filled, 'replace', 3));

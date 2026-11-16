@@ -86,11 +86,12 @@ const has = (n: number | undefined) => n !== undefined;
 /** Whether saving would overwrite something: the recipe already has calories, protein, carbs, fat or any vitamin or mineral. */
 export const hasNumbers = (r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro'>): boolean => has(r.kcal) || has(r.p) || has(r.c) || has(r.f) || Object.keys(r.micro ?? {}).length > 0;
 
-/** The fields to write. `replace` takes every filled value (and drops an old vitamin the fill does not list); `blanks` keeps each typed number and each existing `micro` key and only adds what is missing. The mark is set in both. Servings are written only when the recipe has none. */
+/** The fields to write. `replace` takes every filled value, and keeps a typed value the fill did not find; `blanks` keeps each typed number and each existing `micro` key and only adds what is missing. The mark is set in both. Servings are written only when the recipe has none. */
 export function applyFill(recipe: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'servings' | 'est'>, filled: Filled, mode: FillMode, servings: number): FillFields {
   const keep = mode === 'blanks';
-  const pick = (old: number | undefined, nu: number | undefined) => (keep && has(old) ? old : nu);
-  const micro = keep ? { ...filled.micro, ...recipe.micro } : filled.micro;
+  // blanks: a typed value wins; replace: the fill's value wins. In both, a value the fill did not find stays (review finding 5): a typed carbs or vitamin is never deleted by a fill that could not list it.
+  const pick = (old: number | undefined, nu: number | undefined) => (keep ? (has(old) ? old : nu) : (nu ?? old));
+  const micro = keep ? { ...filled.micro, ...recipe.micro } : { ...recipe.micro, ...filled.micro };
   const out: FillFields = {};
   const kcal = pick(recipe.kcal, filled.kcal), p = pick(recipe.p, filled.p), c = pick(recipe.c, filled.c), f = pick(recipe.f, filled.f);
   if (kcal !== undefined) out.kcal = kcal;
