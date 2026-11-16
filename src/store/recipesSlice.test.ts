@@ -378,3 +378,36 @@ describe('Library estimates through the store (brief library-recipe-nutrition)',
     expect(st().recipes[0]!.est).toBeUndefined();
   });
 });
+
+describe('fillRecipeNumbers (brief recipe-auto-nutrition)', () => {
+  const fields = { kcal: 300, p: 12, micro: { iron: 2 }, servings: 4, est: { of: 3, n: 4 } };
+  const made = (extra = {}) => { st().saveRecipe({ ...draft, ...extra }); return st().recipes[0]!.id; };
+  it('writes numbers, servings and the estimate mark in one save, with no edited mark', () => {
+    const id = made({ servings: 2 });
+    const r = st().fillRecipeNumbers(id, fields);
+    expect(typeof r).toBe('object');
+    expect(st().recipes[0]).toMatchObject({ kcal: 300, p: 12, micro: { iron: 2 }, servings: 4, est: { of: 3, n: 4 } });
+    expect(st().recipes[0]!.edited).toBeUndefined();
+  });
+  it('Undo puts back the old numbers, servings and mark, and refuses once the recipe changed since', () => {
+    const id = made({ kcal: 100, servings: 2 });
+    const r = st().fillRecipeNumbers(id, fields) as { undo: () => boolean };
+    expect(r.undo()).toBe(true);
+    expect(st().recipes[0]).toMatchObject({ kcal: 100, servings: 2 });
+    expect(st().recipes[0]!.micro).toBeUndefined(); expect(st().recipes[0]!.est).toBeUndefined();
+    const r2 = st().fillRecipeNumbers(id, fields) as { undo: () => boolean };
+    st().saveRecipe({ ...draft, id, kcal: 350, p: 12, micro: { iron: 2 }, servings: 4 }); // a hand edit after the fill
+    expect(r2.undo()).toBe(false);
+    expect(st().recipes[0]).toMatchObject({ kcal: 350 });
+  });
+  it('Undo still works when the vitamin keys came back in another order (review finding 9)', () => {
+    const id = made({ servings: 2 });
+    const r = st().fillRecipeNumbers(id, { ...fields, micro: { iron: 2, zinc: 1 } }) as { undo: () => boolean };
+    useAppStore.setState({ recipes: st().recipes.map(x => (x.id === id ? { ...x, micro: { zinc: 1, iron: 2 } } : x)) }); // the same values, the other order
+    expect(r.undo()).toBe(true);
+    expect(st().recipes[0]!.micro).toBeUndefined();
+  });
+  it('says so when the recipe is gone', () => {
+    expect(st().fillRecipeNumbers('nope', fields)).toBe('That recipe is gone.');
+  });
+});
