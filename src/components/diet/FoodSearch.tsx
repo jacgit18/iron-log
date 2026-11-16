@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Micro } from '../../shared/foodMicro.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
+import FoodNameCard from './FoodNameCard.js';
 import { useFoodHits } from './useFoodHits.js';
 import { AI_LABEL_TEXT, OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
 import { labelFood } from '../../lib/labelFill.js';
@@ -110,7 +111,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
       )}
       {pick && (
         <div className="dt-lookuppick">
-          <p>{hitLabel(pick)}</p>
+          <FoodNameCard hit={pick} />
           {pick.source === 'off' && <p className="note">{OFF_SOURCE_TEXT}</p>}
           <label className="field" htmlFor={given === undefined ? 'dt-lookup-g' : 'dt-find-g'}>Grams
             <input id={given === undefined ? 'dt-lookup-g' : 'dt-find-g'} type="number" inputMode="decimal" min="1" max="5000" step="any" value={grams} onChange={e => setGrams(e.target.value)} />

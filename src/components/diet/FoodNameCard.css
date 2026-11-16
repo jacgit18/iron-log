@@ -1,0 +1,49 @@
+@layer base, components;
+@layer components {
+/* The picked or scanned food's name card (brief scan-item-name): the name is the largest text, the kcal the smallest. */
+.fnc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-12);
+  padding: var(--sp-12) 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--bg);
+}
+.fnc p {
+  margin: 0;
+}
+.fnc-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-4);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.fnc-name {
+  font-size: var(--fs-4xl);
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.fnc-brand {
+  color: var(--muted);
+  font-size: var(--fs-base);
+}
+.fnc-kcal {
+  padding-top: var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.fnc-kcal b {
+  color: var(--ink);
+  font-size: var(--fs-base);
+}
+}
