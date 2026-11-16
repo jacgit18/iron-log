@@ -70,3 +70,11 @@ describe('planCopy', () => {
   });
   it('adds nothing from an empty day', () => { expect(planCopy(l, '2026-10-01', '2026-10-30', null)).toEqual({ add: [], left: 0 }); });
 });
+
+describe('est survives copy and re-log (brief recipe-auto-nutrition)', () => {
+  const marked = [{ id: 'a', d: '2026-10-29', n: 'Oat bowl', kcal: 300, p: 10, micro: { zinc: 2 }, est: true as const }];
+  it('planCopy and suggestNow carry the mark with the vitamins', () => {
+    expect(planCopy(marked, '2026-10-29', '2026-10-31', null).add[0]).toMatchObject({ est: true });
+    expect(suggestNow(marked, 12, '2026-10-30')[0]).toMatchObject({ est: true });
+  });
+});

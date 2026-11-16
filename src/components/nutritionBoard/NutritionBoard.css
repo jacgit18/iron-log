@@ -149,7 +149,19 @@
 }
 /* Vitamins and minerals under Supplements (brief vitamin-mineral-day-meter, layout B): a closed line, then thin bars in the new teal `--m-vit`. Own classes only; the Board's rules are untouched. */
 .wb-meter.nb-vit-meter {
+  position: relative;
   height: 6px;
+}
+/* The part of a bar that comes from foods eaten from a recipe with estimated vitamins (brief recipe-auto-nutrition): hatched over the fill, and the open list says so in words. */
+.wb-meter.nb-vit-meter i.nb-vit-est {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(45deg, var(--surface) 0 2px, transparent 2px 4px);
+  opacity: 0.7;
+}
+.nb-vit-estnote {
+  margin: 0;
 }
 .wb-meter.nb-vit-meter i {
   background: var(--m-vit);

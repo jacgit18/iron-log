@@ -90,3 +90,20 @@ describe('the section Totals button (brief nutrition-manage-cleanup)', () => {
     expect(sectionTotalsVisible(false, { kind: 'none' })).toBe(false);
   });
 });
+
+describe('estimated share (brief recipe-auto-nutrition)', () => {
+  const bowl = (est?: true): DietEntry => ({ id: 'e', d: day, n: 'Oat bowl', kcal: 300, p: 10, micro: { manganese: 2.2 }, ...(est ? { est } : {}) });
+  it('carries the estimated part to the bar and says so for the list', () => {
+    const m = view([], {}, [bowl(true)]);
+    if (m?.kind !== 'rows') throw new Error('rows');
+    expect(m.estimated).toBe(true);
+    expect(m.subs[0]).toMatchObject({ key: 'manganese', estShare: 20 });
+    expect(m.subs[0]!.name).toContain('Part of this is estimated from recipes');
+  });
+  it('is quiet with no marked entry', () => {
+    const m = view([], {}, [bowl()]);
+    if (m?.kind !== 'rows') throw new Error('rows');
+    expect(m.estimated).toBe(false);
+    expect(m.subs[0]!.estShare).toBe(0);
+  });
+});

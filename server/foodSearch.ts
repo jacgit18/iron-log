@@ -8,7 +8,7 @@ import { cleanQuery, mergeFoods, parseFoods, type FoodHit } from '../src/shared/
 
 export const USDA_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search'; // also asked by the barcode lookup (foodBarcode.ts)
 // Two asks, so plain foods ("Eggs, Grade A, Large, egg whole") come before store products: with one ask for everything, "egg" listed a Snickers egg first.
-const GENERIC_TYPES = 'Foundation,SR Legacy';
+export const GENERIC_TYPES = 'Foundation,SR Legacy';
 const BRANDED_TYPE = 'Branded';
 const ASK_FOR = 25; // asked for more than shown: some foods have no calories or protein and are dropped
 export const TIMEOUT_MS = 5000;
@@ -26,6 +26,20 @@ export interface FoodDeps {
 }
 
 const UNAVAILABLE = 'food search is not available right now';
+
+/** One USDA FoodData Central search for `q` in one data type list, as diet foods. Throws on a non-200 answer (the URL carries the key: never log it). */
+export async function askUsda(ask: typeof fetch, key: string, q: string, dataType: string, pageSize: number = ASK_FOR, max?: number): Promise<FoodHit[]> {
+  const url = new URL(USDA_URL);
+  url.search = new URLSearchParams({ query: q, dataType, pageSize: String(pageSize), api_key: key }).toString();
+  const r = await ask(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
+  if (!r.ok) throw new Error(`upstream ${r.status}`);
+  return parseFoods(await r.json(), max);
+}
+
+/** The plain-food ask (Foundation, SR Legacy), reused by the ingredient resolver (server/ingredients.ts). */
+/** For the resolver, which orders the answers itself (`rankForTerm`): USDA's own order leaves the everyday food far down the list, so it asks for `PLAIN_WIDE` and gets them all back. */
+export const PLAIN_WIDE = 50;
+export const askPlainFoods = (ask: typeof fetch, key: string, q: string): Promise<FoodHit[]> => askUsda(ask, key, q, GENERIC_TYPES, PLAIN_WIDE, PLAIN_WIDE);
 
 export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps = {}): Router {
   const router = Router();
@@ -51,16 +65,10 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
     const name = q.toLowerCase();
     const old = held.get(name);
     if (old && t - old.at < HOLD_MS) return void res.json({ ok: true, hits: old.hits });
-    const askUsda = async (dataType: string) => {
-      const url = new URL(USDA_URL);
-      url.search = new URLSearchParams({ query: q, dataType, pageSize: String(ASK_FOR), api_key: key }).toString();
-      const r = await ask(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
-      if (!r.ok) throw new Error(`upstream ${r.status}`);
-      return parseFoods(await r.json());
-    };
+    const askType = (dataType: string) => askUsda(ask, key, q, dataType);
     try {
       // Both at once. One failing still gives the other's foods; both failing is "not available".
-      const [plain, branded] = await Promise.allSettled([askUsda(GENERIC_TYPES), askUsda(BRANDED_TYPE)]);
+      const [plain, branded] = await Promise.allSettled([askType(GENERIC_TYPES), askType(BRANDED_TYPE)]);
       if (plain.status === 'rejected' && branded.status === 'rejected') throw plain.reason;
       const g = plain.status === 'fulfilled' ? plain.value : [], b = branded.status === 'fulfilled' ? branded.value : [];
       const hits = mergeFoods(g, b);

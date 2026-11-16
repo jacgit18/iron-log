@@ -8,6 +8,7 @@ import { useToday } from '../../store/useToday.js';
 import ArmedButton from '../ArmedButton.jsx';
 import EntryForm from '../diet/EntryForm.js';
 import DayPicker from './DayPicker.js';
+import { MicroList } from './MicroLine.js';
 import Sheet from '../Sheet.js';
 
 // The sheet an eaten row opens (brief nutrition-items-row-sheet-and-more): the food's numbers, Edit, and a two-tap Delete (ADR 023). `id` is the diet entry. Edit shows the same form the Add sheet uses; Delete goes through the same store action the old inline button did.
@@ -58,6 +59,7 @@ export default function EatenRowSheet({ id }: { id: string }) {
     <Sheet className="nbsheet" aria-label={entry.n}>
       <h2 className="cond">{entry.n}</h2>
       <p className="nb-eatsheet-nums">{entryText(entry)}</p>
+      <MicroList micro={entry.micro} est={entry.est === true} />
       {note && <p className="note" role="status">{note}</p>}
       {picking && (
         <>

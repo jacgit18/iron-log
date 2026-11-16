@@ -245,3 +245,20 @@ describe('fav (brief recipes-find-type-tabs)', () => {
     for (const v of [false, 'yes', 1, null]) expect(normRecipe({ ...base, fav: v })).not.toHaveProperty('fav');
   });
 });
+
+describe('est on a recipe (brief recipe-auto-nutrition)', () => {
+  const base = { id: 'r1', n: 'Stew', cat: 'protein', ing: [{ n: 'Beef' }], steps: [], micro: { zinc: 4 } };
+  it('keeps an object with whole counts and round-trips', () => {
+    expect(normRecipe({ ...base, est: { of: 7, n: 8 } })!.est).toEqual({ of: 7, n: 8 });
+    expect(validRecipe(normRecipe({ ...base, est: { of: 7, n: 8 } }))).toBe(true);
+  });
+  it('drops an unusable mark: counted above could count, fractions, text, too many', () => {
+    for (const est of [{ of: 9, n: 8 }, { of: 1.5, n: 2 }, { of: -1, n: 2 }, { of: '1', n: 2 }, { of: 1, n: 41 }, 7, true, null, [1, 2]]) expect(normRecipe({ ...base, est })!.est).toBeUndefined();
+  });
+});
+
+describe('est without vitamins (brief recipe-auto-nutrition)', () => {
+  it('a Fill that found no vitamins still marks the estimated macros', () => {
+    expect(normRecipe({ id: 'r2', n: 'Stew', cat: 'protein', ing: [], steps: [], kcal: 300, p: 20, est: { of: 1, n: 2 } })!.est).toEqual({ of: 1, n: 2 });
+  });
+});

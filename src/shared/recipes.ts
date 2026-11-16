@@ -1,4 +1,4 @@
-import type { FoodType, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeIngredient, RecipeUse } from '../types.ts';
+import type { FoodType, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeEst, RecipeIngredient, RecipeUse } from '../types.ts';
 import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { cleanMicro } from './foodMicro.js';
 import { reservedId } from './grocery.js';
@@ -85,6 +85,14 @@ const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'nu
 export const MIN_Q = 0.1, MAX_Q = 100;
 export const cleanQ = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= MIN_Q && v <= MAX_Q ? Math.round(v * 100) / 100 : null);
 
+/** The estimate mark of a recipe (brief recipe-auto-nutrition): `of` lines counted out of `n` that could count, both whole, 0 <= of <= n <= MAX_INGREDIENTS; null when unusable. */
+export function cleanEst(v: unknown): RecipeEst | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  const of = typeof o.of === 'number' && Number.isInteger(o.of) ? o.of : -1, n = typeof o.n === 'number' && Number.isInteger(o.n) ? o.n : -1;
+  return of >= 0 && n >= of && n <= MAX_INGREDIENTS ? { of, n, ...(o.sEst === true ? { sEst: true as const } : {}) } : null;
+}
+
 /** One ingredient line, or null when it has no name. */
 export function normIngredient(x: unknown): RecipeIngredient | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
@@ -117,7 +125,8 @@ export function normRecipe(x: unknown): Recipe | null {
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
   const micro = cleanMicro(o.micro); // vitamins and minerals per serving, filled by a scan, the ingredient calculator or a meal's roll-up, or the eaten-row sheet's save-to-recipe tick (only when it had none)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(fromMeal ? { fromMeal } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  const est = cleanEst(o.est); // the numbers were estimated from ingredient lines; a Fill may find no vitamins and still estimate the macros, so this does not need `micro` (an entry's mark does)
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(est ? { est } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(fromMeal ? { fromMeal } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

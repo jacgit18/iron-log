@@ -13,7 +13,7 @@ export function kcalFromMacros(p: number | null, c: number | null, f: number | n
   return cleanKcal(4 * p + 4 * c + 9 * f);
 }
 
-export interface Food { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; /** The portions the numbers are totals for, when known (brief portion-scaled-micros): carried to the entry so its Edit sheet opens per portion. */ x?: number }
+export interface Food { n: string; kcal: number; p: number; c?: number; f?: number; from?: string; micro?: Micro; /** The portions the numbers are totals for, when known (brief portion-scaled-micros): carried to the entry so its Edit sheet opens per portion. */ x?: number; /** True when the vitamins came from a recipe whose numbers were estimated (brief recipe-auto-nutrition): carried to the entry. */ est?: true }
 
 /** Foods to offer for `query` (case-blind, a name that starts with it first, then one that contains it): what you logged before (one per name, newest day first, a recipe you logged counts under its recipe) and your own recipes that have calories and protein. An empty query offers nothing. */
 export function findFoods(entries: DietEntry[], recipes: Recipe[], query: string, limit = 6): Food[] {

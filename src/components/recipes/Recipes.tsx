@@ -215,12 +215,12 @@ export default function Recipes() {
   };
 
   // One compact row (brief recipes-list-compact): name and star, then the type and the macro line; the same right-hand slot holds Log or + Add, or an arrow that opens the item.
-  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
+  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; est?: boolean; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
     <li key={o.key} className={`rc-item${o.lib ? ' rc-libitem' : ''}${o.current ? ' current' : ''}${o.chips?.length ? ' hascombos' : ''}`}>
       <button type="button" className="rc-row" onClick={o.open} aria-current={o.current ? 'true' : undefined}>
         <span className="rc-main">
           <span className="rc-title"><b id={`rc-t-${o.key}`}>{o.title}</b>{o.fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{o.edited && <span className="rc-edited">Edited</span>}</span>
-          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}</span>
+          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}{o.est && <> · <span aria-hidden="true">est.</span><span className="vh"> estimated</span></>}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}</span>
         </span>
         {!o.logId && !o.addIt && <span className="rc-go" aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
@@ -248,7 +248,7 @@ export default function Recipes() {
           <ul className="rc-list rc-cards">
             {groups.library.map(it => {
               const have = libHave.get(it.id) ?? null;
-              return row({ key: it.id, title: it.name, meta: recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), have: have ? `${have.text} at home` : null, haveAll: !!have?.all, lib: true, addIt: () => addFromLibrary(it), open: () => setView({ kind: 'library', item: it }) });
+              return row({ key: it.id, title: it.name, meta: recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), badge: it.data.recipe!.est ? nutritionBadge(it.data.recipe!) : null, est: !!it.data.recipe!.est, have: have ? `${have.text} at home` : null, haveAll: !!have?.all, lib: true, addIt: () => addFromLibrary(it), open: () => setView({ kind: 'library', item: it }) });
             })}
           </ul>
           {libNow.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}
@@ -335,7 +335,7 @@ export default function Recipes() {
           {yours && (
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
-                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
+                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
           )}

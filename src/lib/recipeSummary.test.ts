@@ -55,6 +55,13 @@ describe('summaryCells', () => {
       { key: 'last', head: 'Not eaten yet', sub: '' },
     ]);
   });
+  it('marks the per serving box Estimated while the recipe carries the estimate mark, never a rolled-up one', () => {
+    const c = summaryCells({ ...base, recipe: { ...stew, est: { of: 3, n: 4 } } })[0]!;
+    expect(c.sub).toBe('P 30 g per serving · Estimated');
+    expect(c.words).toContain('estimated from ingredients');
+    expect(summaryCells({ ...base, recipe: { ...stew, est: { of: 3, n: 4 } }, rolled: { kcal: 100, p: 5 } })[0]!.sub).not.toMatch(/Estimated/);
+    expect(summaryCells(base)[0]!.sub).not.toMatch(/Estimated/);
+  });
   it('keeps the unit on the second line of the macro box', () => {
     expect(summaryCells(base)[0]).toMatchObject({ head: '400 kcal', sub: 'P 30 g per serving' });
     expect(summaryCells({ ...base, recipe: { ...stew, p: undefined } })[0]).toMatchObject({ head: '400 kcal', sub: 'per serving' });

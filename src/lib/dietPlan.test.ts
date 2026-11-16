@@ -157,3 +157,15 @@ describe('a planned item checked as eaten', () => {
     expect(clean[today]![0]!.e).toEqual(['e1']);
   });
 });
+
+describe('planLog keeps the estimate mark (brief recipe-auto-nutrition)', () => {
+  const est = [{ id: 'e1', n: 'Oat bowl', cat: 'other' as const, ing: [], steps: [], kcal: 300, p: 10, micro: { zinc: 2 }, est: { of: 2, n: 3 } }];
+  it('ticking a planned recipe with est and micro logs an entry that carries the mark', () => {
+    const out = planLog(resolve({ k: 'r', id: 'e1', x: 2 }, est, []), [], '2026-09-24', est);
+    expect(out).toMatchObject({ add: [{ micro: { zinc: 4 }, est: true }] });
+  });
+  it('and does not without it', () => {
+    const plain = [{ ...est[0]!, est: undefined }];
+    expect((planLog(resolve({ k: 'r', id: 'e1' }, plain, []), [], '2026-09-24', plain) as { add: object[] }).add[0]).not.toHaveProperty('est');
+  });
+});
