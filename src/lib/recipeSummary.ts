@@ -7,7 +7,7 @@ import { macroLine, macroWords, type MacroParts } from './macroLine.js';
 
 /* ---------- The recipe page's summary strip and "Add to today" (brief recipe-page-after-log). Pure: the page passes in what it read and keeps only state and markup. ---------- */
 
-type Basis = Pick<Recipe, 'id' | 'n' | 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual' | 'unit' | 'plural' | 'micro'>;
+type Basis = Pick<Recipe, 'id' | 'n' | 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual' | 'unit' | 'plural' | 'micro' | 'est'>;
 
 /** The newest eaten entry that came from this recipe (`from` is the recipe's id), or null. The newest day wins; on one day the later entry in the list does. */
 export function lastEaten(diet: readonly DietEntry[], recipeId: string): DietEntry | null {
@@ -45,7 +45,8 @@ function perCell(m: MacroParts): StripCell | null {
 export function summaryCells(o: { recipe: Basis; rolled: MacroParts | null; mine: boolean; have: number; total: number; inventoryItems: number; diet: readonly DietEntry[]; today: string }): StripCell[] {
   const cells: StripCell[] = [];
   const per = perCell(o.rolled ?? o.recipe);
-  if (per) cells.push(per);
+  if (per && !o.rolled && o.recipe.est) cells.push({ ...per, sub: `${per.sub} · Estimated`, words: `${per.words ?? ''}, estimated from ingredients` }); // a Fill's numbers say so (brief recipe-auto-nutrition); text, not colour
+  else if (per) cells.push(per);
   else if (o.mine) cells.push({ key: 'nonum', head: 'No numbers yet', sub: NO_NUMBERS_SUB });
   if (o.total > 0 && o.inventoryItems > 0) cells.push({ key: 'home', head: `${o.have} of ${o.total} at home`, sub: o.total > o.have ? `${o.total - o.have} missing` : '' });
   if (o.mine) {
