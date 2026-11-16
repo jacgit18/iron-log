@@ -66,7 +66,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
               <span className="note" id="fill-servings-note">Needed to give numbers per serving.</span>
             </label>
           )}
-          {filled && <p className="fill-macros" aria-label="Per serving">{macroLine(filled)} <span className="fill-flag">Estimated · {countedText(filled.est.of, filled.est.n)}</span></p>}
+          {filled && <p className="fill-macros">{macroLine(filled)} <span className="fill-flag">Estimated · {countedText(filled.est.of, filled.est.n)}</span></p>}
           <ul className="fill-rows" aria-label="Ingredients">
             {rows.map((r, i) => (
               <li key={i} className={`fill-row fill-${r.state}`}>
