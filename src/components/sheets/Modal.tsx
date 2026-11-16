@@ -36,6 +36,7 @@ import BulkShareSheet from '../grocery/BulkShareSheet.js';
 import PriceHistorySheet from '../grocery/PriceHistorySheet.js';
 import ReceiptSheet from '../grocery/ReceiptSheet.js';
 import ReceiptViewer from '../grocery/ReceiptViewer.js';
+import FillNutritionSheet from '../recipes/FillNutritionSheet.js';
 import RecipeFilters from '../recipes/RecipeFilters.js';
 import RowMenuSheet from '../program/RowMenuSheet.js';
 import QaPickerSheet from './QaPickerSheet.js';
@@ -81,6 +82,7 @@ export default function Modal() {
     case 'receipt': return <ReceiptSheet />;
     case 'receiptview': return <ReceiptViewer key={String((modal.receipt as { id?: string } | undefined)?.id ?? '')} />;
     case 'recipefilters': return <RecipeFilters />;
+    case 'fillnutrition': return <FillNutritionSheet key={String(modal.id ?? '')} id={String(modal.id ?? '')} />;
     case 'ideaadd': return <IdeaAddSheet key={String(modal.id ?? '')} id={String(modal.id ?? '')} />;
     case 'help': return <HelpSheet />;
     case 'share': return <ShareSheet title={String(modal.title ?? '')} url={String(modal.url ?? '')} />;
