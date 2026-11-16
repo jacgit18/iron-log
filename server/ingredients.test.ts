@@ -4,7 +4,7 @@ import { sql, type Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
 import type { DB } from './db/types.ts';
-import { cacheKey, postgresCache, resolveLines, RESOLVER_VERSION, type MatchCache } from './ingredients.ts';
+import { cacheKey, pickTokens, planTokens, postgresCache, resolveLines, RESOLVER_VERSION, type MatchCache } from './ingredients.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
 // Brief recipe-auto-nutrition, PR 1, Done when 1: the resolver with a fake model and a fake USDA, the cache, the caps and the route.
@@ -25,7 +25,7 @@ const reply = (obj: unknown, stop_reason = 'end_turn', status = 200) => new Resp
 interface Fakes { plan?: unknown; picks?: unknown; usdaFail?: string[] }
 /** One fetch that plays the Claude API (call 1 asks for "lines", call 2 for "picks") and USDA (by query). */
 function fakeFetch(f: Fakes) {
-  const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string }[], urls: [] as string[] };
+  const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string; max_tokens: number }[], urls: [] as string[] };
   const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
     if (new URL(url).hostname === 'api.anthropic.com') {
@@ -199,11 +199,26 @@ describe('resolveLines', () => {
     expect(f.calls.model).toBe(0);
   });
 
+  it('both model calls leave room for the model to think before it answers (the owner eval of 2026-11-16: two of three recipes stopped at max_tokens)', async () => {
+    const f = fakeFetch({ plan: PLAN, picks: PICKS });
+    await resolveLines(LINES, deps(f.fn, memCache()));
+    expect(f.calls.bodies.map(b => b.max_tokens)).toEqual([planTokens(5), pickTokens(3)]);
+    // The owner's eval run used about 80 output tokens a line on average (1,882 for 23 lines, thinking included); single calls ran well over that, so even one line gets a few thousand. Only used tokens are billed.
+    for (const n of [1, 6, 40]) { expect(planTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); expect(pickTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); }
+    expect(planTokens(40)).toBeLessThanOrEqual(16000);
+  });
+
   it('a model call that is cut off or refused writes nothing', async () => {
     const cache = memCache();
     const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
     await expect(resolveLines(LINES, deps(fn, cache))).rejects.toThrow(/max_tokens/);
     expect(cache.map.size).toBe(0);
+  });
+
+  it('a cut-off call was paid for: its tokens are on the error for the batch\'s spend ceiling (review of PR 1018)', async () => {
+    const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
+    const err = await resolveLines(LINES, deps(fn, memCache())).catch((e: unknown) => e);
+    expect((err as { usage?: unknown }).usage).toEqual({ calls: 1, inputTokens: 100, outputTokens: 50 });
   });
 
   it('a plan of the wrong length is a failed request', async () => {

@@ -72,10 +72,21 @@ export interface ResolveDeps {
 }
 export type Resolved = { ok: true; lines: LineMatch[]; usage: Usage; cached: number } | { ok: false; retryAfterSec: number };
 
+/** Output limits of the two model calls. The model thinks before it answers (adaptive thinking is on by default) and those tokens count against the limit, so a limit sized
+ *  for the JSON alone cut real answers off (`stopped: max_tokens`: the whole fill failed, on a recipe that had worked a minute before). Only tokens used are billed, never the limit,
+ *  so the room is generous: at 40 lines it is 10,000 and 8,000. For scale, the owner's eval run of 2026-11-16 used 1,882 output tokens for 23 lines over both calls, thinking included (about 80 a line on average; single calls ran well over that). */
+export const planTokens = (lines: number): number => 2000 + 200 * lines;
+export const pickTokens = (lines: number): number => 2000 + 150 * lines;
+
 type Stored = Omit<LineMatch, 'line'>;
 const stored = (m: LineMatch): Stored => { const { line: _line, ...rest } = m; return rest; };
 const call = async (deps: ResolveDeps, system: string, user: string, schema: Record<string, unknown>, maxTokens: number, usage: Usage): Promise<unknown> => {
-  const r = await askModelJson(deps.ask, deps.key, deps.model, { system, user, schema, maxTokens });
+  const r = await askModelJson(deps.ask, deps.key, deps.model, { system, user, schema, maxTokens }).catch((err: unknown) => {
+    // A reply that was cut off or unusable was still paid for: count it, so the catalog batch's spend ceiling sees it.
+    const spent = (err as { spent?: { inputTokens: number; outputTokens: number } } | null)?.spent;
+    if (spent) { usage.calls++; usage.inputTokens += spent.inputTokens; usage.outputTokens += spent.outputTokens; }
+    throw err;
+  });
   usage.calls++; usage.inputTokens += r.inputTokens; usage.outputTokens += r.outputTokens;
   const json = jsonFromReply(r.text);
   if (!json) throw new Error('reply is not a JSON object');
@@ -105,7 +116,7 @@ async function resolveInner(lines: string[], deps: ResolveDeps, usage: Usage): P
   if (todo.length > 0) {
     const gate = deps.gate?.();
     if (gate && !gate.ok) return { ok: false, retryAfterSec: gate.retryAfterSec };
-    const plan = cleanPlan(await call(deps, SYSTEM_PLAN, JSON.stringify(todo.map((t, i) => ({ i, line: t.line }))), PLAN_SCHEMA, 200 + 70 * todo.length, usage), todo.length);
+    const plan = cleanPlan(await call(deps, SYSTEM_PLAN, JSON.stringify(todo.map((t, i) => ({ i, line: t.line }))), PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
     if (!plan) throw new Error('plan has the wrong length');
     // USDA: one plain-food search per distinct term. A failed search leaves its line `none` for this answer and is not cached; every search failing is a failed request.
     const terms = [...new Set(plan.flatMap(p => (!p.skip && p.term ? [p.term.toLowerCase()] : [])))];
@@ -116,7 +127,7 @@ async function resolveInner(lines: string[], deps: ResolveDeps, usage: Usage): P
     if (terms.length > 0 && failed.size === terms.length) throw new Error('every food search failed');
     const shown = new Map<number, Map<number, FoodHit>>();
     plan.forEach((p, i) => { const h = p.skip || !p.term ? undefined : found.get(p.term.toLowerCase()); if (h && h.length > 0) shown.set(i, new Map(h.map(f => [f.id, f]))); });
-    const picks = shown.size === 0 ? new Map() : cleanPicks(await call(deps, SYSTEM_PICK, JSON.stringify([...shown.keys()].map(i => ({ i, line: todo[i]!.line, options: [...shown.get(i)!.values()].map(f => ({ id: f.id, name: f.name, kcal: f.kcal })) }))), PICK_SCHEMA, 100 + 40 * shown.size, usage), new Map([...shown].map(([i, m]) => [i, new Set(m.keys())])));
+    const picks = shown.size === 0 ? new Map() : cleanPicks(await call(deps, SYSTEM_PICK, JSON.stringify([...shown.keys()].map(i => ({ i, line: todo[i]!.line, options: [...shown.get(i)!.values()].map(f => ({ id: f.id, name: f.name, kcal: f.kcal })) }))), PICK_SCHEMA, pickTokens(shown.size), usage), new Map([...shown].map(([i, m]) => [i, new Set(m.keys())])));
     const write: { key: string; result: Stored }[] = [];
     todo.forEach((t, i) => {
       const p = plan[i]!;
