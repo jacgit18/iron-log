@@ -25,6 +25,8 @@ export const DEFAULT_PRICE = { inUsd: 0.10, outUsd: 0.50 };
 export const USDA_MS_PER_LINE = 3700;
 /** Passes over a recipe that still has a line to retry. */
 export const MAX_PASSES = 2;
+/** Runs a recipe may end unfinished (a line that never resolves) before it is filed as `none`: each run pays for its plan call again. */
+export const MAX_RUNS = 3;
 
 export interface BatchRecipe { id: string; cat: RecipeCategory; ing: string[]; servings?: number }
 export interface Price { inUsd: number; outUsd: number }
@@ -41,6 +43,8 @@ export interface ResultsFile {
   portions: Record<string, { g: number; s: number }>;
   /** Hash of the typical-portion table the estimated servings were worked out with. A different table means those records are stale: the run drops them and works them out again (their lines are cached). */
   portionsHash?: string;
+  /** Runs that ended with a recipe unfinished, by id; at `MAX_RUNS` the recipe is filed under `none`. */
+  attempts?: Record<string, number>;
 }
 
 /** A short hash of the portion table in use (the table and its fallback), in a fixed category order. */
@@ -52,7 +56,7 @@ export const emptyResults = (): ResultsFile => ({ version: 1, resolver: RESOLVER
 export function parseResults(raw: unknown): ResultsFile {
   const o = raw as Partial<ResultsFile> | null;
   if (!o || typeof o !== 'object' || o.version !== 1 || typeof o.records !== 'object' || !o.records || typeof o.spentUsd !== 'number') throw new Error('not a catalog:nutrition results file');
-  return { version: 1, resolver: typeof o.resolver === 'number' ? o.resolver : RESOLVER_VERSION, spentUsd: o.spentUsd, records: o.records as ResultsFile['records'], none: (o.none && typeof o.none === 'object' ? o.none : {}) as ResultsFile['none'], portions: (o.portions && typeof o.portions === 'object' ? o.portions : {}) as ResultsFile['portions'], ...(typeof o.portionsHash === 'string' ? { portionsHash: o.portionsHash } : {}) };
+  return { version: 1, resolver: typeof o.resolver === 'number' ? o.resolver : RESOLVER_VERSION, spentUsd: o.spentUsd, records: o.records as ResultsFile['records'], none: (o.none && typeof o.none === 'object' ? o.none : {}) as ResultsFile['none'], portions: (o.portions && typeof o.portions === 'object' ? o.portions : {}) as ResultsFile['portions'], ...(typeof o.portionsHash === 'string' ? { portionsHash: o.portionsHash } : {}), ...(o.attempts && typeof o.attempts === 'object' ? { attempts: o.attempts } : {}) };
 }
 
 /** The resolver's cache kept in a plain object that the CLI saves as a file: `get` and `put` as the resolver wants them. */
@@ -183,7 +187,11 @@ export async function resolveRecipes(run: ResolveRun): Promise<ResolveReport> {
       if (r.servings && !outcome.record.sEst) results.portions[r.id] = { g: Math.round(totalGrams(last)), s: outcome.record.servings };
     }
     else if (outcome.kind === 'none') { results.none[r.id] = outcome.why; rep.none++; }
-    else rep.unfinished++;
+    else {
+      const n = (results.attempts?.[r.id] ?? 0) + 1;
+      if (n >= MAX_RUNS) { results.none[r.id] = `a line never resolved in ${n} runs`; rep.none++; delete results.attempts?.[r.id]; }
+      else { results.attempts = { ...results.attempts, [r.id]: n }; rep.unfinished++; }
+    }
   }
   return rep;
 }

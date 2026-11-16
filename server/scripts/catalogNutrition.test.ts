@@ -6,7 +6,7 @@ import { cleanLineMatch, normalizeLine } from '../../src/shared/ingredientMatch.
 import { cacheKey, type Resolved } from '../ingredients.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 import {
-  applyResults, costUsd, emptyResults, estimatorError, memoryCache, needsRetry, outcomeOf, parseResults, portionMedians, project, resolveRecipes, rollUp, sampleOf, type BatchRecipe,
+  applyResults, costUsd, emptyResults, estimatorError, MAX_PASSES, MAX_RUNS, memoryCache, needsRetry, outcomeOf, parseResults, portionMedians, project, resolveRecipes, rollUp, sampleOf, type BatchRecipe,
 } from './catalogNutrition.ts';
 
 // A fake resolver stands in for the model and USDA: every line is "100 g of a food at 200 kcal / 10 p / 20 c / 5 f per 100 g", so a recipe's numbers are easy to check by hand.
@@ -121,6 +121,18 @@ describe('resolveRecipes', () => {
     const stop = await resolveRecipes({ recipes, results: two, resolve, price: { inUsd: 1e6, outUsd: 0 }, ceilingUsd: 1000 });
     expect(stop.stoppedAtCeiling).toBe(true);
     expect(stop.attempted).toBe(1);
+  });
+
+  it('stops retrying a recipe whose line never resolves after MAX_RUNS runs, and files it as none', async () => {
+    const f = fake({}, line => (line === 'flaky' ? { line, status: 'none', retry: true } : food(line)));
+    const results = emptyResults();
+    const run = () => resolveRecipes({ recipes: [recipe('c:wbc:a', ['flaky', 'ok'], { servings: 2 })], results, resolve: f.resolve, price: PRICE, ceilingUsd: 50 });
+    for (let i = 1; i < MAX_RUNS; i++) expect(await run()).toMatchObject({ unfinished: 1, none: 0 });
+    const before = f.calls.length;
+    expect(await run()).toMatchObject({ unfinished: 0, none: 1 });
+    expect(results.none['c:wbc:a']).toMatch(/never resolved/);
+    expect((await run()).attempted).toBe(0);
+    expect(f.calls.length).toBe(before + MAX_PASSES);
   });
 
   it('redoes estimated servings when the portion table changed, from the cache, and leaves source servings alone', async () => {
