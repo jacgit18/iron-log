@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { Kysely } from 'kysely';
 import type { RecipeCategory } from '../../src/types.ts';
@@ -6,7 +7,7 @@ import { cleanMicro, type Micro } from '../../src/shared/foodMicro.ts';
 import { NUTRIENT_KEYS } from '../../src/shared/nutrientKeys.ts';
 import type { LineMatch } from '../../src/shared/ingredientMatch.ts';
 import {
-  cleanNutrition, countLines, estimateServings, ingredientHash, isCounted, NUTRITION_VERSION, passesShowRule, perServing, servingsFor, totalGrams, type LibraryNutrition,
+  cleanNutrition, countLines, estimateServings, ingredientHash, isCounted, NUTRITION_VERSION, passesShowRule, perServing, PORTION_FALLBACK_G, PORTION_G, servingsFor, totalGrams, type LibraryNutrition,
 } from '../../src/shared/libraryNutrition.ts';
 import { cacheKey, RESOLVER_VERSION, type MatchCache, type Resolved } from '../ingredients.ts';
 
@@ -38,14 +39,20 @@ export interface ResultsFile {
   none: Record<string, string>;
   /** Recipes whose servings came from the source: total counted grams and those servings. What `PORTION_G` is set from and the estimator is measured against. */
   portions: Record<string, { g: number; s: number }>;
+  /** Hash of the typical-portion table the estimated servings were worked out with. A different table means those records are stale: the run drops them and works them out again (their lines are cached). */
+  portionsHash?: string;
 }
+
+/** A short hash of the portion table in use (the table and its fallback), in a fixed category order. */
+export const portionsHashOf = (portionG: Partial<Record<RecipeCategory, number>> = PORTION_G): string =>
+  createHash('sha256').update(JSON.stringify([Object.entries(portionG).sort(([a], [b]) => (a < b ? -1 : 1)), PORTION_FALLBACK_G])).digest('hex').slice(0, 12);
 export const emptyResults = (): ResultsFile => ({ version: 1, resolver: RESOLVER_VERSION, spentUsd: 0, records: {}, none: {}, portions: {} });
 
 /** A results file read back and checked again; anything unreadable is an error, never a silent empty file. */
 export function parseResults(raw: unknown): ResultsFile {
   const o = raw as Partial<ResultsFile> | null;
   if (!o || typeof o !== 'object' || o.version !== 1 || typeof o.records !== 'object' || !o.records || typeof o.spentUsd !== 'number') throw new Error('not a catalog:nutrition results file');
-  return { version: 1, resolver: typeof o.resolver === 'number' ? o.resolver : RESOLVER_VERSION, spentUsd: o.spentUsd, records: o.records as ResultsFile['records'], none: (o.none && typeof o.none === 'object' ? o.none : {}) as ResultsFile['none'], portions: (o.portions && typeof o.portions === 'object' ? o.portions : {}) as ResultsFile['portions'] };
+  return { version: 1, resolver: typeof o.resolver === 'number' ? o.resolver : RESOLVER_VERSION, spentUsd: o.spentUsd, records: o.records as ResultsFile['records'], none: (o.none && typeof o.none === 'object' ? o.none : {}) as ResultsFile['none'], portions: (o.portions && typeof o.portions === 'object' ? o.portions : {}) as ResultsFile['portions'], ...(typeof o.portionsHash === 'string' ? { portionsHash: o.portionsHash } : {}) };
 }
 
 /** The resolver's cache kept in a plain object that the CLI saves as a file: `get` and `put` as the resolver wants them. */
@@ -127,6 +134,8 @@ export interface ResolveReport {
   /** Recipes with a line still unworked after the last pass: not in the file, tried again on the next run. */
   unfinished: number;
   failed: number;
+  /** Records whose servings were estimated with a different portion table, dropped at the start of this run to be worked out again. */
+  rederived: number;
   stoppedAtCeiling: boolean;
   spentUsd: number;
   /** Spend of this run only, and its uncached distinct lines (what the projection divides). */
@@ -137,7 +146,14 @@ export interface ResolveReport {
 /** Resolves `recipes` one at a time and puts each finished one in `results` (mutated; the caller saves it after the run). Stops before the next recipe when the total spend has reached the ceiling. */
 export async function resolveRecipes(run: ResolveRun): Promise<ResolveReport> {
   const { recipes, results, resolve, price, ceilingUsd, sleep = async () => {}, msPerLine = 0, portionG, log = () => {} } = run;
-  const rep: ResolveReport = { attempted: 0, alreadyDone: 0, records: 0, none: 0, unfinished: 0, failed: 0, stoppedAtCeiling: false, spentUsd: results.spentUsd, runUsd: 0, uncachedLines: 0 };
+  const rep: ResolveReport = { attempted: 0, alreadyDone: 0, records: 0, none: 0, unfinished: 0, failed: 0, rederived: 0, stoppedAtCeiling: false, spentUsd: results.spentUsd, runUsd: 0, uncachedLines: 0 };
+  // Servings estimated from the grams depend on the portion table: records made with another table are dropped (their recipes are redone below, from the cache) so apply never loads them.
+  const hash = portionsHashOf(portionG);
+  if (results.portionsHash !== hash) {
+    for (const [id, rec] of Object.entries(results.records)) if (rec.sEst) { delete results.records[id]; rep.rederived++; }
+    results.portionsHash = hash;
+    if (rep.rederived > 0) log(`portion table changed: ${rep.rederived} estimated-servings records dropped, redone from the cache`);
+  }
   for (const r of recipes) {
     if (r.id in results.records || r.id in results.none) { rep.alreadyDone++; continue; }
     if (results.spentUsd >= ceilingUsd) { rep.stoppedAtCeiling = true; break; }

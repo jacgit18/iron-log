@@ -123,6 +123,19 @@ describe('resolveRecipes', () => {
     expect(stop.attempted).toBe(1);
   });
 
+  it('redoes estimated servings when the portion table changed, from the cache, and leaves source servings alone', async () => {
+    const rs = [recipe('c:wbc:a', ['a', 'b', 'c', 'd']), recipe('c:wbc:b', ['e', 'f'], { servings: 2 })];
+    const f = fake({}, line => food(line, { grams: 250 })), results = emptyResults();
+    await resolveRecipes({ recipes: rs, results, resolve: f.resolve, price: PRICE, ceilingUsd: 50, portionG: { protein: 250 } });
+    expect(results.records['c:wbc:a']).toMatchObject({ servings: 4, sEst: true });
+    const same = await resolveRecipes({ recipes: rs, results, resolve: f.resolve, price: PRICE, ceilingUsd: 50, portionG: { protein: 250 } });
+    expect(same).toMatchObject({ rederived: 0, attempted: 0 });
+    const rep = await resolveRecipes({ recipes: rs, results, resolve: f.resolve, price: PRICE, ceilingUsd: 50, portionG: { protein: 500 } });
+    expect(rep).toMatchObject({ rederived: 1, attempted: 1, runUsd: 0 });
+    expect(results.records['c:wbc:a']).toMatchObject({ servings: 2, sEst: true });
+    expect(results.records['c:wbc:b']).toMatchObject({ servings: 2 });
+  });
+
   it('throttles under the USDA allowance by uncached line, and keeps going after a failed recipe', async () => {
     const f = fake({}, food), slept: number[] = [];
     let n = 0;
