@@ -4,7 +4,7 @@ import { sql, type Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
 import type { DB } from './db/types.ts';
-import { cacheKey, postgresCache, resolveLines, RESOLVER_VERSION, type MatchCache } from './ingredients.ts';
+import { cacheKey, pickTokens, planTokens, postgresCache, resolveLines, RESOLVER_VERSION, type MatchCache } from './ingredients.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
 // Brief recipe-auto-nutrition, PR 1, Done when 1: the resolver with a fake model and a fake USDA, the cache, the caps and the route.
@@ -25,7 +25,7 @@ const reply = (obj: unknown, stop_reason = 'end_turn', status = 200) => new Resp
 interface Fakes { plan?: unknown; picks?: unknown; usdaFail?: string[] }
 /** One fetch that plays the Claude API (call 1 asks for "lines", call 2 for "picks") and USDA (by query). */
 function fakeFetch(f: Fakes) {
-  const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string }[], urls: [] as string[] };
+  const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string; max_tokens: number }[], urls: [] as string[] };
   const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
     if (new URL(url).hostname === 'api.anthropic.com') {
@@ -199,11 +199,86 @@ describe('resolveLines', () => {
     expect(f.calls.model).toBe(0);
   });
 
+  it('both model calls leave room for the model to think before it answers (the owner eval of 2026-11-16: two of three recipes stopped at max_tokens)', async () => {
+    const f = fakeFetch({ plan: PLAN, picks: PICKS });
+    await resolveLines(LINES, deps(f.fn, memCache()));
+    expect(f.calls.bodies.map(b => b.max_tokens)).toEqual([planTokens(5), pickTokens(3)]);
+    // The owner's eval run used about 80 output tokens a line on average (1,882 for 23 lines, thinking included); single calls ran well over that, so even one line gets a few thousand. Only used tokens are billed.
+    for (const n of [1, 6, 40]) { expect(planTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); expect(pickTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); }
+    expect(planTokens(40)).toBeLessThanOrEqual(16000);
+  });
+
+  it('asks USDA for a wide list and shows the everyday food USDA ranked far down (owner eval 2026-11-16: milk matched buttermilk, potatoes their skin)', async () => {
+    const names = ['Cheese, mozzarella, whole milk', 'Cheese, ricotta, whole milk', 'Milk, buttermilk, fluid, whole', 'Yogurt, plain, whole milk', 'Cheese, feta, whole milk, crumbled', 'Yogurt, Greek, fruit, whole milk',
+      'Crackers, milk', 'Candies, milk chocolate', 'Milk and cereal bar', 'Milk, dry, whole, with added vitamin D', 'Milk, whole, 3.25% milkfat, with added vitamin D'];
+    FOODS['milk, whole'] = names.map((n, i) => usdaFood(500 + i, n, 61));
+    try {
+      const f = fakeFetch({ plan: { lines: [{ term: 'milk, whole', grams: 245, gramsFrom: 'converted', skip: false }] }, picks: { picks: [{ i: 0, id: 510, approximate: false }] } });
+      const out = await resolveLines(['1 cup milk'], deps(f.fn, memCache()));
+      expect(new URL(f.calls.urls[0]!).searchParams.get('pageSize')).toBe('50');
+      const options = (JSON.parse(f.calls.bodies[1]!.messages[0]!.content) as { options: { id: number; name: string }[] }[])[0]!.options;
+      expect(options.length).toBeLessThanOrEqual(8);
+      expect(options.map(o => o.name)).toContain('Milk, whole, 3.25% milkfat, with added vitamin D');
+      expect(options[0]!.name.startsWith('Milk,')).toBe(true);
+      expect(out.ok && out.lines[0]).toMatchObject({ status: 'matched', food: 'Milk, whole, 3.25% milkfat, with added vitamin D', grams: 245 });
+    } finally { delete FOODS['milk, whole']; }
+  });
+
+  it('the plan prompt asks for a guess when a line has no amount, and the pick prompt for the whole everyday food', async () => {
+    const f = fakeFetch({ plan: PLAN, picks: PICKS });
+    await resolveLines(LINES, deps(f.fn, memCache()));
+    expect(f.calls.bodies[0]!.system).toMatch(/when the line gives no amount, estimate/);
+    expect(f.calls.bodies[0]!.system).toMatch(/null only when "skip" is true/);
+    expect(f.calls.bodies[1]!.system).toMatch(/whole, everyday food over a part of it/);
+  });
+
+  it('a plan with the wrong number of entries is asked for once more, told the count (owner eval 2026-11-16: Fried Eggs failed the whole fill)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const base = fakeFetch({ plan: PLAN, picks: PICKS });
+    const plans: string[] = [];
+    const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      if (new URL(String(input)).hostname === 'api.anthropic.com') {
+        const body = JSON.parse(String(init?.body)) as { system: string };
+        if (body.system.includes('search terms')) { plans.push(body.system); if (plans.length === 1) return reply({ lines: PLAN.lines.slice(0, 4) }); }
+      }
+      return base.fn(input, init);
+    }) as unknown as typeof fetch;
+    const out = await resolveLines(LINES, deps(fn, memCache()));
+    expect(plans).toHaveLength(2);
+    expect(plans[0]).not.toMatch(/wrong number/);
+    expect(plans[1]).toMatch(/There are 5 lines: answer exactly 5 entries/);
+    expect(out.ok && out.lines.map(l => l.status)).toEqual(['matched', 'matched', 'matched', 'skip', 'none']);
+    // Three model calls in all (plan, plan again, pick), every one counted.
+    expect(out.ok && out.usage).toEqual({ calls: 3, inputTokens: 300, outputTokens: 150 });
+    // The retry leaves one log line with the count and none of the recipe's text.
+    expect(warn).toHaveBeenCalledTimes(1);
+    const logged = String(warn.mock.calls[0]![0]);
+    expect(JSON.parse(logged)).toEqual({ msg: 'ingredient plan had the wrong number of entries, asking once more', lines: 5 });
+    expect(logged).not.toMatch(/flour|eggs|butter/i);
+  });
+
+  it('a second wrong plan is still a failed request that writes nothing, and both tries are counted', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const cache = memCache();
+    const fn = vi.fn(async () => reply({ lines: PLAN.lines.slice(0, 4) })) as unknown as typeof fetch;
+    const err = await resolveLines(LINES, deps(fn, cache)).catch((e: unknown) => e);
+    expect(String(err)).toMatch(/plan has the wrong length/);
+    expect((err as { usage?: unknown }).usage).toEqual({ calls: 2, inputTokens: 200, outputTokens: 100 });
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(cache.map.size).toBe(0);
+  });
+
   it('a model call that is cut off or refused writes nothing', async () => {
     const cache = memCache();
     const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
     await expect(resolveLines(LINES, deps(fn, cache))).rejects.toThrow(/max_tokens/);
     expect(cache.map.size).toBe(0);
+  });
+
+  it('a cut-off call was paid for: its tokens are on the error for the batch\'s spend ceiling (review of PR 1018)', async () => {
+    const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
+    const err = await resolveLines(LINES, deps(fn, memCache())).catch((e: unknown) => e);
+    expect((err as { usage?: unknown }).usage).toEqual({ calls: 1, inputTokens: 100, outputTokens: 50 });
   });
 
   it('a plan of the wrong length is a failed request', async () => {

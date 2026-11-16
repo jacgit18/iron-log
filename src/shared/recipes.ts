@@ -90,7 +90,7 @@ export function cleanEst(v: unknown): RecipeEst | null {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
   const o = v as Record<string, unknown>;
   const of = typeof o.of === 'number' && Number.isInteger(o.of) ? o.of : -1, n = typeof o.n === 'number' && Number.isInteger(o.n) ? o.n : -1;
-  return of >= 0 && n >= of && n <= MAX_INGREDIENTS ? { of, n } : null;
+  return of >= 0 && n >= of && n <= MAX_INGREDIENTS ? { of, n, ...(o.sEst === true ? { sEst: true as const } : {}) } : null;
 }
 
 /** One ingredient line, or null when it has no name. */

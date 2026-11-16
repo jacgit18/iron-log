@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracketGrams, hasAmount, termMatchesLine, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, leadingGrams, normalizeLine, textGrams, MAX_LINE, MAX_LINES } from './ingredientMatch.js';
+import { bracketGrams, cleanAnswer, cleanLineMatch, cleanLines, cleanPicks, cleanPlan, cleanTerm, confidenceOf, hasAmount, leadingGrams, MAX_LINE, MAX_LINES, normalizeLine, rankForTerm, termMatchesLine, termScore, textGrams } from './ingredientMatch.js';
 
 const hit = { id: 7, name: 'Flour, wheat', kcal: 360, p: 10, c: 76, f: 1, micro: { iron: 4.6 } };
 const ok = { status: 'matched', fdcId: 7, food: 'Flour, wheat', grams: 100, gramsFrom: 'text', confidence: 'high', per100: hit };
@@ -53,6 +53,47 @@ describe('termMatchesLine', () => {
   it('keeps the retry flag on none and nowhere else', () => {
     expect(cleanLineMatch({ status: 'none', retry: true }, 'l')).toEqual({ line: 'l', status: 'none', retry: true });
     expect(cleanLineMatch({ status: 'skip', retry: true }, 'l')).toEqual({ line: 'l', status: 'skip' });
+  });
+});
+
+describe('rankForTerm: USDA answers ordered for the term (names as USDA gave them, 2026-11-16)', () => {
+  const food = (name: string) => ({ name });
+  const top = (term: string, names: string[], n: number) => rankForTerm(term, names.map(food)).slice(0, n).map(f => f.name);
+  it('puts whole milk in the shown foods, where USDA had it at place 27', () => {
+    const usda = ['Cheese, mozzarella, whole milk', 'Cheese, ricotta, whole milk', 'Milk, buttermilk, fluid, whole', 'Yogurt, plain, whole milk', 'Cheese, feta, whole milk, crumbled', 'Yogurt, Greek, fruit, whole milk',
+      'Milk, dry, whole, with added vitamin D', 'Crackers, milk', 'Candies, milk chocolate', 'Milk, whole, 3.25% milkfat, with added vitamin D'];
+    const shown = top('milk, whole', usda, 3);
+    expect(shown).toContain('Milk, whole, 3.25% milkfat, with added vitamin D');
+    expect(shown).not.toContain('Cheese, mozzarella, whole milk');
+    // The dried form is not what "milk" means: it comes after the fluid ones.
+    expect(top('milk, whole', usda, 10).indexOf('Milk, dry, whole, with added vitamin D')).toBeGreaterThan(top('milk, whole', usda, 10).indexOf('Milk, whole, 3.25% milkfat, with added vitamin D'));
+  });
+  it('puts the whole potato before its skin', () => {
+    const usda = ['Potatoes, raw, skin', 'Potatoes, flesh and skin, raw', 'Sweet potato leaves, raw', 'Potatoes, gold, without skin, raw', 'Potatoes, red, flesh and skin, raw'];
+    const shown = top('potatoes, raw', usda, 5);
+    expect(shown[0]).not.toBe('Potatoes, raw, skin');
+    expect(shown.indexOf('Potatoes, flesh and skin, raw')).toBeLessThan(shown.indexOf('Potatoes, raw, skin'));
+    expect(shown.at(-1)).toBe('Sweet potato leaves, raw');
+  });
+  it('puts rolled oats first, ahead of the rolls and the oat bran', () => {
+    const usda = ['Rolls, dinner, oat bran', 'Oats, whole grain, rolled, old fashioned', 'Oats, puffed', 'Oil, oat', 'Rolls, french', 'Bagels, oat bran'];
+    expect(top('oats, rolled', usda, 1)).toEqual(['Oats, whole grain, rolled, old fashioned']);
+  });
+  it('meets singular and plural terms, and sinks a lead that is a made-over form (apple juice, tomato powder)', () => {
+    const apples = ['Apple juice, canned', 'Applesauce, canned', 'Apples, raw, with skin', 'Apples, dehydrated (low moisture)'];
+    expect(top('apple, raw', apples, 1)).toEqual(['Apples, raw, with skin']);
+    expect(top('apples, raw', apples, 1)).toEqual(['Apples, raw, with skin']);
+    expect(top('olive oil', ['Olives, ripe, canned', 'Oil, olive, salad or cooking', 'Olive oil'], 1)).toEqual(['Olive oil']);
+    expect(top('tomatoes, raw', ['Tomato powder', 'Tomatoes, sun-dried', 'Tomatoes, red, ripe, raw, year round average'], 1)).toEqual(['Tomatoes, red, ripe, raw, year round average']);
+  });
+  it('does not prefer a short name: equal scores keep USDA\'s order', () => {
+    expect(top('tomatoes, raw', ['Tomatoes, red, ripe, raw, year round average', 'Tomatoes, green, raw'], 1)).toEqual(['Tomatoes, red, ripe, raw, year round average']);
+  });
+  it('keeps a part or form the term asks for, keeps USDA\'s order between equals, and never drops a food', () => {
+    expect(termScore('milk, dry', 'Milk, dry, whole, with added vitamin D')).toBeGreaterThan(termScore('milk, dry', 'Milk, whole, 3.25% milkfat, with added vitamin D'));
+    expect(top('eggs', ['Egg, whole, raw, fresh', 'Egg, whole, raw, frozen'], 2)[0]).toBe('Egg, whole, raw, fresh');
+    expect(top('', ['B', 'A'], 2)).toEqual(['B', 'A']);
+    expect(top('zzz', ['B', 'A'], 2)).toHaveLength(2);
   });
 });
 

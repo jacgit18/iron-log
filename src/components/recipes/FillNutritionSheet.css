@@ -1,0 +1,60 @@
+@layer base, components;
+@layer components {
+/* Fill nutrition review sheet (FillNutritionSheet.tsx): one row per ingredient line with its matched food, grams and Sure, Check or No match. The state is words, never colour alone. */
+.fillsheet .fill-servings {
+  display: grid;
+  gap: var(--sp-4);
+  margin: var(--sp-8) 0;
+}
+.fillsheet .fill-servings input {
+  width: 6rem;
+  min-height: 44px;
+}
+.fill-macros {
+  margin: var(--sp-8) 0;
+  font-weight: 600;
+}
+.fill-flag {
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.fill-rows {
+  display: grid;
+  gap: var(--sp-4);
+  margin: var(--sp-8) 0;
+  padding: 0;
+  list-style: none;
+}
+.fill-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+.fill-row input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+}
+.fill-text {
+  display: grid;
+  min-width: 0;
+}
+.fill-line {
+  overflow-wrap: anywhere;
+}
+.fill-food {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.fill-state {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-8);
+  white-space: nowrap;
+}
+}

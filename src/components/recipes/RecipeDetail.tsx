@@ -3,13 +3,14 @@ import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
 import Icon from '../Icon.js';
 import { packServings } from '../../lib/dietLog.js';
-import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
+import { estimateNote, NO_NUTRITION, showsEstimateNote } from '../../lib/recipeNutrition.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
 import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
+import { canFill } from '../../lib/recipeFill.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { macroLine } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
@@ -53,19 +54,23 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const today = ymd(useToday(s => s.today));
   const [addedId, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo, leaving the page or the entry's deletion elsewhere
   const added = stillAdded(diet, addedId); // read from the store, so deleting the entry on the board brings "Add to today" back
+  const [addMsg, setAddMsg] = useState(''); // what the page said when Add to today logged: said again if Undo of a Fill leaves the add standing
+  const [fillUndo, setFillUndo] = useState<(() => boolean) | null>(null); // Undo of the Fill that just saved, for the status line
   const [usualSaved, setUsualSaved] = useState<UsualChange | null>(null); // the usual a whole pack saved, for Undo to take back
   const pack = wholePackFor({ mine, recipe });
   useEffect(() => { if (addedId !== null && added === null) { setAdded(null); setMsg(''); setUsualSaved(null); } }, [addedId, added]); // the entry was deleted elsewhere: the old "Logged …" line goes with it
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   const addToDay = () => {
+    setFillUndo(null);
     setUsualSaved(null); // a usual saved by an earlier whole pack is not this log's to take back
     const st = useAppStore.getState();
     const r = addToToday(st.addDietEntry, recipe, today);
     if (r.ok) setAdded(r.id);
-    setMsg(r.ok ? r.text : r.error);
+    setMsg(r.ok ? r.text : r.error); setAddMsg(r.ok ? r.text : '');
   };
   const addPack = () => { // the portion sheet's Log saves a changed portion as the usual (`usualChange`); a whole pack does the same here, and Undo takes it back
     if (pack === null) return;
+    setFillUndo(null);
     setUsualSaved(null);
     const st = useAppStore.getState();
     const r = addToToday(st.addDietEntry, recipe, today, pack);
@@ -73,7 +78,10 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     setAdded(r.id);
     const change = usualChange(recipe, pack);
     if (change && !st.setRecipeUsual(recipe.id, change.next)) { setUsualSaved(change); setMsg(`${r.text} Usual portion saved: ${amountText(pack, recipe)}.`); } else setMsg(r.text);
+    setAddMsg(r.text);
   };
+  const openFill = () => useAppStore.getState().openModal({ type: 'fillnutrition', id: recipe.id, onSaved: (text: string, undo: () => boolean) => { setFillUndo(() => undo); setMsg(text); } });
+  const undoFill = () => { const ok = fillUndo?.() ?? false; setFillUndo(null); setMsg(`${ok ? 'Put the numbers back.' : 'Can’t undo: the recipe changed since.'}${added !== null && addMsg ? ` ${addMsg}` : ''}`); };
   const undoAdd = () => {
     const st = useAppStore.getState();
     if (added) st.removeDietEntry(added, false);
@@ -82,7 +90,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   };
   const cells = summaryCells({ recipe, rolled: roll && roll.counted > 0 ? roll.per : null, mine, have: status.have, total: status.total, inventoryItems: grocery.items.length, diet, today });
   const strip = <Summary recipe={recipe} mine={mine} cells={cells} />;
-  const bar = <ActionRow recipe={recipe} mine={mine} state={addState({ mine, recipe, added: added !== null })} msg={msg} canUndo={added !== null} pack={pack} onWholePack={addPack} onAddToday={addToDay} onUndo={undoAdd} onPlan={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id, day: planDay(today) })} onEdit={onEdit} onAddMine={() => onAdd(shown ?? undefined)}>
+  const bar = <ActionRow recipe={recipe} mine={mine} state={addState({ mine, recipe, added: added !== null })} msg={msg} canUndo={added !== null || fillUndo !== null} fill={canFill(recipe, mine) ? (recipe.est ? 'Fill again' : 'Fill nutrition') : null} onFill={openFill} pack={pack} onWholePack={addPack} onAddToday={addToDay} onUndo={fillUndo ? undoFill : undoAdd} onPlan={() => useAppStore.getState().openModal({ type: 'portion', id: recipe.id, day: planDay(today) })} onEdit={onEdit} onAddMine={() => onAdd(shown ?? undefined)}>
     {mine && recipe.cat !== 'ready' && <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to Shopping` : 'Add missing to Shopping'}</button>}
   </ActionRow>;
   if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and the log control
@@ -156,12 +164,13 @@ const Summary = ({ recipe, mine, cells }: { recipe: Recipe; mine: boolean; cells
         {c.words ? <><span aria-hidden="true"><b>{c.head}</b><span className="rc-strip-sub">{c.sub}</span></span><span className="vh">{c.words}</span></> : <><b>{c.head}</b>{c.sub && <span className="rc-strip-sub">{c.sub}</span>}</>}
       </li>
     ))}</ul>}
+    {showsEstimateNote(recipe) && <p className="note">{estimateNote(recipe.est, recipe.servings)}</p>}
     {!mine && !cells.some(c => c.key === 'per') && <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>}
   </>
 );
 
 // The action row: Add to today (one tap, usual portion), Whole pack (N) beside it for a ready-made food with a pack size, Plan… (the portion sheet on tomorrow), and what else the page does (`children`: Add missing to Shopping). A library recipe's only action is Add to Mine; one with no calories and protein asks for them.
-const ActionRow = ({ recipe, mine, state, msg, canUndo, pack, onWholePack, onAddToday, onUndo, onPlan, onEdit, onAddMine, children }: { recipe: Recipe; mine: boolean; state: ReturnType<typeof addState>; msg: string; canUndo: boolean; pack: number | null; onWholePack: () => void; onAddToday: () => void; onUndo: () => void; onPlan: () => void; onEdit: () => void; onAddMine: () => void; children?: React.ReactNode }) => (
+const ActionRow = ({ recipe, mine, state, msg, canUndo, fill, onFill, pack, onWholePack, onAddToday, onUndo, onPlan, onEdit, onAddMine, children }: { recipe: Recipe; mine: boolean; state: ReturnType<typeof addState>; msg: string; canUndo: boolean; fill: string | null; onFill: () => void; pack: number | null; onWholePack: () => void; onAddToday: () => void; onUndo: () => void; onPlan: () => void; onEdit: () => void; onAddMine: () => void; children?: React.ReactNode }) => (
   <div className="rc-actionrow">
     <div className="rc-actions">
       {state === 'to-mine' && <button type="button" className="btn primary" onClick={onAddMine}>Add to Mine</button>}
@@ -169,6 +178,7 @@ const ActionRow = ({ recipe, mine, state, msg, canUndo, pack, onWholePack, onAdd
       {(state === 'add' || state === 'added') && <button type="button" className="btn primary" disabled={state === 'added'} onClick={onAddToday}>{state === 'added' ? 'Added' : 'Add to today'}</button>}
       {state === 'add' && pack !== null && <button type="button" className="btn" onClick={onWholePack}>Whole pack ({pack})</button>}
       {(state === 'add' || state === 'added') && <button type="button" className="btn" onClick={onPlan}>Plan…</button>}
+      {fill && <button type="button" className="btn" onClick={onFill}>{fill}</button>}
       {children}
     </div>
     {state === 'needs-numbers' && <p className="note">Add calories and protein per serving to log this {recipe.cat === 'ready' ? 'food' : 'recipe'}.</p>}

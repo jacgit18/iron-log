@@ -41,22 +41,13 @@ type MealInput = Pick<Recipe, 'ing'> & Partial<Pick<Recipe, 'id' | 'servings' | 
 /** An amount for display: two decimals at most, no trailing zeros. */
 export const fmtAmount = (n: number): string => String(Math.round(n * 100) / 100);
 
-/** The breakdown of a meal built from linked foods, or null when there is nothing to show: no linked parts, the person's own numbers, or no part with vitamin or mineral data. */
-export function mealMicroBreakdown(meal: MealInput, recipes: readonly Recipe[]): Breakdown | null {
-  if (!isRolledUp(meal)) return null;
-  const path = meal.id ? new Set<string>().add(meal.id) : new Set<string>();
-  const servings = meal.servings && meal.servings >= 1 ? meal.servings : 1;
-  const used: { name: string; micro: Partial<Record<NutrientKey, number>>; q: number }[] = [];
-  for (const i of meal.ing.filter(x => x.n.trim() && !x.skip)) {
-    if (!i.rid || i.q === undefined || i.skip) continue;
-    const part = path.has(i.rid) ? undefined : recipes.find(r => r.id === i.rid);
-    if (!part) continue; // a deleted part reads as plain text; a link back to itself adds nothing
-    const n = numbersOf(part, recipes, path, 0);
-    if (n) used.push({ name: part.n, micro: n.micro ?? {}, q: i.q });
-  }
-  if (!used.length) return null;
+/** A part of a meal for the bars: its name, its amounts per one unit of it, and how many units go in (q). */
+export interface BreakdownPart { name: string; micro: Partial<Record<NutrientKey, number>>; q: number }
+
+/** The rows and legend for parts already worked out; shared by a meal built from linked foods and by Fill nutrition's review sheet (parts there are ingredient lines). Null when no part lists any nutrient. */
+export function breakdownOfParts(used: readonly BreakdownPart[], servings: number): Breakdown | null {
   const slotOf = (idx: number): number | 'other' => (idx < MAX_SEGMENTS ? idx + 1 : 'other');
-  const groups = new Map<number | 'other', typeof used>();
+  const groups = new Map<number | 'other', BreakdownPart[]>();
   used.forEach((u, idx) => { const s = slotOf(idx); groups.set(s, [...(groups.get(s) ?? []), u]); });
   const rows: BreakdownRow[] = [];
   for (const key of NUTRIENT_KEYS) {
@@ -76,4 +67,21 @@ export function mealMicroBreakdown(meal: MealInput, recipes: readonly Recipe[]):
   }
   if (!rows.length) return null;
   return { rows, legend: [...groups].map(([slot, parts]) => ({ slot, name: slot === 'other' ? 'Other' : parts[0]!.name })) };
+}
+
+/** The breakdown of a meal built from linked foods, or null when there is nothing to show: no linked parts, the person's own numbers, or no part with vitamin or mineral data. */
+export function mealMicroBreakdown(meal: MealInput, recipes: readonly Recipe[]): Breakdown | null {
+  if (!isRolledUp(meal)) return null;
+  const path = meal.id ? new Set<string>().add(meal.id) : new Set<string>();
+  const servings = meal.servings && meal.servings >= 1 ? meal.servings : 1;
+  const used: BreakdownPart[] = [];
+  for (const i of meal.ing.filter(x => x.n.trim() && !x.skip)) {
+    if (!i.rid || i.q === undefined || i.skip) continue;
+    const part = path.has(i.rid) ? undefined : recipes.find(r => r.id === i.rid);
+    if (!part) continue; // a deleted part reads as plain text; a link back to itself adds nothing
+    const n = numbersOf(part, recipes, path, 0);
+    if (n) used.push({ name: part.n, micro: n.micro ?? {}, q: i.q });
+  }
+  if (!used.length) return null;
+  return breakdownOfParts(used, servings);
 }

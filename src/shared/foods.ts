@@ -42,8 +42,8 @@ function amounts(list: unknown): Map<string, number> {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** The foods in a USDA search answer that have calories and protein, at most `MAX_RESULTS`, in the source's order. Anything unreadable is skipped, never thrown. */
-export function parseFoods(json: unknown): FoodHit[] {
+/** The foods in a USDA search answer that have calories and protein, at most `max` (`MAX_RESULTS` unless a caller that orders them itself asks for more), in the source's order. Anything unreadable is skipped, never thrown. */
+export function parseFoods(json: unknown, max: number = MAX_RESULTS): FoodHit[] {
   const foods = obj(json)?.foods;
   if (!Array.isArray(foods)) return [];
   const out: FoodHit[] = [];
@@ -63,7 +63,7 @@ export function parseFoods(json: unknown): FoodHit[] {
     const size = num(o.servingSize);
     const serving = size !== null && size > 0 && size <= MAX_GRAMS && (unit === 'g' || unit === 'grm') ? round1(size) : undefined;
     out.push({ id, name: name.slice(0, 80), ...(brand ? { brand: brand.slice(0, 60) } : {}), kcal: Math.round(kcal), p: round1(p), ...(c !== undefined ? { c: round1(c) } : {}), ...(f !== undefined ? { f: round1(f) } : {}), ...(serving !== undefined ? { serving } : {}), ...withMicro(usdaMicro(a)) });
-    if (out.length >= MAX_RESULTS) break;
+    if (out.length >= max) break;
   }
   return out;
 }

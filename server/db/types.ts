@@ -69,6 +69,7 @@ export interface CatalogItems {
   kind: string;
   license: string;
   name: string;
+  nutrition: Json | null;
   retired_at: Timestamp | null;
   source: string;
   updated_at: Generated<Timestamp>;

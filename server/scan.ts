@@ -29,7 +29,11 @@ const RECEIPT_UNAVAILABLE = 'receipt scan is not available right now';
 const SUPPLEMENT_UNAVAILABLE = 'bottle scan is not available right now';
 
 const MICRO_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-const LABEL_MAX_TOKENS = 850; // the four macros were 400; up to 28 vitamin and mineral amounts more (700 for the first 20)
+/** Output limits of the three scans. Thinking tokens count against `max_tokens` (the Claude 5 models think adaptively unless told otherwise, per the claude-api docs; no scan reply was measured); thinking depth is bounded by `SCAN_EFFORT` (claudeApi.ts). A limit sized for the JSON
+ *  alone can cut a reply off (`stop_reason: max_tokens`: the person saw "not available"; same fault as the resolver, PR 1018). Each is the room for the answer (label 850: four macros and up to 28
+ *  vitamin and mineral amounts; bottle 1,600: 30 rows and a long blend; receipt 3,000) plus 4,000 for thinking. Only tokens used are billed, never the limit. */
+export const THINKING_ROOM = 4000;
+export const LABEL_MAX_TOKENS = 850 + THINKING_ROOM;
 
 const SYSTEM = [
   'You read one photo of a food nutrition-facts label and answer with one JSON object and nothing else.',
@@ -44,7 +48,8 @@ const SYSTEM = [
 ].join(' ');
 
 const SUPPLEMENT_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-const SUPPLEMENT_MAX_TOKENS = 1600; // a panel can list 30 rows and a long "other ingredients" blend
+export const SUPPLEMENT_MAX_TOKENS = 1600 + THINKING_ROOM;
+export const RECEIPT_MAX_TOKENS = 3000 + THINKING_ROOM;
 
 const SUPPLEMENT_SYSTEM = [
   'You read one photo of the Supplement Facts panel on a supplement bottle and answer with one JSON object and nothing else.',
@@ -110,7 +115,7 @@ export async function readSupplement(ask: typeof fetch, key: string, model: stri
 /** One receipt photo and the list's item ids and names in, one checked receipt out. The items are sent as data inside the user turn, never as instructions. */
 export async function readReceipt(ask: typeof fetch, key: string, model: string, image: string, items: ItemRef[]): Promise<ReceiptResult> {
   const text = `Items on the list (JSON: id, name, unit when weighed, got when ticked this month):\n${JSON.stringify(items)}\nRead this receipt.`;
-  return receiptFromReply(await askModel(ask, key, model, image, { system: RECEIPT_SYSTEM, text, maxTokens: 3000 }), new Set(items.map(i => i.id)));
+  return receiptFromReply(await askModel(ask, key, model, image, { system: RECEIPT_SYSTEM, text, maxTokens: RECEIPT_MAX_TOKENS }), new Set(items.map(i => i.id)));
 }
 
 export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAILY_MAX, receiptModel = DEFAULT_RECEIPT_MODEL, receiptDailyMax = DEFAULT_RECEIPT_DAILY_MAX, userDailyMax = DEFAULT_USER_DAILY_MAX, receiptUserDailyMax = DEFAULT_RECEIPT_USER_DAILY_MAX, supplementModel = DEFAULT_SUPPLEMENT_MODEL, supplementDailyMax = DEFAULT_SUPPLEMENT_DAILY_MAX, supplementUserDailyMax = DEFAULT_SUPPLEMENT_USER_DAILY_MAX, fetch: ask = fetch, now = Date.now }: ScanDeps = {}): Router {

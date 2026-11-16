@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Micro } from '../../shared/foodMicro.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
+import FoodNameCard from './FoodNameCard.js';
 import { useFoodHits } from './useFoodHits.js';
 import { AI_LABEL_TEXT, OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
 import { labelFood } from '../../lib/labelFill.js';
@@ -29,6 +30,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
   const [sort, setSort] = useSortChoice('foods', FOOD_SORTS, DEFAULT_FOOD_SORT);
   const shown = sortFoodHits(hits, sort); // the page already fetched, reordered here only
   const [pick, setPick] = useState<FoodHit | null>(resume?.hit ?? null);
+  const [fromScan, setFromScan] = useState(Boolean(resume?.hit)); // a pick made by a barcode scan (or resumed after one) gets the Scanned tick; one chosen from the results does not
   const [grams, setGrams] = useState(() => (resume?.hit ? String(defaultGrams(resume.hit)) : '100'));
   const [ai, setAi] = useState<{ fill: FoodFill; name: string } | null>(null); // a label read from a photo, waiting for Use
   const [aiNote, setAiNote] = useState('');
@@ -41,7 +43,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
 
   const g = cleanGrams(grams);
   const scaled = pick && g !== null ? scaleFood(pick, g) : null;
-  const choose = (h: FoodHit) => { setPick(h); setGrams(String(defaultGrams(h))); };
+  const choose = (h: FoodHit, byScan = false) => { setPick(h); setFromScan(byScan); setGrams(String(defaultGrams(h))); };
   const use = () => {
     if (!pick || !scaled) return;
     onUse({ n: pick.name.slice(0, 80), ...scaled });
@@ -68,7 +70,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
   const later = (r: ScanResume) => setTimeout(() => reopen?.(r), 0); // after the barcode sheet has closed itself
   const scan = () => useAppStore.getState().openModal(reopen
     ? { type: 'barcode', onFound: (h: FoodHit) => later({ hit: h }), onLabel: () => later({ label: true }), onType: () => later({}) }
-    : { type: 'barcode', onFound: (h: FoodHit) => choose(h), onLabel: openLabel });
+    : { type: 'barcode', onFound: (h: FoodHit) => choose(h, true), onLabel: openLabel });
 
   const scanned = useRef(false);
   useEffect(() => { if (scanFirst && !scanned.current) { scanned.current = true; scan(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival: Recipes + New, Scan to fill a food form opens the barcode sheet over this form
@@ -110,7 +112,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto, scanFirst
       )}
       {pick && (
         <div className="dt-lookuppick">
-          <p>{hitLabel(pick)}</p>
+          <FoodNameCard hit={pick} scanned={fromScan} />
           {pick.source === 'off' && <p className="note">{OFF_SOURCE_TEXT}</p>}
           <label className="field" htmlFor={given === undefined ? 'dt-lookup-g' : 'dt-find-g'}>Grams
             <input id={given === undefined ? 'dt-lookup-g' : 'dt-find-g'} type="number" inputMode="decimal" min="1" max="5000" step="any" value={grams} onChange={e => setGrams(e.target.value)} />
