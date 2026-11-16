@@ -13,6 +13,7 @@ import type { TimeChoice } from '../lib/supplementTimes.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
+import type { FillFields } from '../lib/recipeFill.ts';
 
 export type Flag = (text: string) => void;
 
@@ -350,6 +351,7 @@ export interface RecipesSlice {
   renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
   removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
   setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
+  fillRecipeNumbers(id: string, fields: FillFields): string | { undo: () => boolean }; // write a Fill's numbers, servings and estimate mark in one save (brief recipe-auto-nutrition); no edited mark; `undo` puts the old fields back, false when the recipe changed since; an error text when the recipe is gone or can't hold them
   setFoodTypes(choices: Record<string, FoodType>, uses?: Record<string, RecipeUse[]>): { changed: number; undo: () => boolean }; // give ready-made foods a Type in one save (the review screen's Looks right); `undo` puts back the untyped state for the whole batch, false when something changed since
   pairRecipes(aId: string, bId: string): string | null; // two recipes go with each other (both sides saved); an error text, or null
   unpairRecipes(aId: string, bId: string): void; // takes the pair off both
