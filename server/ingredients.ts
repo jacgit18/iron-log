@@ -118,7 +118,11 @@ async function resolveInner(lines: string[], deps: ResolveDeps, usage: Usage): P
   if (todo.length > 0) {
     const gate = deps.gate?.();
     if (gate && !gate.ok) return { ok: false, retryAfterSec: gate.retryAfterSec };
-    const plan = cleanPlan(await call(deps, SYSTEM_PLAN, JSON.stringify(todo.map((t, i) => ({ i, line: t.line }))), PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
+    const planUser = JSON.stringify(todo.map((t, i) => ({ i, line: t.line })));
+    let plan = cleanPlan(await call(deps, SYSTEM_PLAN, planUser, PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
+    // The model sometimes answers with another number of entries than lines (owner eval 2026-11-16: 1 recipe of 20, a line naming two foods, "butter or olive oil", is the likely cause), and the whole fill then failed.
+    // One more try, told the count, usually settles it; both tries are counted in `usage`. A second wrong answer is still a failed request.
+    if (!plan) plan = cleanPlan(await call(deps, `${SYSTEM_PLAN} Your last answer had the wrong number of entries. There are ${todo.length} lines: answer exactly ${todo.length} entries, one for each line in order, even when a line names two foods (take the first).`, planUser, PLAN_SCHEMA, planTokens(todo.length), usage), todo.length);
     if (!plan) throw new Error('plan has the wrong length');
     // USDA: one plain-food search per distinct term. A failed search leaves its line `none` for this answer and is not cached; every search failing is a failed request.
     const terms = [...new Set(plan.flatMap(p => (!p.skip && p.term ? [p.term.toLowerCase()] : [])))];

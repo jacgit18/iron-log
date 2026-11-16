@@ -232,6 +232,35 @@ describe('resolveLines', () => {
     expect(f.calls.bodies[1]!.system).toMatch(/whole, everyday food over a part of it/);
   });
 
+  it('a plan with the wrong number of entries is asked for once more, told the count (owner eval 2026-11-16: Fried Eggs failed the whole fill)', async () => {
+    const base = fakeFetch({ plan: PLAN, picks: PICKS });
+    const plans: string[] = [];
+    const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      if (new URL(String(input)).hostname === 'api.anthropic.com') {
+        const body = JSON.parse(String(init?.body)) as { system: string };
+        if (body.system.includes('search terms')) { plans.push(body.system); if (plans.length === 1) return reply({ lines: PLAN.lines.slice(0, 4) }); }
+      }
+      return base.fn(input, init);
+    }) as unknown as typeof fetch;
+    const out = await resolveLines(LINES, deps(fn, memCache()));
+    expect(plans).toHaveLength(2);
+    expect(plans[0]).not.toMatch(/wrong number/);
+    expect(plans[1]).toMatch(/There are 5 lines: answer exactly 5 entries/);
+    expect(out.ok && out.lines.map(l => l.status)).toEqual(['matched', 'matched', 'matched', 'skip', 'none']);
+    // Three model calls in all (plan, plan again, pick), every one counted.
+    expect(out.ok && out.usage).toEqual({ calls: 3, inputTokens: 300, outputTokens: 150 });
+  });
+
+  it('a second wrong plan is still a failed request that writes nothing, and both tries are counted', async () => {
+    const cache = memCache();
+    const fn = vi.fn(async () => reply({ lines: PLAN.lines.slice(0, 4) })) as unknown as typeof fetch;
+    const err = await resolveLines(LINES, deps(fn, cache)).catch((e: unknown) => e);
+    expect(String(err)).toMatch(/plan has the wrong length/);
+    expect((err as { usage?: unknown }).usage).toEqual({ calls: 2, inputTokens: 200, outputTokens: 100 });
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(cache.map.size).toBe(0);
+  });
+
   it('a model call that is cut off or refused writes nothing', async () => {
     const cache = memCache();
     const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
