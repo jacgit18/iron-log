@@ -5,13 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
 import { NUTRIENT_KEYS } from '../src/shared/nutrientKeys.ts';
 import { CURATED_INGREDIENTS } from '../src/shared/supplementIngredients.ts';
+import { askModel } from './claudeApi.ts';
 import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, DEFAULT_SUPPLEMENT_MODEL, scanRoutes, type ScanDeps } from './scan.ts';
 
 let server: Server | undefined;
 afterEach(() => { vi.restoreAllMocks(); return new Promise<void>(done => (server ? server.close(() => done()) : done())); });
 
 const jpeg = '/9j/' + 'A'.repeat(200);
-const model = (text: string, status = 200) => new Response(JSON.stringify({ content: [{ type: 'text', text }] }), { status });
+const model = (text: string, status = 200) => new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text }] }), { status });
 const good = '{"name":"Gnocchi","serving":"1 cup","servingG":140,"servingsPerPack":3,"kcal":210,"p":6,"c":40,"f":1}';
 
 async function start(deps: ScanDeps) {
@@ -48,7 +49,7 @@ describe('POST /api/scan/label', () => {
     const sent = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { system: string; max_tokens: number };
     for (const k of NUTRIENT_KEYS) expect(sent.system).toContain(`${k} (${MICRO_UNIT[k]})`);
     expect(sent.system).toContain('never the percent of Daily Value');
-    expect(sent.max_tokens).toBe(850);
+    expect(sent.max_tokens).toBeGreaterThanOrEqual(850 + 4000); // the answer plus room for thinking, which counts against the limit
   });
 
   it('answers with the checked amounts and drops what the model made up', async () => {
@@ -329,5 +330,40 @@ describe('POST /api/scan/supplement', () => {
     expect(over.status).toBe(503);
     expect(await over.json()).toMatchObject({ why: 'cap' });
     expect(ask).toHaveBeenCalledTimes(2);
+  });
+});
+
+// The scan models think by default and thinking tokens count against max_tokens (PR 1018 found it for the resolver); a cut-off reply is a named failure, not text that fails to parse.
+describe('scan output limits', () => {
+  const sentLimit = async (path: string, body: Record<string, unknown>, deps: ScanDeps) => {
+    const ask = vi.fn(async () => model('{}'));
+    const app = express();
+    app.use((_req, res, next) => { res.locals.userId = 'u1'; next(); });
+    app.use('/api/scan', scanRoutes({ key: 'k', ...deps, fetch: ask as unknown as typeof fetch }));
+    server = app.listen(0);
+    await new Promise(done => server!.once('listening', done));
+    await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    return (JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { max_tokens: number }).max_tokens;
+  };
+
+  it('leaves room for thinking on top of the answer, for the label, the bottle and the receipt', async () => {
+    expect(await sentLimit('label', { image: jpeg }, {})).toBeGreaterThanOrEqual(850 + 4000);
+    expect(await sentLimit('supplement', { image: jpeg }, {})).toBeGreaterThanOrEqual(1600 + 4000);
+    expect(await sentLimit('receipt', { image: jpeg, items: [{ id: 'eggs', n: 'Eggs' }] }, {})).toBeGreaterThanOrEqual(3000 + 4000);
+  });
+
+  it('throws a named error for a reply that did not end its turn', async () => {
+    const cut = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
+    await expect(askModel(cut as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).rejects.toThrow('stopped: max_tokens');
+    const none = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{}' }] }), { status: 200 });
+    await expect(askModel(none as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).rejects.toThrow('stopped: unknown');
+  });
+
+  it('answers the label route as not available when the reply was cut off', async () => {
+    const cut = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
+    const post = await start({ key: 'k', fetch: cut as unknown as typeof fetch });
+    const res = await post({ image: jpeg });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ ok: false, why: 'upstream' });
   });
 });

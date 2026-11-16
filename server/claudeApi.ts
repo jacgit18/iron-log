@@ -5,7 +5,7 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 const TIMEOUT_MS = 30_000;
 
-/** The one vendor call. Throws on any failure; the caller turns that into "not available". */
+/** The one vendor call (an image in, text out). Throws on any failure or a cut-off reply (`stop_reason` is not `end_turn`, e.g. `stopped: max_tokens`); the caller turns that into "not available". */
 export async function askModel(ask: typeof fetch, key: string, model: string, image: string, p: { system: string; text: string; maxTokens: number }): Promise<string> {
   const r = await ask(API_URL, {
     method: 'POST',
@@ -19,7 +19,8 @@ export async function askModel(ask: typeof fetch, key: string, model: string, im
     }),
   });
   if (!r.ok) throw new Error(`upstream ${r.status}`);
-  const body = (await r.json()) as { content?: { type?: string; text?: unknown }[] };
+  const body = (await r.json()) as { stop_reason?: unknown; content?: { type?: string; text?: unknown }[] };
+  if (body.stop_reason !== 'end_turn') throw new Error(`stopped: ${typeof body.stop_reason === 'string' ? body.stop_reason : 'unknown'}`);
   const first = body.content?.find(part => part?.type === 'text');
   if (typeof first?.text !== 'string') throw new Error('no text in reply');
   return first.text;
