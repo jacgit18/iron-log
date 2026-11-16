@@ -121,6 +121,36 @@ export function termMatchesLine(term: string | null, line: string): boolean {
   return false;
 }
 
+const stemList = (t: string): string[] => (t.toLowerCase().match(/[a-z]{3,}/g) ?? []).map(w => w.replace(/(?:es|s)$/, '').replace(/e$/, '')); // plural and a final e both go, so apple, apples and olive, olives meet
+/** A part of a food, or a made-over form of it, that a plain line does not mean: "Potatoes, raw, skin" for "2 potatoes", "Milk, dry, whole" for "1 cup milk". */
+const PART_OR_FORM = new Set(['skin', 'peel', 'leav', 'seed', 'juic', 'powder', 'dried', 'dry', 'dehydrated', 'flour', 'canned', 'frozen']);
+
+/** How well a USDA food name answers a search term. USDA's own order is by text relevance and puts "Cheese, mozzarella, whole milk" and "Crackers, milk" ahead of
+ *  "Milk, whole, 3.25% milkfat" (measured 2026-11-16: place 27 of 50 for "milk, whole"), so the resolver asks for more and orders them itself:
+ *  the name leads with the food, it has every word of the term, and it is not a part or a made-over form the term did not ask for; equal scores keep USDA's order. */
+export function termScore(term: string, name: string): number {
+  const t = stemList(term);
+  if (t.length === 0) return 0;
+  const all = stemList(name);
+  const have = new Set(all);
+  const lead = stemList(name.split(',')[0] ?? '');
+  const hits = t.filter(w => have.has(w)).length;
+  const asked = new Set(t);
+  let s = 20 * hits + (hits === t.length ? 30 : 0);
+  if (lead[0] === t[0]) s += 100; else if (lead.includes(t[0]!)) s += 40;
+  // A part or form counts only when it stands as its own piece of the name ("Potatoes, raw, skin", "Milk, dry, whole"), not inside one ("Potatoes, flesh and skin, raw").
+  const pieces = name.split(',').slice(1).map(stemList).filter(p => p.length > 0);
+  if (pieces.some(p => p.every(w => w === 'only' || PART_OR_FORM.has(w)) && p.some(w => PART_OR_FORM.has(w) && !asked.has(w)))) s -= 25;
+  // The leading piece is the food itself: "Apple juice", "Tomato powder" lead with a made-over form.
+  else if (lead.some(w => PART_OR_FORM.has(w) && !asked.has(w))) s -= 25;
+  return s;
+}
+
+/** `hits` ordered by `termScore`, best first; equal scores keep the source's order. */
+export function rankForTerm<T extends { name: string }>(term: string, hits: T[]): T[] {
+  return hits.map((h, i) => ({ h, i, s: termScore(term, h.name) })).sort((a, b) => b.s - a.s || a.i - b.i).map(x => x.h);
+}
+
 /** The server's confidence: high only when the grams came from the text or a unit conversion and the pick is not approximate. */
 export const confidenceOf = (gramsFrom: 'text' | 'converted' | 'guess', approximate: boolean): 'high' | 'low' => (gramsFrom !== 'guess' && !approximate ? 'high' : 'low');
 

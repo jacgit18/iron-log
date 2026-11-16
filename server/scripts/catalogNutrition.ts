@@ -158,6 +158,12 @@ export async function resolveRecipes(run: ResolveRun): Promise<ResolveReport> {
     results.portionsHash = hash;
     if (rep.rederived > 0) log(`portion table changed: ${rep.rederived} estimated-servings records dropped, redone from the cache`);
   }
+  // A results file made by an older resolver version holds that version's matches: drop its records and no-match recipes so this run redoes them (their lines are not in the cache any more: the version is in every key).
+  if (results.resolver !== RESOLVER_VERSION) {
+    const dropped = Object.keys(results.records).length + Object.keys(results.none).length;
+    results.records = {}; results.none = {}; delete results.attempts; results.resolver = RESOLVER_VERSION;
+    if (dropped > 0) log(`resolver version changed: ${dropped} finished recipes dropped, redone with version ${RESOLVER_VERSION}`);
+  }
   for (const r of recipes) {
     if (r.id in results.records || r.id in results.none) { rep.alreadyDone++; continue; }
     if (results.spentUsd >= ceilingUsd) { rep.stoppedAtCeiling = true; break; }

@@ -208,6 +208,30 @@ describe('resolveLines', () => {
     expect(planTokens(40)).toBeLessThanOrEqual(16000);
   });
 
+  it('asks USDA for a wide list and shows the everyday food USDA ranked far down (owner eval 2026-11-16: milk matched buttermilk, potatoes their skin)', async () => {
+    const names = ['Cheese, mozzarella, whole milk', 'Cheese, ricotta, whole milk', 'Milk, buttermilk, fluid, whole', 'Yogurt, plain, whole milk', 'Cheese, feta, whole milk, crumbled', 'Yogurt, Greek, fruit, whole milk',
+      'Crackers, milk', 'Candies, milk chocolate', 'Milk and cereal bar', 'Milk, dry, whole, with added vitamin D', 'Milk, whole, 3.25% milkfat, with added vitamin D'];
+    FOODS['milk, whole'] = names.map((n, i) => usdaFood(500 + i, n, 61));
+    try {
+      const f = fakeFetch({ plan: { lines: [{ term: 'milk, whole', grams: 245, gramsFrom: 'converted', skip: false }] }, picks: { picks: [{ i: 0, id: 510, approximate: false }] } });
+      const out = await resolveLines(['1 cup milk'], deps(f.fn, memCache()));
+      expect(new URL(f.calls.urls[0]!).searchParams.get('pageSize')).toBe('50');
+      const options = (JSON.parse(f.calls.bodies[1]!.messages[0]!.content) as { options: { id: number; name: string }[] }[])[0]!.options;
+      expect(options.length).toBeLessThanOrEqual(8);
+      expect(options.map(o => o.name)).toContain('Milk, whole, 3.25% milkfat, with added vitamin D');
+      expect(options[0]!.name.startsWith('Milk,')).toBe(true);
+      expect(out.ok && out.lines[0]).toMatchObject({ status: 'matched', food: 'Milk, whole, 3.25% milkfat, with added vitamin D', grams: 245 });
+    } finally { delete FOODS['milk, whole']; }
+  });
+
+  it('the plan prompt asks for a guess when a line has no amount, and the pick prompt for the whole everyday food', async () => {
+    const f = fakeFetch({ plan: PLAN, picks: PICKS });
+    await resolveLines(LINES, deps(f.fn, memCache()));
+    expect(f.calls.bodies[0]!.system).toMatch(/when the line gives no amount, estimate/);
+    expect(f.calls.bodies[0]!.system).toMatch(/null only when "skip" is true/);
+    expect(f.calls.bodies[1]!.system).toMatch(/whole, everyday food over a part of it/);
+  });
+
   it('a model call that is cut off or refused writes nothing', async () => {
     const cache = memCache();
     const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
