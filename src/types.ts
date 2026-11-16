@@ -339,7 +339,7 @@ export interface CatalogData {
   entryYear?: number;
   upc?: string;
   /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
-  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number; /** Estimated per-serving numbers the API adds while the stored estimate still matches (brief library-recipe-nutrition): `est.of` of `est.n` lines counted, `est.sEst` when `servings` is an estimate. */ kcal?: number; p?: number; c?: number; f?: number; micro?: Micro; est?: { of: number; n: number; sEst?: true } };
+  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number; /** Estimated per-serving numbers the API adds while the stored estimate still matches (brief library-recipe-nutrition): `est.of` of `est.n` lines counted, `est.sEst` when `servings` is an estimate. */ kcal?: number; p?: number; c?: number; f?: number; micro?: Micro; est?: RecipeEst };
 }
 
 /** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
@@ -366,7 +366,7 @@ export type PlateMark = 'protein' | 'carb' | 'veg';
 /** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
 export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; /** The id of the saved meal (`cfg.diet.meals`) this meal was made from by the move into Recipes (brief saved-meals-removal); lets a repeat or a second device find it instead of making a copy. */ fromMeal?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; /** Vitamins and minerals per serving (brief recipes-vitamins-minerals), beside kcal, p, c and f. */ micro?: Micro; /** Set when the vitamins and minerals (and numbers) were estimated from ingredient lines (brief recipe-auto-nutrition): `of` lines counted out of `n` that could count. Cleared by a hand edit of kcal, p, c, f or micro. An object so a later flag can join it. */ est?: RecipeEst }
 /** How many ingredient lines an estimate counted (`of`) out of those that could count (`n`). */
-export interface RecipeEst { of: number; n: number }
+export interface RecipeEst { of: number; n: number; /** Library recipes only (brief library-recipe-nutrition): the servings were estimated too, not read from the source. Cleared when the servings are changed by hand. */ sEst?: true }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

@@ -1,4 +1,4 @@
-import type { Recipe } from '../types.ts';
+import type { Recipe, RecipeEst } from '../types.ts';
 import { macroLine } from './macroLine.js';
 
 /* ---------- Nutrition on the recipe list (brief recipe-nutrition-badges): pure, so every rule here is a node test ----------
@@ -30,3 +30,10 @@ export const matchesNutrition = (r: Pick<Recipe, 'kcal' | 'p'>, keys: readonly N
 
 /** The line on a Library recipe's page, which never has numbers until it is copied to Mine. */
 export const NO_NUTRITION = 'No nutrition yet. Add this recipe to Mine, then use Calculate from ingredients in its form to fill it in.';
+
+/** The note under a recipe's summary strip when its numbers were estimated from the ingredient lines (brief library-recipe-nutrition): how many lines were counted, and "at least" when some were not.
+ *  When the servings were estimated too, a second sentence says so. */
+export function estimateNote(est: RecipeEst, servings?: number): string {
+  const counted = est.of === est.n ? `All ${est.n} counted.` : `${est.of} of ${est.n} counted, so these are at least.`;
+  return `Estimated from the ingredients. ${counted}${est.sEst && servings ? ` About ${servings} ${servings === 1 ? 'serving' : 'servings'}, estimated.` : ''}`;
+}

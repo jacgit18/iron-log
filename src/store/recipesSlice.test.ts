@@ -363,3 +363,18 @@ describe('setRecipeUsual', () => {
     expect(st().setRecipeUsual('nope', 2)).toBe('That food is gone.');
   });
 });
+
+describe('Library estimates through the store (brief library-recipe-nutrition)', () => {
+  const est: CatalogItem = { id: 'c:wbc:e1', name: 'Pancakes', data: { recipe: { cat: 'breakfast', ing: ['2 cups flour', '1 egg'], steps: ['Mix.'], servings: 4, kcal: 300, p: 9, c: 40, f: 10, est: { of: 1, n: 2, sEst: true } } } };
+  it('copies with the numbers and the mark, a later catalog change touches no copy, and a servings change rescales an untouched copy while a typed number clears the mark', () => {
+    expect(st().copyCatalogRecipe(est)).toBeNull();
+    const copy = st().recipes[0]!;
+    expect(copy).toMatchObject({ kcal: 300, p: 9, est: { of: 1, n: 2, sEst: true } });
+    const form = (over: object) => { const { est: _e, ...rest } = st().recipes[0]!; return { ...rest, ...over }; };
+    expect(st().saveRecipe(form({ servings: 8 }))).toBeNull();
+    expect(st().recipes[0]).toMatchObject({ servings: 8, kcal: 150, p: 4.5, est: { of: 1, n: 2 } });
+    expect(st().recipes[0]!.est).not.toHaveProperty('sEst');
+    expect(st().saveRecipe(form({ kcal: 999 }))).toBeNull();
+    expect(st().recipes[0]!.est).toBeUndefined();
+  });
+});

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { HIGH_PROTEIN_G, NUTRITION_FILTERS, UNDER_KCAL, matchesNutrition, nutritionBadge } from './recipeNutrition.js';
+import { HIGH_PROTEIN_G, NUTRITION_FILTERS, UNDER_KCAL, estimateNote, matchesNutrition, nutritionBadge } from './recipeNutrition.js';
 import { filterRecipes } from './recipeList.js';
 
 describe('nutritionBadge', () => {
@@ -65,5 +65,17 @@ describe('filterRecipes with nutrition, category and tags', () => {
   it('leaves a recipe without numbers out, and lists it when no chip is on', () => {
     expect(ids(['protein'])).not.toContain('d');
     expect(ids([])).toContain('d');
+  });
+});
+
+describe('estimateNote (brief library-recipe-nutrition)', () => {
+  it('says how many lines were counted, with "at least" when some were not', () => {
+    expect(estimateNote({ of: 7, n: 8 })).toBe('Estimated from the ingredients. 7 of 8 counted, so these are at least.');
+    expect(estimateNote({ of: 8, n: 8 })).toBe('Estimated from the ingredients. All 8 counted.');
+  });
+  it('adds the servings sentence only when the servings were estimated', () => {
+    expect(estimateNote({ of: 8, n: 8, sEst: true }, 6)).toBe('Estimated from the ingredients. All 8 counted. About 6 servings, estimated.');
+    expect(estimateNote({ of: 8, n: 8 }, 6)).not.toMatch(/servings/);
+    expect(estimateNote({ of: 8, n: 8, sEst: true })).not.toMatch(/servings/);
   });
 });
