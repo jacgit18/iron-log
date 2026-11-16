@@ -84,6 +84,15 @@ const call = async (deps: ResolveDeps, system: string, user: string, schema: Rec
 
 /** Resolves `lines` (already cleaned, 1 to 40): cached ones from the cache, the rest through the two calls. Throws when a model call or the cache fails; nothing is written then. */
 export async function resolveLines(lines: string[], deps: ResolveDeps): Promise<Resolved> {
+  const usage: Usage = { calls: 0, inputTokens: 0, outputTokens: 0 };
+  try { return await resolveInner(lines, deps, usage); } catch (err) {
+    // The tokens of the model calls that were made before the failure were paid for: the caller (the catalog batch's spend ceiling) reads them off the error.
+    if (err instanceof Error) (err as Error & { usage?: Usage }).usage = usage;
+    throw err;
+  }
+}
+
+async function resolveInner(lines: string[], deps: ResolveDeps, usage: Usage): Promise<Resolved> {
   const keys = lines.map(cacheKey);
   const hit = await deps.cache.get([...new Set(keys)]);
   const results = new Map<string, Stored>();
@@ -92,7 +101,6 @@ export async function resolveLines(lines: string[], deps: ResolveDeps): Promise<
   const todoByKey = new Map<string, string>();
   lines.forEach((l, i) => { if (!results.has(keys[i]!) && !todoByKey.has(keys[i]!)) todoByKey.set(keys[i]!, l); });
   const todo = [...todoByKey].map(([key, line]) => ({ key, line }));
-  const usage: Usage = { calls: 0, inputTokens: 0, outputTokens: 0 };
   const cached = results.size; // distinct lines answered from the cache
   if (todo.length > 0) {
     const gate = deps.gate?.();

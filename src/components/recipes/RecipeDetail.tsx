@@ -3,7 +3,7 @@ import ArmedButton from '../ArmedButton.jsx';
 import WatchLink from '../WatchLink.jsx';
 import Icon from '../Icon.js';
 import { packServings } from '../../lib/dietLog.js';
-import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
+import { estimateNote, NO_NUTRITION, showsEstimateNote } from '../../lib/recipeNutrition.js';
 import { amountText } from '../../lib/foodUnit.js';
 import { monthKey, withoutUsed } from '../../lib/grocery.js';
 import { countedNote, hasParts, mealRollup } from '../../lib/mealRollup.js';
@@ -164,6 +164,7 @@ const Summary = ({ recipe, mine, cells }: { recipe: Recipe; mine: boolean; cells
         {c.words ? <><span aria-hidden="true"><b>{c.head}</b><span className="rc-strip-sub">{c.sub}</span></span><span className="vh">{c.words}</span></> : <><b>{c.head}</b>{c.sub && <span className="rc-strip-sub">{c.sub}</span>}</>}
       </li>
     ))}</ul>}
+    {showsEstimateNote(recipe) && <p className="note">{estimateNote(recipe.est, recipe.servings)}</p>}
     {!mine && !cells.some(c => c.key === 'per') && <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>}
   </>
 );

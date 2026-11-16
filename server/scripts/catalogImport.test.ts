@@ -181,6 +181,20 @@ describe('importCatalog', () => {
     expect(await all()).toEqual(before);
   });
 
+  it('leaves the stored nutrition alone: unchanged rows are reported unchanged, and a changed row keeps its numbers (ADR 134)', async () => {
+    const list = rows('A', 'B');
+    await run(list);
+    const nutrition = { kcal: 300, p: 10, c: 40, f: 9, servings: 4, of: 3, n: 4, hash: 'abc', v: 1 };
+    await db.updateTable('catalog_items').set({ nutrition: JSON.stringify(nutrition) }).where('id', '=', 'c:fedb:A').execute();
+    expect(await run(list)).toMatchObject({ added: [], changed: [], retired: [], unchanged: 2 });
+    const renamed = [{ ...list[0]!, name: 'Renamed' }, list[1]!];
+    expect(await run(renamed)).toMatchObject({ changed: ['c:fedb:A'], unchanged: 1 });
+    const [a, b] = await all();
+    expect(a!.name).toBe('Renamed');
+    expect(a!.nutrition).toEqual(nutrition);
+    expect(b!.nutrition).toBeNull();
+  });
+
   it('a dry run reports what it would do and writes nothing', async () => {
     expect(await run(rows('A', 'B'), false)).toMatchObject({ applied: false, added: ['c:fedb:A', 'c:fedb:B'] });
     expect(await all()).toEqual([]);

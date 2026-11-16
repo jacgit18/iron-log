@@ -4,6 +4,7 @@ import type { Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
 import type { DB } from './db/types.ts';
+import { ingredientHash } from '../src/shared/libraryNutrition.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
 let db: Kysely<DB>;
@@ -189,6 +190,33 @@ describe('GET /api/catalog/search (recipes)', () => {
     const two = await search('?kind=recipe&q=dish&sort=name&offset=30');
     expect(one.body.more).toBe(true);
     expect([...ids(one), ...ids(two)]).toEqual(Array.from({ length: 40 }, (_, i) => `c:wbc:r${100 + i}`));
+  });
+  describe('estimated nutrition (ADR 134)', () => {
+    const rec9 = (n: number, ing: string[], nutrition: object | null, extra: object = {}) => ({ ...rec(n, `Numbered ${n}`, 'protein', ing), nutrition: nutrition === null ? null : JSON.stringify(nutrition), ...extra });
+    const nums = (ing: string[], over: object = {}) => ({ kcal: 310, p: 20.5, c: 30, f: 11, micro: { iron: 2.5 }, servings: 4, sEst: true, of: 7, n: 8, hash: ingredientHash(ing), v: 1, ...over });
+    const recipeOf = async (q: string) => (await search(q)).body.items[0]!.data.recipe as Record<string, unknown>;
+
+    it('merges the stored numbers into the recipe, with the servings they are per and the est mark', async () => {
+      const ing = ['2 eggs', '1 cup rice'];
+      await db.insertInto('catalog_items').values(rec9(20, ing, nums(ing))).execute();
+      expect(await recipeOf('?kind=recipe&q=numbered')).toEqual({ cat: 'protein', ing, steps: ['Cook.'], servings: 4, kcal: 310, p: 20.5, c: 30, f: 11, micro: { iron: 2.5 }, est: { of: 7, n: 8, sEst: true } });
+    });
+    it('serves a recipe as it was with no numbers, a stale hash, or under half counted', async () => {
+      const ing = ['2 eggs', '1 cup rice'];
+      await db.insertInto('catalog_items').values([
+        rec9(21, ing, null), rec9(22, ing, nums(['changed line'])), rec9(23, ing, nums(ing, { of: 3, n: 8 })),
+      ]).execute();
+      for (const id of [21, 22, 23]) expect(await recipeOf(`?kind=recipe&q=numbered%20${id}`), String(id)).toEqual({ cat: 'protein', ing, steps: ['Cook.'] });
+    });
+    it('keeps the answer private with its short cache (unchanged), the page size, and never sends the raw column', async () => {
+      const ing = ['2 eggs'];
+      await db.insertInto('catalog_items').values(rec9(24, ing, nums(ing, { of: 1, n: 1 }))).execute();
+      const res = await fetch(`${await start()}/api/catalog/search?kind=recipe&q=numbered`, { headers: { 'x-dev-user': 'guest' } });
+      expect(res.headers.get('cache-control')).toBe('private, max-age=300'); // the search route's own short private cache, unchanged by the numbers
+      const body = (await res.json()) as { items: object[] };
+      expect(Object.keys(body.items[0]!).sort()).toEqual(['data', 'id', 'name']);
+      expect(body.items).toHaveLength(1);
+    });
   });
   it('refuses a sort that is not one, and a sort on another kind', async () => {
     for (const q of ['?kind=recipe&sort=newest', '?kind=recipe&sort=', '?kind=recipe&sort=name&sort=relevance', '?kind=supplement&q=fish&sort=name']) expect((await search(q)).status, q).toBe(400);

@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { ymd } from '../../shared/dates.js';
 import { ESTIMATED } from '../../lib/microLine.js';
+import { showsEstimateNote } from '../../lib/recipeNutrition.js';
 import { recipeMicroRows } from '../../lib/recipeMicroRows.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -31,7 +32,7 @@ export default function RecipeMicro({ recipe }: { recipe: Recipe }) {
               </li>
             ))}
           </ul>
-          <p className="note">Numbers are per serving, against a day’s recommended amount.{recipe.est ? ` ${ESTIMATED}: worked out from ${recipe.est.of} of ${recipe.est.n} ingredients, not from a label.` : ''}</p>
+          <p className="note">Numbers are per serving, against a day’s recommended amount.{recipe.est && !showsEstimateNote(recipe) ? ` ${ESTIMATED}: worked out from ${recipe.est.of} of ${recipe.est.n} ingredients, not from a label.` : ''}</p>
         </div>
       )}
     </section>
