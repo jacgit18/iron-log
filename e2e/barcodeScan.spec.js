@@ -34,8 +34,9 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0); // found: the sheet closes
     expect(asked).toEqual(['/api/foods/barcode/00016000275287']); // the 12-digit UPC-A went as 14 digits
     await expect(page.locator('.fnc-name')).toHaveText('Cheerios Cereal'); // the name is its own big line; the brand and kcal sit under it
-    await expect(page.getByText('General Mills', { exact: true })).toBeVisible();
-    await expect(page.getByText('380 kcal per 100 g')).toBeVisible();
+    await expect(page.locator('.fnc-brand')).toHaveText('General Mills');
+    await expect(page.locator('.fnc-kcal')).toHaveText('380 kcal per 100 g');
+    await expect(page.locator('.fnc-badge')).toBeVisible(); // a scan from the search box carries the Scanned tick too
     await expect(page.getByLabel('Grams')).toHaveValue('28'); // the product’s own serving
     await page.getByRole('button', { name: 'Use', exact: true }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Cheerios Cereal');

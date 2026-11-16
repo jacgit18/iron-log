@@ -2,7 +2,7 @@ import type { FoodHit } from '../../shared/foods.js';
 import Icon from '../Icon.js';
 import './FoodNameCard.css';
 
-// The picked or scanned food, name first (brief scan-item-name): the name is the big line, the brand sits under it and the kcal is small. Replaces the one 15px line from `hitLabel`.
+// The picked or scanned food, name first (brief scan-item-name): the name is the big line, the brand sits under it and the kcal is small. Used where the one 15px `hitLabel` line was (the result buttons still use `hitLabel`).
 // `scanned` adds the "Scanned" tick (a barcode scan); a food picked from typed results has the same card without it.
 export default function FoodNameCard({ hit, scanned = false }: { hit: FoodHit; scanned?: boolean }) {
   return (

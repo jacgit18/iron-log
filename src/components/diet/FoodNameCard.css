@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: var(--sp-2);
   margin: 0 0 var(--sp-12);
-  padding: var(--sp-12) 14px;
+  padding: var(--sp-12) var(--sp-16);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
   background: var(--bg);
@@ -35,6 +35,7 @@
 .fnc-brand {
   color: var(--muted);
   font-size: var(--fs-base);
+  overflow-wrap: anywhere;
 }
 .fnc-kcal {
   padding-top: var(--sp-6);
