@@ -1,6 +1,6 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
 import { linkError, settleMeals } from '../lib/mealRollup.js';
-import { fieldsOf, withFields } from '../lib/recipeFill.js';
+import { fieldsOf, sameFields, withFields } from '../lib/recipeFill.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { withUsual } from '../lib/usualPortion.js';
@@ -45,7 +45,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     return {
       undo: () => {
         const now = get().recipes.find(r => r.id === id);
-        if (get().blocked() || !now || JSON.stringify(fieldsOf(now)) !== JSON.stringify(after)) return false;
+        if (get().blocked() || !now || !sameFields(fieldsOf(now), after)) return false;
         const back = normRecipe(withFields(now, before));
         if (!back) return false;
         set({ recipes: settleMeals(get().recipes.map(r => (r.id === id ? back : r))) });

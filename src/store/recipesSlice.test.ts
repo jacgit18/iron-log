@@ -385,6 +385,13 @@ describe('fillRecipeNumbers (brief recipe-auto-nutrition)', () => {
     expect(r2.undo()).toBe(false);
     expect(st().recipes[0]).toMatchObject({ kcal: 350 });
   });
+  it('Undo still works when the vitamin keys came back in another order (review finding 9)', () => {
+    const id = made({ servings: 2 });
+    const r = st().fillRecipeNumbers(id, { ...fields, micro: { iron: 2, zinc: 1 } }) as { undo: () => boolean };
+    useAppStore.setState({ recipes: st().recipes.map(x => (x.id === id ? { ...x, micro: { zinc: 1, iron: 2 } } : x)) }); // the same values, the other order
+    expect(r.undo()).toBe(true);
+    expect(st().recipes[0]!.micro).toBeUndefined();
+  });
   it('says so when the recipe is gone', () => {
     expect(st().fillRecipeNumbers('nope', fields)).toBe('That recipe is gone.');
   });

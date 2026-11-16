@@ -120,6 +120,10 @@ export const fillWrites = (recipe: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micr
 
 const fieldsOfPick = (r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'servings' | 'est'>): FillFields => ({ ...(has(r.kcal) ? { kcal: r.kcal! } : {}), ...(has(r.p) ? { p: r.p! } : {}), ...(has(r.c) ? { c: r.c! } : {}), ...(has(r.f) ? { f: r.f! } : {}), ...(r.micro ? { micro: r.micro } : {}), ...(r.servings ? { servings: r.servings } : {}), ...(r.est ? { est: r.est } : {}) });
 
+/** Whether two sets of Fill fields are the same values, whatever order the vitamin keys came in (a copy that went through the server may reorder them; review finding 9). */
+export const sameFields = (a: FillFields, b: FillFields): boolean =>
+  a.kcal === b.kcal && a.p === b.p && a.c === b.c && a.f === b.f && a.servings === b.servings && keyed(a.micro) === keyed(b.micro) && a.est?.of === b.est?.of && a.est?.n === b.est?.n;
+
 /** The recipe's current values of the Fill fields, for Undo. */
 export const fieldsOf = (r: Recipe): FillFields => ({ ...(has(r.kcal) ? { kcal: r.kcal! } : {}), ...(has(r.p) ? { p: r.p! } : {}), ...(has(r.c) ? { c: r.c! } : {}), ...(has(r.f) ? { f: r.f! } : {}), ...(r.micro ? { micro: r.micro } : {}), ...(r.servings ? { servings: r.servings } : {}), ...(r.est ? { est: r.est } : {}) });
 
