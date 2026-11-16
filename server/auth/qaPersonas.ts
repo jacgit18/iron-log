@@ -25,6 +25,8 @@ import type { PiiCrypto } from './piiCrypto.ts';
       are the ones in server/qa/personas.ts (looked up by their fixed id; the request never names an email or a user id). */
 
 export const QA_MARK = 'iron-log qa';
+/** The mark scripts/qa-local.mjs puts on the scratch database it makes for the QA Runner (a database on this machine, dropped when the run stops). Same lock, second mark: the other two locks (QA_PERSONAS=true and a verified admin email) still apply. */
+export const QA_LOCAL_MARK = 'iron-log qa-local scratch';
 export const PERSONA_SESSION_SECONDS = 60 * 60;
 const ADMIN_COOKIE = 'admin_session';
 
@@ -48,7 +50,7 @@ export function qaMarkReader(pool: Pick<pg.Pool, 'query'>) {
     if (yes) return true;
     try {
       const { rows } = await pool.query<{ mark: string | null }>("select shobj_description(oid, 'pg_database') as mark from pg_database where datname = current_database()");
-      yes = rows[0]?.mark === QA_MARK;
+      yes = rows[0]?.mark === QA_MARK || rows[0]?.mark === QA_LOCAL_MARK;
     } catch {
       return false;
     }
