@@ -187,6 +187,15 @@ describe('sampleOf, project, portions', () => {
   });
 });
 
+describe('estimatorError', () => {
+  it('uses the proposed fallback for a category without its own median, not the constant', () => {
+    const all = [recipe('c:wbc:a', ['a'], { cat: 'sides' })];
+    const results = { ...emptyResults(), portions: { 'c:wbc:a': { g: 600, s: 3 } } }; // 200 g a serving
+    expect(estimatorError(all, results, {}, 200)).toMatchObject({ n: 1, medianRelError: 0 });
+    expect(estimatorError(all, results, {}, 100)!.medianRelError).toBeCloseTo(1, 5); // would guess 6 servings
+  });
+});
+
 describe('results file and the retry contract', () => {
   it('reads back what it wrote and refuses anything else', () => {
     const r = emptyResults();

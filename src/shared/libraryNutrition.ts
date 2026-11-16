@@ -93,9 +93,9 @@ export const PORTION_FALLBACK_G = 200;
 export const sourceServings = (v: unknown): number | undefined => (wholeIn(v, 1, MAX_SOURCE_SERVINGS) ? v : undefined);
 
 /** Servings worked out from the grams of the counted lines: total over a typical portion for the category, whole, 2 to 24. Undefined with no grams. */
-export function estimateServings(grams: number, cat: RecipeCategory, portionG: Partial<Record<RecipeCategory, number>> = PORTION_G): number | undefined {
+export function estimateServings(grams: number, cat: RecipeCategory, portionG: Partial<Record<RecipeCategory, number>> = PORTION_G, fallbackG: number = PORTION_FALLBACK_G): number | undefined {
   if (!finite(grams) || grams <= 0) return undefined;
-  const portion = portionG[cat] ?? PORTION_FALLBACK_G;
+  const portion = portionG[cat] ?? fallbackG;
   return Math.min(MAX_EST_SERVINGS, Math.max(MIN_EST_SERVINGS, Math.round(grams / portion)));
 }
 

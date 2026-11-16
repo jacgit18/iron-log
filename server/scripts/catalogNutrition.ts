@@ -226,12 +226,12 @@ export function portionMedians(all: readonly BatchRecipe[], results: ResultsFile
   return { byCat, counts, ...(every.length ? { fallback: Math.round(median(every)) } : {}) };
 }
 
-/** The estimator measured on the recipes with known servings: for each, the servings it would have guessed from the grams against the source's value. Median and share within 50% of the truth. */
-export function estimatorError(all: readonly BatchRecipe[], results: ResultsFile, portionG: Partial<Record<RecipeCategory, number>>): { n: number; medianRelError: number; within50: number } | null {
+/** The estimator measured on the recipes with known servings (with the proposed table: `portionG` and its `fallbackG` for a category not in it): for each, the servings it would have guessed from the grams against the source's value. Median and share within 50% of the truth. */
+export function estimatorError(all: readonly BatchRecipe[], results: ResultsFile, portionG: Partial<Record<RecipeCategory, number>>, fallbackG?: number): { n: number; medianRelError: number; within50: number } | null {
   const errs: number[] = [];
   for (const r of all) {
     const p = results.portions[r.id];
-    const est = p ? estimateServings(p.g, r.cat, portionG) : undefined;
+    const est = p ? estimateServings(p.g, r.cat, portionG, fallbackG) : undefined;
     if (p && est) errs.push(Math.abs(est - p.s) / p.s);
   }
   if (!errs.length) return null;

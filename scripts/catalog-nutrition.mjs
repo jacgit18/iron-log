@@ -71,7 +71,7 @@ if (values.load) {
   save(values.cache, store); save(values.results, results);
   const projection = project(all, rep, results, new Set(Object.keys(store)), ceiling);
   const medians = portionMedians(all, results);
-  const err = estimatorError(all, results, { ...medians.byCat });
+  const err = estimatorError(all, results, { ...medians.byCat }, medians.fallback);
   console.log(JSON.stringify({ report: rep, projection, portions: medians, servingsEstimator: err, currentPortionG: PORTION_G }, null, 2));
   if (projection.overCeiling) console.log(`PROJECTION IS OVER THE CEILING (${projection.projectedUsd.toFixed(2)} > ${ceiling}): stop and take it back to the resolver brief.`);
   console.log(`Nothing was written to a database. Apply a finished file with: npm run catalog:nutrition -- --load=${values.results} [--apply]`);
