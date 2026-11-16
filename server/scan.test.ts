@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
 import { NUTRIENT_KEYS } from '../src/shared/nutrientKeys.ts';
 import { CURATED_INGREDIENTS } from '../src/shared/supplementIngredients.ts';
-import { askModel } from './claudeApi.ts';
-import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, DEFAULT_SUPPLEMENT_MODEL, scanRoutes, type ScanDeps } from './scan.ts';
+import { askModel, SCAN_EFFORT, SCAN_TIMEOUT_MS, takesEffort } from './claudeApi.ts';
+import { DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, DEFAULT_SUPPLEMENT_MODEL, LABEL_MAX_TOKENS, RECEIPT_MAX_TOKENS, SUPPLEMENT_MAX_TOKENS, THINKING_ROOM, scanRoutes, type ScanDeps } from './scan.ts';
 
 let server: Server | undefined;
 afterEach(() => { vi.restoreAllMocks(); return new Promise<void>(done => (server ? server.close(() => done()) : done())); });
@@ -15,13 +15,13 @@ const jpeg = '/9j/' + 'A'.repeat(200);
 const model = (text: string, status = 200) => new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text }] }), { status });
 const good = '{"name":"Gnocchi","serving":"1 cup","servingG":140,"servingsPerPack":3,"kcal":210,"p":6,"c":40,"f":1}';
 
-async function start(deps: ScanDeps) {
+async function start(deps: ScanDeps, path = 'label') {
   const app = express();
   app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
   app.use('/api/scan', scanRoutes(deps));
   server = app.listen(0);
   await new Promise(done => server!.once('listening', done));
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/label`;
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/${path}`;
   return (body: unknown, raw = false, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: raw ? String(body) : JSON.stringify(body) });
 }
 
@@ -49,7 +49,7 @@ describe('POST /api/scan/label', () => {
     const sent = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { system: string; max_tokens: number };
     for (const k of NUTRIENT_KEYS) expect(sent.system).toContain(`${k} (${MICRO_UNIT[k]})`);
     expect(sent.system).toContain('never the percent of Daily Value');
-    expect(sent.max_tokens).toBeGreaterThanOrEqual(850 + 4000); // the answer plus room for thinking, which counts against the limit
+    expect(sent.max_tokens).toBe(LABEL_MAX_TOKENS); // the answer plus room for thinking, which counts against the limit
   });
 
   it('answers with the checked amounts and drops what the model made up', async () => {
@@ -333,36 +333,59 @@ describe('POST /api/scan/supplement', () => {
   });
 });
 
-// The scan models think by default and thinking tokens count against max_tokens (PR 1018 found it for the resolver); a cut-off reply is a named failure, not text that fails to parse.
+// Thinking tokens count against max_tokens (PR 1018 found it for the resolver); a cut-off reply is a named failure, not text that fails to parse.
 describe('scan output limits', () => {
-  const sentLimit = async (path: string, body: Record<string, unknown>, deps: ScanDeps) => {
+  const sent = async (path: string, body: Record<string, unknown>, deps: ScanDeps = {}) => {
     const ask = vi.fn(async () => model('{}'));
     const app = express();
     app.use((_req, res, next) => { res.locals.userId = 'u1'; next(); });
     app.use('/api/scan', scanRoutes({ key: 'k', ...deps, fetch: ask as unknown as typeof fetch }));
-    server = app.listen(0);
-    await new Promise(done => server!.once('listening', done));
-    await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    return (JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { max_tokens: number }).max_tokens;
+    const srv = app.listen(0);
+    try {
+      await new Promise(done => srv.once('listening', done));
+      await fetch(`http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/scan/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    } finally { await new Promise<void>(done => srv.close(() => done())); }
+    return JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { max_tokens: number; model: string; output_config?: { effort: string } };
   };
+  const items = [{ id: 'eggs', n: 'Eggs' }];
 
   it('leaves room for thinking on top of the answer, for the label, the bottle and the receipt', async () => {
-    expect(await sentLimit('label', { image: jpeg }, {})).toBeGreaterThanOrEqual(850 + 4000);
-    expect(await sentLimit('supplement', { image: jpeg }, {})).toBeGreaterThanOrEqual(1600 + 4000);
-    expect(await sentLimit('receipt', { image: jpeg, items: [{ id: 'eggs', n: 'Eggs' }] }, {})).toBeGreaterThanOrEqual(3000 + 4000);
+    expect((await sent('label', { image: jpeg })).max_tokens).toBe(850 + THINKING_ROOM);
+    expect((await sent('supplement', { image: jpeg })).max_tokens).toBe(SUPPLEMENT_MAX_TOKENS);
+    expect(SUPPLEMENT_MAX_TOKENS).toBe(1600 + THINKING_ROOM);
+    expect((await sent('receipt', { image: jpeg, items })).max_tokens).toBe(RECEIPT_MAX_TOKENS);
+    expect(RECEIPT_MAX_TOKENS).toBe(3000 + THINKING_ROOM);
   });
 
-  it('throws a named error for a reply that did not end its turn', async () => {
-    const cut = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
-    await expect(askModel(cut as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).rejects.toThrow('stopped: max_tokens');
+  it('bounds thinking with an effort on the default models, and sends none to a model that would reject it', async () => {
+    for (const [path, body] of [['label', { image: jpeg }], ['supplement', { image: jpeg }], ['receipt', { image: jpeg, items }]] as const) expect((await sent(path, body)).output_config).toEqual({ effort: SCAN_EFFORT });
+    for (const m of [DEFAULT_MODEL, DEFAULT_RECEIPT_MODEL, DEFAULT_SUPPLEMENT_MODEL, 'claude-opus-5-5', 'claude-sonnet-5']) expect(takesEffort(m)).toBe(true);
+    for (const m of ['claude-haiku-4-5', 'claude-sonnet-4-5', 'claude-3-5-haiku', 'claude-haiku-5-5-preview', '']) expect(takesEffort(m)).toBe(false);
+    expect((await sent('label', { image: jpeg }, { model: 'claude-haiku-4-5' })).output_config).toBeUndefined();
+  });
+
+  it('waits longer than the resolver but less than the 120 s request limit', () => {
+    expect(SCAN_TIMEOUT_MS).toBeGreaterThan(30_000);
+    expect(SCAN_TIMEOUT_MS).toBeLessThan(120_000);
+  });
+
+  it('throws a named error that carries the tokens of a reply that did not end its turn', async () => {
+    const cut = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', usage: { input_tokens: 900, output_tokens: 4850 }, content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
+    const err = await askModel(cut as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e);
+    expect((err as Error).message).toBe('stopped: max_tokens');
+    expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 900, outputTokens: 4850 });
     const none = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{}' }] }), { status: 200 });
     await expect(askModel(none as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).rejects.toThrow('stopped: unknown');
   });
 
-  it('answers the label route as not available when the reply was cut off', async () => {
-    const cut = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
-    const post = await start({ key: 'k', fetch: cut as unknown as typeof fetch });
-    const res = await post({ image: jpeg });
+  const cutReply = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
+  it.each([
+    ['label', { image: jpeg }],
+    ['supplement', { image: jpeg }],
+    ['receipt', { image: jpeg, items }],
+  ] as const)('answers the %s route as not available when the reply was cut off', async (path, body) => {
+    const post = await start({ key: 'k', fetch: cutReply as unknown as typeof fetch }, path);
+    const res = await post(body);
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ ok: false, why: 'upstream' });
   });

@@ -29,7 +29,7 @@ const RECEIPT_UNAVAILABLE = 'receipt scan is not available right now';
 const SUPPLEMENT_UNAVAILABLE = 'bottle scan is not available right now';
 
 const MICRO_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-/** Output limits of the three scans. The scan models (Haiku 5.5, Sonnet 5.5) think before they answer by default and those tokens count against `max_tokens`, so a limit sized for the JSON
+/** Output limits of the three scans. Thinking tokens count against `max_tokens` (the Claude 5 models think adaptively unless told otherwise, per the claude-api docs; no scan reply was measured); thinking depth is bounded by `SCAN_EFFORT` (claudeApi.ts). A limit sized for the JSON
  *  alone can cut a reply off (`stop_reason: max_tokens`: the person saw "not available"; same fault as the resolver, PR 1018). Each is the room for the answer (label 850: four macros and up to 28
  *  vitamin and mineral amounts; bottle 1,600: 30 rows and a long blend; receipt 3,000) plus 4,000 for thinking. Only tokens used are billed, never the limit. */
 export const THINKING_ROOM = 4000;
