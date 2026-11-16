@@ -33,7 +33,7 @@ export const addOneOff = async (sheet, name, kcal, protein) => {
 // An eaten row on today's column opens its row sheet (the numbers, Copy to, Move to, Edit, a two-tap Delete). Returns the dialog.
 export const openRow = async (page, name) => {
   // The exact name: hasText alone is a case-insensitive substring ("Rice" would open "Chicken and rice bowl", "Tea" would open "Steak").
-  await todayCol(page).locator('.nb-eat').filter({ has: page.locator('.nb-eatn', { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }) }).first().getByRole('button').click();
+  await todayCol(page).locator('.nb-eat').filter({ has: page.locator('.nb-eatn', { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }) }).first().locator('.nb-eatrow').click(); // the row button only: the row also holds the Less and More portion buttons
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('heading', { name, exact: true })).toBeVisible(); // exact too: the sheet is the one for this food, not one whose name contains it
   return sheet;
