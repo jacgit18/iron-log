@@ -593,6 +593,15 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
     },
+    setGroceryReceiptShare(month, id, share) { // a receipt's split for one line: this month's line only, so the item's usual split (and next month) stay as they are
+      const clean = share === null ? null : cleanShare(share);
+      if ((share !== null && !clean) || !get().grocery.items.some(i => i.id === id)) return;
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (clean) { l.share = clean; delete l.packShares; } else delete l.share; // a pack's own split beats the line's, so the split chosen on the receipt takes the packs too (Undo puts the line back)
+        if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
+      });
+    },
     setGroceryPackShare(month, id, index, share) {
       const clean = share === null ? null : cleanShare(share);
       if ((share !== null && !clean) || !get().grocery.items.some(i => i.id === id)) return;

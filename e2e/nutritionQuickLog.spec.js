@@ -78,7 +78,10 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await page.getByRole('button', { name: 'Scan and log', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
   await page.getByLabel('Barcode photo').setInputFiles(photo);
   const scanned = page.getByRole('group', { name: 'Scanned food' });
-  await expect(scanned.getByText('Almond milk (Silk) · 30 kcal per 100 g')).toBeVisible();
+  await expect(scanned.locator('.fnc-name')).toHaveText('Almond milk'); // the name is its own line, with the brand and kcal under it
+  expect(await scanned.locator('.fnc-name').evaluate(e => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(22); // the name is the largest text of the card
+  await expect(scanned.getByText('Silk', { exact: true })).toBeVisible();
+  await expect(scanned.getByText('30 kcal per 100 g')).toBeVisible();
   await scanned.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Drink' }).click();
   await expect(scanned.getByText('72 kcal · P 2.4 · C 2.4 · F 6 g')).toBeVisible();
   const go = scanned.getByRole('button', { name: 'Save and log it' });

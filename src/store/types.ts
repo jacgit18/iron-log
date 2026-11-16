@@ -401,6 +401,7 @@ export interface GrocerySlice {
   setGroceryAllStores(groupId: string, on: boolean): void; // the group is the default for every store with no group of its own; at most one group has it
   setGroceryItemShare(id: string, share: GroceryShare | null): void; // the item's usual share; null goes back to the store's group
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
+  setGroceryReceiptShare(month: string, id: string, share: GroceryShare | null): void; // a receipt's split for one line, this month's line only (the item's usual split is not touched)
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
   setGroceryTax(month: string, store: string, cents: number | null): void; // the receipt's sales tax for that store this month, in cents; null clears it
   setGroceryPayer(month: string, store: string, personId: string | null): void; // who paid for that store this month; null is you

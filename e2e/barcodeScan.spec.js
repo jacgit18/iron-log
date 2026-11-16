@@ -33,7 +33,10 @@ test.describe('as an admin', () => {
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0); // found: the sheet closes
     expect(asked).toEqual(['/api/foods/barcode/00016000275287']); // the 12-digit UPC-A went as 14 digits
-    await expect(page.getByText('Cheerios Cereal (General Mills) · 380 kcal per 100 g')).toBeVisible();
+    await expect(page.locator('.fnc-name')).toHaveText('Cheerios Cereal'); // the name is its own big line; the brand and kcal sit under it
+    await expect(page.locator('.fnc-brand')).toHaveText('General Mills');
+    await expect(page.locator('.fnc-kcal')).toHaveText('380 kcal per 100 g');
+    await expect(page.locator('.fnc-badge')).toBeVisible(); // a scan from the search box carries the Scanned tick too
     await expect(page.getByLabel('Grams')).toHaveValue('28'); // the product’s own serving
     await page.getByRole('button', { name: 'Use', exact: true }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Cheerios Cereal');
@@ -73,7 +76,7 @@ test.describe('as an admin', () => {
     await answer(page, 200, CHEERIOS);
     await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
-    await expect(page.getByText('Cheerios Cereal (General Mills)')).toBeVisible();
+    await expect(page.locator('.fnc-name')).toHaveText('Cheerios Cereal');
     await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
   });
 
@@ -141,7 +144,7 @@ test.describe('as an admin', () => {
     await page.getByRole('button', { name: 'Scan to fill form' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Point the camera at the barcode' })).toBeVisible();
     await page.evaluate(() => { window.__codes = [{ rawValue: '016000275287', format: 'upc_a' }]; }); // the reader now "sees" a barcode
-    await expect(page.getByText('Cheerios Cereal (General Mills)')).toBeVisible();
+    await expect(page.locator('.fnc-name')).toHaveText('Cheerios Cereal');
     await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0);
     expect(await page.evaluate(() => window.__stopped)).toBeGreaterThan(0); // closing the sheet stopped the camera
   });
