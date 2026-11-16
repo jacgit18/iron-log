@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import express from 'express';
+import { askModel } from './claudeApi.ts';
 import { dayCap } from './dayCap.ts';
 import { cleanItemRefs, MAX_RECEIPT_BASE64, receiptFromReply, type ItemRef, type ReceiptResult } from '../src/shared/receipt.ts';
 import { MICRO_UNIT } from '../src/shared/foodMicro.ts';
@@ -10,10 +11,8 @@ import { cleanSupplementScan, type SupplementScanResult } from '../src/shared/su
 // Label photo scan (brief label-photo-scan), mounted at /api/scan behind sign-in (open to every signed-in account) and a per-user limit. The server sends one photo of a
 // nutrition-facts label to the Claude API and answers with the few numbers a Ready-made food needs (src/shared/scan.ts checks every field). The key
 // never reaches a phone. The photo is held only while the call runs: never written to disk or the database, never logged, never cached.
-// This file is the only place that knows the vendor: changing it means rewriting `askModel`.
+// The vendor call (`askModel`) lives in claudeApi.ts, the only place that knows the vendor.
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const API_VERSION = '2023-06-01';
 export const DEFAULT_MODEL = 'claude-haiku-5-5';
 export const BODY_LIMIT = '2mb';
 export const DEFAULT_DAILY_MAX = 150;
@@ -25,13 +24,16 @@ export const DEFAULT_RECEIPT_USER_DAILY_MAX = 5; // one person's receipts a day
 export const DEFAULT_SUPPLEMENT_MODEL = 'claude-sonnet-5-5'; // a Supplement Facts panel is small dense print with blends and IU, so it gets the larger model (brief supplement-label-scan; SCAN_SUPPLEMENT_MODEL=claude-haiku-5-5 is the one-variable switch)
 export const DEFAULT_SUPPLEMENT_DAILY_MAX = 60;
 export const DEFAULT_SUPPLEMENT_USER_DAILY_MAX = 5; // one person's bottle scans a day
-const TIMEOUT_MS = 30_000;
 const UNAVAILABLE = 'label scan is not available right now';
 const RECEIPT_UNAVAILABLE = 'receipt scan is not available right now';
 const SUPPLEMENT_UNAVAILABLE = 'bottle scan is not available right now';
 
 const MICRO_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-const LABEL_MAX_TOKENS = 850; // the four macros were 400; up to 28 vitamin and mineral amounts more (700 for the first 20)
+/** Output limits of the three scans. Thinking tokens count against `max_tokens` (the Claude 5 models think adaptively unless told otherwise, per the claude-api docs; no scan reply was measured); thinking depth is bounded by `SCAN_EFFORT` (claudeApi.ts). A limit sized for the JSON
+ *  alone can cut a reply off (`stop_reason: max_tokens`: the person saw "not available"; same fault as the resolver, PR 1018). Each is the room for the answer (label 850: four macros and up to 28
+ *  vitamin and mineral amounts; bottle 1,600: 30 rows and a long blend; receipt 3,000) plus 4,000 for thinking. Only tokens used are billed, never the limit. */
+export const THINKING_ROOM = 4000;
+export const LABEL_MAX_TOKENS = 850 + THINKING_ROOM;
 
 const SYSTEM = [
   'You read one photo of a food nutrition-facts label and answer with one JSON object and nothing else.',
@@ -46,7 +48,8 @@ const SYSTEM = [
 ].join(' ');
 
 const SUPPLEMENT_KEYS = NUTRIENT_KEYS.map(k => `${k} (${MICRO_UNIT[k]})`).join(', ');
-const SUPPLEMENT_MAX_TOKENS = 1600; // a panel can list 30 rows and a long "other ingredients" blend
+export const SUPPLEMENT_MAX_TOKENS = 1600 + THINKING_ROOM;
+export const RECEIPT_MAX_TOKENS = 3000 + THINKING_ROOM;
 
 const SUPPLEMENT_SYSTEM = [
   'You read one photo of the Supplement Facts panel on a supplement bottle and answer with one JSON object and nothing else.',
@@ -99,29 +102,9 @@ export interface ScanDeps {
   now?: () => number;
 }
 
-/** The one vendor call. Throws on any failure; the caller turns that into "not available". */
-async function askModel(ask: typeof fetch, key: string, model: string, image: string, p: { system: string; text: string; maxTokens: number } = { system: SYSTEM, text: 'Read this label.', maxTokens: LABEL_MAX_TOKENS }): Promise<string> {
-  const r = await ask(API_URL, {
-    method: 'POST',
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': API_VERSION },
-    body: JSON.stringify({
-      model,
-      max_tokens: p.maxTokens,
-      system: p.system,
-      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } }, { type: 'text', text: p.text }] }],
-    }),
-  });
-  if (!r.ok) throw new Error(`upstream ${r.status}`);
-  const body = (await r.json()) as { content?: { type?: string; text?: unknown }[] };
-  const first = body.content?.find(part => part?.type === 'text');
-  if (typeof first?.text !== 'string') throw new Error('no text in reply');
-  return first.text;
-}
-
 /** One photo in, one checked label out: what the route does, shared with scripts/scan-eval.mjs so the accuracy run tests the real prompt and validator. */
 export async function readLabel(ask: typeof fetch, key: string, model: string, image: string): Promise<LabelResult> {
-  return cleanLabel(jsonFromReply(await askModel(ask, key, model, image)));
+  return cleanLabel(jsonFromReply(await askModel(ask, key, model, image, { system: SYSTEM, text: 'Read this label.', maxTokens: LABEL_MAX_TOKENS })));
 }
 
 /** One bottle photo in, one checked supplement label out (brief supplement-label-scan); shared with scripts/scan-eval.mjs --supplement. */
@@ -132,7 +115,7 @@ export async function readSupplement(ask: typeof fetch, key: string, model: stri
 /** One receipt photo and the list's item ids and names in, one checked receipt out. The items are sent as data inside the user turn, never as instructions. */
 export async function readReceipt(ask: typeof fetch, key: string, model: string, image: string, items: ItemRef[]): Promise<ReceiptResult> {
   const text = `Items on the list (JSON: id, name, unit when weighed, got when ticked this month):\n${JSON.stringify(items)}\nRead this receipt.`;
-  return receiptFromReply(await askModel(ask, key, model, image, { system: RECEIPT_SYSTEM, text, maxTokens: 3000 }), new Set(items.map(i => i.id)));
+  return receiptFromReply(await askModel(ask, key, model, image, { system: RECEIPT_SYSTEM, text, maxTokens: RECEIPT_MAX_TOKENS }), new Set(items.map(i => i.id)));
 }
 
 export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAILY_MAX, receiptModel = DEFAULT_RECEIPT_MODEL, receiptDailyMax = DEFAULT_RECEIPT_DAILY_MAX, userDailyMax = DEFAULT_USER_DAILY_MAX, receiptUserDailyMax = DEFAULT_RECEIPT_USER_DAILY_MAX, supplementModel = DEFAULT_SUPPLEMENT_MODEL, supplementDailyMax = DEFAULT_SUPPLEMENT_DAILY_MAX, supplementUserDailyMax = DEFAULT_SUPPLEMENT_USER_DAILY_MAX, fetch: ask = fetch, now = Date.now }: ScanDeps = {}): Router {

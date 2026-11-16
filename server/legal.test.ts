@@ -141,9 +141,9 @@ describe('the policy and the system agree', () => {
   });
 
   it('names the AI provider the scan routes call, and says the photo is read by AI', () => {
-    // scan.ts is the only place that knows the vendor; if its address changes, the policy has to name the new one.
+    // claudeApi.ts is the only place that knows the vendor (the scans and the ingredient resolver call it); if its address changes, the policy has to name the new one.
+    expect(read('server/claudeApi.ts')).toContain('https://api.anthropic.com/');
     const scan = read('server/scan.ts');
-    expect(scan).toContain('https://api.anthropic.com/');
     expect(text).toMatch(/Anthropic \(AI service that reads the photo/);
     expect(text).toContain('artificial intelligence (AI)');
     expect(text).toContain('Scan label');

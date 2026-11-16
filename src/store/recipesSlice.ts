@@ -1,5 +1,6 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
 import { linkError, settleMeals } from '../lib/mealRollup.js';
+import { fieldsOf, sameFields, withFields } from '../lib/recipeFill.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { withUsual } from '../lib/usualPortion.js';
@@ -30,6 +31,28 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     set({ recipes: get().recipes.map(x => (x.id === id ? { ...x, micro: m } : x)) });
     get().saveRecipes();
     return null;
+  },
+
+  // A Fill's numbers (brief recipe-auto-nutrition): kcal, protein, carbs, fat, vitamins, servings and the estimate mark in one save. Like the usual portion, it is not recipe content, so no edited mark; meals built from this recipe follow its numbers. Undo puts the old fields back while the recipe still holds the filled ones.
+  fillRecipeNumbers(id, fields) {
+    const list = get().recipes, cur = list.find(r => r.id === id);
+    if (!cur) return 'That recipe is gone.';
+    const next = normRecipe(withFields(cur, fields));
+    if (!next) return 'Those numbers can’t be saved.';
+    const before = fieldsOf(cur), after = fieldsOf(next);
+    set({ recipes: settleMeals(list.map(r => (r.id === id ? next : r))) });
+    get().saveRecipes();
+    return {
+      undo: () => {
+        const now = get().recipes.find(r => r.id === id);
+        if (get().blocked() || !now || !sameFields(fieldsOf(now), after)) return false;
+        const back = normRecipe(withFields(now, before));
+        if (!back) return false;
+        set({ recipes: settleMeals(get().recipes.map(r => (r.id === id ? back : r))) });
+        get().saveRecipes();
+        return true;
+      },
+    };
   },
 
   // The usual portion alone (brief nutrition-usual-portion): no edited mark, no meal re-settling, nothing else on the recipe changes. An error text, or null.

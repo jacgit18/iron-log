@@ -97,3 +97,27 @@ describe('the eight added nutrients', () => {
     expect(w).not.toMatch(/Thiamin|Biotin|Choline/);
   });
 });
+
+describe('estimated share in the Totals row (brief recipe-auto-nutrition)', () => {
+  const bowl = (est?: true) => ({ id: 'e', d: day, n: 'Oat bowl', kcal: 300, p: 10, micro: { manganese: 2.6 }, ...(est ? { est } : {}) });
+  const other = { id: 'f', d: day, n: 'Rice', kcal: 200, p: 4, micro: { manganese: 6 } };
+  it('says how much of the food figure is estimated, and the share of the limit', () => {
+    const r = totalsView([], {}, day, 'taken', [bowl(true), other]).rows[0]!;
+    expect(r.foodLine).toBe('Supplements 0 mg, food 8.6 mg (2.6 mg of it estimated from recipes).');
+    expect(r.estShare).toBe(24); // 2.6 of the 11 mg limit
+  });
+  it('reads as today with no marked entry', () => {
+    const r = totalsView([], {}, day, 'taken', [bowl(), other]).rows[0]!;
+    expect(r.foodLine).toBe('Supplements 0 mg, food 8.6 mg.');
+    expect(r.estShare).toBe(0);
+  });
+  it('says it on a nutrient with no upper limit too', () => {
+    const t = totalsView([], {}, day, 'taken', [{ ...bowl(true), micro: { potassium: 400 } }]).targets[0]!;
+    expect(t.foodLine).toBe('Supplements 0 mg, food 400 mg (400 mg of it estimated from recipes).');
+  });
+  it('does not shade food that the limit does not count (magnesium counts supplements only)', () => {
+    const r = totalsView([], {}, day, 'taken', [{ ...bowl(true), micro: { magnesium: 100 } }]).rows[0]!;
+    expect(r.estShare).toBe(0);
+    expect(r.foodLine).toContain('(100 mg of it estimated from recipes) is not added');
+  });
+});

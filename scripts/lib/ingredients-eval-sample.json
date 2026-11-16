@@ -1,0 +1,1708 @@
+{
+ "note": "174 lines from 20 Library recipes (vault audits/2026-11-15-recipe-line-match-sample/sample.json). verdict is the hand judgement of USDA first result for the raw name: top = right food first, top3 = right food in first three, wrong = neither. usda = names of the first three Foundation/SR Legacy results (empty when USDA answered 400). Add expectGrams (hand value, grams in the whole line) to about 40 lines for the grams check.",
+ "lines": [
+  {
+   "recipe": "Apple Crisp I",
+   "line": "6 cups sliced and cored baking apples (for example, Granny Smith)",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Apple Crisp I",
+   "line": "½ cup (100 g) all-purpose flour",
+   "verdict": "top",
+   "usda": [
+    "Flour, wheat, all-purpose, enriched, bleached",
+    "Flour, wheat, all-purpose, enriched, unbleached",
+    "Flour, wheat, all-purpose, unenriched, unbleached"
+   ]
+  },
+  {
+   "recipe": "Apple Crisp I",
+   "line": "½ cup (100 g) rolled oats",
+   "verdict": "top3",
+   "usda": [
+    "Rolls, dinner, oat bran",
+    "Oats, whole grain, rolled, old fashioned",
+    "Oats, puffed"
+   ]
+  },
+  {
+   "recipe": "Apple Crisp I",
+   "line": "¾ teaspoon (3 g) cinnamon",
+   "verdict": "wrong",
+   "usda": [
+    "Bread, cinnamon",
+    "Muffins, English, raisin-cinnamon (includes apple-cinnamon)",
+    "Bagels, cinnamon-raisin"
+   ]
+  },
+  {
+   "recipe": "Apple Crisp I",
+   "line": "⅓ cup (75 g) cold butter or cold margarine",
+   "verdict": "top",
+   "usda": [
+    "Margarine-like, margarine-butter blend, soybean oil and butter",
+    "Oil, flaxseed, cold pressed",
+    "Cheese food, cold pack, American"
+   ]
+  },
+  {
+   "recipe": "Apple Crisp I",
+   "line": "⅔–¾ cup (120–150 g) brown sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, brown",
+    "Sweeteners, sugar substitute, granulated, brown",
+    "Toaster pastries, brown-sugar-cinnamon"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Vegetable oil",
+   "verdict": "top",
+   "usda": [
+    "Oil, vegetable, soybean, refined",
+    "Vegetable oil, palm kernel",
+    "Shortening industrial, lard and vegetable oil"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Mushrooms, chopped",
+   "verdict": "top",
+   "usda": [
+    "Mushroom, beech",
+    "Mushroom, crimini",
+    "Mushroom, enoki"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Garlic",
+   "verdict": "top",
+   "usda": [
+    "Garlic, raw",
+    "Garlic, raw",
+    "Garlic bread, frozen"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Parsley",
+   "verdict": "top",
+   "usda": [
+    "Parsley, fresh",
+    "Parsley, freeze-dried",
+    "Spices, parsley, dried"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Ground/minced beef",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Cream",
+   "verdict": "top",
+   "usda": [
+    "Cream, fluid, light (coffee cream or table cream)",
+    "Cream, whipped, cream topping, pressurized",
+    "Cheese, cream"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Chilli sauce",
+   "verdict": "wrong",
+   "usda": [
+    "Sauce, cheese sauce mix, dry",
+    "Sauce, barbecue",
+    "Sauce, horseradish"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Hamburger buns, sliced in half",
+   "verdict": "wrong",
+   "usda": [
+    "McDONALD'S, Hamburger",
+    "Fast foods, hamburger; single, regular patty; double decker bun with condiments ",
+    "BURGER KING, Hamburger"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Lettuce",
+   "verdict": "top",
+   "usda": [
+    "Lettuce, iceberg, raw",
+    "Lettuce, cos or romaine, raw",
+    "Lettuce, cos or romaine, raw"
+   ]
+  },
+  {
+   "recipe": "Beef and Mushroom Burger",
+   "line": "Tomato, sliced",
+   "verdict": "top3",
+   "usda": [
+    "Tomato powder",
+    "Tomato, roma",
+    "Tomato products, canned, sauce, with tomato tidbits"
+   ]
+  },
+  {
+   "recipe": "Bête Noire (Flourless Chocolate Cake)",
+   "line": "½ cup water",
+   "verdict": "wrong",
+   "usda": [
+    "Water convolvulus,raw",
+    "Crackers, water biscuits",
+    "Beverages, carbonated, tonic water"
+   ]
+  },
+  {
+   "recipe": "Bête Noire (Flourless Chocolate Cake)",
+   "line": "1 ⅓ cup white granulated sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, granulated",
+    "Sugars, granulated",
+    "Sweeteners, sugar substitute, granulated, brown"
+   ]
+  },
+  {
+   "recipe": "Bête Noire (Flourless Chocolate Cake)",
+   "line": "4 oz (120 g) bittersweet chocolate, finely chopped",
+   "verdict": "top3",
+   "usda": [
+    "Beverages, chocolate syrup",
+    "Candies, milk chocolate",
+    "Candies, semisweet chocolate"
+   ]
+  },
+  {
+   "recipe": "Bête Noire (Flourless Chocolate Cake)",
+   "line": "8 oz (230 g) unsweetened chocolate, finely chopped",
+   "verdict": "top",
+   "usda": [
+    "Baking chocolate, unsweetened, liquid",
+    "Baking chocolate, unsweetened, squares",
+    "Blackberries, frozen, unsweetened"
+   ]
+  },
+  {
+   "recipe": "Bête Noire (Flourless Chocolate Cake)",
+   "line": "½ lb (225 g) butter",
+   "verdict": "top3",
+   "usda": [
+    "Butter, Clarified butter (ghee)",
+    "Butter, salted",
+    "Croissants, butter"
+   ]
+  },
+  {
+   "recipe": "Bête Noire (Flourless Chocolate Cake)",
+   "line": "5 beaten eggs",
+   "verdict": "top3",
+   "usda": [
+    "Eggs, Grade A, Large, egg white",
+    "Eggs, Grade A, Large, egg whole",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "4 tbsp minced fresh dill",
+   "verdict": "top",
+   "usda": [
+    "Dill weed, fresh",
+    "Ham, minced",
+    "Pickles, cucumber, dill or kosher dill"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "4 tsp grated orange peel",
+   "verdict": "top",
+   "usda": [
+    "Orange peel, raw",
+    "Oranges, raw, with peel",
+    "Cheese, parmesan, grated"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "3 tsp minced garlic",
+   "verdict": "wrong",
+   "usda": [
+    "Ham, minced",
+    "Pie, mince, prepared from recipe",
+    "Luncheon meat, pork and chicken, minced, canned, includes Spam Lite"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "¾ tsp salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "4 cup cherry tomatoes, halved",
+   "verdict": "top3",
+   "usda": [
+    "Tomato powder",
+    "Tomato, roma",
+    "Tomato products, canned, sauce, with tomato tidbits"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "1 tbsp olive oil",
+   "verdict": "top3",
+   "usda": [
+    "Oil, corn, peanut, and olive",
+    "Oil, olive, salad or cooking",
+    "Mayonnaise, reduced fat, with olive oil"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "4 skinless boneless chicken breast halves, thinly sliced crosswise",
+   "verdict": "top",
+   "usda": [
+    "Chicken, breast, boneless, skinless, raw",
+    "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",
+    "Chicken, thigh, boneless, skinless, raw"
+   ]
+  },
+  {
+   "recipe": "Chicken with Orange, Spinach and Cherry Tomatoes",
+   "line": "4 cups firmly packed torn fresh spinach leaves (about 8 ounces)",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "1 cup (240 ml) cornmeal",
+   "verdict": "top",
+   "usda": [
+    "Cornmeal, blue (Navajo)",
+    "Cornmeal, white (Navajo)",
+    "Cornmeal, yellow (Navajo)"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "1 cup (240 ml) all-purpose flour",
+   "verdict": "top",
+   "usda": [
+    "Flour, wheat, all-purpose, enriched, bleached",
+    "Flour, wheat, all-purpose, enriched, unbleached",
+    "Flour, wheat, all-purpose, unenriched, unbleached"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "4 tsp baking powder",
+   "verdict": "top",
+   "usda": [
+    "Leavening agents, baking powder, low-sodium",
+    "Leavening agents, baking powder, double-acting, straight phosphate",
+    "Leavening agents, baking powder, double-acting, sodium aluminum sulfate"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "½ tsp salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "1 cup (240 ml) milk",
+   "verdict": "wrong",
+   "usda": [
+    "Crackers, milk",
+    "Milk dessert, frozen, milk-fat free, chocolate",
+    "Protein supplement, milk based, Muscle Milk, powder"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "1 egg",
+   "verdict": "top3",
+   "usda": [
+    "Eggs, Grade A, Large, egg white",
+    "Eggs, Grade A, Large, egg whole",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "¼ cup (60 ml) shortening",
+   "verdict": "top",
+   "usda": [
+    "Shortening, industrial, soy (partially hydrogenated), pourable liquid fry shorte",
+    "Shortening, confectionery, fractionated palm",
+    "Shortening, vegetable, household, composite"
+   ]
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "¼ cup (60 ml) sugar (optional)",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Corn Sticks",
+   "line": "½ can (7.5 ounces / 212 g) whole corn (optional), drained",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Eastern North Carolina Barbecued Pig",
+   "line": "80 pound pig (butchered with head removed)",
+   "verdict": "wrong",
+   "usda": [
+    "Turkey, drumstick, smoked, cooked, with skin, bone removed",
+    "Turkey, wing, smoked, cooked, with skin, bone removed",
+    "Fish, salmon, red, canned, bones removed (Alaska Native)"
+   ]
+  },
+  {
+   "recipe": "Eastern North Carolina Barbecued Pig",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Eastern North Carolina Barbecued Pig",
+   "line": "40 pounds charcoal (for charcoal cooking option)",
+   "verdict": "wrong",
+   "usda": [
+    "Bulgur, cooked",
+    "Couscous, cooked",
+    "Millet, cooked"
+   ]
+  },
+  {
+   "recipe": "Eastern North Carolina Barbecued Pig",
+   "line": "Your favorite vinegar-based Eastern NC sauce",
+   "verdict": "wrong",
+   "usda": [
+    "Mollusks, oyster, eastern, canned",
+    "Mollusks, oyster, eastern, farmed, raw",
+    "Mollusks, oyster, eastern, wild, raw"
+   ]
+  },
+  {
+   "recipe": "Fried Eggs",
+   "line": "2 teaspoons butter or olive oil",
+   "verdict": "top3",
+   "usda": [
+    "Oil, corn, peanut, and olive",
+    "Oil, olive, salad or cooking",
+    "Butter oil, anhydrous"
+   ]
+  },
+  {
+   "recipe": "Fried Eggs",
+   "line": "2–3 large eggs, depending on appetite",
+   "verdict": "top3",
+   "usda": [
+    "Eggs, Grade A, Large, egg white",
+    "Eggs, Grade A, Large, egg whole",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Fried Eggs",
+   "line": "Salt to taste",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Fried Eggs",
+   "line": "Pepper to taste (optional)",
+   "verdict": "wrong",
+   "usda": [
+    "Pepper, banana, raw",
+    "Peppers, ancho, dried",
+    "Peppers, hungarian, raw"
+   ]
+  },
+  {
+   "recipe": "Grilled Portobello Mushrooms",
+   "line": "1 large portobello mushroom per person",
+   "verdict": "top",
+   "usda": [
+    "Mushroom, beech",
+    "Mushroom, crimini",
+    "Mushroom, enoki"
+   ]
+  },
+  {
+   "recipe": "Grilled Portobello Mushrooms",
+   "line": "Olive oil",
+   "verdict": "top3",
+   "usda": [
+    "Oil, corn, peanut, and olive",
+    "Oil, olive, salad or cooking",
+    "Mayonnaise, reduced fat, with olive oil"
+   ]
+  },
+  {
+   "recipe": "Grilled Portobello Mushrooms",
+   "line": "Salt (as desired)",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Olive oil",
+   "verdict": "top3",
+   "usda": [
+    "Oil, corn, peanut, and olive",
+    "Oil, olive, salad or cooking",
+    "Mayonnaise, reduced fat, with olive oil"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Chicken",
+   "verdict": "wrong",
+   "usda": [
+    "Chicken spread",
+    "Chicken, meatless",
+    "Fat, chicken"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Bell peppers",
+   "verdict": "top",
+   "usda": [
+    "Peppers, bell, green, raw",
+    "Peppers, bell, orange, raw",
+    "Peppers, bell, red, raw"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Leeks",
+   "verdict": "top",
+   "usda": [
+    "Leeks, (bulb and lower leaf-portion), raw",
+    "Leeks, (bulb and lower-leaf portion), freeze-dried",
+    "Leeks, (bulb and lower leaf-portion), cooked, boiled, drained, with salt"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Onions",
+   "verdict": "top",
+   "usda": [
+    "Onions, raw",
+    "DENNY'S, onion rings",
+    "Onions, dehydrated flakes"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Tomatoes",
+   "verdict": "top3",
+   "usda": [
+    "Tomato powder",
+    "Tomato, roma",
+    "Tomato products, canned, sauce, with tomato tidbits"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Celery",
+   "verdict": "top",
+   "usda": [
+    "Celery, raw",
+    "Celery, raw",
+    "Spices, celery seed"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Tomato paste",
+   "verdict": "top",
+   "usda": [
+    "Tomato, paste, canned, without salt added",
+    "Nuts, almond paste",
+    "Seeds, sesame butter, paste"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Water",
+   "verdict": "wrong",
+   "usda": [
+    "Water convolvulus,raw",
+    "Crackers, water biscuits",
+    "Beverages, carbonated, tonic water"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Black pepper, ground",
+   "verdict": "top",
+   "usda": [
+    "Spices, pepper, black",
+    "Pepper, banana, raw",
+    "Peppers, ancho, dried"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Peeled plantains",
+   "verdict": "top",
+   "usda": [
+    "Plantains, green, boiled",
+    "Plantains, green, fried",
+    "Plantains, green, raw"
+   ]
+  },
+  {
+   "recipe": "Igisafuliya (Rwandan Chicken Stew)",
+   "line": "Whole chile pepper",
+   "verdict": "wrong",
+   "usda": [
+    "Peppers, hot chile, sun-dried",
+    "Sauce, hot chile, sriracha",
+    "Sauce, hot chile, sriracha, CHA! BY TEXAS PETE"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "2 cloves ginger, finely grated",
+   "verdict": "top",
+   "usda": [
+    "Ginger root, raw",
+    "Spices, ginger, ground",
+    "Beverages, carbonated, ginger ale"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "1 tin (1 ⅔ cups) evaporated milk",
+   "verdict": "top",
+   "usda": [
+    "Milk, canned, evaporated, with added vitamin A",
+    "Dessert topping, powdered, 1.5 ounce prepared with 1/2 cup milk",
+    "Milk, canned, evaporated, nonfat, with added vitamin A and vitamin D"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "⅔ tin (1 ¼ cups) sweetened condensed milk",
+   "verdict": "top",
+   "usda": [
+    "Sweetened condensed milk",
+    "Milk, canned, condensed, sweetened",
+    "Dessert topping, powdered, 1.5 ounce prepared with 1/2 cup milk"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "2 tbsp coconut cream",
+   "verdict": "top",
+   "usda": [
+    "Nuts, coconut cream, canned, sweetened",
+    "Nuts, coconut meat, dried (desiccated), creamed",
+    "Puddings, coconut cream, dry mix, instant"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "6 cups flour",
+   "verdict": "top3",
+   "usda": [
+    "Arrowroot flour",
+    "Carob flour",
+    "Flour, 00"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "2 tsp cinnamon powder",
+   "verdict": "wrong",
+   "usda": [
+    "Baobab powder",
+    "Sugars, powdered",
+    "Tomato powder"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "1 stick (½ cup) butter or margarine",
+   "verdict": "top",
+   "usda": [
+    "Margarine-like, margarine-butter blend, soybean oil and butter",
+    "Margarine-like, butter-margarine blend, 80% fat, stick, without salt",
+    "Margarine-like, vegetable oil-butter spread, tub, with salt"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "6 dashes Angostura bitters",
+   "verdict": "wrong",
+   "usda": [
+    "Balsam-pear (bitter gourd), pods, raw",
+    "Balsam-pear (bitter gourd), leafy tips, raw",
+    "Balsam-pear (bitter gourd), pods, cooked, boiled, drained, with salt"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "2 cups sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugar, turbinado",
+    "Sugars, brown",
+    "Sugars, granulated"
+   ]
+  },
+  {
+   "recipe": "Kurma (Trinidadian Fried Dough in Syrup)",
+   "line": "½ cup water",
+   "verdict": "wrong",
+   "usda": [
+    "Water convolvulus,raw",
+    "Crackers, water biscuits",
+    "Beverages, carbonated, tonic water"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Uncooked rice",
+   "verdict": "top",
+   "usda": [
+    "Rice, white, glutinous, unenriched, uncooked",
+    "Rice, white, short-grain, enriched, uncooked",
+    "Quinoa, uncooked"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Water",
+   "verdict": "wrong",
+   "usda": [
+    "Water convolvulus,raw",
+    "Crackers, water biscuits",
+    "Beverages, carbonated, tonic water"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Cooked rice",
+   "verdict": "top3",
+   "usda": [
+    "Rice noodles, cooked",
+    "Wild rice, cooked",
+    "Rice, white, glutinous, unenriched, cooked"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Milk (optional)",
+   "verdict": "wrong",
+   "usda": [
+    "Crackers, milk",
+    "Milk dessert, frozen, milk-fat free, chocolate",
+    "Protein supplement, milk based, Muscle Milk, powder"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Yeast",
+   "verdict": "wrong",
+   "usda": [
+    "Yeast extract spread",
+    "Doughnuts, yeast-leavened, with creme filling",
+    "Doughnuts, yeast-leavened, with jelly filling"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Baking powder",
+   "verdict": "top",
+   "usda": [
+    "Leavening agents, baking powder, low-sodium",
+    "Leavening agents, baking powder, double-acting, straight phosphate",
+    "Leavening agents, baking powder, double-acting, sodium aluminum sulfate"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugar, turbinado",
+    "Sugars, brown",
+    "Sugars, granulated"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Masa (Hausa Rice Pancake) with Onions",
+   "line": "Onion, chopped",
+   "verdict": "top",
+   "usda": [
+    "Onions, raw",
+    "DENNY'S, onion rings",
+    "Onions, dehydrated flakes"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "300 g uncooked spaghetti",
+   "verdict": "wrong",
+   "usda": [
+    "Quinoa, uncooked",
+    "Spelt, uncooked",
+    "Teff, uncooked"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "Palm oil",
+   "verdict": "top",
+   "usda": [
+    "Oil, palm",
+    "Vegetable oil, palm kernel",
+    "Oil, industrial, palm and palm kernel, filling fat (non-hydrogenated)"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "500 g assorted meat, boiled",
+   "verdict": "wrong",
+   "usda": [
+    "Babyfood, meat, meat sticks, junior",
+    "Frankfurter, meat",
+    "Meat extender"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "1 medium onion, chopped",
+   "verdict": "top",
+   "usda": [
+    "Onions, raw",
+    "DENNY'S, onion rings",
+    "Onions, dehydrated flakes"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "2 tablespoons fermented locust beans (iru)",
+   "verdict": "wrong",
+   "usda": [
+    "Gums, seed gums (includes locust bean, guar)",
+    "Tofu, salted and fermented (fuyu)",
+    "Fish, salmon, tipnuk, fermented (Alaska Native)"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "1½ cups fresh pepper mix",
+   "verdict": "wrong",
+   "usda": [
+    "Fish, bass, fresh water, mixed species, raw",
+    "Basil, fresh",
+    "Parsley, fresh"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "2 Knorr stock cubes",
+   "verdict": "wrong",
+   "usda": [
+    "Soup, stock, beef, home-prepared",
+    "Soup, stock, chicken, home-prepared",
+    "Soup, stock, fish, home-prepared"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "1 tablespoon ground crayfish",
+   "verdict": "top",
+   "usda": [
+    "Crustaceans, crayfish, mixed species, farmed, raw",
+    "Crustaceans, crayfish, mixed species, wild, raw",
+    "Crustaceans, crayfish, mixed species, farmed, cooked, moist heat"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "1 medium Nigerian smoked catfish or titus fish",
+   "verdict": "top",
+   "usda": [
+    "Fish, catfish, channel, farmed, raw",
+    "Fish, catfish, channel, wild, raw",
+    "Fish, catfish, farm raised, raw"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "Kpomo",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Native Jollof Spaghetti",
+   "line": "Handful of scent leaves",
+   "verdict": "wrong",
+   "usda": [
+    "Drumstick leaves, raw",
+    "Amaranth leaves, raw",
+    "Broccoli, leaves, raw"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "1 cup (140 g / 4.9 oz) all-purpose flour",
+   "verdict": "top",
+   "usda": [
+    "Flour, wheat, all-purpose, enriched, bleached",
+    "Flour, wheat, all-purpose, enriched, unbleached",
+    "Flour, wheat, all-purpose, unenriched, unbleached"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "2 eggs",
+   "verdict": "top3",
+   "usda": [
+    "Eggs, Grade A, Large, egg white",
+    "Eggs, Grade A, Large, egg whole",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "¼ cup (55 g / 1.9 oz) white granulated sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, granulated",
+    "Sugars, granulated",
+    "Sweeteners, sugar substitute, granulated, brown"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "¾ cup (185 g / 6.3 oz) milk",
+   "verdict": "wrong",
+   "usda": [
+    "Crackers, milk",
+    "Milk dessert, frozen, milk-fat free, chocolate",
+    "Protein supplement, milk based, Muscle Milk, powder"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "½ cup (125 g / 4.2 oz) water",
+   "verdict": "wrong",
+   "usda": [
+    "Water convolvulus,raw",
+    "Crackers, water biscuits",
+    "Beverages, carbonated, tonic water"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "1 tablespoon vanilla extract",
+   "verdict": "top",
+   "usda": [
+    "Vanilla extract",
+    "Vanilla extract, imitation, alcohol",
+    "Vanilla extract, imitation, no alcohol"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "3 tablespoons butter, melted",
+   "verdict": "top3",
+   "usda": [
+    "Butter, Clarified butter (ghee)",
+    "Butter, salted",
+    "Croissants, butter"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "9 tablespoons butter",
+   "verdict": "top3",
+   "usda": [
+    "Butter, Clarified butter (ghee)",
+    "Butter, salted",
+    "Croissants, butter"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "1 ½ cups (450 g / 16 oz) Nutella or chocolate hazelnut spread",
+   "verdict": "top",
+   "usda": [
+    "Chocolate-flavored hazelnut spread",
+    "Oil, hazelnut",
+    "Nuts, hazelnuts or filberts"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "⅓ cup (80 g / 2.7 oz) sweetened whipped cream",
+   "verdict": "top",
+   "usda": [
+    "Cream, whipped, cream topping, pressurized",
+    "Cream, fluid, heavy whipping",
+    "Cream, fluid, light whipping"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "32 banana slices, 0.5 inches (1.3 cm) thick",
+   "verdict": "top3",
+   "usda": [
+    "Bananas, dehydrated, or banana powder",
+    "Bananas, raw",
+    "Bananas, overripe, raw"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "¼ cup (20 g / 0.71 oz) chopped hazelnuts",
+   "verdict": "top3",
+   "usda": [
+    "Oil, hazelnut",
+    "Nuts, hazelnuts or filberts",
+    "SILK Hazelnut Creamer"
+   ]
+  },
+  {
+   "recipe": "Nutella Crepes",
+   "line": "Powdered sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, powdered",
+    "Beverages, chocolate powder, no sugar added",
+    "Beverages, Cocoa mix, no sugar added, powder"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "1 cup (125 g) flour",
+   "verdict": "top3",
+   "usda": [
+    "Arrowroot flour",
+    "Carob flour",
+    "Flour, 00"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "1 tsp baking powder",
+   "verdict": "top",
+   "usda": [
+    "Leavening agents, baking powder, low-sodium",
+    "Leavening agents, baking powder, double-acting, straight phosphate",
+    "Leavening agents, baking powder, double-acting, sodium aluminum sulfate"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "¾ tsp salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "½ cup (120 g) unsalted butter, melted",
+   "verdict": "wrong",
+   "usda": [
+    "Pretzels, soft, unsalted",
+    "Snacks, popcorn, air-popped (Unsalted)",
+    "Snacks, potato chips, plain, unsalted"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "1 cup (240 g) firmly packed dark brown sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, brown",
+    "Sweeteners, sugar substitute, granulated, brown",
+    "Toaster pastries, brown-sugar-cinnamon"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "1 tbsp vanilla extract",
+   "verdict": "top",
+   "usda": [
+    "Vanilla extract",
+    "Vanilla extract, imitation, alcohol",
+    "Vanilla extract, imitation, no alcohol"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "1 egg",
+   "verdict": "top3",
+   "usda": [
+    "Eggs, Grade A, Large, egg white",
+    "Eggs, Grade A, Large, egg whole",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Pecan Blondies",
+   "line": "¾ cup (180 g) chopped pecans",
+   "verdict": "top3",
+   "usda": [
+    "Ham, chopped, canned",
+    "Ham, chopped, not canned",
+    "Nuts, pecans"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "2 cups (480 ml) milk, scalded",
+   "verdict": "wrong",
+   "usda": [
+    "Crackers, milk",
+    "Milk dessert, frozen, milk-fat free, chocolate",
+    "Protein supplement, milk based, Muscle Milk, powder"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "2 cups (450 g) cooked and puréed pumpkin (or plain canned pumpkin)",
+   "verdict": "top",
+   "usda": [
+    "Pumpkin, canned, with salt",
+    "Pumpkin pie mix, canned",
+    "Pumpkin, canned, without salt"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "1 cup (240 ml) maple syrup",
+   "verdict": "top",
+   "usda": [
+    "Syrups, maple",
+    "Syrup, maple, Canadian",
+    "Syrups, table blends, pancake, with 2% maple"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "⅛ cup (30 g) sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugar, turbinado",
+    "Sugars, brown",
+    "Sugars, granulated"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "1 tbsp flour",
+   "verdict": "top3",
+   "usda": [
+    "Arrowroot flour",
+    "Carob flour",
+    "Flour, 00"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "½ tsp salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "1 tsp ginger",
+   "verdict": "top",
+   "usda": [
+    "Ginger root, raw",
+    "Spices, ginger, ground",
+    "Beverages, carbonated, ginger ale"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "1 tsp cinnamon",
+   "verdict": "wrong",
+   "usda": [
+    "Bread, cinnamon",
+    "Muffins, English, raisin-cinnamon (includes apple-cinnamon)",
+    "Bagels, cinnamon-raisin"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "¼ tsp nutmeg (optional)",
+   "verdict": "top3",
+   "usda": [
+    "Oil, nutmeg butter",
+    "Spices, nutmeg, ground"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "2 large eggs, beaten",
+   "verdict": "top3",
+   "usda": [
+    "Eggs, Grade A, Large, egg white",
+    "Eggs, Grade A, Large, egg whole",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Pumpkin Pie I",
+   "line": "1 unbaked 9-inch pie shell",
+   "verdict": "top",
+   "usda": [
+    "Pie crust, refrigerated, regular, unbaked",
+    "Pie crust, standard-type, prepared from recipe, unbaked",
+    "Pie crust, deep dish, frozen, unbaked, made with enriched flour"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "2 tomatoes, cored and chopped",
+   "verdict": "top3",
+   "usda": [
+    "Tomato powder",
+    "Tomato, roma",
+    "Tomato products, canned, sauce, with tomato tidbits"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "½ ea. cucumber, chopped",
+   "verdict": "top3",
+   "usda": [
+    "Beverages, ABBOTT, EAS soy protein powder",
+    "Beverages, ABBOTT, EAS whey protein powder",
+    "Cucumber, peeled, raw"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "1 onion, chopped",
+   "verdict": "top",
+   "usda": [
+    "Onions, raw",
+    "DENNY'S, onion rings",
+    "Onions, dehydrated flakes"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "1 tbsp minced parsley",
+   "verdict": "top",
+   "usda": [
+    "Parsley, fresh",
+    "Ham, minced",
+    "Parsley, freeze-dried"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "2 tbsp lemon juice",
+   "verdict": "top",
+   "usda": [
+    "Lemon juice, raw",
+    "Lemon juice from concentrate, bottled, REAL LEMON",
+    "Cookies, ladyfingers, with lemon juice and rind"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "2 tbsp oil",
+   "verdict": "top",
+   "usda": [
+    "Oil, canola",
+    "Oil, almond",
+    "Oil, avocado"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "1 eggplant, sliced into 1 cm rounds",
+   "verdict": "top3",
+   "usda": [
+    "Eggplant, pickled",
+    "Eggplant, raw",
+    "Eggplant, raw"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "4 hard-boiled eggs, peeled and sliced",
+   "verdict": "top",
+   "usda": [
+    "Egg, whole, cooked, hard-boiled",
+    "Candies, hard",
+    "Chicken, feet, boiled"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "Vegetable oil, for frying",
+   "verdict": "top",
+   "usda": [
+    "Oil, vegetable, soybean, refined",
+    "Vegetable oil, palm kernel",
+    "Shortening industrial, lard and vegetable oil"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "4 pita breads",
+   "verdict": "top",
+   "usda": [
+    "Bread, pita, white, enriched",
+    "Bread, pita, white, unenriched",
+    "Bread, pita, whole-wheat"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "¾ cup hummus",
+   "verdict": "top",
+   "usda": [
+    "Hummus, commercial",
+    "Hummus, commercial",
+    "Hummus, home prepared"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "½ cup tahini",
+   "verdict": "top",
+   "usda": [
+    "Seeds, sesame butter, tahini, type of kernels unspecified",
+    "Seeds, sesame butter, tahini, from raw and stone ground kernels",
+    "Seeds, sesame butter, tahini, from roasted and toasted kernels (most common type"
+   ]
+  },
+  {
+   "recipe": "Sabich (Vegetable and Pita Sandwich)",
+   "line": "Amba sauce",
+   "verdict": "wrong",
+   "usda": [
+    "Sauce, cheese sauce mix, dry",
+    "Sauce, barbecue",
+    "Sauce, horseradish"
+   ]
+  },
+  {
+   "recipe": "Smoky Chipotle Glazed Hot Wings",
+   "line": "24 chicken wingettes",
+   "verdict": "wrong",
+   "usda": [
+    "Chicken spread",
+    "Chicken, meatless",
+    "Fat, chicken"
+   ]
+  },
+  {
+   "recipe": "Smoky Chipotle Glazed Hot Wings",
+   "line": "2 tsp soy sauce",
+   "verdict": "top",
+   "usda": [
+    "Soy sauce made from soy (tamari)",
+    "Soy sauce made from soy and wheat (shoyu)",
+    "Soy sauce made from soy and wheat (shoyu), low sodium"
+   ]
+  },
+  {
+   "recipe": "Smoky Chipotle Glazed Hot Wings",
+   "line": "6 tbsp Smoky Chipotle Hot Sauce",
+   "verdict": "wrong",
+   "usda": [
+    "Sauce, hot chile, sriracha",
+    "Sauce, ready-to-serve, pepper or hot",
+    "Cheesefurter, cheese smokie, pork, beef"
+   ]
+  },
+  {
+   "recipe": "Smoky Chipotle Glazed Hot Wings",
+   "line": "6 tbsp butter, melted",
+   "verdict": "top3",
+   "usda": [
+    "Butter, Clarified butter (ghee)",
+    "Butter, salted",
+    "Croissants, butter"
+   ]
+  },
+  {
+   "recipe": "Smoky Chipotle Glazed Hot Wings",
+   "line": "3 cloves garlic, minced",
+   "verdict": "top",
+   "usda": [
+    "Garlic, raw",
+    "Garlic, raw",
+    "Garlic bread, frozen"
+   ]
+  },
+  {
+   "recipe": "Smoky Chipotle Glazed Hot Wings",
+   "line": "Oil for deep frying",
+   "verdict": "top",
+   "usda": [
+    "Oil, industrial, canola (partially hydrogenated) oil for deep fat frying",
+    "Oil, industrial, canola for salads, woks and light frying",
+    "Oil, industrial, soy, refined, for woks and light frying"
+   ]
+  },
+  {
+   "recipe": "Strawberry Pie",
+   "line": "Pillsbury pie crust",
+   "verdict": "top3",
+   "usda": [
+    "Pie Crust, Cookie-type, Chocolate, Ready Crust",
+    "Pie crust, refrigerated, regular, baked",
+    "Pie crust, refrigerated, regular, unbaked"
+   ]
+  },
+  {
+   "recipe": "Strawberry Pie",
+   "line": "1 cup sliced strawberries",
+   "verdict": "wrong",
+   "usda": [
+    "Strawberries, frozen, sweetened, sliced",
+    "Cheese, provolone, sliced",
+    "Ham, sliced, restaurant"
+   ]
+  },
+  {
+   "recipe": "Strawberry Pie",
+   "line": "¼ cup water",
+   "verdict": "wrong",
+   "usda": [
+    "Water convolvulus,raw",
+    "Crackers, water biscuits",
+    "Beverages, carbonated, tonic water"
+   ]
+  },
+  {
+   "recipe": "Strawberry Pie",
+   "line": "⅔ cup white granulated sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, granulated",
+    "Sugars, granulated",
+    "Sweeteners, sugar substitute, granulated, brown"
+   ]
+  },
+  {
+   "recipe": "Strawberry Pie",
+   "line": "1 tbsp lemon juice",
+   "verdict": "top",
+   "usda": [
+    "Lemon juice, raw",
+    "Lemon juice from concentrate, bottled, REAL LEMON",
+    "Cookies, ladyfingers, with lemon juice and rind"
+   ]
+  },
+  {
+   "recipe": "Strawberry Pie",
+   "line": "Whipped cream",
+   "verdict": "top",
+   "usda": [
+    "Cream, whipped, cream topping, pressurized",
+    "Cream, fluid, heavy whipping",
+    "Cream, fluid, light whipping"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "1–2 tbsp virgin olive oil",
+   "verdict": "top3",
+   "usda": [
+    "Cereals, CREAM OF WHEAT, 2 1/2 minute cook time, dry",
+    "Oil, corn, peanut, and olive",
+    "Oil, olive, salad or cooking"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "½ ea. onion (vidalia onions are okay, purple or white onions are also acceptable), chopped",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "3 oz (85 g) tomato, sliced in rings",
+   "verdict": "top3",
+   "usda": [
+    "Tomato powder",
+    "Tomato, roma",
+    "Tomato products, canned, sauce, with tomato tidbits"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "Vinegar",
+   "verdict": "top",
+   "usda": [
+    "Vinegar, balsamic",
+    "Vinegar, cider",
+    "Vinegar, distilled"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "Brown sugar",
+   "verdict": "top",
+   "usda": [
+    "Sugars, brown",
+    "Sweeteners, sugar substitute, granulated, brown",
+    "Toaster pastries, brown-sugar-cinnamon"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "Lemon",
+   "verdict": "wrong",
+   "usda": [
+    "Lemon juice from concentrate, bottled, REAL LEMON",
+    "Lemon juice, raw",
+    "Lemon peel, raw"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "5 tbsp virgin olive oil",
+   "verdict": "top3",
+   "usda": [
+    "Oil, corn, peanut, and olive",
+    "Oil, olive, salad or cooking",
+    "Mayonnaise, reduced fat, with olive oil"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "½–1 lb (225–450 g) whole fresh carp, fully cleaned and scaled",
+   "verdict": "top",
+   "usda": [
+    "Fish, carp, raw",
+    "Fish, carp, cooked, dry heat",
+    "Egg, whole, raw, fresh"
+   ]
+  },
+  {
+   "recipe": "Tipitapa Fish Topped with Salsa (Pescado a la Tipitapa)",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "500 g fish of choice",
+   "verdict": "wrong",
+   "usda": [
+    "Fish, fish sticks, frozen, prepared",
+    "Fish broth",
+    "Fish, surimi"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "75 g butter (unsalted)",
+   "verdict": "wrong",
+   "usda": []
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "5 L vegetable or fish stock",
+   "verdict": "top",
+   "usda": [
+    "Soup, stock, fish, home-prepared",
+    "Fish, fish sticks, frozen, prepared",
+    "Fish broth"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "1 leek, cleaned and julienned",
+   "verdict": "top",
+   "usda": [
+    "Leeks, (bulb and lower leaf-portion), raw",
+    "Leeks, (bulb and lower-leaf portion), freeze-dried",
+    "Leeks, (bulb and lower leaf-portion), cooked, boiled, drained, with salt"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "2 carrots, julienned",
+   "verdict": "top3",
+   "usda": [
+    "Carrot, dehydrated",
+    "Carrots, raw",
+    "Babyfood, carrots, toddler"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "2 medium potatoes, peeled and cut into 2 cm pieces",
+   "verdict": "wrong",
+   "usda": [
+    "Bread, potato",
+    "Flour, potato",
+    "Potato flour"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "Bay leaf",
+   "verdict": "top",
+   "usda": [
+    "Spices, bay leaf",
+    "Lettuce, green leaf, raw",
+    "Lettuce, leaf, green, raw"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "10 black peppercorns",
+   "verdict": "top3",
+   "usda": [
+    "Salad dressing, peppercorn dressing, commercial, regular",
+    "HORMEL ALWAYS TENDER, Pork Tenderloin, Peppercorn-Flavored",
+    "Spices, pepper, black"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "1 egg yolk",
+   "verdict": "top3",
+   "usda": [
+    "Egg, yolk, dried",
+    "Egg, yolk, dried",
+    "Eggs, Grade A, Large, egg yolk"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "2.5 L double cream",
+   "verdict": "wrong",
+   "usda": [
+    "McDONALD'S, Double Cheeseburger",
+    "APPLEBEE'S, Double Crunch Shrimp",
+    "BURGER KING, Double Cheeseburger"
+   ]
+  },
+  {
+   "recipe": "Waterzooi",
+   "line": "Salt",
+   "verdict": "wrong",
+   "usda": [
+    "Butter, salted",
+    "Butter, whipped, with salt",
+    "Butter, without salt"
+   ]
+  }
+ ]
+}

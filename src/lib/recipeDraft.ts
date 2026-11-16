@@ -1,4 +1,5 @@
 import type { CatalogItem, Recipe } from '../types.ts';
+import { rescaleForServings } from '../shared/libraryNutrition.js';
 import { MAX_RECIPES, normRecipe } from '../shared/recipes.js';
 import { splitIngredient } from './recipePantry.js';
 import { scaleAmount } from './recipeScale.js';
@@ -22,7 +23,10 @@ export function recipeFromCatalog(item: CatalogItem, used: Iterable<string>, ser
   // Copied after scaling to other servings in the recipe view: the copy holds those servings and amounts, and counts as changed.
   const scale = servings && d.servings && servings !== d.servings ? servings / d.servings : null;
   const ing = d.ing.map(splitIngredient).map(i => (scale && i.amt ? { ...i, amt: scaleAmount(i.amt, scale).text } : i));
-  return normRecipe({ id: newRecipeId(used, item.name), n: item.name, cat: d.cat, ing, steps: d.steps, servings: scale ? servings : d.servings, minutes: d.minutes, from: item.id, ...(scale ? { edited: true } : {}) });
+  // The estimated numbers (brief library-recipe-nutrition) come along as the copy's own, with the mark: a snapshot, never changed by a later batch run. Per-serving numbers stay the same when the amounts are scaled;
+  // the servings are then the person's choice, so the "servings were estimated" flag goes.
+  const numbers = d.est ? { kcal: d.kcal, p: d.p, c: d.c, f: d.f, micro: d.micro, est: scale && d.est.sEst ? { of: d.est.of, n: d.est.n } : d.est } : {};
+  return normRecipe({ id: newRecipeId(used, item.name), n: item.name, cat: d.cat, ing, steps: d.steps, servings: scale ? servings : d.servings, minutes: d.minutes, from: item.id, ...numbers, ...(scale ? { edited: true } : {}) });
 }
 
 /** Why a recipe can't be saved as it is, or null. `list` is your recipes without this one. */
@@ -42,6 +46,29 @@ const content = (r: Recipe) => JSON.stringify([r.n.replace(/\s+/g, ' ').trim(), 
 /** `next` with the Edited mark: set when it has a library source and its content differs from `prev`, kept once set. A recipe written from
  *  scratch (no `from`) never gets it; saving without a change leaves the mark as it was. */
 export function withEditedMark(prev: Recipe | undefined, next: Recipe): Recipe {
+  return markEdited(prev, keepEstMark(prev, rescaleEstimated(prev, next)));
+}
+
+/** A copy whose servings were estimated (`est.sEst`) and whose numbers are untouched: when the person changes its servings, the same total is shared over the new servings, so the numbers are rescaled and the servings flag goes
+ *  (the rest of the mark stays). A form save never carries `est`, so this reads it from `prev`; a hand edit of any number, or no change of servings, leaves `next` as it is (`keepEstMark` then keeps or drops the mark). */
+export function rescaleEstimated(prev: Recipe | undefined, next: Recipe): Recipe {
+  if (next.est || !prev?.est?.sEst || !prev.servings || !next.servings || prev.servings === next.servings || numbersKey(prev) !== numbersKey(next)) return next;
+  const nums = rescaleForServings({ kcal: prev.kcal, p: prev.p, c: prev.c, f: prev.f, micro: prev.micro }, prev.servings, next.servings);
+  if (!nums) return next;
+  const { micro: _m, ...rest } = next;
+  return { ...rest, ...nums, est: { of: prev.est.of, n: prev.est.n } };
+}
+
+/** What a hand edit of the numbers changes: the four macros and the vitamins and minerals. */
+const numbersKey = (r: Recipe) => JSON.stringify([r.kcal ?? null, r.p ?? null, r.c ?? null, r.f ?? null, r.micro ?? null]);
+
+/** `next` with the estimate mark (brief recipe-auto-nutrition): the form never carries it, so it is kept from `prev` while kcal, protein, carbs, fat and vitamins are exactly as they were, and gone after a hand edit of any of them. A mark `next` brings itself (a Fill) stays. */
+export function keepEstMark(prev: Recipe | undefined, next: Recipe): Recipe {
+  if (next.est || !prev?.est || numbersKey(prev) !== numbersKey(next)) return next;
+  return { ...next, est: prev.est };
+}
+
+function markEdited(prev: Recipe | undefined, next: Recipe): Recipe {
   if (!next.from) return next;
   const { edited: _drop, ...rest } = next;
   return prev && (prev.edited || content(prev) !== content(next)) ? { ...rest, edited: true } : rest;
