@@ -16,11 +16,14 @@ export type FillMode = 'blanks' | 'replace';
 
 /** The ingredient lines a Fill sends: named, not skipped, text as "amount name", at most MAX_LINES (the rest are not sent), each cut at MAX_LINE. */
 export function fillLines(recipe: Pick<Recipe, 'ing'>): string[] {
-  return recipe.ing
-    .filter(i => i.n.trim() && !i.skip)
-    .map(i => `${i.amt ? `${i.amt.trim()} ` : ''}${i.n.trim()}`.replace(/\s+/g, ' ').slice(0, MAX_LINE).trim())
-    .slice(0, MAX_LINES);
+  return namedLines(recipe).slice(0, MAX_LINES);
 }
+const namedLines = (recipe: Pick<Recipe, 'ing'>): string[] => recipe.ing
+  .filter(i => i.n.trim() && !i.skip)
+  .map(i => `${i.amt ? `${i.amt.trim()} ` : ''}${i.n.trim()}`.replace(/\s+/g, ' ').slice(0, MAX_LINE).trim());
+
+/** How many ingredient lines past MAX_LINES are not sent (review finding 4): the sheet says so and the "N of M" counts include them in M. */
+export const unsentCount = (recipe: Pick<Recipe, 'ing'>): number => Math.max(0, namedLines(recipe).length - MAX_LINES);
 
 /** Whether the recipe page offers Fill: a recipe in Mine, not a ready-made food, with at least one ingredient line, not rolled up from linked foods. */
 export const canFill = (recipe: Pick<Recipe, 'cat' | 'ing' | 'own'>, mine: boolean): boolean => mine && recipe.cat !== 'ready' && fillLines(recipe).length > 0 && !isRolledUp(recipe);
@@ -59,7 +62,7 @@ export interface Filled { kcal: number; p: number; c?: number; f?: number; micro
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
 /** The recipe's numbers per serving from the counted lines: calories and macros are sums over them (c and f only when a counted food lists them); a nutrient is saved when at least one counted line lists it ("at least"). Null when nothing is counted. */
-export function fillNumbers(lines: readonly LineMatch[], off: ReadonlySet<number>, servings: number): Filled | null {
+export function fillNumbers(lines: readonly LineMatch[], off: ReadonlySet<number>, servings: number, unsent = 0): Filled | null {
   const idx = countedLines(lines, off);
   if (!idx.length || !(servings >= 1)) return null;
   let kcal = 0, p = 0, c: number | undefined, f: number | undefined;
@@ -72,7 +75,7 @@ export function fillNumbers(lines: readonly LineMatch[], off: ReadonlySet<number
     for (const [k, v] of Object.entries(s.micro ?? {})) micro[k as keyof Micro] = (micro[k as keyof Micro] ?? 0) + v;
   }
   const per = scaleMicro(micro, 1 / servings), clean = per ? cleanMicro(per) : null;
-  return { kcal: Math.round(kcal / servings), p: r1(p / servings), ...(c !== undefined ? { c: r1(c / servings) } : {}), ...(f !== undefined ? { f: r1(f / servings) } : {}), ...(clean ? { micro: clean } : {}), est: { of: idx.length, n: couldCount(lines) } };
+  return { kcal: Math.round(kcal / servings), p: r1(p / servings), ...(c !== undefined ? { c: r1(c / servings) } : {}), ...(f !== undefined ? { f: r1(f / servings) } : {}), ...(clean ? { micro: clean } : {}), est: { of: idx.length, n: couldCount(lines) + unsent } };
 }
 
 /** The bars' parts: one per counted line, with its amounts for the grams used; a food that lists nothing still takes part, so the bar says "at least". */

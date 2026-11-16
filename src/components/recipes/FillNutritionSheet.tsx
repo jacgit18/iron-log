@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { macroLine } from '../../lib/macroLine.js';
 import { resolveLines, type Resolve } from '../../lib/ingredientsClient.js';
-import { applyFill, breakdownFor, countedLines, countedText, couldCount, failureText, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, savedText, validServings, type FillMode, type RowState } from '../../lib/recipeFill.js';
+import { applyFill, breakdownFor, countedLines, countedText, couldCount, failureText, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, savedText, unsentCount, validServings, type FillMode, type RowState } from '../../lib/recipeFill.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
 import MealMicroBars from './MealMicroBars.js';
@@ -17,6 +17,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
   const closeModal = useAppStore(s => s.closeModal);
   const recipe = useAppStore(s => s.recipes.find(r => r.id === id));
   const lines = useMemo(() => (recipe ? fillLines(recipe) : []), [recipe]);
+  const unsent = recipe ? unsentCount(recipe) : 0;
   const [answer, setAnswer] = useState<Resolve | null>(null);
   const [off, setOff] = useState<ReadonlySet<number>>(new Set());
   const [servingsText, setServingsText] = useState('');
@@ -37,7 +38,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
   const filled = got ? fillNumbers(got, off, servings) : null;
   const bars = got && servings ? breakdownFor(got, off, servings) : null;
   const counted = got ? countedLines(got, off).length : 0;
-  const total = got ? couldCount(got) : 0;
+  const total = got ? couldCount(got) + unsent : 0;
   const anyCountable = rows.some(r => r.countable);
   const choose = hasNumbers(recipe);
   const blanksWrite = !!filled && fillWrites(recipe, filled, 'blanks'); // false: every number is already typed, so "blanks" would change nothing
@@ -56,6 +57,7 @@ export default function FillNutritionSheet({ id }: { id: string }) {
     <Sheet className="fillsheet">
       <h2 className="cond">{recipe.est ? 'Fill again' : 'Fill nutrition'}: {recipe.n}</h2>
       {!answer && <p className="note" role="status">Working out {lines.length} ingredient{lines.length === 1 ? '' : 's'}…</p>}
+      {answer && unsent > 0 && <p className="note">Only the first {lines.length} of {lines.length + unsent} ingredients were looked at; the other {unsent} count as not matched.</p>}
       {answer && !answer.ok && <p className="note" role="alert">{failureText(answer.reason)}</p>}
       {got && !anyCountable && <p className="note" role="status">None of the ingredients matched a food. Use Calculate from ingredients in the form.</p>}
       {got && (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LineMatch } from '../shared/ingredientMatch.js';
 import type { Recipe } from '../types.ts';
-import { applyFill, breakdownFor, canFill, countedLines, couldCount, fieldsOf, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, validServings, withFields } from './recipeFill.js';
+import { applyFill, breakdownFor, canFill, countedLines, couldCount, fieldsOf, fillLines, fillNumbers, fillRows, fillWrites, hasNumbers, unsentCount, validServings, withFields } from './recipeFill.js';
 
 const m = (line: string, grams: number, per100: LineMatch['per100'], over: Partial<LineMatch> = {}): LineMatch => ({ line, status: 'matched', fdcId: 1, food: line, grams, gramsFrom: 'text', confidence: 'high', per100, ...over });
 const rice = m('200 g rice', 200, { id: 1, name: 'Rice', kcal: 130, p: 2.7, c: 28, f: 0.3, micro: { iron: 1, zinc: 1 } });
@@ -15,6 +15,12 @@ describe('fillLines and canFill', () => {
   it('sends "amount name", leaves out skipped and empty lines, and stops at 40', () => {
     expect(fillLines(recipe({ ing: [{ n: 'rice', amt: '200 g' }, { n: 'salt', skip: true }, { n: '  ' }, { n: 'Olive oil' }] }))).toEqual(['200 g rice', 'Olive oil']);
     expect(fillLines(recipe({ ing: Array.from({ length: 45 }, (_, i) => ({ n: `food ${i}` })) }))).toHaveLength(40);
+  });
+  it('counts the lines past 40 as unsent, and the estimate counts them in M (review finding 4)', () => {
+    const big = recipe({ ing: Array.from({ length: 45 }, (_, i) => ({ n: `food ${i}` })) });
+    expect(unsentCount(big)).toBe(5);
+    expect(unsentCount(recipe())).toBe(0);
+    expect(fillNumbers([rice], new Set(), 1, 5)!.est).toEqual({ of: 1, n: 6 });
   });
   it('is offered for a recipe in Mine with ingredients that is not ready-made and not rolled up from linked foods', () => {
     expect(canFill(recipe(), true)).toBe(true);
