@@ -146,7 +146,13 @@ export async function resolveRecipes(run: ResolveRun): Promise<ResolveReport> {
     let last: LineMatch[] = [];
     for (let pass = 1; pass <= MAX_PASSES && outcome.kind === 'retry'; pass++) {
       let out: Resolved;
-      try { out = await resolve(r.ing); } catch (err) { log(`${r.id}: failed (${err instanceof Error ? err.message : 'unknown'})`); rep.failed++; outcome = { kind: 'retry' }; break; }
+      try { out = await resolve(r.ing); } catch (err) {
+        log(`${r.id}: failed (${err instanceof Error ? err.message : 'unknown'})`); rep.failed++; outcome = { kind: 'retry' };
+        // A throw after a paid model call still cost money: it counts toward the ceiling.
+        const spent = (err as { usage?: { inputTokens: number; outputTokens: number } } | null)?.usage;
+        if (spent) { const cost = costUsd(spent, price); results.spentUsd += cost; rep.runUsd += cost; rep.spentUsd = results.spentUsd; }
+        break;
+      }
       if (!out.ok) { log(`${r.id}: refused (retry in ${out.retryAfterSec}s)`); rep.failed++; break; }
       const cost = costUsd(out.usage, price);
       results.spentUsd += cost; rep.runUsd += cost; rep.spentUsd = results.spentUsd;

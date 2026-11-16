@@ -109,6 +109,20 @@ describe('resolveRecipes', () => {
     expect(Object.keys(f.store).some(k => k === cacheKey('flaky'))).toBe(false);
   });
 
+  it('counts the spend of a call that was paid for and then failed toward the ceiling', async () => {
+    const results = emptyResults();
+    const resolve = async (): Promise<Resolved> => { throw Object.assign(new Error('every food search failed'), { usage: { calls: 1, inputTokens: 1000, outputTokens: 500 } }); };
+    const rep = await resolveRecipes({ recipes: [recipes[0]!], results, resolve, price: PRICE, ceilingUsd: 50 });
+    expect(rep.failed).toBe(1);
+    expect(results.spentUsd).toBeCloseTo(costUsd({ inputTokens: 1000, outputTokens: 500 }, PRICE));
+    expect(rep.runUsd).toBeCloseTo(results.spentUsd);
+    // ...so a run of such failures reaches the ceiling and stops.
+    const two = emptyResults();
+    const stop = await resolveRecipes({ recipes, results: two, resolve, price: { inUsd: 1e6, outUsd: 0 }, ceilingUsd: 1000 });
+    expect(stop.stoppedAtCeiling).toBe(true);
+    expect(stop.attempted).toBe(1);
+  });
+
   it('throttles under the USDA allowance by uncached line, and keeps going after a failed recipe', async () => {
     const f = fake({}, food), slept: number[] = [];
     let n = 0;
