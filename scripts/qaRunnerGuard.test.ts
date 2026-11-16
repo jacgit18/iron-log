@@ -1,11 +1,11 @@
 // The allow/deny decision of scripts/qa-runner-guard.mjs, the PreToolUse hook that keeps the QA Runner agent inside the local stack and the evidence folder.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
-import { liveStackUrl, originProblem, readStackUrls, stackServerProblem, readStateText } from './qa-local.mjs';
+import { createStateFile, liveStackUrl, originProblem, readStackUrls, stackServerProblem, readStateText, updateStateFile } from './qa-local.mjs';
 import { bashProblem, decide, pathProblem, underEvidence, words } from './qa-runner-guard.mjs';
 
 const root = '/tmp/qa-runs';
@@ -14,7 +14,7 @@ const DB = 'iron_qa_run_deadbeef';
 const START_ENV = { NODE_ENV: 'test', HOST: '127.0.0.1', AUTH_TEST_SIGNIN: 'true', PORT: '41234', DATABASE_URL: `postgres://u:p@127.0.0.1:5433/${DB}` };
 /** A real child process standing in for the stack's server: its command line names server/index.ts, it runs in this checkout, and its environment is what `start` gives the server unless `env` changes it. */
 const fakeStack = (env: Record<string, string> = {}) => spawn('node', ['-e', 'setTimeout(()=>{},60000)', 'server/index.ts'], { stdio: 'ignore', cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...process.env, ...START_ENV, ...env } });
-const record = (pid: number | undefined, extra: Record<string, unknown> = {}) => ({ url: stackUrl, port: 41234, db: DB, pid, ...extra });
+const record = (pid: number | undefined, extra: Record<string, unknown> = {}) => ({ url: stackUrl, port: 41234, db: DB, pid, scratch: START_ENV.DATABASE_URL.replace('u:p@', ''), ...extra });
 const ok = (cmd: string) => expect(bashProblem(cmd, root)).toBeNull();
 const no = (cmd: string) => expect(bashProblem(cmd, root)).not.toBeNull();
 
@@ -184,6 +184,17 @@ describe('what counts as a live stack server', () => {
     expect(stackServerProblem(ok, record(1, { db: 'iron_qa_run_00000000' }), checkout)).not.toBeNull();
     expect(stackServerProblem(ok, record(1, { db: 'ironlog' }), checkout)).not.toBeNull();
   });
+  it.each([
+    ['another host', `postgres://u:p@192.168.1.5:5433/${DB}`],
+    ['another port', `postgres://u:p@127.0.0.1:5434/${DB}`],
+    ['a query the record does not have', `postgres://u:p@127.0.0.1:5433/${DB}?x=%zz`],
+    ['an unparseable URL', 'not a url'],
+  ])('refuses a server whose DATABASE_URL has %s', (_n, url) => expect(stackServerProblem({ ...ok, environ: env({ DATABASE_URL: url }) }, st, checkout)).not.toBeNull());
+  it('accepts the same host, port and query whatever the login', () => expect(stackServerProblem({ ...ok, environ: env({ DATABASE_URL: `postgres://other:x@127.0.0.1:5433/${DB}` }) }, st, checkout)).toBeNull());
+  it('refuses when the record has a different query, or no readable scratch URL', () => {
+    expect(stackServerProblem(ok, record(1, { scratch: `postgres://u@127.0.0.1:5433/${DB}?sslmode=disable` }), checkout)).not.toBeNull();
+    for (const scratch of [undefined, 'nope', 5]) expect(stackServerProblem(ok, record(1, { scratch }), checkout)).not.toBeNull();
+  });
   it('fails closed when a reading is missing (unreadable /proc)', () => {
     for (const bad of [{ ...ok, environ: null }, { ...ok, cwd: null }, { ...ok, cmdline: null }]) expect(stackServerProblem(bad as never, st, checkout)).not.toBeNull();
   });
@@ -224,4 +235,47 @@ describe('which state files are read', () => {
     process.env.QA_LOCAL_STATE_FILE = file('s.json', JSON.stringify(record(process.pid)));
     try { expect(readStackUrls((process.getuid?.() ?? 0) + 1)).toEqual([]); } finally { if (prev === undefined) delete process.env.QA_LOCAL_STATE_FILE; else process.env.QA_LOCAL_STATE_FILE = prev; }
   });
+});
+
+describe('the state file is made and rewritten without following a link', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qa-state-test-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  it('creates a new file owner-only', () => {
+    const f = join(dir, 'new.json'); createStateFile(f, '{"a":1}');
+    expect(readFileSync(f, 'utf8')).toBe('{"a":1}');
+    expect(spawnSync('stat', ['-c', '%a', f], { encoding: 'utf8' }).stdout.trim()).toBe('600');
+  });
+  it('refuses a link planted at the path and writes nothing through it', () => {
+    const target = join(dir, 'target.txt'); const f = join(dir, 'link.json'); symlinkSync(target, f);
+    expect(() => createStateFile(f, 'secret')).toThrow();
+    expect(existsSync(target)).toBe(false);
+  });
+  it('refuses a file that is already there', () => { const f = join(dir, 'there.json'); writeFileSync(f, 'x'); expect(() => createStateFile(f, 'y')).toThrow(); expect(readFileSync(f, 'utf8')).toBe('x'); });
+  it('rewrites a regular file, and refuses a link or another user\'s file', () => {
+    const f = join(dir, 'rw.json'); createStateFile(f, 'a long first text'); updateStateFile(f, 'b');
+    expect(readFileSync(f, 'utf8')).toBe('b');
+    const target = join(dir, 't2.txt'); writeFileSync(target, 'keep'); const l = join(dir, 'l2.json'); symlinkSync(target, l);
+    expect(() => updateStateFile(l, 'x')).toThrow(); expect(readFileSync(target, 'utf8')).toBe('keep');
+    expect(() => updateStateFile(f, 'x', (process.getuid?.() ?? 0) + 1)).toThrow();
+  });
+});
+
+describe('start and seed with a bad state file', () => {
+  const script = fileURLToPath(new URL('./qa-local.mjs', import.meta.url));
+  const dir = mkdtempSync(join(tmpdir(), 'qa-bad-state-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const bads: [string, (f: string) => void][] = [
+    ['bad JSON', f => writeFileSync(f, '{not json')],
+    ['a link', f => symlinkSync(join(dir, 'nowhere'), f)],
+    ['a pipe', f => { expect(spawnSync('mkfifo', [f]).status).toBe(0); }],
+  ];
+  for (const cmd of [['start', '--no-build'], ['seed', 'x']]) {
+    it.each(bads)(`${cmd[0]} refuses with one line and a non-zero exit on %s`, (name, make) => {
+      const f = join(dir, `${cmd[0]}-${name.replace(/\W/g, '')}.json`); make(f);
+      const r = spawnSync('npx', ['tsx', script, ...cmd], { encoding: 'utf8', timeout: 60000, env: { ...process.env, QA_LOCAL_STATE_FILE: f } });
+      expect(r.status).toBe(2);
+      expect(r.stderr.trim().split('\n')).toHaveLength(1);
+      expect(r.stderr).toMatch(/^qa-local: refused: the state file .* cannot be used/);
+    }, 70000);
+  }
 });
