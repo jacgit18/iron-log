@@ -12,7 +12,7 @@ let db: Kysely<DB>;
 let stop: () => Promise<void>;
 let server: Server;
 let base: string;
-const model = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{"kcal":120,"p":4,"lines":[{"text":"EGGS","total":500,"match":"eggs"}]}' }] }), { status: 200 });
+const model = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: '{"kcal":120,"p":4,"lines":[{"text":"EGGS","total":500,"match":"eggs"}]}' }] }), { status: 200 });
 
 beforeAll(async () => {
   ({ db, stop } = await startTestDatabase());

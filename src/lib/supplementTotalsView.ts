@@ -31,6 +31,8 @@ export interface TotalRow {
   statusText: string;
   /** What the total is made of when food is part of the picture: "Supplements 200 mg, food 80 mg", or "Food 80 mg is not added: this limit counts supplements only." Empty with no food. */
   foodLine: string;
+  /** The estimated part of food that is added to the total, as a whole percent of the limit (0 when none or when food is not added): the day meter shades it. */
+  estShare: number;
   /** "Magnesium 200 mg" per product that adds to it, biggest first. */
   products: string[];
   recommendedText: string;
@@ -79,6 +81,9 @@ export { fmtAmount };
 /** Why food is shown beside a row but not added to it, by what the limit counts (the same words as the limits table's scope). */
 const NOT_ADDED: Record<'supplements' | 'form', string> = { supplements: 'this limit counts supplements only', form: 'this limit counts one form of the nutrient, which a food label does not separate' };
 
+/** " (2.6 mg of it estimated from recipes)" after a food figure when part of it comes from entries marked estimated; empty otherwise. */
+export const estNote = (est: number, unit: string): string => (est > 0 ? ` (${fmtAmount(est)} ${unit} of it estimated from recipes)` : '');
+
 /** The coverage line: how many of a day's eaten foods listed vitamins or minerals. A food without data adds nothing, so say so. */
 export function coverageText(eaten: readonly DietEntry[]): string {
   const c = foodCoverage(eaten);
@@ -125,7 +130,7 @@ function targetRows(items: SupplementItem[], taken: Taken, date: string, basis: 
       : `Recommended ${rangeText(min, max)} ${t.unit} a day (${target.recommendedNote}). ${GENERAL_INFO}`;
     return {
       key: t.key, label: target.label, figure: `${fmtAmount(t.total)} ${t.unit}`, percent: Math.max(0, Math.min(100, pct)), statusText,
-      foodLine: t.fromFood > 0 ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : '',
+      foodLine: t.fromFood > 0 ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}${estNote(t.fromFoodEst, t.unit)}.` : '',
       products: t.products.map(p => `${p.name}${tagOf(items, p.itemId)} ${fmtAmount(p.amount)} ${t.unit}`), recommendedText, averageText: averageLine(avg?.targets.get(t.key), t.unit), scopeNote: target.scopeNote,
       notAdded: t.notAdded.map(n => `${n.name}: ${fmtAmount(n.amount)} ${n.unit} not added. ${n.reason}`),
     };
@@ -151,7 +156,8 @@ export function totalsView(items: SupplementItem[], taken: Taken, date: string, 
       share: s.percent,
       status: s.status,
       statusText: s.status === 'over' ? `Over the limit${g ? ` for ${g.ages}` : ''} by ${fmtAmount(s.over)} ${t.unit}` : s.status === 'close' ? `Close to the limit (${s.percent}%)` : `${s.percent}% of the limit`,
-      foodLine: t.fromFood <= 0 ? '' : t.foodCounted ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}.` : `Food ${fmtAmount(t.fromFood)} ${t.unit} is not added: ${NOT_ADDED[limit.scope === 'supplements' ? 'supplements' : 'form']}.`,
+      foodLine: t.fromFood <= 0 ? '' : t.foodCounted ? `Supplements ${fmtAmount(t.fromSupplements)} ${t.unit}, food ${fmtAmount(t.fromFood)} ${t.unit}${estNote(t.fromFoodEst, t.unit)}.` : `Food ${fmtAmount(t.fromFood)} ${t.unit}${estNote(t.fromFoodEst, t.unit)} is not added: ${NOT_ADDED[limit.scope === 'supplements' ? 'supplements' : 'form']}.`,
+      estShare: t.foodCounted ? Math.round((t.fromFoodEst / upper) * 100) : 0,
       products: t.products.map(p => `${p.name}${tagOf(items, p.itemId)} ${fmtAmount(p.amount)} ${t.unit}`),
       recommendedText: g ? `Recommended for ${g.group}: ${fmtAmount(g.recommended)} ${t.unit} a day${UNIT_NOTE[t.key] ?? ''}. ${GENERAL_INFO}` : `Recommended ${rangeText(rec.min, rec.max)} ${t.unit} a day (${limit.recommendedNote}). ${GENERAL_INFO}`,
       targetText: !tc || tc.status === 'none' ? '' : tc.status === 'below' ? `Below the recommended amount (${tc.percent}%)` : tc.status === 'meets' ? 'Meets the recommended amount' : 'Above the recommended amount',

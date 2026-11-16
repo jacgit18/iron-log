@@ -339,7 +339,7 @@ export interface CatalogData {
   entryYear?: number;
   upc?: string;
   /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
-  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number };
+  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number; /** Estimated per-serving numbers the API adds while the stored estimate still matches (brief library-recipe-nutrition): `est.of` of `est.n` lines counted, `est.sEst` when `servings` is an estimate. */ kcal?: number; p?: number; c?: number; f?: number; micro?: Micro; est?: RecipeEst };
 }
 
 /** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
@@ -364,7 +364,9 @@ export type RecipeUse = 'meal' | 'ingredient' | 'ready' | 'drink';
 /** What a recipe covers on a plate (brief week-board): derived from its category and numbers until the person sets it. */
 export type PlateMark = 'protein' | 'carb' | 'veg';
 /** `own`: the person types this meal's numbers and the roll-up from its linked parts is only a hint (brief meals-from-foods). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; /** The id of the saved meal (`cfg.diet.meals`) this meal was made from by the move into Recipes (brief saved-meals-removal); lets a repeat or a second device find it instead of making a copy. */ fromMeal?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; /** Vitamins and minerals per serving (brief recipes-vitamins-minerals), beside kcal, p, c and f. */ micro?: Micro }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; type?: FoodType; uses?: RecipeUse[]; pairs?: string[]; counts?: PlateMark[]; fav?: true; own?: true; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; /** The id of the saved meal (`cfg.diet.meals`) this meal was made from by the move into Recipes (brief saved-meals-removal); lets a repeat or a second device find it instead of making a copy. */ fromMeal?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string; /** Vitamins and minerals per serving (brief recipes-vitamins-minerals), beside kcal, p, c and f. */ micro?: Micro; /** Set when the vitamins and minerals (and numbers) were estimated from ingredient lines (brief recipe-auto-nutrition): `of` lines counted out of `n` that could count. Cleared by a hand edit of kcal, p, c, f or micro. An object so a later flag can join it. */ est?: RecipeEst }
+/** How many ingredient lines an estimate counted (`of`) out of those that could count (`n`). */
+export interface RecipeEst { of: number; n: number; /** Library recipes only (brief library-recipe-nutrition): the servings were estimated too, not read from the source. Cleared when the servings are changed by hand. */ sEst?: true }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
@@ -384,7 +386,7 @@ export interface DailySnack { id: string; x?: number }
 /** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
 export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; mealsMoved?: Record<string, string>; plan?: Record<string, PlanItem[]>; /** The daily snack list, at most 6 (brief daily-snacks). */ snacks?: DailySnack[]; /** Day to the ids of listed snacks skipped on that day only. */ snackSkips?: Record<string, string[]> }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
-export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro; /** The portions the stored totals are for (0.5 to 99; brief portion-scaled-micros). Absent on an entry logged before it: one portion of its numbers. */ x?: number }
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number; /** Vitamins and minerals as eaten, from a lookup or scan that listed them (brief food-vitamins-minerals). */ micro?: Micro; /** The portions the stored totals are for (0.5 to 99; brief portion-scaled-micros). Absent on an entry logged before it: one portion of its numbers. */ x?: number; /** True when the vitamins and minerals came from a recipe whose numbers were estimated (brief recipe-auto-nutrition); a snapshot like the numbers. */ est?: true }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

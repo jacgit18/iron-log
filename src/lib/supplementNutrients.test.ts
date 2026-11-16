@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SupplementItem } from '../types.ts';
-import { countedItems, limitStatus, overLimit, supplementNutrientTotals, toLimitUnit } from './supplementNutrients.js';
+import { countedItems, limitStatus, overLimit, supplementNutrientTotals, targetTotals, toLimitUnit } from './supplementNutrients.js';
 
 const D = '2026-11-08';
 const item = (id: string, nutrients: SupplementItem['nutrients'], slot: SupplementItem['slot'] = 'morning'): SupplementItem => ({ id, n: id.toUpperCase(), slot, nutrients });
@@ -79,5 +79,18 @@ describe('limit status', () => {
   it('finds the totals that are over', () => {
     const a = item('a', [{ key: 'zinc', amount: 50, unit: 'mg' }, { key: 'iron', amount: 10, unit: 'mg' }]);
     expect(overLimit(supplementNutrientTotals([a], { [D]: { a: true } }, D)).map(t => t.key)).toEqual(['zinc']);
+  });
+});
+
+describe('estimated food share (brief recipe-auto-nutrition)', () => {
+  const eaten = (est?: true) => ({ id: 'e', d: D, n: 'Oat bowl', kcal: 300, p: 10, micro: { manganese: 2.6 }, ...(est ? { est } : {}) });
+  it('counts the estimated part of food apart, inside the same food total', () => {
+    const [m] = supplementNutrientTotals([], {}, D, 'taken', [eaten(true), { ...eaten(), id: 'f', micro: { manganese: 6 } }]);
+    expect(m).toMatchObject({ key: 'manganese', fromFood: 8.6, fromFoodEst: 2.6, foodCounted: true, total: 8.6 });
+  });
+  it('is 0 when no entry is marked, and for a nutrient with no limit (targets)', () => {
+    expect(supplementNutrientTotals([], {}, D, 'taken', [eaten()])[0]!.fromFoodEst).toBe(0);
+    const t = targetTotals([], {}, D, 'taken', [{ ...eaten(true), micro: { potassium: 400 } }]);
+    expect(t[0]).toMatchObject({ key: 'potassium', fromFood: 400, fromFoodEst: 400 });
   });
 });

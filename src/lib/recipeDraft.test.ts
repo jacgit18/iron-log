@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogItem } from '../types.ts';
 import type { Recipe } from '../types.ts';
-import { attribution, newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from './recipeDraft.js';
+import { attribution, newRecipeId, recipeError, recipeFromCatalog, rescaleEstimated, withEditedMark } from './recipeDraft.js';
 
 const cat: CatalogItem = { id: 'c:wbc:recipe_00_001', name: 'Garlic Dressing', data: { recipe: { cat: 'sauces', ing: ['1 cup olive oil', '2 cloves garlic'], steps: ['Whisk.'], servings: 4 } } };
 
@@ -83,5 +83,66 @@ describe('recipeFromCatalog at other servings', () => {
     expect(recipeFromCatalog(four, [], 4)).not.toHaveProperty('edited');
     const none = { ...four, data: { recipe: { ...four.data.recipe!, servings: undefined } } };
     expect(recipeFromCatalog(none, [], 8)).not.toHaveProperty('edited');
+  });
+});
+
+describe('estimate mark and hand edits (brief recipe-auto-nutrition)', () => {
+  const prev: Recipe = { id: 'r1', n: 'Stew', cat: 'protein', ing: [{ n: 'Beef' }], steps: [], kcal: 400, p: 30, c: 10, f: 12, micro: { zinc: 4 }, est: { of: 3, n: 4 } };
+  const formSave = (over: Partial<Recipe> = {}): Recipe => { const { est: _e, ...rest } = prev; return { ...rest, ...over }; }; // the form never carries est
+  it('keeps the mark when the form saves the numbers as they were', () => {
+    expect(withEditedMark(prev, formSave()).est).toEqual({ of: 3, n: 4 });
+    expect(withEditedMark(prev, formSave({ n: 'Beef stew', steps: ['Simmer.'] })).est).toEqual({ of: 3, n: 4 });
+  });
+  it('clears it when kcal, protein, carbs, fat or vitamins change by hand', () => {
+    for (const over of [{ kcal: 410 }, { p: 31 }, { c: 11 }, { f: 13 }, { micro: { zinc: 5 } }]) expect(withEditedMark(prev, formSave(over)).est).toBeUndefined();
+  });
+  it('clears it when the vitamins are removed', () => {
+    const { micro: _m, ...noMicro } = formSave();
+    expect(withEditedMark(prev, noMicro).est).toBeUndefined();
+  });
+  it('keeps it on a recipe whose estimate found no vitamins, while the macros are as they were', () => {
+    const { micro: _m, ...bare } = prev;
+    expect(withEditedMark(bare, { ...bare, est: undefined, n: 'Beef stew' }).est).toEqual({ of: 3, n: 4 });
+  });
+  it('leaves a mark the new recipe brings (a Fill), and a recipe that never had one', () => {
+    expect(withEditedMark(prev, { ...formSave({ kcal: 500 }), est: { of: 5, n: 5 } }).est).toEqual({ of: 5, n: 5 });
+    expect(withEditedMark(undefined, formSave()).est).toBeUndefined();
+  });
+});
+
+describe('Library estimates on a copy (brief library-recipe-nutrition)', () => {
+  const est: CatalogItem = { id: 'c:wbc:e1', name: 'Pancakes', data: { recipe: { cat: 'breakfast', ing: ['2 cups flour', '1 egg'], steps: ['Mix.'], servings: 4, kcal: 300, p: 9, c: 40, f: 10, micro: { iron: 2 }, est: { of: 1, n: 2, sEst: true } } } };
+  const plain: CatalogItem = { id: 'c:wbc:e2', name: 'Plain', data: { recipe: { cat: 'breakfast', ing: ['1 egg'], steps: ['Fry.'], servings: 2 } } };
+  const formSave = (r: Recipe, over: Partial<Recipe> = {}): Recipe => { const { est: _e, ...rest } = r; return { ...rest, ...over }; }; // the form never carries est
+
+  it('carries the numbers, vitamins and the mark onto the copy; a recipe with none gets none', () => {
+    expect(recipeFromCatalog(est, [])).toMatchObject({ kcal: 300, p: 9, c: 40, f: 10, micro: { iron: 2 }, est: { of: 1, n: 2, sEst: true }, servings: 4 });
+    const r = recipeFromCatalog(plain, [])!;
+    for (const k of ['kcal', 'p', 'c', 'f', 'micro', 'est']) expect(r).not.toHaveProperty(k);
+  });
+  it('keeps per-serving numbers when the amounts are scaled, and drops only the servings flag', () => {
+    const r = recipeFromCatalog(est, [], 8)!;
+    expect(r).toMatchObject({ servings: 8, kcal: 300, p: 9, est: { of: 1, n: 2 }, edited: true });
+    expect(r.est).not.toHaveProperty('sEst');
+  });
+  it('rescales an untouched copy when its estimated servings change (4 to 8 halves each serving), clears the flag, keeps the rest of the mark', () => {
+    const copy = recipeFromCatalog(est, [])!;
+    const saved = withEditedMark(copy, formSave(copy, { servings: 8 }));
+    expect(saved).toMatchObject({ servings: 8, kcal: 150, p: 4.5, c: 20, f: 5, micro: { iron: 1 }, est: { of: 1, n: 2 } });
+    expect(saved.est).not.toHaveProperty('sEst');
+  });
+  it('does not rescale when the person also changed a number, when the servings were the source\'s, or when the servings did not change', () => {
+    const copy = recipeFromCatalog(est, [])!;
+    const typed = withEditedMark(copy, formSave(copy, { servings: 8, kcal: 310 }));
+    expect(typed).toMatchObject({ kcal: 310, servings: 8 });
+    expect(typed.est).toBeUndefined(); // a hand edit clears the mark
+    const sourced = recipeFromCatalog({ ...est, data: { recipe: { ...est.data.recipe!, est: { of: 1, n: 2 } } } }, [])!;
+    expect(withEditedMark(sourced, formSave(sourced, { servings: 8 }))).toMatchObject({ kcal: 300, servings: 8, est: { of: 1, n: 2 } });
+    expect(withEditedMark(copy, formSave(copy)).est).toEqual({ of: 1, n: 2, sEst: true });
+  });
+  it('rescaleEstimated leaves a recipe it does not apply to as it is', () => {
+    const r: Recipe = { id: 'a', n: 'x', cat: 'other', ing: [{ n: 'y' }], steps: [], servings: 4, kcal: 100 };
+    expect(rescaleEstimated(r, { ...r, servings: 2 })).toEqual({ ...r, servings: 2 });
+    expect(rescaleEstimated(undefined, r)).toBe(r);
   });
 });

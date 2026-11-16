@@ -69,6 +69,7 @@ export interface CatalogItems {
   kind: string;
   license: string;
   name: string;
+  nutrition: Json | null;
   retired_at: Timestamp | null;
   source: string;
   updated_at: Generated<Timestamp>;
@@ -99,6 +100,12 @@ export interface GroceryMonths {
   updated_at: Generated<Timestamp>;
   user_id: Int8;
   version: Generated<number>;
+}
+
+export interface IngredientMatches {
+  created_at: Generated<Timestamp>;
+  key: string;
+  result: Json;
 }
 
 export interface Issues {
@@ -308,6 +315,7 @@ export interface DB {
   catalog_items: CatalogItems;
   config: Config;
   grocery_months: GroceryMonths;
+  ingredient_matches: IngredientMatches;
   issues: Issues;
   library_items: LibraryItems;
   list_items: ListItems;

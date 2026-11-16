@@ -144,6 +144,24 @@ describe('the stored portion x (brief portion-scaled-micros)', () => {
     st().updateDietEntry(id!, { kcal: 250 });
     expect(st().diet[0]).toMatchObject({ x: 2 }); expect(st().diet[0]!.micro).toBeUndefined();
   });
+  it('a hand edit of the vitamins clears the estimated mark; so do changed calories that drop them (PR 1009 review)', () => {
+    const { id } = st().addDietEntry({ ...rice, micro: { calcium: 100 } });
+    useAppStore.setState({ diet: st().diet.map(e => ({ ...e, est: true as const })) }); // an entry eaten from an estimated recipe
+    expect(st().diet[0]).toMatchObject({ est: true });
+    st().updateDietEntry(id!, { p: 9 }); // not a vitamin edit: the mark stays
+    expect(st().diet[0]).toMatchObject({ est: true });
+    st().updateDietEntry(id!, { micro: { calcium: 150 } });
+    expect(st().diet[0]!.est).toBeUndefined();
+    useAppStore.setState({ diet: st().diet.map(e => ({ ...e, est: true as const })) });
+    st().updateDietEntry(id!, { n: 'Rice again', micro: { calcium: 150 } }); // same amounts sent again by the row sheet: the mark stays (review finding 8)
+    expect(st().diet[0]).toMatchObject({ est: true });
+    st().updateDietEntry(id!, { micro: { calcium: 151 } });
+    expect(st().diet[0]!.est).toBeUndefined();
+    const b = st().addDietEntry({ ...rice, micro: { calcium: 100 } }).id!;
+    useAppStore.setState({ diet: st().diet.map(e => (e.id === b ? { ...e, est: true as const } : e)) });
+    st().updateDietEntry(b, { kcal: 250 });
+    expect(st().diet.find(e => e.id === b)!.est).toBeUndefined();
+  });
   it('setRecipeMicro writes amounts to a recipe with none and never overwrites', () => {
     useAppStore.setState({ recipes: [{ id: 'r1', n: 'Oats', cat: 'meal', ing: [{ n: 'oats' }], steps: [] }, { id: 'r2', n: 'Eggs', cat: 'meal', ing: [{ n: 'egg' }], steps: [], micro: { iron: 1 } }] as never });
     expect(st().setRecipeMicro('r1', { calcium: 120 })).toBeNull();

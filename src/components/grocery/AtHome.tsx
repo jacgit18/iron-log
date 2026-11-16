@@ -9,6 +9,7 @@ import { editSummaryText } from '../../lib/groceryListSummary.js';
 import { ALL_CHIP, chipGroups, chipsOf, haveCount, resolveChip, showChips } from '../../lib/groceryChips.js';
 import { boughtMonthText, homeFilterChips, homeFilterEmpty, homeFilterItems, toBuyText, type HomeFilter } from '../../lib/groceryHomeState.js';
 import { dailyFix } from '../../lib/route.js';
+import { clearSharingIntent, readyResume, resumeModal, wantsSharing } from '../../lib/sharingIntent.js';
 import EmptyTiles from '../EmptyTiles.js';
 import { navigate } from '../useRoute.js';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
@@ -29,7 +30,9 @@ import useIdSet from './useIdSet.js';
 
 export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
-  const [sharingOpen, setSharingOpen] = useState(false); // the Sharing panel (groups and who is in them) above the list, reachable without Edit
+  const [sharingOpen, setSharingOpen] = useState(wantsSharing); // the Sharing panel (groups and who is in them) above the list, reachable without Edit; open at once when the receipt sheet sent the person here
+  const resume = useRef(resumeModal()); // the receipt that asked (brief receipt-share): reopened after Done
+  useEffect(() => { clearSharingIntent(); }, []);
   const [sharingSaved, setSharingSaved] = useState(false); // Done in the Sharing panel closed it: say so until it is opened again
   const [openEdit, setEdits, clearEdits] = useIdSet(); // items whose edit form is open; every item starts closed each time Edit is pressed
   const g = useMemo(() => withoutUsed(all, months, editing ? openEdit : undefined), [all, months, editing, openEdit]); // a one-time item that was bought is out of Inventory, but its row stays while it is open in Edit (brief quickadd-one-time-items)
@@ -93,7 +96,7 @@ export default function AtHome({ g: all, months, nowKey }: { g: GroceryT; months
       {!hasSharing(g) && !sharingOpen && g.items.length > 0 && (
         <p className="note gshareprompt">Buy groceries with other people? <button type="button" className="btn sm ghost" id="groc-sharing-prompt" onClick={() => setSharingOpen(true)}>Set up sharing</button></p>
       )}
-      {sharingOpen && <SharingGroups g={g} onDone={() => { focusAfter.current = 'groc-sharing'; setSharingOpen(false); setSharingSaved(true); }} />}
+      {sharingOpen && <SharingGroups g={g} onDone={() => { focusAfter.current = 'groc-sharing'; setSharingOpen(false); setSharingSaved(true); const back = resume.current; if (back) { resume.current = null; readyResume(back); navigate('daily/grocery/shopping', 'replace'); } }} />}
       {sharingSaved && !sharingOpen && <p className="note" role="status">Sharing saved.</p>}
       <RemovedNotice scope="grocery" />
       {haveErr && <p className="note gerr" role="alert">{haveErr}</p>}
