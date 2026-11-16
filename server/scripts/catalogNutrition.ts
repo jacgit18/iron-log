@@ -254,8 +254,15 @@ export interface ApplyResult { applied: boolean; written: number; unchanged: num
 export async function applyResults(db: Kysely<DB>, file: ResultsFile, { apply, log = () => {} }: { apply: boolean; log?: (msg: string) => void }): Promise<ApplyResult> {
   const out: ApplyResult = { applied: apply, written: 0, unchanged: 0, stale: 0, missing: 0 };
   await db.transaction().execute(async trx => {
-    for (const [id, rec] of Object.entries(file.records)) {
-      const row = await trx.selectFrom('catalog_items').select(['data', 'nutrition']).where('id', '=', id).where('kind', '=', 'recipe').where('retired_at', 'is', null).executeTakeFirst();
+    // One SELECT per chunk of ids rather than one per record (about 3,700 records).
+    const entries = Object.entries(file.records);
+    const rows = new Map<string, { data: unknown; nutrition: unknown }>();
+    for (let i = 0; i < entries.length; i += 500) {
+      const got = await trx.selectFrom('catalog_items').select(['id', 'data', 'nutrition']).where('id', 'in', entries.slice(i, i + 500).map(([id]) => id)).where('kind', '=', 'recipe').where('retired_at', 'is', null).execute();
+      for (const g of got) rows.set(g.id, g);
+    }
+    for (const [id, rec] of entries) {
+      const row = rows.get(id);
       if (!row) { out.missing++; continue; }
       const ing = (row.data as { recipe?: { ing?: unknown } } | null)?.recipe?.ing;
       const clean = Array.isArray(ing) && ing.every(x => typeof x === 'string') ? cleanNutrition(rec, ing as string[]) : null;
