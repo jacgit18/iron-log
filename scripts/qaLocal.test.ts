@@ -2,7 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv } from '../server/qa/localAdmin.ts';
+import { BILLING_ADMIN_PERSONAS, FAKE_BILLING_ENV, LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv } from '../server/qa/localAdmin.ts';
+import { personaEmail, personaById } from '../server/qa/personas.ts';
+import { billingConfigFrom } from '../server/billing.ts';
 import { QA_LOCAL_MARK } from '../server/auth/qaPersonas.ts';
 import { join } from 'node:path';
 import { BROWSER_FLAGS, dropProblem, dropScratch, finishStop, freePort, markProblem, newScratchName, originProblem, pidIsStack, removeSignInFiles, SCRATCH_MARK, seedToken, serverProblem, signInFilesIn, signInHtml, signInNames, signInScript, urlProblem } from './qa-local.mjs';
@@ -166,11 +168,29 @@ describe('the sign-in cache and clean-up', () => {
 
 describe('the picker on the scratch stack (brief: qa-runner-test-admin)', () => {
   it('the server accepts the mark this script puts on the scratch database', () => expect(QA_LOCAL_MARK).toBe(SCRATCH_MARK));
-  it('turns the picker on with exactly one admin, a test address that cannot be real, and the scratch database as the owner URL', () => {
+  it('turns the picker on with the test admin first, only test addresses that cannot be real, and the scratch database as the owner URL', () => {
     const env = pickerEnv('postgres://x@127.0.0.1:5433/iron_qa_run_0a1b2c3d');
-    expect(env).toEqual({ QA_PERSONAS: 'true', ADMIN_EMAILS: LOCAL_ADMIN_EMAIL, QA_OWNER_DATABASE_URL: 'postgres://x@127.0.0.1:5433/iron_qa_run_0a1b2c3d' });
+    expect(env).toMatchObject({ QA_PERSONAS: 'true', QA_OWNER_DATABASE_URL: 'postgres://x@127.0.0.1:5433/iron_qa_run_0a1b2c3d' });
+    const admins = env.ADMIN_EMAILS.split(',');
+    expect(admins[0]).toBe(LOCAL_ADMIN_EMAIL);
+    for (const a of admins) expect(a).toMatch(/^[a-z0-9-]+@qa\.invalid$/);
     expect(LOCAL_ADMIN_EMAIL).toMatch(/^[a-z0-9-]+@qa\.invalid$/);
-    expect(env.ADMIN_EMAILS).not.toContain(',');
     expect(LOCAL_ADMIN_ID).toMatch(/^[a-z0-9-]+$/); // matches the guard's persona id pattern, so `seed` of it is allowed
+  });
+  it('makes exactly the four billing personas admins besides the test admin (S-266 to S-269 need the admin-only Billing panel)', () => {
+    expect([...BILLING_ADMIN_PERSONAS].sort()).toEqual(['founder', 'legacy-beta', 'lifetime', 'paid-past-due']);
+    for (const id of BILLING_ADMIN_PERSONAS) expect(personaById(id)).toBeDefined();
+    expect(pickerEnv('x').ADMIN_EMAILS.split(',').sort()).toEqual([LOCAL_ADMIN_EMAIL, ...BILLING_ADMIN_PERSONAS.map(personaEmail)].sort());
+    expect(pickerEnv('x').ADMIN_EMAILS).not.toContain('paid-monthly'); // no other plan account is an admin
+  });
+  it('turns billing on with placeholder test keys the server accepts, overriding a real key and BILLING_LIVE from the shell', () => {
+    const env = pickerEnv('x');
+    for (const [k, v] of Object.entries(FAKE_BILLING_ENV)) expect(env[k as keyof typeof env]).toBe(v);
+    const shell = { STRIPE_SECRET_KEY: 'sk_live_real', STRIPE_WEBHOOK_SECRET: 'whsec_real', STRIPE_PRICE_MONTHLY: 'price_real', STRIPE_PRICE_YEARLY: 'price_real2', BILLING_LIVE: '1' };
+    const merged = { ...shell, ...env }; // qa-local start spreads process.env first, then pickerEnv
+    const out = billingConfigFrom(merged, 'http://127.0.0.1:1');
+    expect(out.problem).toBeUndefined();
+    expect(out.config?.secretKey).toMatch(/^sk_test_/);
+    expect(merged.BILLING_LIVE).not.toBe('1');
   });
 });

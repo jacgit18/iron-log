@@ -61,8 +61,9 @@ export function qaMarkReader(pool: Pick<pg.Pool, 'query'>) {
 export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
   const isQa = qaMarkReader(config.pool);
   const notFound = () => new APIError('NOT_FOUND', { message: 'Not found' });
-  const isAdminSession = (s: { user: { email?: string | null; emailVerified?: boolean } }) =>
-    s.user.emailVerified === true && !!s.user.email && config.admins.has(s.user.email.toLowerCase());
+  // A test account never counts as the picker's admin, even if its address is on the admin list (the scratch stack lists four so the Billing panel shows, see server/qa/localAdmin.ts): otherwise a switch from one would keep its own session as the way back instead of the real admin's.
+  const isAdminSession = (s: { user: { id?: string; email?: string | null; emailVerified?: boolean } }) =>
+    s.user.emailVerified === true && !!s.user.email && config.admins.has(s.user.email.toLowerCase()) && !PERSONAS.some(p => personaAuthId(p.id) === s.user.id);
 
   // Reset needs the database owner (the API's own role cannot delete rows or set plans). The pool is made on the first reset, so a service
   // that is not QA never opens it: every route checks the QA mark first.

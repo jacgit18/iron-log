@@ -177,6 +177,32 @@ describe('what /api/me says (the banner and the Settings panel read it)', () => 
     expect((await meOf(base, jar)).qa).toEqual({ persona: null, canSwitch: true });
   });
 
+  it('does not offer the picker to a test account that is also on the admin list (the scratch stack lists four so the Billing panel shows)', async () => {
+    const admins = new Set([ADMIN, personaEmail('lifetime')]);
+    const { base } = await serve({ capExempt: admins }, admins);
+    await sql`insert into auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt") values (${personaAuthId('lifetime')}, 'lifetime', ${personaEmail('lifetime')}, true, now(), now())`.execute(db);
+    await sql`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ('a-lt', ${personaAuthId('lifetime')}, 'credential', ${personaAuthId('lifetime')}, ${await hashPassword(PASSWORD)}, now(), now())`.execute(db);
+    const jar = new Jar();
+    expect((await call(base, jar, 'POST', '/sign-in/email', { email: personaEmail('lifetime'), password: PASSWORD })).status).toBe(200);
+    const mine = (await (await fetch(`${base}/api/me`, { headers: { cookie: jar.header } })).json()) as { qa?: { canSwitch: boolean }; account: { isAdmin: boolean } };
+    expect(mine.account.isAdmin).toBe(true); // admin for features such as Billing
+    expect(mine.qa?.canSwitch).toBe(false); // but not the picker's admin
+    expect((await call(base, jar, 'GET', '/qa/personas')).status).toBe(403);
+    expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'founder' })).status).toBe(403);
+  });
+
+  it('keeps the real admin as the way back when the admin switches through a test account that is on the admin list', async () => {
+    const admins = new Set([ADMIN, personaEmail('lifetime')]);
+    const { base } = await serve({ capExempt: admins }, admins);
+    await seedPersona('lifetime');
+    await seedPersona('founder');
+    const jar = await signUp(base, ADMIN);
+    await call(base, jar, 'POST', '/qa/personas/switch', { id: 'lifetime' });
+    expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'founder' })).status).toBe(200);
+    expect((await call(base, jar, 'POST', '/qa/personas/return')).status).toBe(200);
+    expect(await me(base, jar)).toBe(ADMIN);
+  });
+
   it('says a signed-in non-admin may not switch', async () => {
     const { base } = await serve();
     const stranger = await signUp(base, 'stranger@example.com');

@@ -291,7 +291,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string; plan: string | null }>`select current_setting('app.user_id') as id, (select plan from users where id = current_setting('app.user_id')::bigint) as plan`.execute(trx)).rows[0]);
     const account = res.locals.account as Account;
     // QA only (qaPersonas.ts): whether this session is a test account, and whether an admin may switch. Absent everywhere else, so production's answer is unchanged.
-    const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true } : undefined;
+    const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true && !personaByEmail(account.email) } : undefined;
     res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', suspended: res.locals.suspended === true, isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
   });
 
