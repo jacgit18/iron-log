@@ -3,6 +3,7 @@ import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../.
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
 import { RECEIPT_TEXT, scanReceipt } from '../../lib/scanPhoto.js';
+import { takeReadyResume } from '../../lib/sharingIntent.js';
 import type { ItemRef } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Grocery } from '../../types.ts';
@@ -37,6 +38,14 @@ export function useReceiptScan(g: Grocery, mk: string) {
     if (r.ok) { setKept(null); setMsg('Photo saved. Find it under Receipts.'); return; }
     setKept({ image, meta, busy: false, fail: r.reason });
   };
+
+  // Back from making a sharing group (brief receipt-share): the same receipt reopens with this screen's own callbacks, so Apply shows the Applied notice and its Undo.
+  useEffect(() => {
+    const back = takeReadyResume();
+    if (!back) return;
+    const image = typeof back.image === 'string' ? back.image : undefined;
+    useAppStore.getState().openModal({ ...back, type: 'receipt', onApplied: (a: Applied) => setApplied({ ...a, mk: String(back.mk ?? mk), t: Date.now() }), onKeep: (meta: KeepMeta) => { if (image) void keep(image, meta); } });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, when Shopping opens
 
   const scan = async (file: File | undefined) => {
     if (!file || busy) return;

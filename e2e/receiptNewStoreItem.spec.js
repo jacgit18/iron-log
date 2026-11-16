@@ -56,7 +56,7 @@ test('renaming the new store before Apply carries the item to the new name, and 
   const store = await stage(sheet);
   await store.selectOption('');
   await expect(store.locator('option:checked')).toHaveText('Anywhere');
-  await sheet.getByRole('button', { name: 'Not now' }).click();
+  await sheet.locator('#rc-new-cancel').click();
   await stage(sheet);
   await sheet.getByRole('button', { name: 'Add item' }).click();
   await sheet.getByLabel('Store name').fill('Target Plus');
