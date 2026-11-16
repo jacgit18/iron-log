@@ -31,6 +31,9 @@ export const matchesNutrition = (r: Pick<Recipe, 'kcal' | 'p'>, keys: readonly N
 /** The line on a Library recipe's page, which never has numbers until it is copied to Mine. */
 export const NO_NUTRITION = 'No nutrition yet. Add this recipe to Mine, then use Calculate from ingredients in its form to fill it in.';
 
+/** True when the page shows `estimateNote` under the summary strip (a Library recipe's numbers estimated from its lines). The vitamin box then leaves out its own "Estimated: worked out from" sentence, so the page says it once. */
+export const showsEstimateNote = <T extends { est?: RecipeEst | undefined; from?: unknown }>(recipe: T): recipe is T & { est: RecipeEst } => Boolean(recipe.est && recipe.from);
+
 /** The note under a recipe's summary strip when its numbers were estimated from the ingredient lines (brief library-recipe-nutrition): how many lines were counted, and "at least" when some were not.
  *  When the servings were estimated too, a second sentence says so. */
 export function estimateNote(est: RecipeEst, servings?: number): string {

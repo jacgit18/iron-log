@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { HIGH_PROTEIN_G, NUTRITION_FILTERS, UNDER_KCAL, estimateNote, matchesNutrition, nutritionBadge } from './recipeNutrition.js';
+import { HIGH_PROTEIN_G, NUTRITION_FILTERS, UNDER_KCAL, estimateNote, matchesNutrition, nutritionBadge, showsEstimateNote } from './recipeNutrition.js';
 import { filterRecipes } from './recipeList.js';
 
 describe('nutritionBadge', () => {
@@ -77,5 +77,13 @@ describe('estimateNote (brief library-recipe-nutrition)', () => {
     expect(estimateNote({ of: 8, n: 8, sEst: true }, 6)).toBe('Estimated from the ingredients. All 8 counted. About 6 servings, estimated.');
     expect(estimateNote({ of: 8, n: 8 }, 6)).not.toMatch(/servings/);
     expect(estimateNote({ of: 8, n: 8, sEst: true })).not.toMatch(/servings/);
+  });
+});
+
+describe('showsEstimateNote', () => {
+  it('is true only for an estimated recipe copied from the Library (the page then says "estimated" once)', () => {
+    expect(showsEstimateNote({ est: { of: 1, n: 1 }, from: 'c:wbc:a' })).toBe(true);
+    expect(showsEstimateNote({ est: { of: 1, n: 1 } })).toBe(false);
+    expect(showsEstimateNote({ from: 'c:wbc:a' })).toBe(false);
   });
 });
