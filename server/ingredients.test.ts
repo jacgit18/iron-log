@@ -4,7 +4,7 @@ import { sql, type Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
 import type { DB } from './db/types.ts';
-import { cacheKey, postgresCache, resolveLines, RESOLVER_VERSION, type MatchCache } from './ingredients.ts';
+import { cacheKey, pickTokens, planTokens, postgresCache, resolveLines, RESOLVER_VERSION, type MatchCache } from './ingredients.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
 // Brief recipe-auto-nutrition, PR 1, Done when 1: the resolver with a fake model and a fake USDA, the cache, the caps and the route.
@@ -25,7 +25,7 @@ const reply = (obj: unknown, stop_reason = 'end_turn', status = 200) => new Resp
 interface Fakes { plan?: unknown; picks?: unknown; usdaFail?: string[] }
 /** One fetch that plays the Claude API (call 1 asks for "lines", call 2 for "picks") and USDA (by query). */
 function fakeFetch(f: Fakes) {
-  const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string }[], urls: [] as string[] };
+  const calls = { model: 0, usda: 0, bodies: [] as { system: string; messages: { content: string }[]; output_config: unknown; model: string; max_tokens: number }[], urls: [] as string[] };
   const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
     if (new URL(url).hostname === 'api.anthropic.com') {
@@ -197,6 +197,15 @@ describe('resolveLines', () => {
     const out = await resolveLines(['2 eggs', '2 Eggs'], deps(f.fn, cache));
     expect(out.ok && out.cached).toBe(1);
     expect(f.calls.model).toBe(0);
+  });
+
+  it('both model calls leave room for the model to think before it answers (the owner eval of 2026-11-16: two of three recipes stopped at max_tokens)', async () => {
+    const f = fakeFetch({ plan: PLAN, picks: PICKS });
+    await resolveLines(LINES, deps(f.fn, memCache()));
+    expect(f.calls.bodies.map(b => b.max_tokens)).toEqual([planTokens(5), pickTokens(3)]);
+    // About 80 tokens a line is what an answer measured; the limit is never the binding cost (only used tokens are billed), so even one line gets a few thousand.
+    for (const n of [1, 6, 40]) { expect(planTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); expect(pickTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); }
+    expect(planTokens(40)).toBeLessThanOrEqual(16000);
   });
 
   it('a model call that is cut off or refused writes nothing', async () => {
