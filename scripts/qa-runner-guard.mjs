@@ -6,7 +6,7 @@
 // Not covered: clicks on in-app links (the `computer` tool), a symlink in the checkout or the evidence folder, which is not followed.
 import { dirname, isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evidenceRoot, originProblem, readStackUrl } from './qa-local.mjs';
+import { evidenceRoot, originProblem, readStackUrls } from './qa-local.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..'); // this checkout, whatever directory the hook is started from
 const SCENARIO_ID = /^S-\d{1,4}$/;
@@ -85,7 +85,7 @@ export function pathProblem(p, { write = false, root = evidenceRoot(), repo = RE
   return abs === rr || abs.startsWith(rr + sep) ? null : `${abs} is outside this checkout and ${root}`;
 }
 
-/** The decision for one hook call: a reason to refuse it, or null. `stackUrl` is the running stack's address (null when none). */
+/** The decision for one hook call: a reason to refuse it, or null. `stackUrl` is the address of every live stack (an array; empty or null when none). */
 export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(), stackUrl = null, repo = REPO } = {}) {
   const input = tool_input && typeof tool_input === 'object' ? tool_input : {};
   switch (tool) {
@@ -117,7 +117,7 @@ export function decide({ tool_name: tool, tool_input }, { root = evidenceRoot(),
 async function main() {
   let call; let why;
   try { call = JSON.parse(await new Promise((ok, no) => { let s = ''; process.stdin.on('data', d => { s += d; }).on('end', () => ok(s)).on('error', no); })); } catch { call = null; }
-  try { why = call && typeof call === 'object' ? decide(call, { stackUrl: readStackUrl() }) : 'the hook could not read its input'; } catch (e) { why = `the hook failed (${e.message})`; }
+  try { why = call && typeof call === 'object' ? decide(call, { stackUrl: readStackUrls() }) : 'the hook could not read its input'; } catch (e) { why = `the hook failed (${e.message})`; }
   if (why) { console.error(`qa-runner-guard: refused: ${why}`); process.exit(2); }
 }
 
