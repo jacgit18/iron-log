@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, pickerEnv } from '../server/qa/localAdmin.ts';
+import { QA_LOCAL_MARK } from '../server/auth/qaPersonas.ts';
 import { join } from 'node:path';
 import { BROWSER_FLAGS, dropProblem, dropScratch, finishStop, freePort, markProblem, newScratchName, originProblem, pidIsStack, removeSignInFiles, SCRATCH_MARK, seedToken, serverProblem, signInFilesIn, signInHtml, signInNames, signInScript, urlProblem } from './qa-local.mjs';
 
@@ -159,5 +161,16 @@ describe('the sign-in cache and clean-up', () => {
     const why = await finishStop(state, async () => { order.push('drop'); throw new Error('connection refused'); }, () => order.push('files'));
     expect(order).toEqual(['files', 'drop']);
     expect(why).toMatch(/could not drop.*connection refused/);
+  });
+});
+
+describe('the picker on the scratch stack (brief: qa-runner-test-admin)', () => {
+  it('the server accepts the mark this script puts on the scratch database', () => expect(QA_LOCAL_MARK).toBe(SCRATCH_MARK));
+  it('turns the picker on with exactly one admin, a test address that cannot be real, and the scratch database as the owner URL', () => {
+    const env = pickerEnv('postgres://x@127.0.0.1:5433/iron_qa_run_0a1b2c3d');
+    expect(env).toEqual({ QA_PERSONAS: 'true', ADMIN_EMAILS: LOCAL_ADMIN_EMAIL, QA_OWNER_DATABASE_URL: 'postgres://x@127.0.0.1:5433/iron_qa_run_0a1b2c3d' });
+    expect(LOCAL_ADMIN_EMAIL).toMatch(/^[a-z0-9-]+@qa\.invalid$/);
+    expect(env.ADMIN_EMAILS).not.toContain(',');
+    expect(LOCAL_ADMIN_ID).toMatch(/^[a-z0-9-]+$/); // matches the guard's persona id pattern, so `seed` of it is allowed
   });
 });

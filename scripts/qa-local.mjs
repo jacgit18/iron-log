@@ -6,7 +6,7 @@
 //   - stop drops only what the state file says this script made, and only if the name and the mark still match.
 // Usage (run with tsx, because seeding reads the TypeScript seed code):
 //   npx tsx scripts/qa-local.mjs start                 builds the app (skip with --no-build), makes the scratch database, starts the server, prints the URL as JSON
-//   npx tsx scripts/qa-local.mjs seed <persona-id>     seeds one test account from server/qa/personas.ts and prints its email, test password and the URL
+//   npx tsx scripts/qa-local.mjs seed <persona-id>     seeds one test account from server/qa/personas.ts (or `qa-local-admin`, the stack's one test admin, for the picker) and prints its email and the URL
 //   npx tsx scripts/qa-local.mjs check-url <url>       exits 1 unless the URL is on this machine (the agent runs this before opening any address)
 //   npx tsx scripts/qa-local.mjs status | stop         stop kills the server and drops the scratch database and login (safe to run twice)
 // DATABASE_URL (or QA_LOCAL_PG) names the local Postgres server to make the scratch database on; default postgres://ironlog:ironlog@127.0.0.1:5433/ironlog
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const LOCAL_HOSTS = ['127.0.0.1', 'localhost', '[::1]'];
 export const SCRATCH_PREFIX = 'iron_qa_run_';
 export const SCRATCH_MARK = 'iron-log qa-local scratch';
-export const TEST_PASSWORD = 'correct horse battery staple'; // a test value the server stores only for seeded accounts on the scratch database
+// The scratch stack's test admin, its password and the picker settings live in server/qa/localAdmin.ts, imported inside `start` and `seed` only (a TypeScript file: status, stop and check-url, which the Runner's hook relies on, must not need Node's TypeScript support).
 // What e2e-qa/persona.js sets before sign-in: without apiSync the app shows this browser's own (empty) data, not the seeded account's.
 export const BROWSER_FLAGS = { 'ironlog:hidetip': '1', 'ironlog:hidelocal': '1', 'ironlog:flag:apiSync': 'true', 'ironlog:session/known': '1' };
 // One page and one script per persona: the server sends static files with `Cache-Control: max-age=3600`, so a shared name made the browser reuse the previous persona's
@@ -51,9 +51,9 @@ fetch('/api/auth/sign-in/email', { method: 'POST', headers: { 'content-type': 'a
 export const signInHtml = (scriptName, token) => `<!doctype html><meta charset="utf-8"><title>QA sign-in</title><script src="/${scriptName}?s=${token}"></script>\n`;
 
 /** Writes the sign-in page into the built app (the server serves it; the CSP allows a script file of its own origin, not an inline one). */
-function writeSignInPage(distDir, personaId, email, token) {
+function writeSignInPage(distDir, personaId, email, token, password) {
   const { page, script } = signInNames(personaId);
-  writeFileSync(join(distDir, script), signInScript(BROWSER_FLAGS, email, TEST_PASSWORD));
+  writeFileSync(join(distDir, script), signInScript(BROWSER_FLAGS, email, password));
   writeFileSync(join(distDir, page), signInHtml(script, token));
   return page;
 }
@@ -212,6 +212,7 @@ async function main() {
   }
 
   if (cmd === 'start') {
+    const { pickerEnv } = await import('../server/qa/localAdmin.ts');
     if (readState()) fail(`a stack is already running for this checkout (${stateFile}); run stop first`);
     const bad = serverProblem(given);
     if (bad) fail(`refused: ${bad}`, 2);
@@ -235,7 +236,7 @@ async function main() {
       const child = spawn('npx', ['tsx', 'server/index.ts'], { cwd: root, detached: true, stdio: ['ignore', out, out], env: {
         ...process.env, NODE_ENV: 'test', HOST: '127.0.0.1', PORT: String(port), BASE_URL: url, STATIC_DIR: 'dist', AUTH_TEST_SIGNIN: 'true',
         BETTER_AUTH_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only-secret', GOOGLE_CLIENT_ID: 'e2e-client.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'e2e-client-secret',
-        DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href } });
+        DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href, ...pickerEnv(scratch.href) } });
       child.unref();
       writeFileSync(stateFile, JSON.stringify({ ...readState(), pid: child.pid }), { mode: 0o600 });
       for (let i = 0; i < 90; i++) {
@@ -255,12 +256,14 @@ async function main() {
     if (!state) fail('no stack is running: run start first');
     const why = urlProblem(state.url) ?? serverProblem(state.scratch);
     if (why) fail(`refused: ${why}`, 2);
+    const { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_ID, seedLocalAdmin, TEST_PASSWORD } = await import('../server/qa/localAdmin.ts');
     const { personaAuthId, personaById, personaEmail } = await import('../server/qa/personas.ts');
     const { SEED_EXERCISE_IDS, seedPersona } = await import('../server/qa/seedPersona.ts');
     const { buildPersonaRows } = await import('../server/qa/seedPlan.ts');
     const { localSeedDay } = await import('../server/qa/seedDay.ts');
     const { hashPassword } = await import('better-auth/crypto');
-    const persona = personaById(arg ?? '');
+    const admin = arg === LOCAL_ADMIN_ID;
+    const persona = admin ? { id: LOCAL_ADMIN_ID } : personaById(arg ?? '');
     if (!persona) fail(`no test account ${JSON.stringify(arg)} in server/qa/personas.ts`, 2);
     const now = new Date();
     const plain = { seal: s => s, sealStable: s => s, open: s => s, isSealed: () => false }; // the scratch server has no PII key
@@ -268,13 +271,18 @@ async function main() {
       const { rows: [{ comment }] } = await c.query(`select shobj_description(oid, 'pg_database') as comment from pg_database where datname = current_database()`);
       const m = markProblem(comment);
       if (m) throw new Error(m);
-      await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
-      await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
-        on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), await hashPassword(TEST_PASSWORD)]);
+      const hash = await hashPassword(TEST_PASSWORD);
+      if (admin) await seedLocalAdmin(c, hash);
+      else {
+        await seedPersona(c, plain, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, localSeedDay(now)), now);
+        await c.query(`insert into auth.account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt") values ($1, $2, 'credential', $2, $3, now(), now())
+          on conflict (id) do update set password = excluded.password`, [`qa-local-${persona.id}`, personaAuthId(persona.id), hash]);
+      }
     });
     const token = seedToken();
-    const page = writeSignInPage(join(root, 'dist'), persona.id, personaEmail(persona.id), token);
-    console.log(JSON.stringify({ url: state.url, persona: persona.id, email: personaEmail(persona.id), signInUrl: `${state.url}/${page}?s=${token}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
+    const email = admin ? LOCAL_ADMIN_EMAIL : personaEmail(persona.id);
+    const page = writeSignInPage(join(root, 'dist'), persona.id, email, token, TEST_PASSWORD);
+    console.log(JSON.stringify({ url: state.url, persona: persona.id, email, signInUrl: `${state.url}/${page}?s=${token}`, signIn: `navigate to signInUrl: the page sets the browser flags, signs in as ${persona.id} and opens /; the tab title says "sign-in failed" if it did not work` }));
     return;
   }
 
