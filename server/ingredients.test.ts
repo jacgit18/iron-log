@@ -203,7 +203,7 @@ describe('resolveLines', () => {
     const f = fakeFetch({ plan: PLAN, picks: PICKS });
     await resolveLines(LINES, deps(f.fn, memCache()));
     expect(f.calls.bodies.map(b => b.max_tokens)).toEqual([planTokens(5), pickTokens(3)]);
-    // About 80 tokens a line is what an answer measured; the limit is never the binding cost (only used tokens are billed), so even one line gets a few thousand.
+    // The owner's eval run used about 80 output tokens a line on average (1,882 for 23 lines, thinking included); single calls ran well over that, so even one line gets a few thousand. Only used tokens are billed.
     for (const n of [1, 6, 40]) { expect(planTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); expect(pickTokens(n)).toBeGreaterThanOrEqual(2000 + 80 * n); }
     expect(planTokens(40)).toBeLessThanOrEqual(16000);
   });
@@ -213,6 +213,12 @@ describe('resolveLines', () => {
     const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
     await expect(resolveLines(LINES, deps(fn, cache))).rejects.toThrow(/max_tokens/);
     expect(cache.map.size).toBe(0);
+  });
+
+  it('a cut-off call was paid for: its tokens are on the error for the batch\'s spend ceiling (review of PR 1018)', async () => {
+    const fn = vi.fn(async () => reply(PLAN, 'max_tokens')) as unknown as typeof fetch;
+    const err = await resolveLines(LINES, deps(fn, memCache())).catch((e: unknown) => e);
+    expect((err as { usage?: unknown }).usage).toEqual({ calls: 1, inputTokens: 100, outputTokens: 50 });
   });
 
   it('a plan of the wrong length is a failed request', async () => {

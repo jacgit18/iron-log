@@ -74,14 +74,19 @@ export type Resolved = { ok: true; lines: LineMatch[]; usage: Usage; cached: num
 
 /** Output limits of the two model calls. The model thinks before it answers (adaptive thinking is on by default) and those tokens count against the limit, so a limit sized
  *  for the JSON alone cut real answers off (`stopped: max_tokens`: the whole fill failed, on a recipe that had worked a minute before). Only tokens used are billed, never the limit,
- *  so the room is generous: at 40 lines it is 10,000 and 8,000, where an answer measures about 80 tokens a line. */
+ *  so the room is generous: at 40 lines it is 10,000 and 8,000. For scale, the owner's eval run of 2026-11-16 used 1,882 output tokens for 23 lines over both calls, thinking included (about 80 a line on average; single calls ran well over that). */
 export const planTokens = (lines: number): number => 2000 + 200 * lines;
 export const pickTokens = (lines: number): number => 2000 + 150 * lines;
 
 type Stored = Omit<LineMatch, 'line'>;
 const stored = (m: LineMatch): Stored => { const { line: _line, ...rest } = m; return rest; };
 const call = async (deps: ResolveDeps, system: string, user: string, schema: Record<string, unknown>, maxTokens: number, usage: Usage): Promise<unknown> => {
-  const r = await askModelJson(deps.ask, deps.key, deps.model, { system, user, schema, maxTokens });
+  const r = await askModelJson(deps.ask, deps.key, deps.model, { system, user, schema, maxTokens }).catch((err: unknown) => {
+    // A reply that was cut off or unusable was still paid for: count it, so the catalog batch's spend ceiling sees it.
+    const spent = (err as { spent?: { inputTokens: number; outputTokens: number } } | null)?.spent;
+    if (spent) { usage.calls++; usage.inputTokens += spent.inputTokens; usage.outputTokens += spent.outputTokens; }
+    throw err;
+  });
   usage.calls++; usage.inputTokens += r.inputTokens; usage.outputTokens += r.outputTokens;
   const json = jsonFromReply(r.text);
   if (!json) throw new Error('reply is not a JSON object');

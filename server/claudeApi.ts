@@ -27,7 +27,7 @@ export async function askModel(ask: typeof fetch, key: string, model: string, im
 
 export interface TextReply { text: string; inputTokens: number; outputTokens: number }
 
-/** A text-only call whose reply is one JSON object that matches `schema` (structured output, effort low). Throws on any failure, a refusal or a cut-off reply (`stop_reason` is not `end_turn`);
+/** A text-only call whose reply is one JSON object that matches `schema` (structured output, effort low). Throws on any failure, a refusal or a cut-off reply (`stop_reason` is not `end_turn`); an error for a reply that did come back has `spent` (its tokens);
  *  the caller turns that into "not available". The user turn is data: the system prompt says so. */
 export async function askModelJson(ask: typeof fetch, key: string, model: string, p: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number }): Promise<TextReply> {
   const r = await ask(API_URL, {
@@ -44,9 +44,12 @@ export async function askModelJson(ask: typeof fetch, key: string, model: string
   });
   if (!r.ok) throw new Error(`upstream ${r.status}`);
   const body = (await r.json()) as { stop_reason?: unknown; content?: { type?: string; text?: unknown }[]; usage?: { input_tokens?: unknown; output_tokens?: unknown } };
-  if (body.stop_reason !== 'end_turn') throw new Error(`stopped: ${typeof body.stop_reason === 'string' ? body.stop_reason : 'unknown'}`);
-  const first = body.content?.find(part => part?.type === 'text');
-  if (typeof first?.text !== 'string') throw new Error('no text in reply');
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-  return { text: first.text, inputTokens: n(body.usage?.input_tokens), outputTokens: n(body.usage?.output_tokens) };
+  const spent = { inputTokens: n(body.usage?.input_tokens), outputTokens: n(body.usage?.output_tokens) };
+  // A reply that came back was paid for, usable or not (a cut-off one up to the whole limit): the error carries its tokens so a caller that counts spend does not lose them.
+  const paidFor = (message: string) => Object.assign(new Error(message), { spent });
+  if (body.stop_reason !== 'end_turn') throw paidFor(`stopped: ${typeof body.stop_reason === 'string' ? body.stop_reason : 'unknown'}`);
+  const first = body.content?.find(part => part?.type === 'text');
+  if (typeof first?.text !== 'string') throw paidFor('no text in reply');
+  return { text: first.text, ...spent };
 }
