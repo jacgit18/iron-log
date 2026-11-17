@@ -178,6 +178,15 @@ describe('POST /api/scan/receipt', () => {
     expect(userText).not.toContain('price');
   });
 
+  it('answers with the subtotal and the charged amount of a BJ\'s-style reply, keeps a coupon row with no item as a negative line, and ignores a rewards field (brief receipt-scan-accuracy)', async () => {
+    const bjs = JSON.stringify({ store: "BJ'S", subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567, lines: [{ text: 'EGGS LRG 5 DZ', qty: 1, total: 56615, match: 'eggs' }, { text: 'CCPN-1620CT', qty: 1, total: -300, match: 'eggs' }, { text: 'PRICE ONLY', qty: 1, total: 100, match: null }] });
+    const post = await startReceipt({ key: 'k', fetch: (async () => model(bjs)) as unknown as typeof fetch });
+    const body = await (await post({ image: jpeg, items })).json() as { result: { receipt: Record<string, unknown> & { lines: { grossCents: number; matchId: string | null }[] } } };
+    expect(body.result.receipt).toMatchObject({ subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567 });
+    expect(body.result.receipt).not.toHaveProperty('rewardsCents');
+    expect(body.result.receipt.lines.map(l => [l.grossCents, l.matchId])).toEqual([[56615, 'eggs'], [-300, null], [100, null]]);
+  });
+
   it('uses the receipt model it is given', async () => {
     const ask = vi.fn(async () => model(reply));
     const post = await startReceipt({ key: 'k', receiptModel: 'claude-haiku-5-5', fetch: ask as unknown as typeof fetch });
@@ -221,9 +230,38 @@ describe('POST /api/scan/receipt', () => {
     expect((await post({ image: jpeg, items })).status).toBe(200);
     const over = await post({ image: jpeg, items });
     expect(over.status).toBe(503);
-    expect(await over.json()).toMatchObject({ why: 'cap' });
+    expect(await over.json()).toMatchObject({ why: 'cap', scope: 'server' });
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg, items })).status).toBe(200);
+  });
+
+  it('names the person\'s own allowance apart from the server-wide one in the 503 (PR 1027 review)', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 5, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items })).status).toBe(200);
+    expect(await (await post({ image: jpeg, items })).json()).toMatchObject({ why: 'cap', scope: 'person' });
+  });
+
+  it('answers 503 upstream when both the first reply and the retry have no text (PR 1027 review)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 5 }, content: [{ type: 'thinking', thinking: 'x' }] }), { status: 200 });
+    const ask = vi.fn(thinkingOnly);
+    const post = await startReceipt({ key: 'k', fetch: ask as unknown as typeof fetch });
+    const res = await post({ image: jpeg, items });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ why: 'upstream' });
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('a scan the server-wide ceiling refuses does not use up the person\'s own allowance, and an admin still passes the person cap', async () => {
+    let t = 1_000_000;
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 1, now: () => t, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'other')).status).toBe(200); // uses the server's one, its day starts now
+    t += 12 * 60 * 60_000;
+    expect(await (await post({ image: jpeg, items }, 'me')).json()).toMatchObject({ scope: 'server' }); // refused by the server: must not start or spend 'me' allowance
+    t += 12 * 60 * 60_000 + 1000; // the server's day is over; 'me' was never served, so their one is still free (it would be spent if the refusal had counted)
+    expect((await post({ image: jpeg, items }, 'me')).status).toBe(200);
   });
 
   it('does not stop an admin account at the per-person receipt allowance, but the server-wide ceiling still holds', async () => {

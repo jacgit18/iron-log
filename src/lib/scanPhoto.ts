@@ -72,13 +72,14 @@ export const RECEIPT_TEXT = {
   offline: 'You are offline. You can still tick items and type prices.',
   limit: 'Too many scans just now. Try again in a minute, or type the prices.',
   cap: 'You have used today\u2019s receipt scans. Try again tomorrow, or type the prices.',
+  capAll: 'Receipt scans are used up for everyone today. Try again tomorrow, or type the prices.',
   unavailable: 'Scan is not available right now. You can still tick items and type prices.',
   photo: 'Could not open that photo. Try another one.',
   unreadable: 'Could not read that receipt. Try a flatter photo with the whole receipt in view. Nothing on your list changed.',
 } as const;
 
 /** One receipt photo and the list's item ids and names to /api/scan/receipt. The answer is re-checked against the same ids; every failure is a plain reason. The shrunk photo comes back too, held in memory so the sheet can offer to keep it (receiptsClient.ts); it goes nowhere unless the person ticks that box. */
-export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal): Promise<{ ok: true; result: ReceiptResult; image: string } | LabelFailure> {
+export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal): Promise<{ ok: true; result: ReceiptResult; image: string } | LabelFailure | { ok: false; reason: 'capAll' }> {
   let image: string;
   try { image = await shrinkToJpegBase64(file, MAX_RECEIPT_SIDE); } catch { return { ok: false, reason: 'photo' }; }
   let res: Response;
@@ -87,8 +88,8 @@ export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSi
   } catch { return { ok: false, reason: 'offline' }; }
   if (res.status === 429) return { ok: false, reason: 'limit' };
   if (!res.ok) {
-    const why = await res.json().then((b: { why?: unknown }) => b.why, () => undefined);
-    if (res.status === 503 && why === 'cap') return { ok: false, reason: 'cap' };
+    const body = await res.json().then((b: { why?: unknown; scope?: unknown }) => b, () => ({} as { why?: unknown; scope?: unknown }));
+    if (res.status === 503 && body.why === 'cap') return { ok: false, reason: body.scope === 'server' ? 'capAll' : 'cap' };
     console.warn(`receipt scan unavailable: status ${res.status}`);
     return { ok: false, reason: 'unavailable' };
   }

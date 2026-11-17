@@ -16,7 +16,8 @@ export type ReceiptUnit = 'lb' | 'kg' | 'oz';
 /** One receipt line. `grossCents` is the printed line total, `discountCents` the savings printed under it (0 when none), so the net price is gross minus discount.
  *  A negative `grossCents` is a return or an unattached discount: it never matches an item. */
 export interface ReceiptLine { text: string; qty: number; unit?: ReceiptUnit; grossCents: number; discountCents: number; matchId: string | null }
-export interface Receipt { store?: string; date?: string; lines: ReceiptLine[]; taxCents?: number; totalCents?: number }
+export interface Receipt { store?: string; date?: string; lines: ReceiptLine[]; taxCents?: number; subtotalCents?: number; totalCents?: number; paidCents?: number }
+// `subtotalCents`: the printed sum of the items before tax (a warehouse club prints SUBTOTAL), `totalCents` the total with tax before any rewards credit (the sheet's lines + tax check reads it), `paidCents` what was charged after a rewards or points credit (what a kept receipt saves as its total).
 export type ReceiptResult = { kind: 'ok'; receipt: Receipt } | { kind: 'unreadable' };
 /** What the route sends the model about the grocery list: ids and names only (no prices, notes or sharing), and `got` when the item is ticked as bought this month (brief receipt-reconcile-ticked), so a ticked item wins a close match. */
 export interface ItemRef { id: string; n: string; unit?: ReceiptUnit; got?: true }
@@ -56,8 +57,12 @@ export function cleanReceipt(raw: unknown, known: ReadonlySet<string>): ReceiptR
   if (typeof o.date === 'string' && DATE_RE.test(o.date) && !Number.isNaN(Date.parse(o.date))) receipt.date = o.date;
   const tax = cents(o.tax, 0);
   if (tax !== null) receipt.taxCents = tax;
+  const subtotal = cents(o.subtotal, 1);
+  if (subtotal !== null) receipt.subtotalCents = subtotal;
   const total = cents(o.total, 1);
   if (total !== null) receipt.totalCents = total;
+  const paid = cents(o.paid, 1);
+  if (paid !== null) receipt.paidCents = paid;
   return { kind: 'ok', receipt };
 }
 
@@ -72,7 +77,7 @@ export function cleanReceiptAnswer(body: unknown, known: ReadonlySet<string>): R
   if (!r) return { kind: 'unreadable' };
   // The route sends net lines in the app's own shape; map them back to the model's field names for one validator.
   const lines = Array.isArray(r.lines) ? r.lines.map(x => { const l = obj(x) ?? {}; return { text: l.text, qty: l.qty, unit: l.unit, total: l.grossCents, discount: l.discountCents, match: l.matchId }; }) : [];
-  return cleanReceipt({ store: r.store, date: r.date, lines, tax: r.taxCents, total: r.totalCents }, known);
+  return cleanReceipt({ store: r.store, date: r.date, lines, tax: r.taxCents, subtotal: r.subtotalCents, total: r.totalCents, paid: r.paidCents }, known);
 }
 
 /** What the request may say about the list: at most MAX_ITEMS_SENT items with an id and a name; anything else is dropped. Null when nothing usable is left. */
