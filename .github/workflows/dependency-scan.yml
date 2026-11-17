@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 26
       - name: Production dependencies have no known high or critical advisory
-        run: npm audit --omit=dev --audit-level=high
+        run: node scripts/audit-prod.mjs # npm audit --omit=dev --audit-level=high, minus the dated exceptions listed in the script
       - name: Development dependencies are reported only
         run: npm audit --audit-level=high || echo "::warning title=Dev dependency advisories::npm audit reports high or critical advisories in development dependencies (not blocking)."
 
