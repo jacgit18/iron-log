@@ -8,6 +8,10 @@ describe('keepMeta', () => {
     expect(keepMeta({ totalCents: 57294, paidCents: 55567, lines: [] }, '2026-11')).toMatchObject({ totalCents: 55567 });
     expect(keepMeta({ totalCents: 57294, lines: [] }, '2026-11')).toMatchObject({ totalCents: 57294 });
   });
+  it('saves You paid (total less the rewards on the sheet) as the total', () => {
+    expect(keepMeta({ totalCents: 57294, rewardsCents: 1727, lines: [] }, '2026-11')).toMatchObject({ totalCents: 55567 });
+    expect(keepMeta({ totalCents: 57294, rewardsCents: 2000, paidCents: 55567, lines: [] }, '2026-11')).toMatchObject({ totalCents: 55294 }); // the typed amount wins over the scan's paid
+  });
   it('carries the reviewed store, date and total with the month on screen', () => {
     expect(keepMeta({ store: "BJ's", date: '2026-11-02', totalCents: 14231, lines: [] }, '2026-11')).toEqual({ month: '2026-11', store: "BJ's", receiptDate: '2026-11-02', totalCents: 14231 });
   });

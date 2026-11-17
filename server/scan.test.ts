@@ -178,12 +178,12 @@ describe('POST /api/scan/receipt', () => {
     expect(userText).not.toContain('price');
   });
 
-  it('answers with the subtotal and the charged amount of a BJ\'s-style reply, keeps a coupon row with no item as a negative line, and ignores a rewards field (brief receipt-scan-accuracy)', async () => {
+  it('answers with the subtotal and the charged amount of a BJ\'s-style reply, keeps a coupon row with no item as a negative line, and reads the rewards field (briefs receipt-scan-accuracy, receipt-rewards-credit)', async () => {
     const bjs = JSON.stringify({ store: "BJ'S", subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567, lines: [{ text: 'EGGS LRG 5 DZ', qty: 1, total: 56615, match: 'eggs' }, { text: 'CCPN-1620CT', qty: 1, total: -300, match: 'eggs' }, { text: 'PRICE ONLY', qty: 1, total: 100, match: null }] });
     const post = await startReceipt({ key: 'k', fetch: (async () => model(bjs)) as unknown as typeof fetch });
     const body = await (await post({ image: jpeg, items })).json() as { result: { receipt: Record<string, unknown> & { lines: { grossCents: number; matchId: string | null }[] } } };
     expect(body.result.receipt).toMatchObject({ subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567 });
-    expect(body.result.receipt).not.toHaveProperty('rewardsCents');
+    expect(body.result.receipt).toMatchObject({ rewardsCents: 1727 }); // the rewards credit is read (brief receipt-rewards-credit)
     expect(body.result.receipt.lines.map(l => [l.grossCents, l.matchId])).toEqual([[56615, 'eggs'], [-300, null], [100, null]]);
   });
 

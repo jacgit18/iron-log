@@ -403,6 +403,7 @@ export interface GrocerySlice {
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
   setGroceryReceiptShare(month: string, id: string, share: GroceryShare | null): void; // a receipt's split for one line, this month's line only (the item's usual split is not touched)
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
+  setGroceryCredit(month: string, store: string, cents: number | null): void; // the receipt's rewards credit for that store this month, in cents, taken off what was spent there; null clears it
   setGroceryTax(month: string, store: string, cents: number | null): void; // the receipt's sales tax for that store this month, in cents; null clears it
   setGroceryPayer(month: string, store: string, personId: string | null): void; // who paid for that store this month; null is you
   setGroceryPaid(month: string, store: string, person: string, paid: boolean): void; // an owed amount of that store this month has (or has not) been settled outside the app; amounts never change

@@ -57,6 +57,19 @@
   gap: var(--sp-4) var(--sp-16);
   font-variant-numeric: tabular-nums;
 }
+.rcrew {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.rcrew input {
+  width: 6rem;
+  min-height: 44px;
+  text-align: right;
+}
+.rcpaid {
+  font-weight: 600;
+}
 .rcwarn {
   margin: 0;
   padding: var(--sp-6) var(--sp-10);

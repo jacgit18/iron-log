@@ -168,3 +168,17 @@ describe('a line\'s store this month merges field by field with the rest of the 
     expect(documentFor(kind('grocery/2026-09'), mirrorOf(rows))).toEqual(m({ got: true, store: '' })); // Anywhere survives
   });
 });
+
+describe('a month\'s rewards credit merges store by store like tax (brief receipt-rewards-credit)', () => {
+  const month = (credit?: Record<string, number>): GroceryMonth => ({ lines: { rice: { got: true } }, pulled: [], ...(credit ? { credit } : {}) });
+  it('two devices that each typed a different store\'s credit both keep it, and one that cleared a store keeps it cleared', () => {
+    const base = month({ Aldi: 100 });
+    expect(mergeGroceryMonth3(base, month({ Aldi: 100, "BJ's": 1727 }), month({ Aldi: 100, Costco: 300 })).week.credit).toEqual({ Aldi: 100, "BJ's": 1727, Costco: 300 });
+    expect(mergeGroceryMonth3(base, month(), month({ Aldi: 100 })).week.credit).toBeUndefined();
+    expect(mergeGroceryMonth3(null, month({ "BJ's": 300 }), month({ "BJ's": 222, Aldi: 35 })).week.credit).toEqual({ "BJ's": 300, Aldi: 35 });
+  });
+  it('is part of the month record and reads back with it', () => {
+    const rows = desiredRows(kind('grocery/2026-09'), month({ "BJ's": 1727 }), new Map());
+    expect(documentFor(kind('grocery/2026-09'), mirrorOf(rows))).toEqual(month({ "BJ's": 1727 }));
+  });
+});

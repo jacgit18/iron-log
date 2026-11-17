@@ -203,6 +203,11 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
     const cents = cleanCents(c);
     if (store !== '__proto__' && store.length <= MAX_STORE && cents) tax[store] = cents;
   });
+  const credit: Record<string, number> = {}; // rewards credit in cents for each store this month (brief receipt-rewards-credit); no entry = none
+  Object.entries(asObject(raw.credit) ?? {}).slice(0, MAX_STORES).forEach(([store, c]) => {
+    const cents = cleanCents(c);
+    if (store !== '__proto__' && store.length <= MAX_STORE && cents) credit[store] = cents;
+  });
   // Which owed amounts are settled, flat so that two devices merge it key by key: "store\npayer\nperson" (a store name never holds a newline) to the cents settled, or false for not paid.
   const paid: Record<string, number | false> = {};
   Object.entries(asObject(raw.paid) ?? {}).slice(0, MAX_PAID).forEach(([key, v]) => {
@@ -210,8 +215,8 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
     if ((v === false || (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= MAX_CENTS)) && !rest.length && store !== undefined && store.length <= MAX_STORE && by && who && by.length <= MAX_ID && who.length <= MAX_ID && who !== 'me') paid[key] = v; // a "you owe" row has the payer as its person: payer and person are the same id there
   });
   const carried = typeof raw.carried === 'string' && MONTH_RE.test(raw.carried) ? raw.carried : undefined; // the month whose At home ticks this one started from (ADR 079)
-  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}), ...(Object.keys(paid).length ? { paid } : {}), ...(carried ? { carried } : {}) };
+  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}), ...(Object.keys(credit).length ? { credit } : {}), ...(Object.keys(paid).length ? { paid } : {}), ...(carried ? { carried } : {}) };
 }
 /** The key a settled mark is kept under: the store, who paid the bill ('me' or a person's id) and the person whose amount it is. */
 export const paidKey = (store: string, payer: string, person: string) => `${store}\n${payer}\n${person}`;
-export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length && !Object.keys(m.paid ?? {}).length && !m.carried; // the marker keeps an emptied month from being seeded again
+export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length && !Object.keys(m.credit ?? {}).length && !Object.keys(m.paid ?? {}).length && !m.carried; // the marker keeps an emptied month from being seeded again
