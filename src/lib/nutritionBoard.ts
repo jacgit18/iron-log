@@ -1,7 +1,8 @@
 import type { Boost, DietEntry, PlanSlot, Recipe, SavedMeal, Supplements } from '../types.ts';
 import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
 import { dayLabel, shortDay, sundayOf } from './dayNames.js';
-import { shiftDay, totalsFor, missingCarbsFat, fmtNum } from './dietLog.js';
+import { MAX_PLAN_AHEAD } from '../shared/diet.js';
+import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';
 import type { Plan } from './dietPlan.js';
 import { portionTag } from './supplementPortion.js';
 import { SLOTS, scheduleOf, slotTally } from './supplements.js';
@@ -10,28 +11,55 @@ import { HOT_OZ, TRAIN_OZ_PER_30, fmtOz, goalFor, sumOz } from './water.js';
 
 /* ---------- Nutrition as one week board (brief nutrition-board): which days a week holds, what a day's four meters show, which meal the add sheet starts on, what the Hydration and Supplements sections say. Pure; the board draws it. ---------- */
 
-/** Weeks are Sunday to Saturday, like the Board's: 0 is the week today is in, -1 the week before it, 1 the week after. Days before today in this week stay on it. */
-export type WeekOffset = -1 | 0 | 1;
-export const WEEK_OFFSETS: readonly WeekOffset[] = [-1, 0, 1];
-export const WEEK_NAME: Record<WeekOffset, string> = { '-1': 'Last week', '0': 'This week', '1': 'Next week' };
+/** Weeks are Sunday to Saturday, like the Board's: 0 is the week today is in, -1 the week before it, 1 the week after, and so on (brief nutrition-meal-labels-year-repeat: any whole number inside `weekRange`; it was only -1, 0 and 1). Days before today in this week stay on it. */
+export type WeekOffset = number;
+/** The weeks the board can reach: back to the oldest logged week (never less than last week) and ahead as far as the plan window (52 weeks). */
+export interface WeekRange { min: WeekOffset; max: WeekOffset }
 
 const days7 = (start: string): string[] => Array.from({ length: 7 }, (_, i) => shiftDay(start, i));
-/** The Sunday of the week `today` is in. */
+const dayGap = (a: string, b: string): number => Math.round((parseDate(b).getTime() - parseDate(a).getTime()) / 86400000);
 
-/** The seven days of a week on the board, Sunday first. The end of next week is at most 13 days ahead (today a Sunday), inside the plan window (MAX_PLAN_AHEAD). */
+/** The seven days of a week on the board, Sunday first. */
 export const weekDays = (today: string, offset: WeekOffset): string[] => days7(shiftDay(sundayOf(today), offset * 7));
 
-/** The week a day sits in. A day outside the board is clamped to the nearest end. */
-export function weekOf(today: string, day: string): WeekOffset {
-  const sun = sundayOf(today);
-  return day < sun ? -1 : day < shiftDay(sun, 7) ? 0 : 1;
+/** The week a day sits in, as a number from this week (a day before this week is negative). */
+export const weekOf = (today: string, day: string): WeekOffset => Math.floor(dayGap(sundayOf(today), day) / 7);
+
+/** The oldest day with a logged entry, or undefined when nothing is logged. */
+export function oldestLogged(entries: readonly Pick<DietEntry, 'd'>[]): string | undefined {
+  let lo: string | undefined;
+  for (const e of entries) if (!lo || e.d < lo) lo = e.d;
+  return lo;
 }
 
-const firstDay = (today: string): string => shiftDay(sundayOf(today), -7);
-const lastDay = (today: string): string => shiftDay(sundayOf(today), 13);
+/** The weeks on offer: from the week of `oldest` (the oldest logged day; last week at the least, as before) to the week holding the last plannable day. */
+export function weekRange(today: string, oldest?: string): WeekRange {
+  const old = oldest && oldest > oldestDay(today) ? oldest : oldest ? oldestDay(today) : undefined; // an entry older than the log keeps is not reachable
+  return { min: Math.min(-1, old ? weekOf(today, old) : -1), max: weekOf(today, shiftDay(today, MAX_PLAN_AHEAD)) };
+}
 
-/** Whether a day is on the board at all: the first day of last week to the last day of next week. */
-export const onBoard = (today: string, day: string): boolean => day >= firstDay(today) && day <= lastDay(today);
+/** The week a step lands on: one week `dir` away, or null at an end of the range. */
+export function stepWeek(offset: WeekOffset, dir: -1 | 1, range: WeekRange): WeekOffset | null {
+  const to = offset + dir;
+  return to < range.min || to > range.max ? null : to;
+}
+
+/** The day the board shows on arriving at `offset`: today in this week, else the week's first day. */
+export const dayOnArrival = (today: string, offset: WeekOffset): string => (offset === 0 ? today : weekDays(today, offset)[0]!);
+
+/** "Last week", "This week", "Next week", "In 3 weeks", "5 weeks ago". */
+export function weekName(offset: WeekOffset): string {
+  if (offset === 0) return 'This week';
+  if (offset === -1) return 'Last week';
+  if (offset === 1) return 'Next week';
+  return offset > 0 ? `In ${offset} weeks` : `${-offset} weeks ago`;
+}
+
+const firstDay = (today: string, oldest?: string): string => shiftDay(sundayOf(today), weekRange(today, oldest).min * 7);
+const lastDay = (today: string): string => shiftDay(sundayOf(today), weekRange(today).max * 7 + 6);
+
+/** Whether a day is on the board at all: the first day of the oldest week on offer to the last day of the last. */
+export const onBoard = (today: string, day: string, oldest?: string): boolean => day >= firstDay(today, oldest) && day <= lastDay(today);
 
 /** How many day columns the board shows at a screen width (brief nutrition-header-sheet-wording): seven from 1440 px, three from 1000, two from 768, else one. */
 export type DaysShown = 1 | 2 | 3 | 7;
@@ -61,11 +89,19 @@ export function weekDates(today: string, offset: WeekOffset): string {
 }
 
 /** "Last week · Nov 1 to 7" (a week that crosses a month says both months). */
-export const weekLabel = (today: string, offset: WeekOffset): string => `${WEEK_NAME[offset]} · ${weekDates(today, offset)}`;
+export const weekLabel = (today: string, offset: WeekOffset): string => `${weekName(offset)} · ${weekDates(today, offset)}`;
 
-/** The day dropdown on a phone: three groups of seven, each day named, today marked. */
+/** The week list: one row per week in `range`, each named and dated, in two groups (earlier weeks, then this week and what is coming), the current week marked. */
+export interface WeekChoice { offset: WeekOffset; name: string; dates: string; label: string }
+export function weekChoices(today: string, range: WeekRange): WeekChoice[] {
+  const out: WeekChoice[] = [];
+  for (let o = range.min; o <= range.max; o++) out.push({ offset: o, name: weekName(o), dates: weekDates(today, o), label: weekLabel(today, o) });
+  return out;
+}
+
+/** The three weeks around today with their days, each day named, today marked. */
 export function dayGroups(today: string): { offset: WeekOffset; label: string; days: { id: string; label: string }[] }[] {
-  return WEEK_OFFSETS.map(offset => ({ offset, label: WEEK_NAME[offset], days: weekDays(today, offset).map(id => ({ id, label: dayLabel(id, today) })) }));
+  return [-1, 0, 1].map(offset => ({ offset, label: weekName(offset), days: weekDays(today, offset).map(id => ({ id, label: dayLabel(id, today) })) }));
 }
 
 /** The toolbar's target: "Adding to Sun 8 · today". */
