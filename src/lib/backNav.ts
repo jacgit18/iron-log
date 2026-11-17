@@ -35,7 +35,7 @@ type Win = { addEventListener(e: 'popstate', fn: (ev: { state: unknown }) => voi
 
 /** A sheet that asks before Back closes it (brief receipt-back-guard). Opt-in: only the open sheet that registers one is held, every other sheet closes as before.
  *  `holds()` says Back must not close it now (it has edits, or its prompt is showing); `ask()` shows the prompt. */
-export interface LeaveGuard { holds(): boolean; ask(): void }
+export interface LeaveGuard { holds(): boolean; ask(): void; cancel?(): boolean }
 let guard: LeaveGuard | null = null;
 /** Registers the open sheet's guard; the returned function removes it (a later sheet's guard is left alone). */
 export function setLeaveGuard(g: LeaveGuard): () => void {
@@ -46,6 +46,12 @@ export const activeLeaveGuard = (): LeaveGuard | null => guard;
 /** Closes the sheet, unless its guard holds it: then the prompt shows instead. For a tap outside the sheet and Escape, which would otherwise close it at once. */
 export function closeOrAsk(close: () => void, g: LeaveGuard | null = guard): void {
   if (g?.holds()) g.ask(); else close();
+}
+
+/** Escape: takes an open prompt back when the guard has one (`cancel` answers true), otherwise like `closeOrAsk`. */
+export function escapeOrAsk(close: () => void, g: LeaveGuard | null = guard): void {
+  if (g?.cancel?.()) return;
+  closeOrAsk(close, g);
 }
 
 /** Keeps the history in step with the store's tab and sheet, and the store in step with Back. Returns the function that stops it.

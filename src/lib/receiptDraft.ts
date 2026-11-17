@@ -16,6 +16,23 @@ export interface Draft { savedAt: number; mk: string; receipt: Receipt; restore:
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+const strs = (v: unknown): boolean => Array.isArray(v) && v.every(x => typeof x === 'string');
+
+/** Whether the sheet's saved edits have the shape the sheet reads (a draft from another build, or edited by hand, must not crash it). */
+function restoreOk(r: Record<string, unknown>): boolean {
+  const { choices, renames, touched, noRemember, separate, pickedStore, staged, seq, unticked, shareChoices, usual, typedName, addOn } = r;
+  return (choices === undefined || (Array.isArray(choices) && choices.every(c => isObj(c) && (c.itemId === null || typeof c.itemId === 'string') && typeof c.include === 'boolean')))
+    && (renames === undefined || (isObj(renames) && Object.values(renames).every(x => typeof x === 'string')))
+    && [touched, noRemember, separate, unticked].every(x => x === undefined || strs(x))
+    && (pickedStore === undefined || typeof pickedStore === 'string')
+    && (staged === undefined || (Array.isArray(staged) && staged.every(s => isObj(s) && typeof s.id === 'string' && typeof s.n === 'string' && typeof s.store === 'string' && Number.isFinite(s.qty) && (s.cents === null || Number.isFinite(s.cents)))))
+    && (seq === undefined || Number.isFinite(seq))
+    && (shareChoices === undefined || (isObj(shareChoices) && isObj(shareChoices.rows)))
+    && (usual === undefined || usual === null || typeof usual === 'boolean')
+    && (typedName === undefined || typedName === null || typeof typedName === 'string')
+    && (addOn === undefined || typeof addOn === 'boolean');
+}
+
 function lineOk(l: unknown): boolean {
   return isObj(l) && typeof l.text === 'string' && Number.isFinite(l.qty) && Number.isFinite(l.grossCents) && Number.isFinite(l.discountCents) && (l.matchId === null || typeof l.matchId === 'string');
 }
@@ -30,8 +47,10 @@ export function parseDraft(raw: string | null | undefined, now: number): Draft |
   if (typeof savedAt !== 'number' || !Number.isFinite(savedAt) || savedAt > now + SKEW_MS || now - savedAt >= DRAFT_MAX_MS) return null;
   if (typeof mk !== 'string' || !/^\d{4}-\d{2}$/.test(mk)) return null;
   if (!isObj(receipt) || !Array.isArray(receipt.lines) || receipt.lines.length === 0 || receipt.lines.length > MAX_LINES || !receipt.lines.every(lineOk)) return null;
+  if ((receipt.store !== undefined && typeof receipt.store !== 'string') || (receipt.date !== undefined && typeof receipt.date !== 'string')) return null;
+  if ((receipt.taxCents !== undefined && !Number.isFinite(receipt.taxCents)) || (receipt.totalCents !== undefined && !Number.isFinite(receipt.totalCents))) return null;
   if (restore !== undefined && restore !== null && !isObj(restore)) return null;
-  return { savedAt, mk, receipt: receipt as unknown as Receipt, restore: isObj(restore) ? restore : null };
+  return { savedAt, mk, receipt: receipt as unknown as Receipt, restore: isObj(restore) && restoreOk(restore) ? restore : null }; // edits in a shape the sheet does not read are dropped, the receipt itself still resumes
 }
 
 /** Keeps the draft. A storage that refuses (private window, full) is ignored: the sheet then closes as it always did. */

@@ -10,7 +10,7 @@ import { earlierText, missingIntro, reconcile, untickedText } from '../../lib/re
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import { leaveSheet, setLeaveGuard } from '../../lib/backNav.js';
-import { dropDraft, isEdited, keepDraft, shouldAskOnBack } from '../../lib/receiptDraft.js';
+import { dropDraft, isEdited, keepDraft, shouldAskOnBack, type Draft } from '../../lib/receiptDraft.js';
 import { askSharing } from '../../lib/sharingIntent.js';
 import type { Receipt } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -25,7 +25,7 @@ import type { Applied } from './ReceiptScan.js';
 import './ReceiptScan.css';
 
 /** The sheet's own edits, carried through Make a sharing group so the receipt comes back as it was left (the split choices are not kept: there was no group to choose with). */
-interface Restore { choices: Choice[]; renames: Record<string, string>; touched: string[]; noRemember: string[]; separate: string[]; pickedStore: string; staged: Staged[]; seq: number }
+interface Restore { choices: Choice[]; renames: Record<string, string>; touched: string[]; noRemember: string[]; separate: string[]; pickedStore: string; staged: Staged[]; seq: number; unticked?: string[]; addOn?: boolean; shareChoices?: ShareChoices; usual?: boolean | null; typedName?: string | null }
 
 // The receipt review sheet (brief receipt-scan): each line with the item it matched, its quantity and its price after any discount; change a match, untick a
 // line, check the total, then Apply. The plan and the checks are pure (lib/groceryReceipt.ts); this only holds the choices. Nothing is written before Apply.
@@ -50,18 +50,18 @@ export default function ReceiptSheet() {
   const [separate, setSeparate] = useState<ReadonlySet<string>>(() => new Set(restore?.separate)); // brief receipt-merge-lines: text keys whose lines the person split back into their own rows (sheet only)
   const [choices, setChoices] = useState<Choice[]>(() => (restore?.choices?.length === receipt?.lines.length ? restore!.choices : (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId })))); // the lines of one row share a match (groupLines), so they start with one choice
   const [pickedStore, setPickedStore] = useState(restore?.pickedStore ?? '');
-  const [usual, setUsual] = useState<boolean | null>(null); // null until the box is touched: then ticked only when every moved item has no usual store; ticked, Apply also makes the receipt's store the items' usual store
+  const [usual, setUsual] = useState<boolean | null>(restore?.usual ?? null); // null until the box is touched: then ticked only when every moved item has no usual store; ticked, Apply also makes the receipt's store the items' usual store
   const monthLines = useAppStore(s => s.groceryMonths[mk]?.lines);
   const monthData = useAppStore(s => s.groceryMonths[mk]);
-  const [shareChoices, setShareChoices] = useState<ShareChoices>(NO_CHOICES); // brief receipt-share: who shares what this receipt buys (null: each line keeps its usual)
+  const [shareChoices, setShareChoices] = useState<ShareChoices>(restore?.shareChoices ?? NO_CHOICES); // brief receipt-share: who shares what this receipt buys (null: each line keeps its usual)
   const [splitHidden, setSplitHidden] = useState(false); // Not now on the offer to make a sharing group
-  const [unticked, setUnticked] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-reconcile-ticked: ticked items the receipt does not show that the person chose to untick (off for every receipt)
+  const [unticked, setUnticked] = useState<ReadonlySet<string>>(() => new Set(restore?.unticked)); // brief receipt-reconcile-ticked: ticked items the receipt does not show that the person chose to untick (off for every receipt)
   const [stagedRaw, setStaged] = useState<Staged[]>(() => restore?.staged ?? []);
   const [form, setForm] = useState<{ line: number; draft: ItemDraft; error: string } | null>(null); // one form open at a time
   const seq = useRef(restore?.seq ?? 0);
-  const [addOn, setAddOn] = useState(true); // brief receipt-add-store: ticked by default, and only offered when the receipt names a store the list does not have
+  const [addOn, setAddOn] = useState(restore?.addOn ?? true); // brief receipt-add-store: ticked by default, and only offered when the receipt names a store the list does not have
   const [storeError, setStoreError] = useState(''); // the store could not be added: Apply stops here and nothing else is written
-  const [typedName, setTypedName] = useState<string | null>(null); // null: the tidied name read from the photo, untouched
+  const [typedName, setTypedName] = useState<string | null>(restore?.typedName ?? null); // null: the tidied name read from the photo, untouched
   const known = receipt ? matchStore(receipt.store, g.stores) : null;
   const cleaned = cleanStoreName(receipt?.store);
   const offer = !!receipt && !known && !!cleaned && receipt.lines.length > 0 && g.stores.length < MAX_STORES && !pickedStore; // picking a store in the list instead hides the box
@@ -85,12 +85,24 @@ export default function ReceiptSheet() {
   const edited = isEdited({ choices, initial: initialChoices, renames: Object.keys(renames).length, touched: touched.size, noRemember: noRemember.size, separate: separate.size, staged: stagedRaw.length, unticked: unticked.size, keep, formOpen: form !== null, storePicked: pickedStore !== '', shared: shareChoices !== NO_CHOICES });
   const live = useRef({ edited, asking });
   useEffect(() => { live.current = { edited, asking }; }); // the guard below reads the latest values when Back arrives
-  useEffect(() => setLeaveGuard({ holds: () => shouldAskOnBack(live.current.edited, live.current.asking), ask: () => setAsking(true) }), []);
+  // One snapshot of the sheet's own edits, for the draft and for the round trip through Make a sharing group; a default that was never touched is left out, so a resumed sheet does not count as edited.
+  const snapshot = (): Restore => ({ choices, renames, touched: [...touched], noRemember: [...noRemember], separate: [...separate], pickedStore, staged: stagedRaw, seq: seq.current, unticked: [...unticked], addOn, ...(shareChoices !== NO_CHOICES ? { shareChoices } : {}), ...(usual !== null ? { usual } : {}), ...(typedName !== null ? { typedName } : {}) });
+  // The guard only holds while this receipt is the open sheet. Escape on the prompt takes it back (cancel).
+  useEffect(() => setLeaveGuard({ holds: () => useAppStore.getState().modal?.type === 'receipt' && shouldAskOnBack(live.current.edited, live.current.asking), ask: () => setAsking(true), cancel: () => { if (!live.current.asking) return false; setAsking(false); return true; } }), []);
+  const wasAsking = useRef(false);
+  useEffect(() => { if (wasAsking.current && !asking) document.querySelector<HTMLElement>('.rcsheet')?.focus(); wasAsking.current = asking; }, [asking]); // Keep editing removed the focused button: focus goes back to the dialog, not to Apply
+  // The first write is at once (a receipt closed a moment after it opened still leaves a draft); later edits are written 500 ms after the last one, and a pending one is flushed when the sheet closes.
+  const written = useRef(false);
+  const pending = useRef<Draft | null>(null);
   useEffect(() => {
     if (!receipt || finished.current) return;
-    const restoreNow: Restore = { choices, renames, touched: [...touched], noRemember: [...noRemember], separate: [...separate], pickedStore, staged: stagedRaw, seq: seq.current };
-    keepDraft({ savedAt: Date.now(), mk, receipt, restore: restoreNow as unknown as Record<string, unknown> });
-  }, [receipt, mk, choices, renames, touched, noRemember, separate, pickedStore, stagedRaw]);
+    const d: Draft = { savedAt: Date.now(), mk, receipt, restore: snapshot() as unknown as Record<string, unknown> };
+    if (!written.current) { written.current = true; keepDraft(d); return; }
+    pending.current = d;
+    const t = window.setTimeout(() => { keepDraft(d); pending.current = null; }, 500);
+    return () => window.clearTimeout(t);
+  }, [receipt, mk, choices, renames, touched, noRemember, separate, pickedStore, stagedRaw, unticked, shareChoices, usual, typedName, addOn]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot() reads exactly these
+  useEffect(() => () => { if (pending.current && !finished.current) keepDraft(pending.current); }, []);
   const discard = () => { finished.current = true; dropDraft(); closeModal(); };
   if (!receipt || !plan || !rec) return null;
   const people = allPeople(g);
@@ -99,7 +111,7 @@ export default function ReceiptSheet() {
   const shareRows = tickedRows(rows, choices);
   const partiesByKey = new Map(shareRows.map(r => [r.key, rowParties(g, withItem.find(x => x.id === r.itemId), monthLines?.[r.itemId!], shareForRow(shareChoices, r.key))] as const)); // once per render: the box, the chips and the owed line all read it
   const owed = sharing ? owedText(g, monthData, taxStore, owedRows(shareRows, r => partiesByKey.get(r.key)!), people) : '';
-  const makeGroup = () => { askSharing({ ...(modal as unknown as Record<string, unknown>), restore: { choices, renames, touched: [...touched], noRemember: [...noRemember], separate: [...separate], pickedStore, staged: stagedRaw, seq: seq.current } satisfies Restore }); leaveSheet(window.history, window, () => navigate('daily/grocery/inventory', 'push'), closeModal); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
+  const makeGroup = () => { askSharing({ ...(modal as unknown as Record<string, unknown>), restore: snapshot() satisfies Restore }); leaveSheet(window.history, window, () => navigate('daily/grocery/inventory', 'push'), closeModal); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
 
   const check = checkText(plan.check);
   const dateMonth = receipt.date ? receipt.date.slice(0, 7) : null;

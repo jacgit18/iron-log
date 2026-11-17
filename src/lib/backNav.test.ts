@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeLeaveGuard, afterSheetClose, closeOrAsk, leaveSheet, navOf, onPop, opsFor, setLeaveGuard, startBackNav, type LeaveGuard } from './backNav';
+import { activeLeaveGuard, afterSheetClose, closeOrAsk, escapeOrAsk, leaveSheet, navOf, onPop, opsFor, setLeaveGuard, startBackNav, type LeaveGuard } from './backNav';
 
 const board = { tab: 'board', modal: false };
 const daily = { tab: 'daily', modal: false };
@@ -123,6 +123,13 @@ describe('leave guard registry', () => {
     const offOne = setLeaveGuard(one); const offTwo = setLeaveGuard(two);
     offOne(); expect(activeLeaveGuard()).toBe(two);
     offTwo(); expect(activeLeaveGuard()).toBeNull();
+  });
+  it('escapeOrAsk takes an open prompt back first, then behaves like closeOrAsk', () => {
+    let closed = 0, asked = 0, cancelled = 0;
+    escapeOrAsk(() => { closed++; }, { holds: () => true, ask: () => { asked++; }, cancel: () => { cancelled++; return true; } });
+    escapeOrAsk(() => { closed++; }, { holds: () => true, ask: () => { asked++; }, cancel: () => false });
+    escapeOrAsk(() => { closed++; }, null);
+    expect({ closed, asked, cancelled }).toEqual({ closed: 1, asked: 1, cancelled: 1 });
   });
   it('closeOrAsk asks when the guard holds and closes otherwise', () => {
     let closed = 0, asked = 0;

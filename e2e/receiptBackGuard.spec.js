@@ -83,6 +83,11 @@ test('a tap outside the sheet and Escape ask first when the receipt was changed,
   await page.getByRole('button', { name: 'Keep editing' }).click();
   await page.keyboard.press('Escape');
   await expect(prompt(page)).toBeVisible();
+  await page.keyboard.press('Escape'); // Escape on the prompt is Keep editing
+  await expect(prompt(page)).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(prompt(page)).toBeVisible();
   await page.getByRole('button', { name: 'Discard' }).click();
   await scan(page);
   await page.locator('.scrim').click({ position: { x: 4, y: 4 } });

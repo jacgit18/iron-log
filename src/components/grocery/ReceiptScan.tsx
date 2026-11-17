@@ -38,9 +38,11 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const draft = left.draft;
   const sheetOpen = useAppStore(s => s.modal?.type === 'receipt');
   useEffect(() => useAppStore.subscribe((s, p) => { if (p.modal?.type === 'receipt' && s.modal?.type !== 'receipt') setLeft(readNow()); }), []); // eslint-disable-line react-hooks/exhaustive-deps -- the receipt sheet just closed: read what it left
+  useEffect(() => { if (!left.draft) return; const t = window.setInterval(() => setLeft(readNow()), 60_000); return () => window.clearInterval(t); }, [left.draft]); // eslint-disable-line react-hooks/exhaustive-deps -- keeps the age shown, and drops the row when the draft expires
   const resume = () => {
-    if (!draft) return;
-    useAppStore.getState().openModal({ type: 'receipt', receipt: draft.receipt, remembered: {}, mk: draft.mk, restore: draft.restore, onApplied: (a: Applied) => setApplied({ ...a, mk: draft.mk, t: Date.now() }) });
+    const d = readDraft(Date.now()); // read again: it may have expired since the row was drawn
+    if (!d) { setLeft(readNow()); return; }
+    useAppStore.getState().openModal({ type: 'receipt', receipt: d.receipt, remembered: {}, mk: d.mk, restore: d.restore, onApplied: (a: Applied) => setApplied({ ...a, mk: d.mk, t: Date.now() }) });
   };
 
   // Uploads the photo kept in memory. On a failure the photo stays here for Try again until the notice is dismissed or the page closes.

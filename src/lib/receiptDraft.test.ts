@@ -52,6 +52,14 @@ describe('draft storage', () => {
     expect(loadDraft(s, NOW)).toBeNull();
     expect(s.m.has(DRAFT_KEY)).toBe(false);
   });
+  it('drops edits the sheet could not read but keeps the receipt, and rejects a receipt with odd fields', () => {
+    for (const restore of [{ touched: 5 }, { choices: [{ itemId: 1, include: true }] }, { staged: [{ id: 1 }] }, { shareChoices: { rows: 3 } }, { usual: 'yes' }, { seq: 'x' }])
+      expect(parseDraft(JSON.stringify({ ...draft(), restore }), NOW)).toMatchObject({ restore: null, mk: '2026-11' });
+    expect(parseDraft(JSON.stringify({ ...draft(), restore: { touched: ['a'], unticked: ['b'], usual: null, shareChoices: { whole: null, rows: {} } } }), NOW)?.restore).not.toBeNull();
+    const r = draft().receipt;
+    for (const bad of [{ ...r, date: 20260924 }, { ...r, store: 5 }, { ...r, taxCents: 'x' }, { ...r, totalCents: null }])
+      expect(parseDraft(JSON.stringify({ ...draft(), receipt: bad }), NOW)).toBeNull();
+  });
   it('accepts a draft saved without a restore', () => {
     const d = draft(); const raw = JSON.stringify({ savedAt: d.savedAt, mk: d.mk, receipt: d.receipt });
     expect(parseDraft(raw, NOW)?.restore).toBeNull();
