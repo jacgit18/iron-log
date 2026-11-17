@@ -1,0 +1,58 @@
+@layer base, components;
+@layer components {
+/* The week list (WeekList.tsx), the dropdown under the week name (WeekPicker.tsx) and the sheet's copy of it (WeekSheet.tsx). */
+.nb-weekname {
+  min-height: 44px;
+  padding: 0 var(--sp-8);
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .nb-weekname:hover {
+    background: var(--surface-2, var(--line));
+  }
+}
+.nb-wp-pop {
+  position: fixed;
+  z-index: var(--z-sheet);
+  width: min(20rem, calc(100vw - 16px));
+  max-height: min(60vh, 26rem);
+  overflow-y: auto;
+  padding: var(--sp-8);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+}
+.nb-wl,
+.nb-wl-items {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nb-wl-hd {
+  margin: var(--sp-8) var(--sp-4) var(--sp-4);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.nb-wl-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  text-align: start;
+}
+.nb-wl-item.on {
+  border-color: var(--ink);
+  font-weight: 600;
+}
+}
