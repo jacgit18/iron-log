@@ -68,7 +68,10 @@ export function checkTotals(receipt: Receipt): Check {
   const taxCents = receipt.taxCents ?? 0;
   const totalCents = receipt.totalCents ?? null;
   const subtotalCents = receipt.subtotalCents ?? null;
-  return { linesCents, taxCents, totalCents, diffCents: totalCents === null ? null : totalCents - linesCents - taxCents, subtotalCents, subtotalDiffCents: subtotalCents === null ? null : subtotalCents - linesCents };
+  // A store may print SUBTOTAL before its discounts (the sum of the printed line prices) or after them: no gap when either sum matches, so a correct scan of the first kind is not called short.
+  const grossCents = receipt.lines.reduce((a, l) => a + l.grossCents, 0);
+  const subtotalDiffCents = subtotalCents === null ? null : subtotalCents === grossCents ? 0 : subtotalCents - linesCents;
+  return { linesCents, taxCents, totalCents, diffCents: totalCents === null ? null : totalCents - linesCents - taxCents, subtotalCents, subtotalDiffCents };
 }
 
 /** The writes for the ticked, matched lines. Two lines for one item are added up; a weighed item takes the weight and a price per unit; any other item becomes packs whose prices add up to the net total to the cent. */
