@@ -13,12 +13,15 @@ let report;
 try { report = JSON.parse(run.stdout); } catch { console.error(`npm audit gave no readable report (exit ${run.status}): ${run.stderr.slice(0, 500)}`); process.exit(1); }
 if (report.error) { console.error(`npm audit failed: ${report.error.summary ?? 'unknown error'}`); process.exit(1); }
 
+// A report without these is not an audit result (an npm upgrade changed the shape, or the output was cut): fail, never pass on nothing.
+if (report.auditReportVersion === undefined || typeof report.metadata?.vulnerabilities !== 'object' || typeof report.vulnerabilities !== 'object' || report.vulnerabilities === null) { console.error('npm audit gave a report without the expected fields; refusing to pass on it.'); process.exit(1); }
+
 const bad = [];
-for (const [name, v] of Object.entries(report.vulnerabilities ?? {})) {
+for (const [name, v] of Object.entries(report.vulnerabilities)) {
   for (const via of v.via ?? []) {
     if (typeof via !== 'object' || !['high', 'critical'].includes(via.severity)) continue;
     const id = String(via.url ?? '').split('/').pop() ?? '';
-    if (id in EXCEPTIONS) { console.log(`allowed: ${id} (${name}): ${EXCEPTIONS[id]}`); continue; }
+    if (Object.hasOwn(EXCEPTIONS, id)) { console.log(`allowed: ${id} (${name}): ${EXCEPTIONS[id]}`); continue; }
     bad.push(`${name}: ${via.severity} ${via.title} ${via.url}`);
   }
 }
