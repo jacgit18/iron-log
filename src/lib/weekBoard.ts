@@ -1,10 +1,11 @@
-import { PLAN_SLOTS, drinkIdsOf, isDailySnackItem, isDrinkItem, samePlanItem } from '../shared/diet.js';
+import { PLAN_SLOTS, isDailySnackItem, isDrinkItem, samePlanItem } from '../shared/diet.js';
 import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { resultText, type SkippedDay } from './dayPicker.js';
 import { fullReason, inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { servingNumbers } from './dietLog.js';
 import { SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
 import { pairsOf } from './recipePairs.js';
+import { drinkIdsOf } from './recipeUses.js';
 import { sortByName } from './sort.js';
 import { mealOfItem } from './usualMeal.js';
 
