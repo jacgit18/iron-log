@@ -162,7 +162,9 @@ export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAIL
     }
     // This person's allowance (an admin account is exempt: owner, 2026-11-17), then the server's, which stays the spend backstop for everyone.
     const isAdmin = (res.locals.account as { isAdmin?: unknown } | undefined)?.isAdmin === true;
-    if ((!isAdmin && !daily.take(`receipt:${String(res.locals.userId)}`, receiptUserDailyMax).ok) || !daily.take('receipt', receiptDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap' });
+    // `scope` says which ceiling stopped it, so the app can tell a person who used their own five from one the whole server's 100 stopped (PR 1027 review).
+    if (!isAdmin && !daily.take(`receipt:${String(res.locals.userId)}`, receiptUserDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap', scope: 'person' });
+    if (!daily.take('receipt', receiptDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap', scope: 'server' });
     try {
       res.json({ ok: true, result: await readReceipt(ask, key, receiptModel, body!.image as string, items) });
     } catch (err) {

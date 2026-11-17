@@ -229,9 +229,27 @@ describe('POST /api/scan/receipt', () => {
     expect((await post({ image: jpeg, items })).status).toBe(200);
     const over = await post({ image: jpeg, items });
     expect(over.status).toBe(503);
-    expect(await over.json()).toMatchObject({ why: 'cap' });
+    expect(await over.json()).toMatchObject({ why: 'cap', scope: 'server' });
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg, items })).status).toBe(200);
+  });
+
+  it('names the person\'s own allowance apart from the server-wide one in the 503 (PR 1027 review)', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 5, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items })).status).toBe(200);
+    expect(await (await post({ image: jpeg, items })).json()).toMatchObject({ why: 'cap', scope: 'person' });
+  });
+
+  it('answers 503 upstream when both the first reply and the retry have no text (PR 1027 review)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 5 }, content: [{ type: 'thinking', thinking: 'x' }] }), { status: 200 });
+    const ask = vi.fn(thinkingOnly);
+    const post = await startReceipt({ key: 'k', fetch: ask as unknown as typeof fetch });
+    const res = await post({ image: jpeg, items });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ why: 'upstream' });
+    expect(ask).toHaveBeenCalledTimes(2);
   });
 
   it('does not stop an admin account at the per-person receipt allowance, but the server-wide ceiling still holds', async () => {

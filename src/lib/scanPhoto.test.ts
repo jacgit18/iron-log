@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentAllowance, resetAllowance } from './labelAllowance.js';
-import { fitSize, MAX_SIDE, SCAN_TEXT, scanLabel, scanReceipt, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
+import { fitSize, MAX_SIDE, RECEIPT_TEXT, SCAN_TEXT, scanLabel, scanReceipt, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
 import { currentSupplementAllowance, resetSupplementAllowance } from './supplementAllowance.js';
 
 describe('fitSize', () => {
@@ -126,6 +126,11 @@ describe('scanReceipt failures', () => {
   it('tells the daily cap apart from an outage', async () => {
     answer(503, { ok: false, why: 'cap' });
     expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'cap' });
+    answer(503, { ok: false, why: 'cap', scope: 'person' });
+    expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'cap' });
+    answer(503, { ok: false, why: 'cap', scope: 'server' }); // the whole server's ceiling: a neutral message, not "you have used"
+    expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'capAll' });
+    expect(RECEIPT_TEXT.capAll).toBe('Receipt scans are used up for everyone today. Try again tomorrow, or type the prices.');
     answer(503, { ok: false, why: 'upstream' });
     expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'unavailable' });
     g.fetch = async () => new Response('nope', { status: 503 });
