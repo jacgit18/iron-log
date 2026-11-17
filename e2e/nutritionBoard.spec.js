@@ -20,7 +20,7 @@ const hash = page => page.evaluate(() => location.hash);
 test('Nutrition is one board with a week switcher; the old Water, Last 7 days and Food eaten panels are gone', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('.nb-col')).toHaveCount(7);
-  await expect(page.getByRole('group', { name: 'Week' }).getByRole('button')).toHaveCount(2); // previous and next arrows, like the Board
+  await expect(page.getByRole('group', { name: 'Week' }).getByRole('button')).toHaveCount(3); // previous and next arrows, like the Board, and the week name that opens the week list
   await expect(page.locator('.nb-weekname')).toHaveText('This week');
   await expect(page.locator('#water-h, #water7-h, #sched-h')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Food eaten' })).toHaveCount(0);
