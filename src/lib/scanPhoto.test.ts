@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentAllowance, resetAllowance } from './labelAllowance.js';
-import { fitSize, MAX_SIDE, SCAN_TEXT, scanLabel, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
+import { fitSize, MAX_SIDE, SCAN_TEXT, scanLabel, scanReceipt, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
 import { currentSupplementAllowance, resetSupplementAllowance } from './supplementAllowance.js';
 
 describe('fitSize', () => {
@@ -108,5 +108,27 @@ describe('scanSupplement', () => {
   it('reads an odd answer as unavailable, never a throw', async () => {
     g.fetch = async () => new Response('not json', { status: 200 });
     expect(await scanSupplement(new Blob(['x']))).toEqual({ ok: false, reason: 'unavailable' });
+  });
+});
+
+describe('scanReceipt failures', () => {
+  const g = globalThis as Record<string, unknown>;
+  const saved = { fetch: g.fetch, createImageBitmap: g.createImageBitmap, document: g.document, __APP_VERSION__: g.__APP_VERSION__ };
+  const answer = (status: number, body: unknown = {}) => { g.fetch = async () => new Response(JSON.stringify(body), { status }); };
+  beforeEach(() => {
+    g.__APP_VERSION__ = 'test';
+    g.createImageBitmap = async () => ({ width: 4000, height: 3000, close() {} });
+    g.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {} }), toBlob: (done: (b: Blob) => void) => done(new Blob([new Uint8Array(1000).fill(0xff)])) }) };
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => { Object.assign(g, saved); vi.restoreAllMocks(); });
+
+  it('tells the daily cap apart from an outage', async () => {
+    answer(503, { ok: false, why: 'cap' });
+    expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'cap' });
+    answer(503, { ok: false, why: 'upstream' });
+    expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'unavailable' });
+    g.fetch = async () => new Response('nope', { status: 503 });
+    expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'unavailable' });
   });
 });
