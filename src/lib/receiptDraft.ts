@@ -27,7 +27,7 @@ const strs = (v: unknown): boolean => Array.isArray(v) && v.every(x => typeof x 
 
 /** Whether the sheet's saved edits have the shape the sheet reads (a draft from another build, or edited by hand, must not crash it). */
 function restoreOk(r: Record<string, unknown>): boolean {
-  const { choices, renames, touched, noRemember, separate, pickedStore, staged, seq, unticked, shareChoices, usual, typedName, addOn } = r;
+  const { choices, renames, touched, noRemember, separate, pickedStore, staged, seq, unticked, shareChoices, usual, typedName, addOn, rewards } = r;
   return (choices === undefined || (Array.isArray(choices) && choices.every(c => isObj(c) && (c.itemId === null || typeof c.itemId === 'string') && typeof c.include === 'boolean')))
     && (renames === undefined || (isObj(renames) && Object.values(renames).every(x => typeof x === 'string')))
     && [touched, noRemember, separate, unticked].every(x => x === undefined || strs(x))
@@ -37,6 +37,7 @@ function restoreOk(r: Record<string, unknown>): boolean {
     && (shareChoices === undefined || (isObj(shareChoices) && isObj(shareChoices.rows)))
     && (usual === undefined || usual === null || typeof usual === 'boolean')
     && (typedName === undefined || typedName === null || typeof typedName === 'string')
+    && (rewards === undefined || typeof rewards === 'string')
     && (addOn === undefined || typeof addOn === 'boolean');
 }
 

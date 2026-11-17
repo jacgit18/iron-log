@@ -78,9 +78,10 @@ describe('draft list storage', () => {
     expect(parseDrafts(raw(draft(), draft()), NOW)).toHaveLength(1);
   });
   it('drops edits the sheet could not read but keeps the receipt, and rejects a receipt with odd fields', () => {
-    for (const restore of [{ touched: 5 }, { choices: [{ itemId: 1, include: true }] }, { staged: [{ id: 1 }] }, { shareChoices: { rows: 3 } }, { usual: 'yes' }, { seq: 'x' }])
+    for (const restore of [{ touched: 5 }, { choices: [{ itemId: 1, include: true }] }, { staged: [{ id: 1 }] }, { shareChoices: { rows: 3 } }, { usual: 'yes' }, { seq: 'x' }, { rewards: 5 }, { rewards: null }])
       expect(parseDrafts(raw({ ...draft(), restore }), NOW)[0]).toMatchObject({ restore: null, mk: '2026-11' });
     expect(parseDrafts(raw({ ...draft(), restore: { touched: ['a'], unticked: ['b'], usual: null, shareChoices: { whole: null, rows: {} } } }), NOW)[0]?.restore).not.toBeNull();
+    expect(parseDrafts(raw({ ...draft(), restore: { rewards: '12.50' } }), NOW)[0]?.restore).toEqual({ rewards: '12.50' }); // brief receipt-rewards-credit: the typed amount restores
     const r = draft().receipt;
     for (const bad of [{ ...r, date: 20260924 }, { ...r, store: 5 }, { ...r, taxCents: 'x' }, { ...r, totalCents: null }])
       expect(parseDrafts(raw({ ...draft(), receipt: bad }), NOW)).toEqual([]);
