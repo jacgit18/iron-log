@@ -17,12 +17,12 @@ const good = '{"name":"Gnocchi","serving":"1 cup","servingG":140,"servingsPerPac
 
 async function start(deps: ScanDeps, path = 'label') {
   const app = express();
-  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
+  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; res.locals.account = { isAdmin: req.get('x-admin') === '1' }; next(); }); // the sign-in gate sets this in the real app
   app.use('/api/scan', scanRoutes(deps));
   server = app.listen(0);
   await new Promise(done => server!.once('listening', done));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/${path}`;
-  return (body: unknown, raw = false, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: raw ? String(body) : JSON.stringify(body) });
+  return (body: unknown, raw = false, user = 'u1', admin = false) => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user, ...(admin ? { 'x-admin': '1' } : {}) }, body: raw ? String(body) : JSON.stringify(body) });
 }
 
 describe('POST /api/scan/label', () => {
@@ -152,12 +152,12 @@ describe('POST /api/scan/receipt', () => {
   const reply = JSON.stringify({ store: "BJ'S", date: '2026-11-03', tax: 204, total: 4000, lines: [{ text: 'EGGS LRG 5 DZ', qty: 2, total: 2698, match: 'eggs' }, { text: 'GONE', qty: 1, total: 100, match: 'not-sent' }] });
   async function startReceipt(deps: ScanDeps) {
     const app = express();
-  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
-  app.use('/api/scan', scanRoutes(deps));
+    app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; res.locals.account = { isAdmin: req.get('x-admin') === '1' }; next(); }); // the sign-in gate sets this in the real app
+    app.use('/api/scan', scanRoutes(deps));
     server = app.listen(0);
     await new Promise(done => server!.once('listening', done));
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/receipt`;
-    return (body: unknown, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: JSON.stringify(body) });
+    return (body: unknown, user = 'u1', admin = false) => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user, ...(admin ? { 'x-admin': '1' } : {}) }, body: JSON.stringify(body) });
   }
 
   it('sends the photo, the item names and the key to the larger model, and answers with the checked receipt', async () => {
@@ -224,6 +224,21 @@ describe('POST /api/scan/receipt', () => {
     expect(await over.json()).toMatchObject({ why: 'cap' });
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg, items })).status).toBe(200);
+  });
+
+  it('does not stop an admin account at the per-person receipt allowance, but the server-wide ceiling still holds', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 3, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'owner', true)).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'owner', true)).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'plain')).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'plain')).status).toBe(503); // the server ceiling of 3 is used up
+  });
+
+  it('still stops a normal account at the per-person allowance', async () => {
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 50, fetch: (async () => model(reply)) as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'plain')).status).toBe(200);
+    expect(await (await post({ image: jpeg, items }, 'plain')).json()).toMatchObject({ why: 'cap' });
   });
 
   it('stops one person at their own receipt allowance and leaves the others theirs', async () => {
@@ -376,6 +391,22 @@ describe('scan output limits', () => {
     expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 900, outputTokens: 4850 });
     const none = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{}' }] }), { status: 200 });
     await expect(askModel(none as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).rejects.toThrow('stopped: unknown');
+  });
+
+  it('asks once more when a reply ends its turn with no text block, and logs the block types only', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 100, output_tokens: 50 }, content: [{ type: 'thinking', thinking: 'SECRET-THOUGHT' }] }), { status: 200 });
+    const ask = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockResolvedValueOnce(model('{"ok":1}'));
+    expect(await askModel(ask as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).toBe('{"ok":1}');
+    expect(ask).toHaveBeenCalledTimes(2);
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain('thinking');
+    expect(logged).not.toContain('SECRET-THOUGHT');
+    const empty = vi.fn(async () => thinkingOnly());
+    const err = await askModel(empty as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e);
+    expect((err as Error).message).toBe('no text in reply');
+    expect(empty).toHaveBeenCalledTimes(2);
+    expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 200, outputTokens: 100 });
   });
 
   const cutReply = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });

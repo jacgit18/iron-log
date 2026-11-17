@@ -75,9 +75,13 @@ test.describe('as an admin', () => {
     await page.getByLabel('Receipt photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'Could not read that receipt' })).toBeVisible();
     await page.unroute('**/api/scan/receipt');
-    await page.route('**/api/scan/receipt', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, why: 'cap' }) }));
+    await page.route('**/api/scan/receipt', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, why: 'upstream' }) }));
     await page.getByLabel('Receipt photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'Scan is not available right now' })).toBeVisible();
+    await page.unroute('**/api/scan/receipt');
+    await page.route('**/api/scan/receipt', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, why: 'cap' }) }));
+    await page.getByLabel('Receipt photo').setInputFiles(photo);
+    await expect(page.getByRole('status').filter({ hasText: 'used today' })).toBeVisible(); // the cap is not shown as an outage
     await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });
 

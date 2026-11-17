@@ -157,7 +157,9 @@ export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAIL
       if (!saidNoKey) { saidNoKey = true; console.warn(JSON.stringify({ msg: 'scan is off: ANTHROPIC_API_KEY is not set' })); }
       return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'no-key' });
     }
-    if (!daily.take(`receipt:${String(res.locals.userId)}`, receiptUserDailyMax).ok || !daily.take('receipt', receiptDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap' }); // this person's allowance, then the server's
+    // This person's allowance (an admin account is exempt: owner, 2026-11-17), then the server's, which stays the spend backstop for everyone.
+    const isAdmin = (res.locals.account as { isAdmin?: unknown } | undefined)?.isAdmin === true;
+    if ((!isAdmin && !daily.take(`receipt:${String(res.locals.userId)}`, receiptUserDailyMax).ok) || !daily.take('receipt', receiptDailyMax).ok) return void res.status(503).json({ ok: false, error: RECEIPT_UNAVAILABLE, why: 'cap' });
     try {
       res.json({ ok: true, result: await readReceipt(ask, key, receiptModel, body!.image as string, items) });
     } catch (err) {

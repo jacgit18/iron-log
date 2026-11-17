@@ -17,27 +17,33 @@ const tokensOf = (body: { usage?: { input_tokens?: unknown; output_tokens?: unkn
   return { inputTokens: n(body.usage?.input_tokens), outputTokens: n(body.usage?.output_tokens) };
 };
 
-/** The one vendor call (an image in, text out). Throws on any failure or a cut-off reply (`stop_reason` is not `end_turn`, e.g. `stopped: max_tokens`); an error for a reply that did come back has `spent` (its tokens, paid for even when cut off); the caller turns that into "not available". Thinking is bounded by `SCAN_EFFORT` where the model takes it. */
+/** The one vendor call (an image in, text out). Throws on any failure or a cut-off reply (`stop_reason` is not `end_turn`, e.g. `stopped: max_tokens`); an error for a reply that did come back has `spent` (its tokens, paid for even when cut off); the caller turns that into "not available". Thinking is bounded by `SCAN_EFFORT` where the model takes it.
+ *  A reply that ends normally but has no `text` block (thinking only; seen in production on a receipt, 2026-11-17) is asked for once more inside the same `SCAN_TIMEOUT_MS` budget; a second empty reply throws `no text in reply` with both calls' tokens in `spent`. The block types (names only, never text) are logged so a repeat explains itself. */
 export async function askModel(ask: typeof fetch, key: string, model: string, image: string, p: { system: string; text: string; maxTokens: number }): Promise<string> {
-  const r = await ask(API_URL, {
-    method: 'POST',
-    signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
-    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': API_VERSION },
-    body: JSON.stringify({
-      model,
-      max_tokens: p.maxTokens,
-      system: p.system,
-      ...(takesEffort(model) ? { output_config: { effort: SCAN_EFFORT } } : {}),
-      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } }, { type: 'text', text: p.text }] }],
-    }),
+  const signal = AbortSignal.timeout(SCAN_TIMEOUT_MS);
+  const body = JSON.stringify({
+    model,
+    max_tokens: p.maxTokens,
+    system: p.system,
+    ...(takesEffort(model) ? { output_config: { effort: SCAN_EFFORT } } : {}),
+    messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } }, { type: 'text', text: p.text }] }],
   });
-  if (!r.ok) throw new Error(`upstream ${r.status}`);
-  const body = (await r.json()) as { stop_reason?: unknown; content?: { type?: string; text?: unknown }[]; usage?: { input_tokens?: unknown; output_tokens?: unknown } };
-  const paidFor = (message: string) => Object.assign(new Error(message), { spent: tokensOf(body) });
-  if (body.stop_reason !== 'end_turn') throw paidFor(`stopped: ${typeof body.stop_reason === 'string' ? body.stop_reason : 'unknown'}`);
-  const first = body.content?.find(part => part?.type === 'text');
-  if (typeof first?.text !== 'string') throw paidFor('no text in reply');
-  return first.text;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (let attempt = 1; ; attempt++) {
+    const r = await ask(API_URL, { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': API_VERSION }, body });
+    if (!r.ok) throw new Error(`upstream ${r.status}`);
+    const reply = (await r.json()) as { stop_reason?: unknown; content?: { type?: string; text?: unknown }[]; usage?: { input_tokens?: unknown; output_tokens?: unknown } };
+    const t = tokensOf(reply);
+    inputTokens += t.inputTokens;
+    outputTokens += t.outputTokens;
+    const paidFor = (message: string) => Object.assign(new Error(message), { spent: { inputTokens, outputTokens } });
+    if (reply.stop_reason !== 'end_turn') throw paidFor(`stopped: ${typeof reply.stop_reason === 'string' ? reply.stop_reason : 'unknown'}`);
+    const first = reply.content?.find(part => part?.type === 'text');
+    if (typeof first?.text === 'string') return first.text;
+    console.warn(JSON.stringify({ msg: 'scan reply had no text block', attempt, blocks: (reply.content ?? []).map(part => (typeof part?.type === 'string' ? part.type : 'unknown')) }));
+    if (attempt >= 2) throw paidFor('no text in reply');
+  }
 }
 
 export interface TextReply { text: string; inputTokens: number; outputTokens: number }
