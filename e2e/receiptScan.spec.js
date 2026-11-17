@@ -85,9 +85,32 @@ test.describe('as an admin', () => {
     await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });
 
-  test('Scan receipt opens the camera and Pick from photos opens the library', async ({ page }) => {
+  test('Scan receipt opens a chooser with Camera and Photos, on a phone and on a desktop (brief receipt-pick-photo)', async ({ page }) => {
     await expect(page.getByLabel('Receipt camera')).toHaveAttribute('capture', 'environment');
     await expect(page.getByLabel('Receipt photo')).not.toHaveAttribute('capture');
-    await expect(page.locator('#groc-scan-pick')).toBeVisible();
+    for (const size of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+      await page.setViewportSize(size);
+      await expect(page.locator('#groc-scan-pick')).toBeHidden(); // shut until Scan receipt is pressed
+      await page.click('#groc-scan');
+      await expect(page.locator('#groc-scan')).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.getByRole('button', { name: 'Camera' })).toBeVisible();
+      const photos = page.getByRole('button', { name: 'Photos' });
+      await expect(photos).toBeVisible();
+      expect((await photos.boundingBox()).height).toBeGreaterThanOrEqual(44);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#groc-scan-pick')).toBeHidden();
+      await expect(page.locator('#groc-scan')).toBeFocused();
+    }
+  });
+
+  test('Photos opens the library picker, Camera the camera, and the chooser closes', async ({ page }) => {
+    await answer(page, good);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.click('#groc-scan');
+    const chooser = page.waitForEvent('filechooser');
+    await page.click('#groc-scan-pick');
+    await (await chooser).setFiles(photo);
+    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
+    await expect(page.locator('#groc-scan-choose')).toHaveCount(0);
   });
 });
