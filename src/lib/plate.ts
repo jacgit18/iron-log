@@ -1,3 +1,4 @@
+import { isDrinkRecipe } from '../shared/diet.js';
 import { PLATE_MARKS, cleanCounts } from '../shared/recipes.js';
 import type { PlanSlot, PlateMark, Recipe } from '../types.ts';
 import { hasParts } from './mealRollup.js';
@@ -17,6 +18,7 @@ const DEFAULT_OF = { protein: ['protein'], carbs: ['carb'], sides: ['veg'] } as 
 
 /** What a recipe covers on a plate: what the person set (`counts`); else, for a meal built from foods, everything its parts cover; else its category (Protein, Carbs, Sides), plus protein for a recipe with about 25 g or more per serving. `recipes` resolves a meal's parts. */
 export function marksOf(r: Recipe, recipes: readonly Recipe[] = [], seen: ReadonlySet<string> = new Set()): PlateMark[] {
+  if (isDrinkRecipe(r)) return []; // a drink has no plate role, whatever its category or protein
   const set = cleanCounts(r.counts);
   if (set) return set;
   const marks = new Set<PlateMark>();
@@ -34,9 +36,9 @@ export function marksOf(r: Recipe, recipes: readonly Recipe[] = [], seen: Readon
   return PLATE_MARKS.filter(m => marks.has(m));
 }
 
-/** What a slot's foods cover against what the slot needs: the marks needed, the ones covered, the ones missing. A slot with nothing in it has nothing to check. */
-export function plateCheck(slot: PlanSlot, foods: readonly Recipe[], recipes: readonly Recipe[] = foods): { need: readonly PlateMark[]; have: PlateMark[]; missing: PlateMark[] } {
-  const need = SLOT_NEEDS[slot];
+/** What a slot's foods cover against what the slot needs: the marks needed, the ones covered, the ones missing. A slot with nothing in it, or only drinks, has nothing to check. */
+export function plateCheck(slot: PlanSlot, all: readonly Recipe[], recipes: readonly Recipe[] = all): { need: readonly PlateMark[]; have: PlateMark[]; missing: PlateMark[] } {
+  const need = SLOT_NEEDS[slot], foods = all.filter(f => !isDrinkRecipe(f)); // drinks are outside the plate check
   if (!foods.length || !need.length) return { need: [], have: [], missing: [] };
   const covered = new Set(foods.flatMap(f => marksOf(f, recipes)));
   return { need, have: need.filter(m => covered.has(m)), missing: need.filter(m => !covered.has(m)) };

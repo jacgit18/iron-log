@@ -37,10 +37,10 @@ describe('a saved-meal item resolves through mealsMoved to its recipe (brief sav
 });
 
 describe('window', () => {
-  it('daysFrom counts forward and inWindow is today to 13 days after', () => {
+  it('daysFrom counts forward and inWindow is today to 364 days after', () => {
     expect(daysFrom('2026-10-30', 3)).toEqual(['2026-10-30', '2026-10-31', '2026-11-01']);
     expect(inWindow('2026-10-29', today)).toBe(false); expect(inWindow('2026-10-30', today)).toBe(true);
-    expect(inWindow('2026-11-12', today)).toBe(true); expect(inWindow('2026-11-13', today)).toBe(false);
+    expect(inWindow('2027-10-29', today)).toBe(true); expect(inWindow('2027-10-30', today)).toBe(false);
   });
   it('prunePlan drops earlier days', () => { expect(Object.keys(prunePlan({ '2026-10-29': [r('r1')], '2026-10-30': [r('r1')] }, today))).toEqual(['2026-10-30']); });
 });
@@ -51,7 +51,7 @@ describe('addItem, setPortion, removeItem', () => {
     p = addItem(p, today, m('m1'), today).plan!;
     expect(p[today]).toEqual([r('r1'), m('m1')]);
     expect(addItem(p, today, r('r1'), today).error).toMatch(/already/);
-    expect(addItem(p, '2026-10-29', r('r3'), today).error).toMatch(/two weeks/);
+    expect(addItem(p, '2026-10-29', r('r3'), today).error).toMatch(/52 weeks/);
     const full: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`)) };
     expect(addItem(full, today, r('r1'), today).error).toContain(String(MAX_PLAN_ITEMS));
   });

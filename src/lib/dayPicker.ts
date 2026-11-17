@@ -16,8 +16,11 @@ export interface SkippedDay { day: string; /** Short reason ("full", "already th
 export const ONE_OFF_REASON = 'One-off foods can’t be planned.';
 export const OWN_DAY_REASON = 'That is its own day.';
 export const PAST_ONLY_REASON = 'Only food you ate can move or copy.';
-export const WINDOW_REASON = 'You can plan the next two weeks.';
-export const PLAN_START_REASON = 'You can plan today and the next two weeks.';
+export const WINDOW_REASON = 'You can plan the next 52 weeks.';
+export const PLAN_START_REASON = 'You can plan today and the next 52 weeks.';
+
+/** How far the quick picks reach: the next two weeks, however far the plan window goes. */
+export const QUICK_PICK_DAYS = 14;
 
 /** The last day a plan can reach. */
 export const lastPlanDay = (today: string): string => shiftDay(today, MAX_PLAN_AHEAD);
@@ -39,7 +42,7 @@ export function dayReason(source: PickerSource, day: string, today: string): str
   return ateDayError(day, today);
 }
 
-/** Every day the picker reaches, oldest kept day to today + 13, each with its label and reason. Plans start today, so a planned source starts its list there. */
+/** Every day the picker reaches, oldest kept day to today + 364, each with its label and reason. Plans start today, so a planned source starts its list there. */
 export function pickerDays(source: PickerSource, today: string): PickerDay[] {
   const from = source.kind === 'plan' ? today : oldestDay(today), to = lastPlanDay(today);
   const out: PickerDay[] = [];
@@ -65,7 +68,7 @@ export function pickerWeek(source: PickerSource, today: string, weekStart: strin
 
 /** The quick picks: Tomorrow, Next 7 days, Weekdays for the next two weeks. Each day set is clipped to the days the source can go to (so a one-off food gets none); a pick left with no days is omitted. */
 export function quickPicks(source: PickerSource, today: string): QuickPick[] {
-  const ahead = Array.from({ length: MAX_PLAN_AHEAD }, (_, i) => shiftDay(today, i + 1)); // tomorrow to the end of the window
+  const ahead = Array.from({ length: QUICK_PICK_DAYS }, (_, i) => shiftDay(today, i + 1)); // tomorrow to the end of the quick picks' two weeks (not the whole plan window)
   const ok = (days: string[]) => days.filter(d => dayReason(source, d, today) === null);
   const weekday = (d: string) => { const n = parseDate(d).getDay(); return n >= 1 && n <= 5; };
   const picks: QuickPick[] = [
@@ -97,7 +100,7 @@ export function moveButton(days: readonly string[], meal: string | undefined, ow
   return changed ? { label: `Move to ${mealLabel(meal!)}`, enabled: true } : { label: 'Pick a day', enabled: false };
 }
 
-/** "This day on": `day` to the last plannable day, one entry per day. Empty when `day` is outside today..today + 13. */
+/** "This day on": `day` to the last plannable day, one entry per day. Empty when `day` is outside today..today + 364. */
 export function onwardDays(day: string, today: string): string[] {
   const out: string[] = [], last = lastPlanDay(today);
   for (let d = day < today ? today : day; d <= last; d = shiftDay(d, 1)) out.push(d);

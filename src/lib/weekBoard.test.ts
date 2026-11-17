@@ -85,7 +85,7 @@ describe('moveItem', () => {
     expect(moveItem({ [D]: [pi('chili', 'lunch')], [D2]: [pi('chili', 'lunch')] }, D, 0, D2, 'lunch', TODAY).error).toMatch(/already in that meal/);
     const full = { [D]: [pi('chili')], [D2]: Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `r${i}` })) };
     expect(moveItem(full, D, 0, D2, 'dinner', TODAY).error).toMatch(/hold 8/);
-    expect(moveItem(plan, D, 0, '2099-03-01', 'dinner', TODAY).error).toMatch(/two weeks/);
+    expect(moveItem(plan, D, 0, '2100-03-01', 'dinner', TODAY).error).toMatch(/52 weeks/);
   });
   it('a listed daily snack moves between days in Snack without counting, and into another meal it counts as planned (brief snacks-day-cap)', () => {
     const list = [{ id: 'yog' }], eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `r${i}` }));
@@ -121,10 +121,10 @@ describe('addItemsToDays and copyItemToDays', () => {
   it('skips the own day, a full day, a duplicate in that meal and a day outside the window, naming each', () => {
     const full = Array.from({ length: 8 }, (_, i) => pi(`f${i}`, 'lunch'));
     const plan = { [T]: [pi('chili', 'dinner')], [day(15)]: full, [day(16)]: [pi('chili', 'dinner')], [day(17)]: [pi('chili', 'lunch')] };
-    const r = copyItemToDays(plan, T, 0, [T, day(15), day(16), day(17), '2026-11-28', day(13)], T);
+    const r = copyItemToDays(plan, T, 0, [T, day(15), day(16), day(17), '2027-11-15', day(13)], T);
     expect(r.added).toEqual([day(17)]); // the same food in another meal is fine
     expect(r.plan[day(17)]).toHaveLength(2);
-    expect(r.skipped).toEqual([{ day: T, reason: 'its own day' }, { day: day(15), reason: 'full' }, { day: day(16), reason: 'already there' }, { day: '2026-11-28', reason: 'out of reach' }, { day: day(13), reason: 'out of reach' }]);
+    expect(r.skipped).toEqual([{ day: T, reason: 'its own day' }, { day: day(15), reason: 'full' }, { day: day(16), reason: 'already there' }, { day: '2027-11-15', reason: 'out of reach' }, { day: day(13), reason: 'out of reach' }]);
   });
   it('an all-skipped batch returns the plan unchanged with an error; a missing item is gone', () => {
     const plan = { [T]: [pi('chili', 'dinner')] };

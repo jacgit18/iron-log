@@ -26,9 +26,11 @@ beforeEach(() => { clearStorage(); useAppStore.setState(blank()); });
 async function fillEverything() {
   const wk = st().weekKey();
   const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push day';
+  const t = new Date(); t.setDate(t.getDate() + 1);
+  const tomorrow = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
   useAppStore.setState({
-    cfg: { ...structuredClone(DEFAULT_CFG), rest: 120, recipeChips: { hide: ['drinks'], order: ['sides', 'protein'] }, ingredientLimits: { caffeine: { kind: 'cap', amount: 400, unit: 'mg' } } },
-    recipes: [{ id: 'chili-ab12', n: 'Chili', cat: 'protein', tags: ['Meal prep', 'weeknight'], ing: [{ n: 'beans' }], steps: ['Simmer.'] }],
+    cfg: { ...structuredClone(DEFAULT_CFG), rest: 120, diet: { repeats: [{ rid: 'rp1', k: 'r', id: 'chili-ab12', x: 2, s: 'dinner', days: [1, 3, 5], from: wk }], repeatSkips: { [tomorrow]: ['rp1'] } }, recipeChips: { hide: ['drinks'], order: ['sides', 'protein'] }, ingredientLimits: { caffeine: { kind: 'cap', amount: 400, unit: 'mg' } } },
+    recipes: [{ id: 'chili-ab12', n: 'Chili', cat: 'protein', meal: 'dinner', tags: ['Meal prep', 'weeknight'], ing: [{ n: 'beans' }], steps: ['Simmer.'] }],
     programs: { A: mine, B: BUILTIN.B },
     body: [{ wk, d: wk, w: 181.5 }],
     experiments: [{ id: 'E1', ex: 'hack', ph: 'hyp', note: 'try a slower tempo' }],
@@ -56,6 +58,10 @@ describe('backup round trip', () => {
     expect(first.config.rest).toBe(120);
     expect(first.programs.A.days[0].title).toBe('Push day');
     expect(first.recipes[0].tags).toEqual(['Meal prep', 'weeknight']); // recipe tags and the chip setting are in the file
+    expect(first.recipes[0].meal).toBe('dinner'); // a food's usual meal, its repeats and their skips are in the file (brief nutrition-meal-labels-year-repeat)
+    expect(first.config.diet.repeats).toEqual([{ rid: 'rp1', k: 'r', id: 'chili-ab12', x: 2, s: 'dinner', days: [1, 3, 5], from: first.config.diet.repeats[0].from }]);
+    expect(first.config.diet.repeats[0].from).toMatch(/^\d{4}-\d\d-\d\d$/);
+    expect(Object.values(first.config.diet.repeatSkips)).toEqual([['rp1']]);
     expect(first.config.recipeChips).toEqual({ hide: ['drinks'], order: ['sides', 'protein'] });
     expect(first.config.ingredientLimits).toEqual({ caffeine: { kind: 'cap', amount: 400, unit: 'mg' } }); // active ingredients and your own limits are in the file
     expect(first.supplements.items[0].ingredients).toEqual([{ name: 'Omega-3', amount: 475, unit: 'mg' }, { name: 'EPA', amount: 175, unit: 'mg' }]);

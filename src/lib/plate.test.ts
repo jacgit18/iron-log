@@ -104,3 +104,16 @@ describe('the Counts as chips', () => {
     expect(countsToSave(true, ['protein', 'veg'])).toEqual(['protein', 'veg']);
   });
 });
+
+describe('drinks are outside the plate check (brief nutrition-meal-labels-year-repeat)', () => {
+  const tea = rec('tea', 'protein', { uses: ['drink'], p: 40 });
+  it('a drink covers nothing, whatever its category or protein', () => { expect(marksOf(tea)).toEqual([]); });
+  it('does not count toward a slot, and a slot of only drinks has nothing to check', () => {
+    expect(plateCheck('breakfast', [tea, rice]).have).toEqual(['carb']);
+    expect(plateCheck('breakfast', [tea, rice]).missing).toEqual(['protein']);
+    expect(plateCheck('breakfast', [tea])).toEqual({ need: [], have: [], missing: [] });
+  });
+  it('a drink-labeled meal keeps its marks nowhere: its own counts are ignored too', () => {
+    expect(marksOf(rec('shake', 'protein', { uses: ['drink'], counts: ['protein'] }))).toEqual([]);
+  });
+});
