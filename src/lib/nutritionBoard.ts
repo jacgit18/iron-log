@@ -1,6 +1,6 @@
 import type { Boost, DietEntry, PlanSlot, Recipe, SavedMeal, Supplements } from '../types.ts';
 import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
-import { dayLabel, shortDay, sundayOf } from './dayNames.js';
+import { shortDay, sundayOf } from './dayNames.js';
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';
 import type { Plan } from './dietPlan.js';
@@ -34,8 +34,9 @@ export function oldestLogged(entries: readonly Pick<DietEntry, 'd'>[]): string |
 
 /** The weeks on offer: from the week of `oldest` (the oldest logged day; last week at the least, as before) to the week holding the last plannable day. */
 export function weekRange(today: string, oldest?: string): WeekRange {
-  const old = oldest && oldest > oldestDay(today) ? oldest : oldest ? oldestDay(today) : undefined; // an entry older than the log keeps is not reachable
-  return { min: Math.min(-1, old ? weekOf(today, old) : -1), max: weekOf(today, shiftDay(today, MAX_PLAN_AHEAD)) };
+  const keptFrom = oldestDay(today); // an entry older than the log keeps is not reachable
+  const first = oldest ? (oldest > keptFrom ? oldest : keptFrom) : null;
+  return { min: first ? Math.min(-1, weekOf(today, first)) : -1, max: weekOf(today, shiftDay(today, MAX_PLAN_AHEAD)) };
 }
 
 /** The week a step lands on: one week `dir` away, or null at an end of the range. */
@@ -97,11 +98,6 @@ export function weekChoices(today: string, range: WeekRange): WeekChoice[] {
   const out: WeekChoice[] = [];
   for (let o = range.min; o <= range.max; o++) out.push({ offset: o, name: weekName(o), dates: weekDates(today, o), label: weekLabel(today, o) });
   return out;
-}
-
-/** The three weeks around today with their days, each day named, today marked. */
-export function dayGroups(today: string): { offset: WeekOffset; label: string; days: { id: string; label: string }[] }[] {
-  return [-1, 0, 1].map(offset => ({ offset, label: weekName(offset), days: weekDays(today, offset).map(id => ({ id, label: dayLabel(id, today) })) }));
 }
 
 /** The toolbar's target: "Adding to Sun 8 · today". */
