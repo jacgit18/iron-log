@@ -397,8 +397,10 @@ describe('scan output limits', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const thinkingOnly = () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 100, output_tokens: 50 }, content: [{ type: 'thinking', thinking: 'SECRET-THOUGHT' }] }), { status: 200 });
     const ask = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockResolvedValueOnce(model('{"ok":1}'));
+    const efforts = () => ask.mock.calls.map(c => (JSON.parse((c[1] as { body: string }).body).output_config ?? {}).effort);
     expect(await askModel(ask as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).toBe('{"ok":1}');
     expect(ask).toHaveBeenCalledTimes(2);
+    expect(efforts()).toEqual([undefined, undefined]); // model 'm' takes no effort field
     const logged = JSON.stringify(warn.mock.calls);
     expect(logged).toContain('thinking');
     expect(logged).not.toContain('SECRET-THOUGHT');
@@ -407,6 +409,20 @@ describe('scan output limits', () => {
     expect((err as Error).message).toBe('no text in reply');
     expect(empty).toHaveBeenCalledTimes(2);
     expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 200, outputTokens: 100 });
+  });
+
+  it('retries a thinking-only reply at lower effort, and an error on the retry keeps the first call\'s spend', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 100, output_tokens: 50 }, content: [{ type: 'thinking', thinking: 'x' }] }), { status: 200 });
+    const ask = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockResolvedValueOnce(model('{"ok":1}'));
+    await askModel(ask as unknown as typeof fetch, 'k', 'claude-sonnet-5-5', jpeg, { system: 's', text: 't', maxTokens: 10 });
+    expect(ask.mock.calls.map(c => JSON.parse((c[1] as { body: string }).body).output_config.effort)).toEqual([SCAN_EFFORT, 'low']);
+    const aborted = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockRejectedValueOnce(Object.assign(new Error('timed out'), { name: 'TimeoutError' }));
+    const err = await askModel(aborted as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e);
+    expect((err as Error).name).toBe('TimeoutError');
+    expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 100, outputTokens: 50 });
+    const first = vi.fn().mockRejectedValueOnce(new Error('boom'));
+    expect(((await askModel(first as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e)) as { spent?: unknown }).spent).toBeUndefined();
   });
 
   const cutReply = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });

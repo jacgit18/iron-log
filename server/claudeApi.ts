@@ -11,6 +11,8 @@ export const SCAN_TIMEOUT_MS = 90_000;
 export const takesEffort = (model: string): boolean => /^claude-(haiku|sonnet|opus|fable|mythos)-5(-\d+)?$/.test(model);
 /** Effort of the scans: below the default of Sonnet 5.5 (`high`) and Haiku 5.5 (`medium`), so thinking is bounded, above the resolver's `low` because a scan reads dense print and is not yet measured lower. */
 export const SCAN_EFFORT = 'medium';
+/** Effort of the one retry after a reply with no text block: lower, because thinking that used up the output is the likely cause, so the same request would likely come back empty again. */
+const RETRY_EFFORT = 'low';
 
 const tokensOf = (body: { usage?: { input_tokens?: unknown; output_tokens?: unknown } }) => {
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -18,22 +20,27 @@ const tokensOf = (body: { usage?: { input_tokens?: unknown; output_tokens?: unkn
 };
 
 /** The one vendor call (an image in, text out). Throws on any failure or a cut-off reply (`stop_reason` is not `end_turn`, e.g. `stopped: max_tokens`); an error for a reply that did come back has `spent` (its tokens, paid for even when cut off); the caller turns that into "not available". Thinking is bounded by `SCAN_EFFORT` where the model takes it.
- *  A reply that ends normally but has no `text` block (thinking only; seen in production on a receipt, 2026-11-17) is asked for once more inside the same `SCAN_TIMEOUT_MS` budget; a second empty reply throws `no text in reply` with both calls' tokens in `spent`. The block types (names only, never text) are logged so a repeat explains itself. */
+ *  A reply that ends normally but has no `text` block (thinking only; seen in production on a receipt, 2026-11-17) is asked for once more at `low` effort inside the same `SCAN_TIMEOUT_MS` budget (an error on that call, such as the timeout, still carries the first call's tokens in `spent`); a second empty reply throws `no text in reply` with both calls' tokens in `spent`. The block types (names only, never text) are logged so a repeat explains itself. */
 export async function askModel(ask: typeof fetch, key: string, model: string, image: string, p: { system: string; text: string; maxTokens: number }): Promise<string> {
   const signal = AbortSignal.timeout(SCAN_TIMEOUT_MS);
-  const body = JSON.stringify({
+  const bodyFor = (effort: string) => JSON.stringify({
     model,
     max_tokens: p.maxTokens,
     system: p.system,
-    ...(takesEffort(model) ? { output_config: { effort: SCAN_EFFORT } } : {}),
+    ...(takesEffort(model) ? { output_config: { effort } } : {}),
     messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } }, { type: 'text', text: p.text }] }],
   });
   let inputTokens = 0;
   let outputTokens = 0;
+  // An error from the call itself (a status, the shared timeout) on the retry still carries what the first call cost.
+  const withSpent = (e: unknown) => (inputTokens + outputTokens > 0 && !(e instanceof Error && 'spent' in e) ? Object.assign(e instanceof Error ? e : new Error(String(e)), { spent: { inputTokens, outputTokens } }) : e);
   for (let attempt = 1; ; attempt++) {
-    const r = await ask(API_URL, { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': API_VERSION }, body });
-    if (!r.ok) throw new Error(`upstream ${r.status}`);
-    const reply = (await r.json()) as { stop_reason?: unknown; content?: { type?: string; text?: unknown }[]; usage?: { input_tokens?: unknown; output_tokens?: unknown } };
+    let reply: { stop_reason?: unknown; content?: { type?: string; text?: unknown }[]; usage?: { input_tokens?: unknown; output_tokens?: unknown } };
+    try {
+      const r = await ask(API_URL, { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': API_VERSION }, body: bodyFor(attempt === 1 ? SCAN_EFFORT : RETRY_EFFORT) });
+      if (!r.ok) throw new Error(`upstream ${r.status}`);
+      reply = (await r.json()) as typeof reply;
+    } catch (e) { throw withSpent(e); }
     const t = tokensOf(reply);
     inputTokens += t.inputTokens;
     outputTokens += t.outputTokens;
