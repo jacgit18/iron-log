@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures.js';
 import { startRecipe, newMenuVisible } from './recipesNav.js';
+import { openNutrition } from './nutritionBoardHelpers.js';
 
 // Progress here is the hub with drill-in pages, which is what a window under 1280px shows (progressOnePage.spec.js covers the wide page).
 test.use({ viewport: { width: 1100, height: 900 } });
@@ -138,4 +139,62 @@ test('Skip to content keeps the address', async ({ page }) => {
   await page.keyboard.press('Enter');
   expect(await hash(page)).toBe('#/progress/trends');
   await expect(page.locator('.hubback')).toBeVisible();
+});
+
+// The Nutrition week list (brief nutrition-meal-labels-year-repeat): a viewed week is never an address; the dropdown (desktop) and the sheet (phone) leave `#/daily/nutrition` as it is. The fixed clock is Thursday 2026-09-24.
+test('picking a week from the dropdown keeps the address; Back and a reload leave the board on Nutrition', async ({ page }) => {
+  await openNutrition(page);
+  expect(await hash(page)).toBe('#/daily/nutrition');
+  await page.locator('.nb-weekname').click();
+  const list = page.getByRole('dialog', { name: 'Choose a week' });
+  await expect(list.getByRole('button', { name: /^This week/ })).toHaveAttribute('aria-current', 'true');
+  await expect(list.getByRole('button')).toHaveCount(1 + 1 + 52 + 1); // last week, this week, then 52 weeks ahead
+  await list.getByRole('button', { name: /^In 5 weeks/ }).click();
+  await expect(list).toHaveCount(0);
+  await expect(page.locator('.nb-weekname')).toHaveText('In 5 weeks');
+  await expect(page.locator('.nb-col').first()).toHaveAttribute('data-day', '2026-10-25');
+  expect(await hash(page)).toBe('#/daily/nutrition');
+  await page.reload();
+  await expect(page.locator('#nb-h')).toBeVisible();
+  expect(await hash(page)).toBe('#/daily/nutrition');
+  await expect(page.locator('.nb-weekname')).toHaveText('This week'); // a reload shows this week, as it always did
+});
+
+test('the arrows and the list end at 52 weeks ahead and at last week', async ({ page }) => {
+  await openNutrition(page);
+  await page.locator('.nb-weekname').click();
+  await page.getByRole('dialog', { name: 'Choose a week' }).getByRole('button', { name: /^In 52 weeks/ }).click();
+  await expect(page.locator('.nb-weekname')).toHaveText('In 52 weeks');
+  await expect(page.getByRole('button', { name: 'Next week' })).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('button', { name: 'Previous week' }).click();
+  await expect(page.locator('.nb-weekname')).toHaveText('In 51 weeks');
+  await page.locator('.nb-weekname').click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'This week', exact: true }).click();
+  await page.getByRole('button', { name: 'Previous week' }).click();
+  await expect(page.getByRole('button', { name: 'Previous week' })).toHaveAttribute('aria-disabled', 'true'); // nothing is logged before last week
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 375, height: 800 } });
+  test('the week list is a bottom sheet with one Back step and a Close button', async ({ page }) => {
+    await openNutrition(page);
+    await page.locator('.nb-weekname').click();
+    const sheet = page.getByRole('dialog', { name: 'Choose a week' });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(sheet).toHaveCount(0);
+    await page.locator('.nb-weekname').click();
+    await page.goBack(); // Back closes just the sheet
+    await expect(sheet).toHaveCount(0);
+    expect(await hash(page)).toBe('#/daily/nutrition');
+    await page.locator('.nb-weekname').click();
+    await sheet.getByRole('button', { name: /^In 3 weeks/ }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.locator('.nb-weekname')).toHaveText('In 3 weeks');
+    await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-10-11'); // the first day of the week
+    expect(await hash(page)).toBe('#/daily/nutrition');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  });
 });

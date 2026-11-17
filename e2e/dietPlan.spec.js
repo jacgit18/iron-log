@@ -112,7 +112,6 @@ test('The week arrows move between Last week, This week and Next week, which swi
   await expect(board(page).getByRole('status').filter({ hasText: 'This week · Sep' })).toBeVisible();
   await week.getByRole('button', { name: 'Next week' }).click();
   await expect(board(page).locator('.nb-weekname')).toHaveText('Next week');
-  await expect(week.getByRole('button', { name: 'Next week' })).toHaveAttribute('aria-disabled', 'true'); // the end of the board
   await expect(board(page).locator('.nb-col')).toHaveCount(7);
   await expect(board(page).locator('.nb-col.today')).toHaveCount(0);
   await week.getByRole('button', { name: 'Previous week' }).click();

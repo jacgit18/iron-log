@@ -294,7 +294,7 @@ test('a sheet adds one Back step and Back closes it; the page keeps its address'
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 375, height: 800 } });
 
-  test('one day with joined day tabs: this week goes to today, other weeks to their first day; the week arrows stop at the ends; no sideways scroll', async ({ page }) => {
+  test('one day with joined day tabs: this week goes to today, other weeks to their first day; Previous stops at last week; no sideways scroll', async ({ page }) => {
     await openNutrition(page);
     await expect(page.locator('.nb-col')).toHaveCount(1);
     const tabs = page.locator('.wdc-tabs [role="tab"]');
@@ -308,7 +308,6 @@ test.describe('on a phone', () => {
     await expect(page.locator('.nb-weekname')).toHaveText('Next week');
     await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-09-27'); // its first day
     await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('button', { name: 'Next week' })).toHaveAttribute('aria-disabled', 'true');
     await tabs.nth(6).click();
     await expect(page.locator('.nb-col')).toHaveAttribute('data-day', '2026-10-03'); // the Saturday that ends next week
     await page.getByRole('button', { name: 'Previous week' }).click();
