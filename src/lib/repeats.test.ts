@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_PLAN_AHEAD, MAX_REPEATS } from '../shared/diet.js';
 import type { RepeatItem } from '../types.ts';
 import { shiftDay } from './dietLog.js';
-import { addRepeat, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, repeatPlanItem, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
+import { addRepeat, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, repeatPlanItem, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
 
 const today = '2026-11-16'; // a Monday
 const rep = (rid: string, days: number[], extra: Partial<RepeatItem> = {}): RepeatItem => ({ rid, k: 'r', id: 'oats', days, from: today, ...extra });
@@ -130,5 +130,19 @@ describe('the Repeat sheet rules', () => {
   it('shows a skipped repeat again', () => {
     expect(unskipRepeat({ '2026-11-18': ['a', 'b'] }, '2026-11-18', 'a')).toEqual({ '2026-11-18': ['b'] });
     expect(unskipRepeat({ '2026-11-18': ['a'] }, '2026-11-18', 'a')).toEqual({});
+  });
+});
+
+describe('repeatFor and repeatSummary', () => {
+  it('finds the repeat by its rid, or by the same food in the same meal', () => {
+    const l = [rep('rp1', every, { id: 'almonds', s: 'snack' }), rep('rp2', every, { id: 'tea' })];
+    expect(repeatFor(l, { k: 'r', id: 'x', rp: 'rp2' })!.id).toBe('tea');
+    expect(repeatFor(l, { k: 'r', id: 'almonds', s: 'snack' })!.rid).toBe('rp1');
+    expect(repeatFor(l, { k: 'r', id: 'almonds', s: 'lunch' })).toBeUndefined();
+    expect(repeatFor(undefined, { k: 'r', id: 'tea' })).toBeUndefined();
+  });
+  it('says what the choice means, and asks for a day when there is none', () => {
+    expect(repeatSummary(weekdays, 'Snack', 'Mon 16')).toBe('Weekdays in Snack, every week from Mon 16 for the next 52 weeks. Nothing is copied: change or stop it here.');
+    expect(repeatSummary([], 'Snack', 'Mon 16')).toBe('Pick at least one day.');
   });
 });

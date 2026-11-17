@@ -1,0 +1,30 @@
+@layer base, components;
+@layer components {
+/* The Repeat sheet (RepeatSheet.tsx): two shortcut buttons and seven day ticks, 44 px targets, the days in one row that never overflows. */
+.nb-rp-short {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.nb-rp-short .btn {
+  min-height: 44px;
+}
+.nb-rp-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--sp-6);
+  margin: 0 0 var(--sp-8);
+}
+.nb-rp-day {
+  min-height: 44px;
+  min-width: 0;
+  padding-inline: 0;
+}
+.nb-rp-short .btn[aria-pressed="true"],
+.nb-rp-day[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+}

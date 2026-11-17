@@ -106,3 +106,15 @@ export function unskipRepeat(skips: Readonly<Record<string, string[]>> | undefin
   if (kept.length) out[day] = kept; else delete out[day];
   return out;
 }
+
+/** The repeat a planned item stands for: the same food in the same meal, by `rid` when the item is a shown repeat. */
+export function repeatFor(list: readonly RepeatItem[] | undefined, item: { k: string; id: string; s?: PlanSlot; rp?: string }): RepeatItem | undefined {
+  if (item.rp) return list?.find(r => r.rid === item.rp);
+  return list?.find(r => samePlanItem(item as PlanItem, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) }));
+}
+
+/** The sentence under the day ticks: what the choice means. */
+export function repeatSummary(days: readonly number[], meal: string, fromName: string): string {
+  if (!days.length) return 'Pick at least one day.';
+  return `${daysName(days)} in ${meal}, every week from ${fromName} for the next 52 weeks. Nothing is copied: change or stop it here.`;
+}
