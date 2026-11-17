@@ -27,7 +27,7 @@ function fake() {
 describe('days offered', () => {
   it('goes back as far as the log keeps entries and ahead as far as the board plans', () => {
     expect(dayRange(TODAY)).toEqual({ min: oldestDay(TODAY), max: shiftDay(TODAY, MAX_PLAN_AHEAD) });
-    expect(MAX_PLAN_AHEAD).toBe(13);
+    expect(MAX_PLAN_AHEAD).toBe(364);
   });
   it('plans only after today', () => {
     expect(isAhead(TODAY, TODAY)).toBe(false);

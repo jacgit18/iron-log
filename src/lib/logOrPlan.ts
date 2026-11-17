@@ -52,7 +52,7 @@ export function logOrPlan(ports: Ports, recipe: Pick<Recipe, 'id' | 'n' | 'kcal'
     if ('error' in made) return fail(made.error);
     return logEntry(ports, made.entry, `Logged ${recipe.n}: ${amount} to ${day === today ? 'today' : day}.`);
   }
-  if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
+  if (!inWindow(day, today)) return fail('You can plan today and the next 52 weeks.');
   if (!meal) return fail('Pick a meal.');
   if (!planPortionOk(servings)) return fail('A planned portion is half steps, up to 10.');
   const before = ports.plan()[day]?.length ?? 0;

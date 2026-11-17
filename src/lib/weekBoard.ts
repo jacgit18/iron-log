@@ -68,7 +68,7 @@ type Moved = { plan: Plan; error: null } | { plan: null; error: string };
 export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string, snacks?: readonly DailySnack[]): Moved {
   const it = plan[fromDay]?.[index];
   if (!it) return { plan: null, error: 'That is gone.' };
-  if (!inWindow(toDay, today)) return { plan: null, error: 'You can plan today and the next two weeks.' };
+  if (!inWindow(toDay, today)) return { plan: null, error: 'You can plan today and the next 52 weeks.' };
   const { s: _old, ...rest } = it;
   const moved: PlanItem = { ...rest, ...(slot ? { s: slot } : {}) };
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on

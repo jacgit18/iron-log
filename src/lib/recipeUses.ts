@@ -24,6 +24,11 @@ export function usesOf(r: Pick<Recipe, 'cat' | 'type' | 'uses'>): RecipeUse[] {
 
 export const hasUse = (r: Pick<Recipe, 'cat' | 'type' | 'uses'>, u: RecipeUse): boolean => usesOf(r).includes(u);
 
+/** Whether a recipe is a drink, by the same rule as the Drinks tab: a saved Drink label, else its Drinks category or Drink type (a recipe saved before Used as labels has no `uses`). */
+export const isDrink = (r: Pick<Recipe, 'cat' | 'type' | 'uses'> | undefined): boolean => !!r && hasUse(r, 'drink');
+/** The ids of the drinks among `recipes`; pass it to `plannedCount`. */
+export const drinkIdsOf = (recipes: readonly Pick<Recipe, 'id' | 'cat' | 'type' | 'uses'>[]): ReadonlySet<string> => new Set(recipes.filter(isDrink).map(r => r.id));
+
 /** Whether a recipe can be eaten as it is: a meal, a ready-to-eat food or a drink. Only these get a Log button. */
 export const isEatable = (r: Pick<Recipe, 'cat' | 'type' | 'uses'>): boolean => usesOf(r).some(u => u !== 'ingredient');
 
