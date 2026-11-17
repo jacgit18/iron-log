@@ -86,7 +86,11 @@ export function newRid(list: readonly RepeatItem[]): string {
 export function saveRepeat(list: readonly RepeatItem[], spec: { rid?: string; item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }; days: readonly number[]; from: string }): Edit {
   const days = [...new Set(spec.days)].sort((a, b) => a - b);
   if (!days.length) return { list: null, error: 'Pick at least one day.' };
-  if (spec.rid && list.some(r => r.rid === spec.rid)) return { list: list.map(r => (r.rid === spec.rid ? { ...r, days } : r)), error: null };
+  if (spec.rid && list.some(r => r.rid === spec.rid)) {
+    const me = list.find(r => r.rid === spec.rid)!;
+    if (list.some(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: me.s }) && r.days.join() === days.join())) return { list: null, error: 'That already repeats.' };
+    return { list: list.map(r => (r.rid === spec.rid ? { ...r, days } : r)), error: null };
+  }
   const { k, id, x, s } = spec.item;
   return addRepeat(list, { rid: newRid(list), k, id, ...(x && x !== 1 ? { x } : {}), ...(s ? { s } : {}), days, from: spec.from });
 }
@@ -108,9 +112,10 @@ export function unskipRepeat(skips: Readonly<Record<string, string[]>> | undefin
 }
 
 /** The repeat a planned item stands for: the same food in the same meal, by `rid` when the item is a shown repeat. */
-export function repeatFor(list: readonly RepeatItem[] | undefined, item: { k: string; id: string; s?: PlanSlot; rp?: string }): RepeatItem | undefined {
+export function repeatFor(list: readonly RepeatItem[] | undefined, item: { k: string; id: string; s?: PlanSlot; rp?: string }, day?: string): RepeatItem | undefined {
   if (item.rp) return list?.find(r => r.rid === item.rp);
-  return list?.find(r => samePlanItem(item as PlanItem, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) }));
+  const weekday = day ? parseDate(day).getDay() : undefined; // with the day, only a repeat that shows there stands for the item
+  return list?.find(r => samePlanItem(item as PlanItem, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) }) && (!day || (day >= r.from && r.days.includes(weekday!))));
 }
 
 /** The sentence under the day ticks: what the choice means. */

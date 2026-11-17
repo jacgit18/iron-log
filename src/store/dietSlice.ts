@@ -1,7 +1,7 @@
 import { skipSnack } from '../lib/dailySnacks.js';
 import { dropRepeatSkips, removeRepeat, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, unskipRepeat } from '../lib/repeats.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
+import { addItem, inWindow, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
@@ -12,7 +12,7 @@ import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
 import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { drinkIdsOf } from '../lib/recipeUses.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
-import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
+import { samePlanItem, MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 import type { DailySnack, DietEntry, PlanItem, SavedMeal } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
@@ -302,10 +302,13 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   realizeRepeat(day, rid) {
     const rep = get().cfg.diet?.repeats?.find(r => r.rid === rid);
     if (!rep) return 'That repeat is gone.';
-    const r = addItem(planOf(get), day, { k: rep.k, id: rep.id, ...(rep.x ? { x: rep.x } : {}), ...(rep.s ? { s: rep.s } : {}) }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
-    if (r.plan === null) return r.error;
-    putPlan(get, r.plan, undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid));
-    return r.plan[day]!.length - 1;
+    const today = ymd(new Date()), plan = planOf(get), have = plan[day] ?? [];
+    if (!inWindow(day, today)) return 'You can plan today and the next 52 weeks.';
+    const item: PlanItem = { k: rep.k, id: rep.id, ...(rep.x ? { x: rep.x } : {}), ...(rep.s ? { s: rep.s } : {}) };
+    if (have.some(i => samePlanItem(i, item))) return 'That is already on this day.';
+    const next: Plan = { ...plan, [day]: [...have, item] }; // a repeat that is shown on a day is never refused for a full day: it was shown, so it can be ticked, changed or moved
+    putPlan(get, next, undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid));
+    return next[day]!.length - 1;
   },
 
   // Takes back an item realizeRepeat just stored when what it was stored for did not happen (the log failed): it goes back to being shown.

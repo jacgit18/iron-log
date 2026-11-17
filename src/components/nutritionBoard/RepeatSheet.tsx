@@ -16,7 +16,7 @@ export default function RepeatSheet() {
   const repeats = useAppStore(s => s.cfg.diet?.repeats);
   const day = String(modal?.day ?? ''), name = String(modal?.name ?? '');
   const item = modal?.item as { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot } | undefined;
-  const existing = item ? repeatFor(repeats, { ...item, ...(modal?.rp ? { rp: String(modal.rp) } : {}) }) : undefined;
+  const existing = item ? repeatFor(repeats, { ...item, ...(modal?.rp ? { rp: String(modal.rp) } : {}) }, day) : undefined;
   const [days, setDays] = useState<number[]>(() => [...(existing?.days ?? WEEKDAYS)]);
   const [msg, setMsg] = useState('');
   const say = (t: string) => (modal?.onMsg as ((t: string) => void) | undefined)?.(t);
@@ -43,7 +43,7 @@ export default function RepeatSheet() {
       <p className="note" role="status">{repeatSummary(days, meal, shortDay(existing?.from ?? day))}</p>
       {msg && <p className="note" role="alert">{msg}</p>}
       <div className="actions">
-        {existing && <button type="button" className="btn" onClick={() => { st().skipRepeatDay(day, existing.rid); say(`${name} is skipped on ${shortDay(day)} only.`); closeModal(); }}>Skip this day only</button>}
+        {existing && !!modal?.rp && <button type="button" className="btn" onClick={() => { st().skipRepeatDay(day, existing.rid); say(`${name} is skipped on ${shortDay(day)} only.`); closeModal(); }}>Skip this day only</button>}
         {existing && <ArmedButton className="btn" aria-label={`Stop repeating ${name}`} label="Stop repeating" armedLabel="Tap again to stop" onConfirm={() => { st().stopRepeat(existing.rid); say(`${name} no longer repeats.`); closeModal(); }} />}
         <button type="button" className="btn" onClick={closeModal}>Cancel</button>
         <button type="button" className="btn primary" disabled={days.length === 0} onClick={save}>{existing ? 'Save' : 'Repeat'}</button>

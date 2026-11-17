@@ -18,8 +18,9 @@ export default function WeekPicker({ today, offset, range, phone, dates, onPick 
     const away = (e: MouseEvent) => { if (!(e.target as Element).closest('.nb-wp-pop, .nb-weekname')) setOpen(false); };
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
     const hide = () => setOpen(false);
-    document.addEventListener('mousedown', away); document.addEventListener('keydown', key); window.addEventListener('resize', hide);
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', key); window.removeEventListener('resize', hide); };
+    const gone = (e: Event) => { if (!(e.target as Element | Document).nodeType || !(e.target as Element).closest?.('.nb-wp-pop')) setOpen(false); }; // the page moving closes it; the list scrolling itself does not
+    document.addEventListener('mousedown', away); document.addEventListener('keydown', key); window.addEventListener('resize', hide); window.addEventListener('scroll', gone, true);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', key); window.removeEventListener('resize', hide); window.removeEventListener('scroll', gone, true); };
   }, [open]);
   const choices = open ? weekChoices(today, range) : [];
   const toggle = () => {

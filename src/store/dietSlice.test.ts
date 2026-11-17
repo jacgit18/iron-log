@@ -732,3 +732,15 @@ describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
     expect(st().saveRepeat(today, { k: 'r', id: 'r2' }, [1])).toMatch(/12 repeats/);
   });
 });
+
+describe('a shown repeat on a full day', () => {
+  it('can still be stored, so it can be ticked or moved', () => {
+    const today = ymd(new Date()), d = shiftDay(today, 7);
+    useAppStore.setState({ recipes: Array.from({ length: 9 }, (_, i) => ({ id: `f${i}`, n: `F${i}`, cat: 'protein' as const, ing: [{ n: 'x' }], steps: [], kcal: 100, p: 5 })) });
+    for (let i = 0; i < 8; i++) expect(st().addPlanItem(d, 'r', `f${i}`)).toBeNull();
+    st().saveRepeat(today, { k: 'r', id: 'f8' }, [0, 1, 2, 3, 4, 5, 6]);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(typeof st().realizeRepeat(d, rid)).toBe('number');
+    expect(st().cfg.diet!.plan![d]).toHaveLength(9);
+  });
+});

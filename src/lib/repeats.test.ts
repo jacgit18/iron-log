@@ -146,3 +146,15 @@ describe('repeatFor and repeatSummary', () => {
     expect(repeatSummary([], 'Snack', 'Mon 16')).toBe('Pick at least one day.');
   });
 });
+
+describe('review fixes', () => {
+  it('repeatFor with a day only matches a repeat that shows on that day', () => {
+    const l = [rep('rp1', [1], { id: 'a', s: 'snack' }), rep('rp2', [3], { id: 'a', s: 'snack' })];
+    expect(repeatFor(l, { k: 'r', id: 'a', s: 'snack' }, '2026-11-18')!.rid).toBe('rp2'); // a Wednesday
+    expect(repeatFor(l, { k: 'r', id: 'a', s: 'snack' }, '2026-11-19')).toBeUndefined();
+  });
+  it('editing the days of a repeat into a twin of another is refused', () => {
+    const l = [rep('rp1', [1], { id: 'a' }), rep('rp2', [2], { id: 'a' })];
+    expect(saveRepeat(l, { rid: 'rp2', item: { k: 'r', id: 'a' }, days: [1], from: today }).error).toMatch(/already/);
+  });
+});
