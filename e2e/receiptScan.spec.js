@@ -61,6 +61,15 @@ test.describe('as an admin', () => {
     await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 3');
   });
 
+  test('a receipt whose lines miss the printed subtotal says so, with the amount, and Apply is still allowed (brief receipt-scan-accuracy)', async ({ page }) => {
+    await answer(page, id => { const r = good(id); r.receipt.subtotalCents = 4198 - 100 + 1727; r.receipt.totalCents = 4198 + 1727; return r; });
+    await page.getByLabel('Receipt photo').setInputFiles(photo);
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByText(/Lines do not add up: \$17\.27 of the receipt subtotal \(\$58\.25\) is not in the lines/)).toBeVisible();
+    await expect(sheet.getByRole('status').filter({ hasText: 'Lines do not add up' })).toHaveClass(/bad/);
+    await expect(sheet.getByRole('button', { name: /^Apply anyway/ })).toBeEnabled(); // a gap reads Apply anyway (brief receipt-apply-footer)
+  });
+
   test('Cancel changes nothing, and a receipt dated another month says so', async ({ page }) => {
     await answer(page, id => { const r = good(id); r.receipt.date = '2026-08-30'; return r; });
     await page.getByLabel('Receipt photo').setInputFiles(photo);

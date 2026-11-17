@@ -178,6 +178,14 @@ describe('POST /api/scan/receipt', () => {
     expect(userText).not.toContain('price');
   });
 
+  it('tells the model about ink marks, warehouse coupon rows, and the subtotal, total and paid fields (brief receipt-scan-accuracy)', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', fetch: ask as unknown as typeof fetch });
+    await post({ image: jpeg, items });
+    const { system } = JSON.parse(String((ask.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { system: string };
+    for (const part of ['ink', 'Never drop a row because its name is hidden', 'ECPN', 'CCPN', 'minus sign', 'tax code', '"subtotal"', 'before any rewards', '"rewards"', '"paid"']) expect(system).toContain(part);
+  });
+
   it('uses the receipt model it is given', async () => {
     const ask = vi.fn(async () => model(reply));
     const post = await startReceipt({ key: 'k', receiptModel: 'claude-haiku-5-5', fetch: ask as unknown as typeof fetch });

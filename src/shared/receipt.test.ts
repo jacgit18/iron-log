@@ -11,6 +11,25 @@ const raw = {
   ],
 };
 
+describe('cleanReceipt subtotal, rewards and paid', () => {
+  it('keeps the BJ\'s totals apart: subtotal, total before rewards, rewards and the card charge', () => {
+    const r = cleanReceipt({ ...raw, subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567 }, known);
+    expect(r).toMatchObject({ kind: 'ok', receipt: { subtotalCents: 56615, taxCents: 679, totalCents: 57294, rewardsCents: 1727, paidCents: 55567 } });
+  });
+  it('drops a bad subtotal, rewards or paid and keeps the rest', () => {
+    const r = cleanReceipt({ ...raw, subtotal: 'x', rewards: 0, paid: -4 }, known);
+    expect(r.kind === 'ok' && r.receipt).toMatchObject({ totalCents: 9781 });
+    expect(r.kind === 'ok' && 'subtotalCents' in r.receipt).toBe(false);
+    expect(r.kind === 'ok' && 'rewardsCents' in r.receipt).toBe(false);
+    expect(r.kind === 'ok' && 'paidCents' in r.receipt).toBe(false);
+  });
+  it('carries the new fields through the route answer the app re-checks', () => {
+    const sent = cleanReceipt({ ...raw, subtotal: 9577, rewards: 100, paid: 9681 }, known);
+    const back = cleanReceiptAnswer({ ok: true, result: sent }, known);
+    expect(back).toEqual(sent);
+  });
+});
+
 describe('cleanReceipt', () => {
   it('keeps a well-formed receipt', () => {
     const r = cleanReceipt(raw, known);

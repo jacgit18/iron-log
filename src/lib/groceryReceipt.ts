@@ -35,7 +35,8 @@ export interface Move { id: string; name: string; from: string; usual: string; t
 /** Where the receipt was bought and what the month already says: `at` is the receipt's store (null: none known); `makeUsual` also changes the items' usual store (null: not chosen yet, so it is on only when every moved item's usual store is Anywhere); `lines` is the month's lines. */
 export interface Where { at: string | null; makeUsual: boolean | null; g: Grocery; lines: Readonly<Record<string, GroceryLine>> }
 
-export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null }
+/** `subtotalCents`: the receipt's printed subtotal (null: none); `subtotalDiffCents`: the part of it the lines do not explain (positive: a row is missing from the lines; null when there is no subtotal). */
+export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null; subtotalCents: number | null; subtotalDiffCents: number | null }
 /** `notes` says why a ticked line was left out of the writes (by line index): a weight that cannot be matched to the item's unit. */
 /** `moves`: the items to mark bought at the receipt's store (none when no store is known); `makeUsual`: Apply also makes that store their usual one. */
 /** `untick`: ticked items the receipt does not show that the person chose to untick (brief receipt-reconcile-ticked); Apply unticks them and Undo ticks them back. `planReceipt` leaves it empty: the review sheet sets it from the person's choices. */
@@ -66,7 +67,8 @@ export function checkTotals(receipt: Receipt): Check {
   const linesCents = receipt.lines.reduce((a, l) => a + netOf(l), 0);
   const taxCents = receipt.taxCents ?? 0;
   const totalCents = receipt.totalCents ?? null;
-  return { linesCents, taxCents, totalCents, diffCents: totalCents === null ? null : totalCents - linesCents - taxCents };
+  const subtotalCents = receipt.subtotalCents ?? null;
+  return { linesCents, taxCents, totalCents, diffCents: totalCents === null ? null : totalCents - linesCents - taxCents, subtotalCents, subtotalDiffCents: subtotalCents === null ? null : subtotalCents - linesCents };
 }
 
 /** The writes for the ticked, matched lines. Two lines for one item are added up; a weighed item takes the weight and a price per unit; any other item becomes packs whose prices add up to the net total to the cent. */
@@ -150,6 +152,11 @@ export function movedText(moves: readonly Move[], makeUsual: boolean, refused: r
 
 /** "Total check" in words for the sheet: whether the lines and tax explain the receipt total, and what is left over when they do not. */
 export function checkText(c: Check): { ok: boolean; text: string } {
+  // The subtotal is the sum of the items alone, so a gap against it names a missing row before tax or rewards can blur it.
+  if (c.subtotalDiffCents) {
+    const more = c.subtotalDiffCents > 0;
+    return { ok: false, text: more ? `Lines do not add up: ${money(c.subtotalDiffCents)} of the receipt subtotal (${money(c.subtotalCents!)}) is not in the lines. A row may be missing or unreadable in the photo. You can still apply.` : `Lines do not add up: the lines are ${money(-c.subtotalDiffCents)} more than the receipt subtotal (${money(c.subtotalCents!)}). A row may have been read twice. You can still apply.` };
+  }
   if (c.diffCents === null) return { ok: true, text: 'This receipt shows no total to check against.' };
   if (c.diffCents === 0) return { ok: true, text: 'Total check: lines plus tax match the receipt.' };
   const more = c.diffCents > 0;
