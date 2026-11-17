@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type 
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
+import { dropDraft, readDraft, type Draft } from '../../lib/receiptDraft.js';
 import { RECEIPT_TEXT, scanReceipt } from '../../lib/scanPhoto.js';
 import { takeReadyResume } from '../../lib/sharingIntent.js';
 import type { ItemRef } from '../../shared/receipt.js';
@@ -9,6 +10,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { Grocery } from '../../types.ts';
 import Notice, { UNDO_MS } from '../Notice.js';
 import { navigate } from '../useRoute.js';
+import ReceiptResume from './ReceiptResume.js';
 import './ReceiptScan.css';
 
 // Scan receipt (brief receipt-scan): admin only. Two buttons (the camera, and the photo library: Android's photo picker offers no camera), the call to
@@ -29,6 +31,19 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const [kept, setKept] = useState<{ image: string; meta: KeepMeta; busy: boolean; fail: SaveFailure['reason'] | null } | null>(null);
   const months = useAppStore(s => s.groceryMonths);
   const canScan = withoutUsed(g, months).items.length > 0;
+
+  // A receipt closed without Apply or Discard stays as a draft for 2 hours (brief receipt-back-guard): the Resume row reopens the sheet with this screen's own callbacks.
+  const readNow = () => ({ draft: readDraft(Date.now()), at: Date.now() });
+  const [left, setLeft] = useState<{ draft: Draft | null; at: number }>(readNow); // `at`: when it was read, for the age shown
+  const draft = left.draft;
+  const sheetOpen = useAppStore(s => s.modal?.type === 'receipt');
+  useEffect(() => useAppStore.subscribe((s, p) => { if (p.modal?.type === 'receipt' && s.modal?.type !== 'receipt') setLeft(readNow()); }), []); // eslint-disable-line react-hooks/exhaustive-deps -- the receipt sheet just closed: read what it left
+  useEffect(() => { if (!left.draft) return; const t = window.setInterval(() => setLeft(readNow()), 60_000); return () => window.clearInterval(t); }, [left.draft]); // eslint-disable-line react-hooks/exhaustive-deps -- keeps the age shown, and drops the row when the draft expires
+  const resume = () => {
+    const d = readDraft(Date.now()); // read again: it may have expired since the row was drawn
+    if (!d) { setLeft(readNow()); return; }
+    useAppStore.getState().openModal({ type: 'receipt', receipt: d.receipt, remembered: {}, mk: d.mk, restore: d.restore, onApplied: (a: Applied) => setApplied({ ...a, mk: d.mk, t: Date.now() }) });
+  };
 
   // Uploads the photo kept in memory. On a failure the photo stays here for Try again until the notice is dismissed or the page closes.
   const keep = async (image: string, meta: KeepMeta) => {
@@ -63,6 +78,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   };
   const notes = (
     <>
+      {draft && !sheetOpen && <ReceiptResume draft={draft} now={left.at} onResume={resume} onDiscard={() => { dropDraft(); setLeft({ draft: null, at: left.at }); }} />}
       {msg && <p className="note" role="status">{msg}</p>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'
@@ -82,7 +98,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
       {canScan && <input ref={library} type="file" accept="image/*" hidden aria-label="Receipt photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
     </>
   );
-  const hasNotes = !!msg || !!kept || (!!applied && applied.mk === mk);
+  const hasNotes = !!draft || !!msg || !!kept || (!!applied && applied.mk === mk);
   return { canScan, busy, inputs, notes, hasNotes, openCamera: () => camera.current?.click(), openLibrary: () => library.current?.click() };
 }
 export type ReceiptScanState = ReturnType<typeof useReceiptScan>;

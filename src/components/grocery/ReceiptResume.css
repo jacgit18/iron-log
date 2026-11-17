@@ -1,0 +1,35 @@
+@layer base, components;
+@layer components {
+/* The Resume row under Scan receipt (brief receipt-back-guard): a bordered card with the draft's store and age, and two buttons. */
+.rcresume {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  padding: var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+.rcresumewhat {
+  margin: 0;
+  min-width: 0;
+}
+.rcresumewhat b {
+  display: block;
+}
+.rcresumewhat span {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.rcresumebtns {
+  display: flex;
+  gap: var(--sp-8);
+}
+.rcresumebtns .btn {
+  min-height: 44px;
+}
+}

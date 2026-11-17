@@ -1,6 +1,7 @@
 import { dataStats } from '../lib/entryMerge.js';
 import type { buildDataFile } from '../lib/export.js';
 import { backupScore, clearBackups, getBackup, listBackups, pruneBackups, saveDailyBackup } from '../lib/autoBackup.js';
+import { dropDraft } from '../lib/receiptDraft.js';
 import { featureNow } from '../features.js';
 import { fetchServerBackup, hasExpectedUser, listServerBackups, uploadBackup, uploadKey } from '../lib/serverBackups.js';
 import { ymd } from '../shared/dates.js';
@@ -55,7 +56,7 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
     try { await dl.save({ filename: `iron-log-data-${date}-auto.json`, data: rec.text }); flag('Exported'); }
     catch (e) { if ((e as { code?: string } | null)?.code !== 'declined') flag('Download isn’t available here'); }
   },
-  async forgetBackups() { stopped = true; await clearBackups(); set({ backups: [], serverBackups: null }); },
+  async forgetBackups() { stopped = true; dropDraft(); /* a receipt left open belongs to the account that scanned it */ await clearBackups(); set({ backups: [], serverBackups: null }); },
   serverBackups: null,
   async refreshServerBackups() { if (get().sync && featureNow('serverBackups')) set({ serverBackups: stopped ? null : await listServerBackups() }); },
   async restoreServerBackup(date) {
