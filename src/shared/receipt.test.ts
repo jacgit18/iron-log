@@ -11,6 +11,29 @@ const raw = {
   ],
 };
 
+describe('cleanReceipt subtotal, rewards and paid', () => {
+  it('keeps the BJ\'s totals apart: subtotal, total before rewards and the card charge', () => {
+    const r = cleanReceipt({ ...raw, subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567 }, known);
+    expect(r).toMatchObject({ kind: 'ok', receipt: { subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567 } });
+    expect(r.kind === 'ok' && 'rewardsCents' in r.receipt).toBe(false); // the rewards credit is not kept: nothing reads it
+  });
+  it('a coupon row with no item above it comes in as a negative line that matches nothing', () => {
+    const r = cleanReceipt({ lines: [{ text: 'ECPN-IRISH S', total: -200, match: 'eggs' }, { text: 'EGGS', total: 500, match: 'eggs' }] }, known);
+    expect(r.kind === 'ok' && r.receipt.lines.map(l => [l.grossCents, l.matchId])).toEqual([[-200, null], [500, 'eggs']]);
+  });
+  it('drops a bad subtotal or paid and keeps the rest', () => {
+    const r = cleanReceipt({ ...raw, subtotal: 'x', rewards: 0, paid: -4 }, known);
+    expect(r.kind === 'ok' && r.receipt).toMatchObject({ totalCents: 9781 });
+    expect(r.kind === 'ok' && 'subtotalCents' in r.receipt).toBe(false);
+    expect(r.kind === 'ok' && 'paidCents' in r.receipt).toBe(false);
+  });
+  it('carries the new fields through the route answer the app re-checks', () => {
+    const sent = cleanReceipt({ ...raw, subtotal: 9577, paid: 9681 }, known);
+    const back = cleanReceiptAnswer({ ok: true, result: sent }, known);
+    expect(back).toEqual(sent);
+  });
+});
+
 describe('cleanReceipt', () => {
   it('keeps a well-formed receipt', () => {
     const r = cleanReceipt(raw, known);

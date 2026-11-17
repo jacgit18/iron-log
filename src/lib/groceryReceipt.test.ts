@@ -41,7 +41,7 @@ describe('matchStore', () => {
 describe('checkTotals and checkText', () => {
   it('explains the whole total when lines and tax add up', () => {
     const c = checkTotals(receipt);
-    expect(c).toEqual({ linesCents: 9577, taxCents: 204, totalCents: 9781, diffCents: 0 });
+    expect(c).toEqual({ linesCents: 9577, taxCents: 204, totalCents: 9781, diffCents: 0, subtotalCents: null, subtotalDiffCents: null });
     expect(checkText(c)).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
   });
   it('says what is missing, or extra, and when there is no total', () => {
@@ -50,6 +50,39 @@ describe('checkTotals and checkText', () => {
     expect(checkText(checkTotals({ ...receipt, totalCents: 9700 })).text).toContain('$0.81 in the lines is more than the receipt total');
     const { totalCents: _t, ...noTotal } = receipt;
     expect(checkText(checkTotals(noTotal)).ok).toBe(true);
+  });
+});
+
+describe('subtotal reconcile (brief receipt-scan-accuracy)', () => {
+  it('is quiet when the lines add up to the subtotal, and the old total check still speaks', () => {
+    const r = { ...receipt, subtotalCents: 9577 };
+    expect(checkTotals(r).subtotalDiffCents).toBe(0);
+    expect(checkText(checkTotals(r))).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
+  });
+  it('says how much the lines miss when a row was dropped, before tax or rewards blur it', () => {
+    const c = checkTotals({ ...receipt, subtotalCents: 9577 + 1234, totalCents: 9781 + 1234 + 100 });
+    expect(c.subtotalDiffCents).toBe(1234);
+    const t = checkText(c);
+    expect(t.ok).toBe(false);
+    expect(t.text).toContain('Lines do not add up: $12.34 of the receipt subtotal ($108.11) is not in the lines');
+  });
+  it('says when the lines are more than the subtotal (a row read twice)', () => {
+    expect(checkText(checkTotals({ ...receipt, subtotalCents: 9000 })).text).toContain('$5.77 more than the receipt subtotal ($90.00)');
+  });
+  it('a rewards credit does not move the check: the total is read before rewards, the charge is kept apart', () => {
+    const r = { ...receipt, subtotalCents: 9577, paidCents: 9781 - 1727 };
+    expect(checkText(checkTotals(r)).ok).toBe(true);
+  });
+  it('accepts a subtotal printed before discounts (the sum of the printed line prices), so a correct scan is not called short', () => {
+    const c = checkTotals({ ...receipt, subtotalCents: 9577 + 650 }); // 650 = the discounts on the lines above
+    expect(c.subtotalDiffCents).toBe(0);
+    expect(checkText(c).text).not.toContain('Lines do not add up');
+  });
+  it('the owner\'s BJ\'s receipt: lines, subtotal 566.15, tax 6.79, total 572.94, paid 555.67; a dropped row is named, the rewards credit is not a gap', () => {
+    const whole: Receipt = { store: "BJ'S", subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567, lines: [{ text: 'A', qty: 1, grossCents: 50615, discountCents: 0, matchId: null }, { text: 'B', qty: 1, grossCents: 8000, discountCents: 2000, matchId: null }] };
+    expect(checkText(checkTotals(whole))).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
+    const short = { ...whole, lines: [whole.lines[0]!] }; // the second row was dropped (hidden by the ink)
+    expect(checkText(checkTotals(short)).text).toContain('Lines do not add up: $60.00 of the receipt subtotal ($566.15) is not in the lines');
   });
 });
 

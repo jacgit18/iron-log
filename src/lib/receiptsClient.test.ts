@@ -4,6 +4,10 @@ import { downloadName, groupByMonth, keepFailText, keepMeta, receiptTitle, retry
 const r = (over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id: '1', savedAt: '2026-11-03T12:00:00.000Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 300_000, ...over });
 
 describe('keepMeta', () => {
+  it('saves the amount charged (after a rewards credit) as the total, falling back to the printed total', () => {
+    expect(keepMeta({ totalCents: 57294, paidCents: 55567, lines: [] }, '2026-11')).toMatchObject({ totalCents: 55567 });
+    expect(keepMeta({ totalCents: 57294, lines: [] }, '2026-11')).toMatchObject({ totalCents: 57294 });
+  });
   it('carries the reviewed store, date and total with the month on screen', () => {
     expect(keepMeta({ store: "BJ's", date: '2026-11-02', totalCents: 14231, lines: [] }, '2026-11')).toEqual({ month: '2026-11', store: "BJ's", receiptDate: '2026-11-02', totalCents: 14231 });
   });
