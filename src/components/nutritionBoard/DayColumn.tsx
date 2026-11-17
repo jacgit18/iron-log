@@ -2,6 +2,7 @@ import { foodEditable, shortDay, type DayView } from '../../lib/nutritionBoard.j
 import type { Resolved } from '../../lib/dietPlan.js';
 import type { PlanSlot } from '../../types.ts';
 import DayMeters from './DayMeters.js';
+import DrinksSection from './DrinksSection.js';
 import HydrationSection from './HydrationSection.js';
 import MealSections from './MealSections.js';
 import type { Say } from '../../lib/eatenStep.js';
@@ -19,6 +20,8 @@ export default function DayColumn({ v, today, selected, onPick, onLog, onMsg, on
       </div>
       <DayMeters v={v} />
       {v.kind !== 'past' && <MealSections view={v.plan} placed={v.placed.meals} today={today} editable={editable} onLog={onLog} onMsg={onMsg} onAdd={onAdd} />}
+      {/* Drinks are planned things, and the plan holds no past days (prunePlan), so a past day has none to show; its drinks that were drunk are eaten rows in "Not in a meal". */}
+      {v.kind !== 'past' && <DrinksSection view={v.plan} today={today} onLog={onLog} onMsg={onMsg} />}
       {v.kind !== 'future' && <NotInMeal day={v.day} entries={v.placed.none} onMsg={onMsg} always={v.kind === 'past'} />}
       {v.fatNote && <p className="wb-fatnote">{v.fatNote}</p>}
       <SupplementsSection day={v.day} folded={v.kind === 'past'} />

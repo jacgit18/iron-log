@@ -1,16 +1,18 @@
 import type { Scenario } from '../scenarios.ts';
 
 const scenario: Scenario = {
-  id: 'S-318', feature: 'Receipt drafts list', title: 'A saved draft is still listed after the page is reloaded', persona: 'grocery-shopper', brief: 'receipt-drafts-list',
+  id: 'S-318', feature: 'Nutrition meal labels and repeat', title: 'The add sheet pre-picks a food\'s usual meal until you press a meal', persona: 'meal-planner', brief: 'nutrition-meal-labels-year-repeat',
   steps: [
-    'On Shopping press Scan receipt, then Photos, and pick a photo of a receipt. Wait for the sheet titled Receipt.',
-    'Untick one line with its "Include" box, then press Save for later.',
-    'Reload the page, open Groceries, then Shopping.',
-    'Press Resume on the row under Scan receipt.',
+    'In Recipes make a recipe named "Oatmeal" with the Usual meal Breakfast and save it. Make a second recipe named "Rice" and leave the Usual meal on None.',
+    'Open Nutrition, pick a day after today and open its add sheet (Add food).',
+    'Read the line under the meal buttons. Find the Plan buttons for Oatmeal and Rice in the recipe list.',
+    'Press Plan on Oatmeal. Then press Dinner in the meal buttons and press Plan on Oatmeal again.',
   ],
   expected: [
-    'After the reload the "Draft receipt" block still shows the row, with its age now counting from when you saved it (for example "saved 2 min ago").',
-    'Resume reopens the Receipt sheet with the line still unticked.',
+    'Before any meal is pressed the line reads "A recipe goes into its usual meal; one without goes into" followed by a meal, then "Press a meal to put everything there."',
+    'The Oatmeal button is named "Plan Oatmeal for Breakfast"; the Rice button names the sheet\'s own starting meal.',
+    'The first Plan shows "Planned Oatmeal for Breakfast."',
+    'After pressing Dinner the line reads "Recipes and saved meals you add go into Dinner." and the button reads "Plan Oatmeal for Dinner"; pressing it shows "Planned Oatmeal for Dinner." The day then holds Oatmeal in Breakfast and in Dinner.',
   ],
 };
 

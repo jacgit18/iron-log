@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, MAX_DAY_DRINKS, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -180,10 +180,10 @@ describe('the plan in cfg.diet', () => {
     expect(r!.plan!['2026-10-30']).toEqual([{ k: 'r', id: 'a' }, { k: 'r', id: 'b' }, { k: 'r', id: 'c' }, { k: 'r', id: 'd', x: 2.5 }, { k: 'm', id: 'e' }]);
   });
   it('drops bad dates, empty days, repeats and items past the cap', () => {
-    const many = Array.from({ length: MAX_PLAN_ITEMS + 3 }, (_, i) => ({ k: 'r', id: `r${i}` }));
+    const many = Array.from({ length: MAX_PLAN_ITEMS + MAX_DAY_DRINKS + 3 }, (_, i) => ({ k: 'r', id: `r${i}` }));
     const r = normDietCfg({ plan: { 'nope': [{ k: 'r', id: 'a' }], '2026-13-45': [{ k: 'r', id: 'a' }], '2026-10-30': many, '2026-10-31': [], '2026-11-01': [{ k: 'r', id: 'a' }, { k: 'r', id: 'a' }] } });
     expect(Object.keys(r!.plan!)).toEqual(['2026-10-30', '2026-11-01']);
-    expect(r!.plan!['2026-10-30']).toHaveLength(MAX_PLAN_ITEMS);
+    expect(r!.plan!['2026-10-30']).toHaveLength(MAX_PLAN_ITEMS + MAX_DAY_DRINKS); // the cleaner cannot tell drinks, so it leaves room for them
     expect(r!.plan!['2026-11-01']).toEqual([{ k: 'r', id: 'a' }]);
   });
   it('applies the window only when given today', () => {

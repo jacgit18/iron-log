@@ -1,19 +1,17 @@
 import type { Scenario } from '../scenarios.ts';
 
 const scenario: Scenario = {
-  id: 'S-319', feature: 'Receipt drafts list', title: 'Two unfinished receipts are two rows; Resume and Apply touch only their own', persona: 'grocery-shopper', brief: 'receipt-drafts-list',
+  id: 'S-319', feature: 'Nutrition meal labels and repeat', title: 'Changing a usual meal moves every copy placed by default, not the one you placed', persona: 'meal-planner', brief: 'nutrition-meal-labels-year-repeat', edge: true,
   steps: [
-    'On Shopping press Scan receipt, then Photos, and pick a photo of one receipt. Wait for the sheet titled Receipt, then press Close.',
-    'Press Scan receipt again and pick a photo of a different receipt (another store if you have one). Untick one line with its "Include" box, then press Save for later.',
-    'Look under Scan receipt, then press Resume on the second receipt\'s row.',
-    'Press the Apply button at the bottom (if it reads "Apply anyway", press it twice: the first press asks, the second applies). This changes the prices on this test account.',
-    'Look under Scan receipt, then press Discard on the remaining row.',
+    'In Recipes make "Oatmeal" with the Usual meal Breakfast.',
+    'In Nutrition open the add sheet for two different days after today and press Plan on Oatmeal on each (the sheet\'s Plan button names Breakfast). On a third day press Dinner first, then Plan on Oatmeal, so that copy is placed by hand.',
+    'Back in Recipes open Oatmeal, open More actions, press Edit, press Snack in the Usual meal row and press Save recipe.',
+    'Open Nutrition and look at the three days.',
   ],
   expected: [
-    'The block is headed "Draft receipts (2)" with "Kept on this device for 7 days" and has two rows, each with its own store and date and its own Resume and Discard buttons.',
-    'Resume opens the second receipt with its line still unticked, not the first one.',
-    'After Apply the sheet closes and only the first receipt\'s row is left, headed "Draft receipt".',
-    'Discard removes the last row and the whole Drafts block disappears.',
+    'The two days where you used the default now show Oatmeal under Snack and nothing under Breakfast.',
+    'The day where you pressed Dinner first still shows Oatmeal under Dinner.',
+    'The Oatmeal card reads "Usual meal: Snack".',
   ],
 };
 

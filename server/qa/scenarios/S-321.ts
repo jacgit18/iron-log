@@ -1,16 +1,17 @@
 import type { Scenario } from '../scenarios.ts';
 
 const scenario: Scenario = {
-  id: 'S-321', feature: 'Receipt drafts list', title: 'A draft resumed after its item was deleted keeps the receipt and sets that line to no match', persona: 'grocery-shopper', brief: 'receipt-drafts-list', edge: true,
+  id: 'S-321', feature: 'Nutrition meal labels and repeat', title: 'No Drinks section until a drink is planned, and it goes when Beverage is turned off', persona: 'meal-planner', brief: 'nutrition-meal-labels-year-repeat', edge: true,
   steps: [
-    'On Shopping press Scan receipt, then Photos, and pick a photo of a receipt with at least two items from your list. Note which list item the first line is matched to, then press Save for later.',
-    'Delete that item from the grocery list (the same way you edit the list), then go back to Shopping.',
-    'Press Resume on the draft row.',
+    'In Nutrition look at a day after today that has no drink planned.',
+    'In Recipes make "Cold brew" a Beverage (press the Beverage button until it reads "A drink"), save it, and plan it on that day from the add sheet.',
+    'Open Recipes, open Cold brew, open More actions, press Edit, press the Beverage button so it reads "Not a drink", and press Save recipe.',
+    'Open Nutrition and look at that day again.',
   ],
   expected: [
-    'The Receipt sheet opens with the whole receipt, every other line as it was.',
-    'A note reads "1 line was matched to an item that is no longer on your list. It is set to no match; pick another item or add it to the list."',
-    'The line whose item was deleted shows no item chosen and is unticked; nothing is applied until you press Apply.',
+    'Before any drink is planned the day has no Drinks section at all.',
+    'With the drink planned a Drinks section shows Cold brew.',
+    'After Beverage is turned off the Drinks section is gone and Cold brew sits in one of the meals instead.',
   ],
 };
 
