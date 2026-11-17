@@ -10,7 +10,7 @@ import { earlierText, missingIntro, reconcile, untickedText } from '../../lib/re
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import { leaveSheet, setLeaveGuard } from '../../lib/backNav.js';
-import { dropDraft, isEdited, keepDraft, shouldAskOnBack, type Draft } from '../../lib/receiptDraft.js';
+import { dropDraft, isEdited, keepDraft, newDraftId, shouldAskOnBack, type Draft } from '../../lib/receiptDraft.js';
 import { askSharing } from '../../lib/sharingIntent.js';
 import type { Receipt } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -47,6 +47,8 @@ export default function ReceiptSheet() {
   const rewardsParse = scanned && rewardsText !== null ? parseRewards(rewardsText, receiptTotal(scanned)) : null;
   const rewardsCents = rewardsParse ? (rewardsParse.ok ? rewardsParse.cents : null) : scanned?.rewardsCents ?? null; // a bad amount counts as none and writes nothing
   const receipt = useMemo(() => (scanned ? withRewards(scanned, rewardsCents) : undefined), [scanned, rewardsCents]);
+  const draftId = useRef((typeof modal?.draftId === 'string' && modal.draftId) || newDraftId()); // one id per receipt: a resumed draft keeps its own, so saving replaces it instead of adding a second
+  const relinked = typeof modal?.relinked === 'number' ? modal.relinked : 0; // lines whose item was deleted since the draft was saved (set to no match on resume)
   const [renames, setRenames] = useState<Record<string, string>>(() => restore?.renames ?? {}); // item id to the name typed on the sheet; the item takes it at Apply
   const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set(restore?.touched)); // row keys whose name or item the person changed: only those can be remembered
   const [noRemember, setNoRemember] = useState<ReadonlySet<string>>(() => new Set(restore?.noRemember)); // row keys whose Remember tick is off (on by default)
@@ -100,14 +102,22 @@ export default function ReceiptSheet() {
   const pending = useRef<Draft | null>(null);
   useEffect(() => {
     if (!scanned || finished.current) return;
-    const d: Draft = { savedAt: Date.now(), mk, receipt: scanned, restore: snapshot() as unknown as Record<string, unknown> };
+    const d: Draft = { id: draftId.current, savedAt: Date.now(), mk, receipt: scanned, restore: snapshot() as unknown as Record<string, unknown> };
     if (!written.current) { written.current = true; keepDraft(d); return; }
     pending.current = d;
     const t = window.setTimeout(() => { keepDraft(d); pending.current = null; }, 500);
     return () => window.clearTimeout(t);
   }, [scanned, mk, choices, renames, touched, noRemember, separate, pickedStore, stagedRaw, unticked, shareChoices, usual, typedName, addOn, rewardsText]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot() reads exactly these
   useEffect(() => () => { if (pending.current && !finished.current) keepDraft(pending.current); }, []);
-  const discard = () => { finished.current = true; dropDraft(); closeModal(); };
+  const discard = () => { finished.current = true; dropDraft(draftId.current); closeModal(); };
+  const [saveError, setSaveError] = useState('');
+  // Save for later (brief receipt-drafts-list): writes the draft as it is now and closes with no prompt; a storage that refuses keeps the sheet open and says so.
+  const saveLater = () => {
+    const d: Draft = { id: draftId.current, savedAt: Date.now(), mk, receipt: receipt!, restore: snapshot() as unknown as Record<string, unknown> };
+    if (!keepDraft(d)) { setSaveError('Could not save on this device. Apply it now, or close and try again.'); return; }
+    finished.current = true; pending.current = null;
+    closeModal();
+  };
   if (!receipt || !plan || !rec) return null;
   const people = allPeople(g);
   const sharing = hasSharing(g) && people.length > 0; // the split shows where sharing shows today: once a group exists
@@ -115,7 +125,7 @@ export default function ReceiptSheet() {
   const shareRows = tickedRows(rows, choices);
   const partiesByKey = new Map(shareRows.map(r => [r.key, rowParties(g, withItem.find(x => x.id === r.itemId), monthLines?.[r.itemId!], shareForRow(shareChoices, r.key))] as const)); // once per render: the box, the chips and the owed line all read it
   const owed = sharing ? owedText(g, monthData, taxStore, owedRows(shareRows, r => partiesByKey.get(r.key)!), people) : '';
-  const makeGroup = () => { askSharing({ ...(modal as unknown as Record<string, unknown>), restore: snapshot() satisfies Restore }); leaveSheet(window.history, window, () => navigate('daily/grocery/inventory', 'push'), closeModal); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
+  const makeGroup = () => { askSharing({ ...(modal as unknown as Record<string, unknown>), draftId: draftId.current, restore: snapshot() satisfies Restore }); leaveSheet(window.history, window, () => navigate('daily/grocery/inventory', 'push'), closeModal); }; // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
 
   const check = checkText(plan.check);
   const paid = paidAfterRewards(receipt);
@@ -171,7 +181,7 @@ export default function ReceiptSheet() {
     if (Object.keys(nm.aliases).length) snap.aliases = nm.aliases;
     const namesText = `${savedNamesText(nm.saved)}${nm.refused.length ? ` Could not rename: ${nm.refused.join(', ')}.` : ''}`;
     const storeText = newStore ? ` Added the store ${newStore}.` : '';
-    finished.current = true; dropDraft(); // applied: nothing left to resume
+    finished.current = true; dropDraft(draftId.current); // applied: nothing left to resume
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
     if (done > 0 || out.unticked || real.taxStore || real.creditStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
@@ -192,6 +202,7 @@ export default function ReceiptSheet() {
         {receipt.date && <span>Dated <b>{receipt.date}</b></span>}
         <span>Applies to <b>{monthLabel(mk)}</b></span>
       </p>
+      {relinked > 0 && <p className="note rcwarn" role="status">{relinked === 1 ? '1 line was matched to an item that is no longer on your list' : `${relinked} lines were matched to items that are no longer on your list`}. {relinked === 1 ? 'It is' : 'They are'} set to no match; pick another item or add {relinked === 1 ? 'it' : 'them'} to the list.</p>}
       {dateMonth && dateMonth !== mk && <p className="note rcwarn" role="status">This receipt is dated {monthLabel(dateMonth)}, but you are on {monthLabel(mk)}. Close this sheet and change the month first if that is not what you want.</p>}
       {offer && (
         <div className="rcaddstore">
@@ -321,7 +332,7 @@ export default function ReceiptSheet() {
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>
       {asking
         ? <ReceiptLeave onKeep={() => setAsking(false)} onDiscard={discard} />
-        : <ReceiptApplyBar plan={plan} newCount={newCount} disabled={nothing || !!nameError} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} />}
+        : <ReceiptApplyBar plan={plan} newCount={newCount} disabled={nothing || !!nameError} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} onSave={saveLater} saveError={saveError} />}
     </Sheet>
   );
 }
