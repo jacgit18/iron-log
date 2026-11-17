@@ -53,6 +53,12 @@ export function clearDraft(storage: Store): void {
   try { storage.removeItem(DRAFT_KEY); } catch { /* nothing to clear */ }
 }
 
+// The three calls the app makes, on this tab's sessionStorage. Reaching for sessionStorage can itself throw (blocked site data), so a missing one is no storage.
+const device = (): Store | null => { try { return typeof sessionStorage === 'undefined' ? null : sessionStorage; } catch { return null; } };
+export const keepDraft = (d: Draft): void => { const s = device(); if (s) saveDraft(s, d); };
+export const readDraft = (now: number): Draft | null => { const s = device(); return s ? loadDraft(s, now) : null; };
+export const dropDraft = (): void => { const s = device(); if (s) clearDraft(s); };
+
 /** "just now", "12 min ago", "1 hour ago": how long ago the receipt was closed, for the Resume row. */
 export function draftAge(savedAt: number, now: number): string {
   const min = Math.max(0, Math.floor((now - savedAt) / 60000));

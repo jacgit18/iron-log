@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { DRAFT_KEY, DRAFT_MAX_MS, clearDraft, draftAge, isEdited, loadDraft, parseDraft, saveDraft, shouldAskOnBack, type Draft, type EditState } from './receiptDraft';
+import { describe, expect, it, vi } from 'vitest';
+import { DRAFT_KEY, DRAFT_MAX_MS, clearDraft, draftAge, dropDraft, isEdited, keepDraft, loadDraft, parseDraft, readDraft, saveDraft, shouldAskOnBack, type Draft, type EditState } from './receiptDraft';
 
 const NOW = Date.UTC(2026, 10, 17, 12, 0, 0);
 const line = { text: 'BANANAS', qty: 1, grossCents: 149, discountCents: 0, matchId: 'i1' };
@@ -63,6 +63,22 @@ describe('draft storage', () => {
     expect(() => saveDraft(bad, draft())).not.toThrow();
     expect(loadDraft(bad, NOW)).toBeNull();
     expect(() => clearDraft(bad)).not.toThrow();
+  });
+});
+
+describe('the device calls', () => {
+  it('keep, read and drop on this tab\'s sessionStorage, and do nothing without one', () => {
+    const s = fake();
+    vi.stubGlobal('sessionStorage', s);
+    keepDraft(draft({ savedAt: Date.now() }));
+    expect(s.m.has(DRAFT_KEY)).toBe(true);
+    expect(readDraft(Date.now())?.mk).toBe('2026-11');
+    dropDraft();
+    expect(readDraft(Date.now())).toBeNull();
+    vi.stubGlobal('sessionStorage', undefined);
+    expect(() => { keepDraft(draft()); dropDraft(); }).not.toThrow();
+    expect(readDraft(Date.now())).toBeNull();
+    vi.unstubAllGlobals();
   });
 });
 
