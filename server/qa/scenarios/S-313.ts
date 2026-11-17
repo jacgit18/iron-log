@@ -10,7 +10,7 @@ const scenario: Scenario = {
   ],
   expected: [
     'The resumed receipt applies and the sheet closes.',
-    'The "Resume your receipt" row is gone.',
+    'The Draft receipt row is gone.',
   ],
 };
 
