@@ -81,6 +81,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
           {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={more === null} onClick={() => more !== null && portion(more)}>More</button>}
           <button type="button" className="btn sm" aria-label={`Copy ${r.name}`} aria-haspopup="dialog" onClick={() => pick('copy')}>Copy to…</button>
           <button type="button" className="btn sm" aria-label={`Move ${r.name}`} aria-haspopup="dialog" onClick={() => pick('move')}>Move to…</button>
+          {r.gone && r.item.rp && <ArmedButton className="btn sm" aria-label={`Stop repeating ${r.name}`} label="Stop repeating" armedLabel="Tap again to stop" onConfirm={() => { st().stopRepeat(r.item.rp!); onOpen(); }} />}
           {repeatable && <button type="button" className="btn sm" aria-label={`Repeat ${r.name}`} aria-haspopup="dialog" onClick={repeat}>Repeat…</button>}
           {item.virtual
             ? <ArmedButton className="btn sm" aria-label={r.item.rp ? `Skip ${r.name} this day` : `Skip ${r.name} today`} label={r.item.rp ? 'Skip this day' : 'Skip today'} armedLabel="Tap again to skip" onConfirm={() => { if (r.item.rp) st().skipRepeatDay(day, r.item.rp); else st().skipDailySnack(day, r.item.id); onOpen(); }} />

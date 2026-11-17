@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_PLAN_AHEAD, MAX_REPEATS } from '../shared/diet.js';
 import type { RepeatItem } from '../types.ts';
 import { shiftDay } from './dietLog.js';
-import { addRepeat, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, repeatPlanItem, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
+import { addRepeat, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, removeRepeatsFor, repeatPlanItem, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
 
 const today = '2026-11-16'; // a Monday
 const rep = (rid: string, days: number[], extra: Partial<RepeatItem> = {}): RepeatItem => ({ rid, k: 'r', id: 'oats', days, from: today, ...extra });
@@ -120,12 +120,13 @@ describe('the Repeat sheet rules', () => {
     expect(repeatsShownOn('2026-11-25', {}, left, undefined, today).map(r => r.rid)).toEqual(['rp2']);
   });
   it('an item taken off its place skips its repeat that day only, and only for the same food in the same meal', () => {
-    const l = [rep('rp1', every, { id: 'almonds', s: 'snack' })];
+    const l = [rep('rp1', every, { id: 'almonds', s: 'snack', from: '2026-11-18' })];
     expect(skipsAfterLeaving(l, undefined, '2026-11-18', { k: 'r', id: 'almonds', s: 'snack' })).toEqual({ '2026-11-18': ['rp1'] });
+    expect(skipsAfterLeaving(l, undefined, '2026-11-25', { k: 'r', id: 'almonds', s: 'snack' })).toBeUndefined(); // a hand-added item on a later day is the person's own: removing it shows the repeat again
     expect(skipsAfterLeaving(l, undefined, '2026-11-18', { k: 'r', id: 'almonds', s: 'lunch' })).toBeUndefined();
     expect(skipsAfterLeaving(l, undefined, '2026-11-18', { k: 'r', id: 'tea', s: 'snack' })).toBeUndefined();
     expect(skipsAfterLeaving(l, { '2026-11-18': ['rp1'] }, '2026-11-18', { k: 'r', id: 'almonds', s: 'snack' })).toBeUndefined();
-    expect(skipsAfterLeaving([rep('rp1', [1], { id: 'almonds' })], undefined, '2026-11-18', { k: 'r', id: 'almonds' })).toBeUndefined(); // Wednesday, not a repeat day
+    expect(skipsAfterLeaving([rep('rp1', [1], { id: 'almonds', from: '2026-11-18' })], undefined, '2026-11-18', { k: 'r', id: 'almonds' })).toBeUndefined(); // Wednesday, not a repeat day
   });
   it('shows a skipped repeat again', () => {
     expect(unskipRepeat({ '2026-11-18': ['a', 'b'] }, '2026-11-18', 'a')).toEqual({ '2026-11-18': ['b'] });
@@ -156,5 +157,20 @@ describe('review fixes', () => {
   it('editing the days of a repeat into a twin of another is refused', () => {
     const l = [rep('rp1', [1], { id: 'a' }), rep('rp2', [2], { id: 'a' })];
     expect(saveRepeat(l, { rid: 'rp2', item: { k: 'r', id: 'a' }, days: [1], from: today }).error).toMatch(/already/);
+  });
+  it('a repeat that overlaps another of the same food and meal on any day is refused, new or edited', () => {
+    const l = [rep('rp1', [1, 2, 3], { id: 'a' })];
+    expect(saveRepeat(l, { item: { k: 'r', id: 'a' }, days: [3, 4], from: today }).error).toMatch(/already/);
+    expect(saveRepeat(l, { item: { k: 'r', id: 'a' }, days: [4, 5], from: today }).error).toBeNull();
+    expect(saveRepeat(l, { item: { k: 'r', id: 'a', s: 'lunch' }, days: [1], from: today }).error).toBeNull(); // another meal is its own repeat
+    const two = [rep('rp1', [1], { id: 'a' }), rep('rp2', [2], { id: 'a' })];
+    expect(saveRepeat(two, { rid: 'rp2', item: { k: 'r', id: 'a' }, days: [1, 2], from: today }).error).toMatch(/already/);
+  });
+  it('two stored repeats that overlap (older data) show once', () => {
+    const l = [rep('rp1', every, { id: 'a' }), rep('rp2', every, { id: 'a' }), rep('rp3', every, { id: 'b' })];
+    expect(repeatsShownOn('2026-11-18', {}, l, undefined, today).map(r => r.rid)).toEqual(['rp1', 'rp3']);
+  });
+  it('removeRepeatsFor takes every repeat of a deleted food', () => {
+    expect(removeRepeatsFor([rep('rp1', every, { id: 'a' }), rep('rp2', every, { id: 'b' }), rep('rp3', [1], { id: 'a', s: 'lunch' })], 'a').map(r => r.rid)).toEqual(['rp2']);
   });
 });

@@ -733,14 +733,37 @@ describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
   });
 });
 
-describe('a shown repeat on a full day', () => {
-  it('can still be stored, so it can be ticked or moved', () => {
-    const today = ymd(new Date()), d = shiftDay(today, 7);
-    useAppStore.setState({ recipes: Array.from({ length: 9 }, (_, i) => ({ id: `f${i}`, n: `F${i}`, cat: 'protein' as const, ing: [{ n: 'x' }], steps: [], kcal: 100, p: 5 })) });
+describe('a shown repeat on a full day, and a deleted recipe', () => {
+  const today = ymd(new Date()), d = shiftDay(today, 7);
+  const recipes = (n: number) => useAppStore.setState({ recipes: Array.from({ length: n }, (_, i) => ({ id: `f${i}`, n: `F${i}`, cat: 'protein' as const, ing: [{ n: 'x' }], steps: [], kcal: 100, p: 5 })) });
+  it('at the 8-item cap is refused with a message and nothing is skipped or stored', () => {
+    recipes(10);
     for (let i = 0; i < 8; i++) expect(st().addPlanItem(d, 'r', `f${i}`)).toBeNull();
     st().saveRepeat(today, { k: 'r', id: 'f8' }, [0, 1, 2, 3, 4, 5, 6]);
     const rid = st().cfg.diet!.repeats![0]!.rid;
-    expect(typeof st().realizeRepeat(d, rid)).toBe('number');
-    expect(st().cfg.diet!.plan![d]).toHaveLength(9);
+    expect(st().realizeRepeat(d, rid)).toMatch(/8 things/);
+    expect(st().cfg.diet!.plan![d]).toHaveLength(8);
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toHaveLength(9); // still shown, so a person can skip it
+  });
+  it('a snack repeat is stored even on a full day (like a daily snack the cleaner keeps it) and what is stored is what the cleaner keeps', () => {
+    recipes(10);
+    for (let i = 0; i < 8; i++) st().addPlanItem(d, 'r', `f${i}`);
+    st().saveRepeat(today, { k: 'r', id: 'f8', s: 'snack' }, [0, 1, 2, 3, 4, 5, 6]);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    const at = st().realizeRepeat(d, rid);
+    if (typeof at === 'number') expect(st().cfg.diet!.plan![d]![at]).toMatchObject({ id: 'f8', s: 'snack' }); // the index points at the stored item
+    else expect(st().cfg.diet!.repeatSkips).toBeUndefined(); // refused: nothing skipped
+  });
+  it('deleting a recipe takes its repeats and their skips; Undo brings them back', () => {
+    recipes(3);
+    st().saveRepeat(today, { k: 'r', id: 'f0' }, [1, 2]);
+    st().saveRepeat(today, { k: 'r', id: 'f1' }, [1, 2]);
+    st().skipRepeatDay(d, st().cfg.diet!.repeats![0]!.rid);
+    st().removeRecipe('f0');
+    expect(st().cfg.diet!.repeats!.map(r => r.id)).toEqual(['f1']);
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
+    st().undoRemoved();
+    expect(st().cfg.diet!.repeats!.map(r => r.id).sort()).toEqual(['f0', 'f1']);
   });
 });

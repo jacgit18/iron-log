@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, RepeatItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementIngredient, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { SkippedDay } from '../lib/dayPicker.ts';
@@ -334,6 +334,8 @@ export interface DietSlice {
   unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
   saveRepeat(day: string, item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }, days: number[], rid?: string): string | null; // repeats the item on those weekdays (0 Sunday to 6 Saturday) of every week from `day`, stored once in cfg.diet.repeats (at most 12); with `rid`, changes that repeat's days; an error text, or null
   stopRepeat(rid: string): void; // removes the repeat and its skips; items already stored on a day stay
+  dropRepeatsFor(id: string): RepeatItem[]; // a deleted recipe or meal takes its repeats and their skips with it; the removed repeats come back for Undo
+  restoreRepeats(list: RepeatItem[]): void; // puts repeats back (Undo of a recipe delete)
   skipRepeatDay(day: string, rid: string): void; // the repeat is not shown on that day only
   realizeRepeat(day: string, rid: string): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
   unstoreRepeat(day: string, index: number, rid: string): void; // takes back an item realizeRepeat just stored when its log failed

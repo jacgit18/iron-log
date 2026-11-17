@@ -12,7 +12,8 @@ export const repeatPlanItem = (r: RepeatItem): PlanItem => ({ k: r.k, id: r.id, 
 export function repeatsShownOn(day: string, plan: Plan, repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, today: string): RepeatItem[] {
   if (!repeats?.length || !inWindow(day, today)) return [];
   const weekday = parseDate(day).getDay(), real = plan[day] ?? [], skipped = skips?.[day] ?? [];
-  return repeats.filter(r => day >= r.from && r.days.includes(weekday) && !skipped.includes(r.rid) && !real.some(i => samePlanItem(i, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) })));
+  const shown = repeats.filter(r => day >= r.from && r.days.includes(weekday) && !skipped.includes(r.rid) && !real.some(i => samePlanItem(i, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) })));
+  return shown.filter((r, n) => !shown.slice(0, n).some(e => samePlanItem({ k: e.k, id: e.id, s: e.s }, { k: r.k, id: r.id, s: r.s }))); // two repeats of the same food in the same meal show once
 }
 
 /** `plan` with each day's shown repeats added after its stored items. The same object when nothing is added, so memos hold. */
@@ -31,9 +32,12 @@ type Edit = { list: RepeatItem[]; error: null } | { list: null; error: string };
 /** `list` with `item` added. An error text when the list is full or that repeat (same `rid`, or the same food in the same meal on the same days) is already there. */
 export function addRepeat(list: readonly RepeatItem[], item: RepeatItem): Edit {
   if (list.length >= MAX_REPEATS) return { list: null, error: `You can keep ${MAX_REPEATS} repeats.` };
-  if (list.some(r => r.rid === item.rid || (samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: item.k, id: item.id, s: item.s }) && r.days.join() === item.days.join()))) return { list: null, error: 'That already repeats.' };
+  if (list.some(r => r.rid === item.rid || (samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: item.k, id: item.id, s: item.s }) && r.days.some(d => item.days.includes(d))))) return { list: null, error: 'That already repeats on some of those days.' };
   return { list: [...list, item], error: null };
 }
+
+/** `list` without any repeat of the recipe or meal `id`. */
+export const removeRepeatsFor = (list: readonly RepeatItem[], id: string): RepeatItem[] => list.filter(r => r.id !== id);
 
 /** `list` without the repeat `rid` (its skips are cleaned by `dropRepeatSkips`). */
 export const removeRepeat = (list: readonly RepeatItem[], rid: string): RepeatItem[] => list.filter(r => r.rid !== rid);
@@ -88,18 +92,18 @@ export function saveRepeat(list: readonly RepeatItem[], spec: { rid?: string; it
   if (!days.length) return { list: null, error: 'Pick at least one day.' };
   if (spec.rid && list.some(r => r.rid === spec.rid)) {
     const me = list.find(r => r.rid === spec.rid)!;
-    if (list.some(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: me.s }) && r.days.join() === days.join())) return { list: null, error: 'That already repeats.' };
+    if (list.some(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: me.s }) && r.days.some(d => days.includes(d)))) return { list: null, error: 'That already repeats on some of those days.' };
     return { list: list.map(r => (r.rid === spec.rid ? { ...r, days } : r)), error: null };
   }
   const { k, id, x, s } = spec.item;
   return addRepeat(list, { rid: newRid(list), k, id, ...(x && x !== 1 ? { x } : {}), ...(s ? { s } : {}), days, from: spec.from });
 }
 
-/** The skips with the repeat that a stored item on `day` stands for skipped there, so taking the item off its place (removing it, moving it to another meal or day) does not bring the repeat back in its spot. The skips unchanged (undefined) when the item stands for no repeat that shows on that day. */
+/** The skips with the repeat that a stored item on `day` stands for skipped there: only the item a repeat was made from (the repeat's start day), since an item the person added by hand on a later day is their own and the repeat shows again where it was (an item realized from a repeat already has its skip). Taking the item off its place (removing it, moving it to another meal or day) does not bring the repeat back in its spot. The skips unchanged (undefined) when the item stands for no repeat that shows on that day. */
 export function skipsAfterLeaving(repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, day: string, item: { k: string; id: string; s?: PlanSlot } | undefined): Record<string, string[]> | undefined {
   if (!item || !repeats?.length) return undefined;
   const weekday = parseDate(day).getDay();
-  const r = repeats.find(x => samePlanItem(item as PlanItem, { k: x.k, id: x.id, ...(x.s ? { s: x.s } : {}) }) && day >= x.from && x.days.includes(weekday) && !(skips?.[day] ?? []).includes(x.rid));
+  const r = repeats.find(x => samePlanItem(item as PlanItem, { k: x.k, id: x.id, ...(x.s ? { s: x.s } : {}) }) && day === x.from && x.days.includes(weekday) && !(skips?.[day] ?? []).includes(x.rid));
   return r ? skipRepeat(skips, day, r.rid) : undefined;
 }
 
