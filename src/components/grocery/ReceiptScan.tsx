@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
@@ -87,25 +87,43 @@ export function useReceiptScan(g: Grocery, mk: string) {
 }
 export type ReceiptScanState = ReturnType<typeof useReceiptScan>;
 
-/** Pick from photos and Saved receipts as the entries of Shopping's More menu on a phone (the same buttons, ids and gates as the row's). */
-export function ReceiptMenu({ r }: { r: ReceiptScanState }) {
-  const shut = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget.closest('details')?.removeAttribute('open'); // the menu closes when one of its receipt buttons is pressed, so it cannot sit over the sheet that opens next
-  return (
-    <>
-      {r.canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={r.busy} onClick={e => { shut(e); r.openLibrary(); }}>Pick from photos</button>}
-      <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>
-    </>
-  );
+/** Saved receipts as the entry of Shopping's More menu on a phone (the same button, id and gate as the row's). Picking a saved photo is in the Scan receipt chooser (brief receipt-pick-photo). */
+export function ReceiptMenu() {
+  const shut = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget.closest('details')?.removeAttribute('open'); // the menu closes when its receipt button is pressed, so it cannot sit over the page that opens next
+  return <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>;
 }
 
-// `phone`: only Scan receipt shows here, full width; Pick from photos and Saved receipts are in the More menu (ReceiptMenu) and their notices still show under it.
+// Scan receipt opens a small chooser, Camera or Photos (brief receipt-pick-photo, owner picked option B from a preview): the camera input has `capture`, the library input has none, so Android's
+// photo picker opens for Photos. The chooser closes on a pick (focus goes back to Scan receipt, so it is not lost when the pressed button unmounts), on Escape (that key stops here and does not
+// reach App's global close), on a second press of Scan receipt, on a tap outside the row and when focus leaves it. It also shuts when scanning becomes unavailable or starts, so it never reopens by itself.
+// On a phone it is the full-width row's second line; Saved receipts stays in More.
 export default function ReceiptScan({ r, phone }: { r: ReceiptScanState; phone?: boolean }) {
+  const [choosing, setChoosing] = useState(false);
+  const scanBtn = useRef<HTMLButtonElement>(null);
+  const row = useRef<HTMLDivElement>(null);
+  const open = choosing && r.canScan && !r.busy;
+  if (choosing && (!r.canScan || r.busy)) setChoosing(false); // adjusting state while rendering: it shuts when scanning is unavailable or starts, so it cannot reopen by itself
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (!row.current?.contains(e.target as Node)) setChoosing(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
   if (phone && !r.canScan && !r.hasNotes) return null;
+  const pick = (go: () => void) => { setChoosing(false); scanBtn.current?.focus(); go(); };
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setChoosing(false); scanBtn.current?.focus(); } };
+  const onBlur = (e: FocusEvent<HTMLDivElement>) => { if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) setChoosing(false); };
   return (
-    <div className={phone ? 'rcscan rcphone' : 'rcscan'}>
+    <div ref={row} className={phone ? 'rcscan rcphone' : 'rcscan'} onKeyDown={onKey} onBlur={onBlur}>
       {r.inputs}
-      {r.canScan && <button type="button" className="btn sm" id="groc-scan" disabled={r.busy} onClick={r.openCamera}>{r.busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
-      {!phone && <ReceiptMenu r={r} />}
+      {r.canScan && <button type="button" ref={scanBtn} className="btn sm" id="groc-scan" disabled={r.busy} aria-expanded={open} aria-controls={open ? 'groc-scan-choose' : undefined} onClick={() => setChoosing(c => !c)}>{r.busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
+      {!phone && <ReceiptMenu />}
+      {open && (
+        <div className="rcchoose" id="groc-scan-choose" role="group" aria-label="Scan receipt from">
+          <button type="button" className="btn sm" id="groc-scan-camera" autoFocus onClick={() => pick(r.openCamera)}>Camera</button>
+          <button type="button" className="btn sm" id="groc-scan-pick" onClick={() => pick(r.openLibrary)}>Photos</button>
+        </div>
+      )}
       {r.notes}
     </div>
   );

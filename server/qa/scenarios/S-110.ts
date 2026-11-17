@@ -4,7 +4,7 @@ const scenario: Scenario = {
   id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'grocery-shopper', brief: 'receipt-add-store', device: true,
   steps: [
     'On your own admin account on a phone (the QA test accounts are not admins and have no Scan receipt button), open Groceries, Inventory, Edit and check the list does not have the store on your receipt (for example Safeway, which Grocery shopper does not have); other stores may stay.',
-    'On Shopping press Scan receipt and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
+    'On Shopping press Scan receipt, then Camera, and photograph a receipt from a store (for example Safeway) that has a few items from your list.',
     'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
     'Press Apply, then open Shopping and Inventory, then press Undo on the notice.',
   ],

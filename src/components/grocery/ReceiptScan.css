@@ -10,6 +10,20 @@
 .rcscan .btn {
   min-height: 44px;
 }
+/* Scan receipt chooser (brief receipt-pick-photo): Camera and Photos, two equal buttons on their own line under the row. */
+.rcchoose {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-8);
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.rcchoose .btn.sm {
+  min-height: 48px;
+}
 /* On a phone Scan receipt is the one full-width button of the row (brief groceries-spending-buttons-quick-add); the other receipt buttons are in More. */
 .rcphone .btn {
   flex: 1 1 100%;

@@ -164,7 +164,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
       {onBought && !bought.length && !q.trim() && <p className="note" id="groc-boughtnone">Nothing bought yet this month. Tick an item on Shopping and it shows up here.</p>}
       {phoneShop
         ? <GroceryPhoneBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} searchOn={list.length > 0} select={selectBtn}
-          more={<GroceryMore phone><ReceiptMenu r={rs} />{detailsBtns}{skipBtn}</GroceryMore>} />
+          more={<GroceryMore phone><ReceiptMenu />{detailsBtns}{skipBtn}</GroceryMore>} />
         : (onBought ? bought.length > 0 : list.length > 0) && <GroceryBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} />}
       {noMatch && <NoMatch q={q} />}
       {!onBought && <RemovedNotice scope="groceryoff" />}
