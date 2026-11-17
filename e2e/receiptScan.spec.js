@@ -91,19 +91,20 @@ test.describe('as an admin', () => {
     for (const size of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.setViewportSize(size);
       await expect(page.locator('#groc-scan-pick')).toBeHidden(); // shut until Scan receipt is pressed
+      await expect(page.locator('#groc-scan')).not.toHaveAttribute('aria-controls'); // nothing to point at while shut
       await page.click('#groc-scan');
       await expect(page.locator('#groc-scan')).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.getByRole('button', { name: 'Camera' })).toBeVisible();
-      const photos = page.getByRole('button', { name: 'Photos' });
-      await expect(photos).toBeVisible();
-      expect((await photos.boundingBox()).height).toBeGreaterThanOrEqual(44);
+      await expect(page.locator('#groc-scan')).toHaveAttribute('aria-controls', 'groc-scan-choose');
+      await expect(page.locator('#groc-scan-camera')).toBeVisible();
+      await expect(page.locator('#groc-scan-pick')).toBeVisible();
+      for (const id of ['#groc-scan-camera', '#groc-scan-pick']) expect(Math.round((await page.locator(id).boundingBox()).height)).toBe(48);
       await page.keyboard.press('Escape');
       await expect(page.locator('#groc-scan-pick')).toBeHidden();
       await expect(page.locator('#groc-scan')).toBeFocused();
     }
   });
 
-  test('Photos opens the library picker, Camera the camera, and the chooser closes', async ({ page }) => {
+  test('Photos opens the library picker, and the chooser closes with focus back on Scan receipt', async ({ page }) => {
     await answer(page, good);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.click('#groc-scan');
@@ -112,5 +113,48 @@ test.describe('as an admin', () => {
     await (await chooser).setFiles(photo);
     await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
     await expect(page.locator('#groc-scan-choose')).toHaveCount(0);
+  });
+
+  test('Camera opens the camera input and sends the photo, and focus is back on Scan receipt', async ({ page }) => {
+    await answer(page, good);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.click('#groc-scan');
+    const chooser = page.waitForEvent('filechooser');
+    await page.click('#groc-scan-camera');
+    await (await chooser).setFiles(photo);
+    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
+    await expect(page.locator('#groc-scan-choose')).toHaveCount(0);
+  });
+
+  test('a second press of Scan receipt, a tap elsewhere, Tab out and the Escape key (which does not also reach App) close the chooser', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const shut = () => expect(page.locator('#groc-scan-choose')).toHaveCount(0);
+    await page.click('#groc-scan'); await expect(page.locator('#groc-scan-choose')).toBeVisible();
+    await page.click('#groc-scan'); await shut();
+    await page.click('#groc-scan'); await page.click('#groc-toolmore'); await shut(); // More on a phone
+    await page.click('#groc-toolmore'); // close More again
+    await page.click('#groc-scan'); await page.mouse.click(5, 300); await shut(); // a tap on empty page
+    await page.click('#groc-scan'); await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await shut(); // focus leaves the row
+    await page.click('#groc-scan');
+    await page.evaluate(() => { window.__esc = 0; document.addEventListener('keydown', e => { if (e.key === 'Escape') window.__esc++; }); });
+    await page.keyboard.press('Escape'); await shut();
+    expect(await page.evaluate(() => window.__esc)).toBe(0);
+  });
+
+  test('while a scan runs the chooser is shut and Scan receipt reads Reading receipt...', async ({ page }) => {
+    let release = () => {};
+    const gate = new Promise(r => { release = r; });
+    await page.route('**/api/scan/receipt', async route => { await gate; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { kind: 'unreadable' } }) }); });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.click('#groc-scan');
+    const chooser = page.waitForEvent('filechooser');
+    await page.click('#groc-scan-pick');
+    await (await chooser).setFiles(photo);
+    await expect(page.locator('#groc-scan')).toHaveText('Reading receipt...');
+    await expect(page.locator('#groc-scan')).toBeDisabled();
+    await expect(page.locator('#groc-scan-choose')).toHaveCount(0);
+    release();
+    await expect(page.locator('#groc-scan')).toHaveText('Scan receipt');
+    await expect(page.locator('#groc-scan-choose')).toHaveCount(0); // it does not reopen by itself
   });
 });

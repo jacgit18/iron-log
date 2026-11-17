@@ -21,7 +21,7 @@
   border-radius: var(--r-lg);
   background: var(--surface);
 }
-.rcchoose .btn {
+.rcchoose .btn.sm {
   min-height: 48px;
 }
 /* On a phone Scan receipt is the one full-width button of the row (brief groceries-spending-buttons-quick-add); the other receipt buttons are in More. */
