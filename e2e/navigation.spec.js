@@ -148,7 +148,7 @@ test('picking a week from the dropdown keeps the address; Back and a reload leav
   await page.locator('.nb-weekname').click();
   const list = page.getByRole('dialog', { name: 'Choose a week' });
   await expect(list.getByRole('button', { name: /^This week/ })).toHaveAttribute('aria-current', 'true');
-  await expect(list.getByRole('button')).toHaveCount(1 + 1 + 52 + 1); // last week, this week, then 52 weeks ahead
+  await expect(list.getByRole('button')).toHaveCount(54); // last week, this week, then 52 weeks ahead
   await list.getByRole('button', { name: /^In 5 weeks/ }).click();
   await expect(list).toHaveCount(0);
   await expect(page.locator('.nb-weekname')).toHaveText('In 5 weeks');
