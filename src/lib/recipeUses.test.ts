@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultUsesFor, hasUse, isEatable, toggleUse, usesOf, usesTag } from './recipeUses.js';
+import { defaultUsesFor, drinkIdsOf, hasUse, isDrink, isEatable, toggleUse, usesOf, usesTag } from './recipeUses.js';
 import { cleanUses, normRecipe, validRecipe } from '../shared/recipes.js';
 import type { RecipeCategory } from '../types.ts';
 
@@ -79,5 +79,20 @@ describe('uses on a saved recipe (sync and restore)', () => {
     expect(normRecipe({ ...base, uses: ['soup'] })?.uses).toBeUndefined();
     expect(normRecipe(base)?.uses).toBeUndefined();
     expect(validRecipe({ ...base, uses: ['ready', 'ingredient'] })).toBe(false); // written out of order: the API refuses it, the app always writes the cleaned order
+  });
+});
+
+describe('isDrink and drinkIdsOf (brief nutrition-meal-labels-year-repeat)', () => {
+  const list = [
+    { id: 'tea', cat: 'other' as const, uses: ['drink' as const] },
+    { id: 'old-drink', cat: 'drinks' as const }, // saved before Used as labels: no uses, the category says drink
+    { id: 'cola', cat: 'ready' as const, type: 'drink' as const },
+    { id: 'crisps', cat: 'ready' as const },
+    { id: 'rice', cat: 'carbs' as const, uses: ['meal' as const] },
+    { id: 'meal-in-drinks', cat: 'drinks' as const, uses: ['meal' as const] }, // saved labels win over the category
+  ];
+  it('matches the Drinks tab: a saved label, else the category or ready-made type', () => {
+    expect([...drinkIdsOf(list)]).toEqual(['tea', 'old-drink', 'cola']);
+    expect(isDrink(undefined)).toBe(false);
   });
 });

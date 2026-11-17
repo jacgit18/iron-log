@@ -165,11 +165,7 @@ export const planItemKey = (i: PlanItem): string => JSON.stringify([i.k, i.id, i
 
 /** Whether a stored item is a listed daily snack: a recipe in Snack whose id is on the daily list. Such an item never counts toward MAX_PLAN_ITEMS; one left on a day after its snack leaves the list counts as planned again. */
 export const isDailySnackItem = (i: PlanItem, snacks: readonly { id: string }[] | undefined): boolean => i.k === 'r' && i.s === 'snack' && !!snacks?.some(s => s.id === i.id);
-/** Whether a recipe is a drink: its `uses` includes Drink (a Drink is never combined with another label, so it is the only one). */
-export const isDrinkRecipe = (r: { uses?: readonly string[] } | undefined): boolean => !!r?.uses?.includes('drink');
-/** The ids of the drinks among `recipes`. */
-export const drinkIdsOf = (recipes: readonly { id: string; uses?: readonly string[] }[]): ReadonlySet<string> => new Set(recipes.filter(isDrinkRecipe).map(r => r.id));
-/** Whether a stored item is a drink: a recipe whose id is in `drinks`. A drink never counts toward MAX_PLAN_ITEMS or the plate check (brief nutrition-meal-labels-year-repeat). */
+/** Whether a stored item is a drink: a recipe whose id is in `drinks` (`drinkIdsOf` in `src/lib/recipeUses.ts` works the set out). A drink never counts toward MAX_PLAN_ITEMS or the plate check (brief nutrition-meal-labels-year-repeat). */
 export const isDrinkItem = (i: PlanItem, drinks: ReadonlySet<string> | undefined): boolean => i.k === 'r' && !!drinks?.has(i.id);
 /** How many of a day's stored items count toward MAX_PLAN_ITEMS: all but its listed daily snacks and, when `drinks` is given, its drinks. */
 export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>): number => items.filter(i => !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length;

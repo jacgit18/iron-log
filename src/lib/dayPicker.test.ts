@@ -119,12 +119,14 @@ describe('goLabel, onwardDays, plannedText (the Add sheet and the buttons)', () 
     expect(goLabel('Move', ['2026-11-15'])).toBe('Move to Sun 15');
     expect(goLabel('Copy', ['2026-11-15', '2026-11-16'])).toBe('Copy to 2 days');
   });
-  it('"This day on" runs from the day to today + 364, one entry each', () => {
+  it('"This day on" runs from the day for 14 days, cut at the last plannable day', () => {
     const d = onwardDays('2026-11-20', today);
     expect(d[0]).toBe('2026-11-20');
-    expect(d.at(-1)).toBe(lastPlanDay(today));
-    expect(d).toHaveLength(359);
-    expect(onwardDays(today, today)).toHaveLength(365);
+    expect(d.at(-1)).toBe('2026-12-03');
+    expect(d).toHaveLength(14);
+    expect(onwardDays(today, today)).toHaveLength(14);
+    expect(onwardDays('2027-11-10', today)).toEqual(['2027-11-10', '2027-11-11', '2027-11-12', '2027-11-13']); // cut at today + 364
+    expect(onwardDays('2020-01-01', today)[0]).toBe(today);
     expect(onwardDays('2027-11-14', today)).toEqual([]);
   });
   it('says what was planned and what was skipped', () => {

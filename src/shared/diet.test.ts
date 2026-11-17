@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, MAX_REPEATS, drinkIdsOf, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -258,9 +258,8 @@ describe('the 52-week window', () => {
 
 describe('drinks outside the planned count', () => {
   const items = [{ k: 'r' as const, id: 'tea' }, { k: 'r' as const, id: 'rice' }, { k: 'm' as const, id: 'tea' }];
-  const drinks = drinkIdsOf([{ id: 'tea', uses: ['drink'] }, { id: 'rice', uses: ['meal'] }, { id: 'plain' }]);
-  it('finds the drinks: a recipe whose uses include drink', () => {
-    expect([...drinks]).toEqual(['tea']);
+  const drinks: ReadonlySet<string> = new Set(['tea']);
+  it('a drink item is a recipe whose id is in the set', () => {
     expect(isDrinkItem(items[0]!, drinks)).toBe(true);
     expect(isDrinkItem(items[2]!, drinks)).toBe(false); // a saved meal is never a drink
     expect(isDrinkItem(items[0]!, undefined)).toBe(false);

@@ -100,10 +100,10 @@ export function moveButton(days: readonly string[], meal: string | undefined, ow
   return changed ? { label: `Move to ${mealLabel(meal!)}`, enabled: true } : { label: 'Pick a day', enabled: false };
 }
 
-/** "This day on": `day` to the last plannable day, one entry per day. Empty when `day` is outside today..today + 364. */
+/** "This day on": `day` and the next 13 days (QUICK_PICK_DAYS in all), cut at the last plannable day, one entry per day. A card is stored on each, so it is bounded; a long run is a repeat's job (brief nutrition-meal-labels-year-repeat). Empty when `day` is past today + 364. */
 export function onwardDays(day: string, today: string): string[] {
-  const out: string[] = [], last = lastPlanDay(today);
-  for (let d = day < today ? today : day; d <= last; d = shiftDay(d, 1)) out.push(d);
+  const out: string[] = [], from = day < today ? today : day, last = [lastPlanDay(today), shiftDay(from, QUICK_PICK_DAYS - 1)].sort()[0]!;
+  for (let d = from; d <= last; d = shiftDay(d, 1)) out.push(d);
   return out;
 }
 
