@@ -40,6 +40,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
   const [uses, setUses] = useState<RecipeUse[]>(() => (recipe ? usesOf(recipe) : [DEFAULT_FOOD_TYPE])); // brief recipes-used-as-ingredients-tab: one or more of Ingredient, Ready to eat, Drink; starts on Ready to eat // brief food-type-and-migration: required, starts on Ready to eat (a food saved before types existed saves with its first Type too)
+  const [beforeBev, setBeforeBev] = useState<RecipeUse[]>(); // the labels the food had when Beverage was turned on
   const [meal, setMeal] = useState<PlanSlot | undefined>(recipe?.meal); // brief nutrition-meal-labels-year-repeat: the food's usual meal
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [note, setNote] = useState(recipe?.note ?? '');
@@ -109,7 +110,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
       <UsedAsChips value={uses} options={FOOD_USES} onChange={setUses} />
-      <UsualMealPicker meal={meal} beverage={uses.includes('drink')} onMeal={setMeal} onBeverage={on => setUses(setBeverage(uses, 'ready', on))} />
+      <UsualMealPicker meal={meal} beverage={uses.includes('drink')} onMeal={setMeal} onBeverage={on => { if (on) setBeforeBev(uses); setUses(setBeverage(uses, 'ready', on, beforeBev)); }} />
       <CountsAsChips value={countsAs.shown(autoMarks)} picked={countsAs.picked} onChange={countsAs.pick} onAuto={countsAs.reset} />
       <div className="rc-nutfields">
         <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => { setKcal(e.target.value); setErr(''); }} /></label>

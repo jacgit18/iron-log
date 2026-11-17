@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
-import { USUAL_MEAL_CHOICES, followsUsualMeal, mealOfItem, planMealFor, setBeverage, startMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
+import { USUAL_MEAL_CHOICES, followsUsualMeal, mealOfItem, planMealFor, setBeverage, startMealFor, storedMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
 
 const foods: Pick<Recipe, 'id' | 'meal'>[] = [{ id: 'oats', meal: 'breakfast' }, { id: 'rice' }, { id: 'tea', meal: 'snack' }];
 const r = (id: string, s?: PlanItem['s']): PlanItem => ({ k: 'r', id, ...(s ? { s } : {}) });
@@ -64,5 +64,18 @@ describe('usualMealLine', () => {
   it('names the meal on the card, or is null', () => {
     expect(usualMealLine({ meal: 'breakfast' })).toBe('Usual meal: Breakfast');
     expect(usualMealLine({})).toBeNull();
+  });
+});
+
+describe('Beverage off keeps the other labels, and an add follows the usual meal', () => {
+  it('puts back the labels the food had before Beverage was turned on', () => {
+    expect(setBeverage(['drink'], 'other', false, ['meal', 'ingredient'])).toEqual(['meal', 'ingredient']);
+    expect(setBeverage(['drink'], 'other', false, ['drink'])).toEqual(['meal']); // nothing else to put back: the category's
+  });
+  it('stores no meal for a food with a usual meal unless one was pressed', () => {
+    expect(storedMealFor({ meal: 'breakfast' }, 'lunch', false)).toBeUndefined();
+    expect(storedMealFor({ meal: 'breakfast' }, 'lunch', true)).toBe('lunch');
+    expect(storedMealFor({}, 'lunch', false)).toBe('lunch');
+    expect(storedMealFor(undefined, 'lunch', false)).toBe('lunch');
   });
 });

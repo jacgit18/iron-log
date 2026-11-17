@@ -11,7 +11,7 @@ import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows, savedMealsNote } from '../../lib/quickMeals.js';
 import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, shortDay, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
-import { planMealFor } from '../../lib/usualMeal.js';
+import { planMealFor, storedMealFor } from '../../lib/usualMeal.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
 import { ymd } from '../../shared/dates.js';
@@ -126,10 +126,11 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
   const st = () => useAppStore.getState();
   const planned = (kind: 'r' | 'm', id: string): PlanSlot => (kind === 'r' ? planMealFor(recipes.find(r => r.id === id), meal, explicit) : meal); // a recipe's usual meal unless a meal was pressed
   const plan = (kind: 'r' | 'm', id: string, name: string) => {
-    const slot = planned(kind, id);
-    if (scope === 'one') { const e = st().addPlanItem(day, kind, id, slot); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[slot]}.`); return; }
+    const slot = planned(kind, id); // the meal named to the person
+    const stored = kind === 'r' ? storedMealFor(recipes.find(r => r.id === id), meal, explicit) : slot; // a recipe following its usual meal is stored with no meal of its own
+    if (scope === 'one') { const e = st().addPlanItem(day, kind, id, stored); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[slot]}.`); return; }
     if (!targets.length) { onMsg('Pick a day first.'); return; }
-    const r = st().addPlanItemToDays(kind, id, targets, slot);
+    const r = st().addPlanItemToDays(kind, id, targets, stored);
     onMsg(r.error ?? plannedText(name, SLOT_LABEL[slot], r.done, r.skipped));
   };
   const addFood = (f: Food) => {
