@@ -1,6 +1,6 @@
 import type { DailySnack, DietEntry, PlanItem, Recipe, SavedItem, SavedMeal } from '../types.ts';
 import { withMicro } from '../shared/foodMicro.js';
-import { MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, isDailySnackItem, plannedCount, samePlanItem } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_DRINKS, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, isDailySnackItem, isDrinkItem, plannedCount, samePlanItem } from '../shared/diet.js';
 import { fmtNum, hasMacros, servingNumbers, shiftDay } from './dietLog.js';
 import { planMeal } from './dietMeals.js';
 import { mealItems } from './quickMeals.js';
@@ -22,12 +22,21 @@ export const inWindow = (day: string, today: string): boolean => day >= today &&
 /** The plan without days before `today` (earlier days are dropped when it is written). */
 export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries(Object.entries(plan).filter(([d]) => d >= today));
 
+/** Why `list` (a day's stored items) can take no more of `item`, or null: a planned thing is held to MAX_PLAN_ITEMS (a listed daily snack and a drink never count toward it), a drink to MAX_DAY_DRINKS, all together to MAX_DAY_ITEMS. */
+export function fullReason(list: readonly PlanItem[], item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): string | null {
+  if (list.length >= MAX_DAY_ITEMS) return `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`;
+  if (isDrinkItem(item, drinks)) return list.filter(i => isDrinkItem(i, drinks)).length >= MAX_DAY_DRINKS ? `A day can hold ${MAX_DAY_DRINKS} drinks. Remove one to add another.` : null;
+  if (isDailySnackItem(item, snacks)) return null;
+  return plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS ? `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` : null;
+}
+
 /** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. A day holds MAX_PLAN_ITEMS planned things; a listed daily snack (`snacks` is the list) never counts toward that, and is held to MAX_DAY_ITEMS in all. */
-export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[]): Made {
+export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next 52 weeks.');
   const list = plan[day] ?? [];
   if (list.some(i => samePlanItem(i, item))) return fail('That is already in that meal.'); // the same food may be in two different meals
-  if (isDailySnackItem(item, snacks) ? list.length >= MAX_DAY_ITEMS : plannedCount(list, snacks) >= MAX_PLAN_ITEMS) return fail(`A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`);
+  const full = fullReason(list, item, snacks, drinks);
+  if (full) return fail(full);
   return { plan: { ...plan, [day]: [...list, item] }, error: null };
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
-import { followsUsualMeal, mealOfItem, usualMealOf } from './usualMeal.js';
+import { USUAL_MEAL_CHOICES, followsUsualMeal, mealOfItem, setBeverage, startMealFor, usualMealOf } from './usualMeal.js';
 
 const foods: Pick<Recipe, 'id' | 'meal'>[] = [{ id: 'oats', meal: 'breakfast' }, { id: 'rice' }, { id: 'tea', meal: 'snack' }];
 const r = (id: string, s?: PlanItem['s']): PlanItem => ({ k: 'r', id, ...(s ? { s } : {}) });
@@ -32,5 +32,22 @@ describe('followsUsualMeal', () => {
     expect(followsUsualMeal(r('oats', 'dinner'), foods)).toBe(false);
     expect(followsUsualMeal(r('rice'), foods)).toBe(false);
     expect(followsUsualMeal({ k: 'm', id: 'oats' }, foods)).toBe(false);
+  });
+});
+
+describe('the form and the add sheet', () => {
+  it('offers the four meals in day order, then None', () => {
+    expect(USUAL_MEAL_CHOICES.map(c => c.slot)).toEqual(['breakfast', 'lunch', 'dinner', 'snack', null]);
+  });
+  it('starts the add sheet on the usual meal, else the fallback', () => {
+    expect(startMealFor({ meal: 'dinner' }, 'snack')).toBe('dinner');
+    expect(startMealFor({}, 'lunch')).toBe('lunch');
+    expect(startMealFor(undefined, 'lunch')).toBe('lunch');
+  });
+  it('Beverage on is a Drink alone; off returns to the category default', () => {
+    expect(setBeverage(['meal'], 'other', true)).toEqual(['drink']);
+    expect(setBeverage(['drink'], 'protein', false)).toEqual(['meal', 'ingredient']);
+    expect(setBeverage(['drink'], 'drinks', false)).toEqual(['meal']);
+    expect(setBeverage(['meal'], 'other', false)).toEqual(['meal']);
   });
 });
