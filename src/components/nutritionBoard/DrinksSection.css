@@ -1,0 +1,9 @@
+@layer base, components;
+@layer components {
+/* A day's Drinks list (DrinksSection.tsx): the meal section look (wb-slot) with a one-line note under the header. */
+.nb-drinksnote {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+}

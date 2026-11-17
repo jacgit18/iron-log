@@ -140,3 +140,35 @@ describe('addItemsToDays and copyItemToDays', () => {
     expect(r.skipped).toEqual([{ day: day(15), reason: 'already there' }]);
   });
 });
+
+describe('usual meal and drinks on the board (brief nutrition-meal-labels-year-repeat)', () => {
+  const oats = rec('oats', 'other', 300, 10, { meal: 'breakfast' }), coffee = rec('coffee', 'other', 5, 0, { uses: ['drink'], meal: 'breakfast' }), tea = rec('tea', 'drinks', 2, 0);
+  const all = [...recipes, oats, coffee, tea];
+  it('puts an item with no meal of its own under its usual meal, and leaves a hand-placed one where it was put', () => {
+    const d = boardDay({ [D]: [pi('oats'), pi('toast'), { ...pi('oats', 'dinner') }] }, D, all, [], null);
+    expect(d.slots.find(s => s.slot === 'breakfast')!.items.map(x => x.index)).toEqual([0]);
+    expect(d.slots.find(s => s.slot === 'dinner')!.items.map(x => x.index)).toEqual([2]);
+    expect(d.slots.find(s => s.slot === null)!.items.map(x => x.index)).toEqual([1]); // no usual meal: still "Not set"
+  });
+  it('changing the usual meal moves every unplaced item with it', () => {
+    const later = all.map(r => (r.id === 'oats' ? { ...r, meal: 'snack' as const } : r));
+    expect(boardDay({ [D]: [pi('oats')] }, D, later, [], null).slots.find(s => s.slot === 'snack')!.items).toHaveLength(1);
+  });
+  it('lists a drink in Drinks, by label or by the Drinks category, outside every meal and its plate check, keeping its calories in the day', () => {
+    const d = boardDay({ [D]: [pi('coffee'), pi('tea', 'lunch'), pi('toast', 'breakfast')] }, D, all, [], null);
+    expect(d.drinks.map(x => x.r.item.id)).toEqual(['coffee', 'tea']);
+    expect(d.slots.flatMap(s => s.items.map(x => x.r.item.id))).toEqual(['toast']);
+    expect(d.slots.find(s => s.slot === 'lunch')).toMatchObject({ items: [], need: [], fixes: [] }); // a lunch holding only a drink asks for nothing
+    expect(d.kcal).toBe(Math.round(5 + 2 + (toast.kcal ?? 0)));
+    expect(d.count).toBe(3);
+  });
+  it('leaves drinks out of the 8-item cap but holds them to their own limit', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => pi(`r${i}`));
+    const drinks = new Set(['coffee']);
+    expect(addItemsToDays({ [D]: eight }, [{ day: D, item: pi('coffee') }], TODAY, undefined, drinks).added).toEqual([D]);
+    expect(addItemsToDays({ [D]: eight }, [{ day: D, item: pi('toast') }], TODAY, undefined, drinks).skipped).toEqual([{ day: D, reason: 'full' }]);
+    const six = Array.from({ length: 6 }, (_, i) => pi('coffee', (['breakfast', 'lunch', 'dinner', 'snack'] as const)[i % 4]!, i < 4 ? undefined : 2));
+    expect(moveItem({ [D]: [...eight, pi('coffee')] }, D, 8, D2, 'lunch', TODAY, undefined, drinks).error).toBeNull();
+    expect(six.length).toBe(6);
+  });
+});
