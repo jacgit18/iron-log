@@ -48,8 +48,8 @@ test('Back on an untouched receipt closes it, and the Resume row brings it back'
   await scan(page);
   await page.goBack();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.locator('#groc-resume')).toContainText(/BJ'S, 2 lines, closed/);
-  await page.click('#groc-resume-go');
+  await expect(page.locator('#groc-resume')).toContainText(/BJ'S, Sep 24.*2 lines.*saved just now/);
+  await page.getByRole('button', { name: /^Resume / }).click();
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
   await expect(page.locator('#groc-resume')).toHaveCount(0); // hidden while the sheet is open
 });
@@ -59,7 +59,7 @@ test('Close keeps a draft with its edits; Resume restores them; Apply erases the
   await oil(page).uncheck();
   await page.getByRole('button', { name: 'Close' }).click(); // Close is deliberate: it does not ask, it keeps a draft
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.click('#groc-resume-go');
+  await page.getByRole('button', { name: /^Resume / }).click();
   await expect(oil(page)).not.toBeChecked();
   await oil(page).check(); // the lines match the receipt total again, so Apply is not armed
   await page.getByRole('dialog').getByRole('button', { name: /^Apply/ }).click();
@@ -70,9 +70,9 @@ test('Close keeps a draft with its edits; Resume restores them; Apply erases the
 test('Discard on the Resume row erases the draft', async ({ page }) => {
   await scan(page);
   await page.getByRole('button', { name: 'Close' }).click();
-  await page.click('#groc-resume-discard');
+  await page.getByRole('button', { name: /^Discard / }).click();
   await expect(page.locator('#groc-resume')).toHaveCount(0);
-  await expect(page.evaluate(() => sessionStorage.getItem('ironlog.receiptDraft'))).resolves.toBeNull();
+  await expect(page.evaluate(() => localStorage.getItem('ironlog.receiptDrafts'))).resolves.toBeNull();
 });
 
 test('a tap outside the sheet and Escape ask first when the receipt was changed, and close an untouched one', async ({ page }) => {
@@ -94,11 +94,11 @@ test('a tap outside the sheet and Escape ask first when the receipt was changed,
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('a draft older than 2 hours is not offered', async ({ page }) => {
+test('a draft older than 7 days is not offered', async ({ page }) => {
   await scan(page);
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page.locator('#groc-resume')).toHaveCount(1);
-  await page.evaluate(() => { const k = 'ironlog.receiptDraft'; const d = JSON.parse(sessionStorage.getItem(k)); d.savedAt -= 3 * 3600 * 1000; sessionStorage.setItem(k, JSON.stringify(d)); });
+  await page.evaluate(() => { const k = 'ironlog.receiptDrafts'; const l = JSON.parse(localStorage.getItem(k)); l[0].savedAt -= 8 * 24 * 3600 * 1000; localStorage.setItem(k, JSON.stringify(l)); });
   await page.reload();
   await expect(page.locator('#groc-scan')).toBeVisible();
   await expect(page.locator('#groc-resume')).toHaveCount(0);
