@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_PLAN_AHEAD, MAX_REPEATS } from '../shared/diet.js';
 import type { RepeatItem } from '../types.ts';
 import { shiftDay } from './dietLog.js';
-import { addRepeat, dropRepeatSkips, removeRepeat, repeatPlanItem, repeatsShownOn, skipRepeat, withRepeats } from './repeats.js';
+import { addRepeat, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, repeatPlanItem, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
 
 const today = '2026-11-16'; // a Monday
 const rep = (rid: string, days: number[], extra: Partial<RepeatItem> = {}): RepeatItem => ({ rid, k: 'r', id: 'oats', days, from: today, ...extra });
@@ -81,5 +81,54 @@ describe('list edits', () => {
     expect(s).toEqual({ '2026-11-18': ['a'] });
     expect(skipRepeat(s, '2026-11-18', 'a')).toEqual(s);
     expect(skipRepeat(s, '2026-11-19', 'a')).toEqual({ '2026-11-18': ['a'], '2026-11-19': ['a'] });
+  });
+});
+
+describe('the Repeat sheet rules', () => {
+  it('names the day sets', () => {
+    expect(daysName(EVERY_DAY)).toBe('Every day');
+    expect(daysName(WEEKDAYS)).toBe('Weekdays');
+    expect(daysName([0, 3, 1])).toBe('Mon, Wed, Sun');
+    expect(daysName([6])).toBe('Sat');
+  });
+  it('ticks and unticks a day, keeping weekday order', () => {
+    expect(toggleWeekday([1, 3], 2)).toEqual([1, 2, 3]);
+    expect(toggleWeekday([1, 2, 3], 2)).toEqual([1, 3]);
+    expect(toggleWeekday([], 0)).toEqual([0]);
+    expect(sameDays([1, 2], [2, 1])).toBe(true);
+    expect(sameDays([1], [1, 2])).toBe(false);
+  });
+  it('saves a new repeat from the day it was set, with its portion and meal', () => {
+    const r = saveRepeat([], { item: { k: 'r', id: 'almonds', x: 2, s: 'snack' }, days: [5, 1, 1], from: '2026-11-17' });
+    expect(r.error).toBeNull();
+    expect(r.list).toEqual([{ rid: 'rp1', k: 'r', id: 'almonds', x: 2, s: 'snack', days: [1, 5], from: '2026-11-17' }]);
+    expect(saveRepeat([], { item: { k: 'r', id: 'a', x: 1 }, days: [1], from: today }).list![0]).not.toHaveProperty('x');
+  });
+  it('changes the days of a repeat that has its rid, and refuses no days, a full list and a twin', () => {
+    const l = [rep('rp1', [1])];
+    expect(saveRepeat(l, { rid: 'rp1', item: { k: 'r', id: 'oats' }, days: [2, 3], from: today }).list![0]!.days).toEqual([2, 3]);
+    expect(saveRepeat(l, { item: { k: 'r', id: 'x' }, days: [], from: today }).error).toMatch(/at least one day/);
+    expect(saveRepeat(l, { item: { k: 'r', id: 'oats' }, days: [1], from: today }).error).toMatch(/already/);
+    const full = Array.from({ length: MAX_REPEATS }, (_, i) => rep(`rp${i + 1}`, [1], { id: `f${i}` }));
+    expect(saveRepeat(full, { item: { k: 'r', id: 'new' }, days: [1], from: today }).error).toMatch(/12 repeats/);
+    expect(newRid(full)).toBe(`rp${MAX_REPEATS + 1}`);
+  });
+  it('stopping a repeat takes all its days and skips away', () => {
+    const l = [rep('rp1', every), rep('rp2', every, { id: 'tea' })];
+    const left = removeRepeat(l, 'rp1');
+    expect(dropRepeatSkips({ '2026-11-18': ['rp1', 'rp2'], '2026-11-19': ['rp1'] }, left)).toEqual({ '2026-11-18': ['rp2'] });
+    expect(repeatsShownOn('2026-11-25', {}, left, undefined, today).map(r => r.rid)).toEqual(['rp2']);
+  });
+  it('an item taken off its place skips its repeat that day only, and only for the same food in the same meal', () => {
+    const l = [rep('rp1', every, { id: 'almonds', s: 'snack' })];
+    expect(skipsAfterLeaving(l, undefined, '2026-11-18', { k: 'r', id: 'almonds', s: 'snack' })).toEqual({ '2026-11-18': ['rp1'] });
+    expect(skipsAfterLeaving(l, undefined, '2026-11-18', { k: 'r', id: 'almonds', s: 'lunch' })).toBeUndefined();
+    expect(skipsAfterLeaving(l, undefined, '2026-11-18', { k: 'r', id: 'tea', s: 'snack' })).toBeUndefined();
+    expect(skipsAfterLeaving(l, { '2026-11-18': ['rp1'] }, '2026-11-18', { k: 'r', id: 'almonds', s: 'snack' })).toBeUndefined();
+    expect(skipsAfterLeaving([rep('rp1', [1], { id: 'almonds' })], undefined, '2026-11-18', { k: 'r', id: 'almonds' })).toBeUndefined(); // Wednesday, not a repeat day
+  });
+  it('shows a skipped repeat again', () => {
+    expect(unskipRepeat({ '2026-11-18': ['a', 'b'] }, '2026-11-18', 'a')).toEqual({ '2026-11-18': ['b'] });
+    expect(unskipRepeat({ '2026-11-18': ['a'] }, '2026-11-18', 'a')).toEqual({});
   });
 });

@@ -332,6 +332,11 @@ export interface DietSlice {
   skipDailySnack(day: string, id: string): void; // a listed snack is not shown on that day (it returns on the others)
   realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (outside the plan window; a day already holding 8 planned things still takes it, snacks never count toward the 8)
   unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
+  saveRepeat(day: string, item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }, days: number[], rid?: string): string | null; // repeats the item on those weekdays (0 Sunday to 6 Saturday) of every week from `day`, stored once in cfg.diet.repeats (at most 12); with `rid`, changes that repeat's days; an error text, or null
+  stopRepeat(rid: string): void; // removes the repeat and its skips; items already stored on a day stay
+  skipRepeatDay(day: string, rid: string): void; // the repeat is not shown on that day only
+  realizeRepeat(day: string, rid: string): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
+  unstoreRepeat(day: string, index: number, rid: string): void; // takes back an item realizeRepeat just stored when its log failed
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
   planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo
   uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark

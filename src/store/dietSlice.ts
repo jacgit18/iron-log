@@ -1,4 +1,5 @@
 import { skipSnack } from '../lib/dailySnacks.js';
+import { dropRepeatSkips, removeRepeat, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, unskipRepeat } from '../lib/repeats.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
@@ -30,10 +31,11 @@ const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
 
 // The plan lives in cfg.diet.plan (brief diet-meal-planner), keyed by date; every write goes back through normDietCfg with today, which drops earlier days.
 const drinksOf = (get: StoreGet) => drinkIdsOf(get().recipes), planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
-const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>) => get().mutateCfg(c => {
+const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>, repeatSkips?: Record<string, string[]>) => get().mutateCfg(c => {
   const next = { ...(c.diet || {}) };
   if (Object.keys(plan).length) next.plan = plan; else delete next.plan;
   if (skips) { if (Object.keys(skips).length) next.snackSkips = skips; else delete next.snackSkips; } // the daily snack skips go in the same write as the plan change that needs them
+  if (repeatSkips) { if (Object.keys(repeatSkips).length) next.repeatSkips = repeatSkips; else delete next.repeatSkips; } // and so do the repeat skips
   const clean = normDietCfg(next, ymd(new Date()));
   if (clean) c.diet = clean; else delete c.diet;
 });
@@ -42,6 +44,9 @@ const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>) =>
 // Only an item in Snack counts: the same recipe planned by hand in another meal is the person's own plan, and taking it out leaves the listed snack as it was.
 const skipsAfterLeaving = (get: StoreGet, day: string, item: { k: string; id: string; s?: string } | undefined): Record<string, string[]> | undefined =>
   item && item.k === 'r' && item.s === 'snack' && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
+
+// A stored item that stands for a repeat (the same food in the same meal, on a day the repeat shows) and leaves its place skips that repeat on that day, so the repeat does not come back where the item was.
+const repeatSkipsAfter = (get: StoreGet, day: string, item: PlanItem | undefined): Record<string, string[]> | undefined => repeatSkipsAfterLeaving(get().cfg.diet?.repeats, get().cfg.diet?.repeatSkips, day, item);
 
 const keyedMicro = (m: unknown): string => Object.entries((m && typeof m === 'object' ? m : {}) as Record<string, number>).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join(',');
 const sameMicro = (a: unknown, b: unknown): boolean => keyedMicro(a) === keyedMicro(b);
@@ -216,7 +221,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   movePlanItem(day, index, toDay, slot) {
     const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
     if (r.plan === null) return r.error;
-    putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, planOf(get)[day]?.[index]) : undefined);
+    putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, planOf(get)[day]?.[index]) : undefined, repeatSkipsAfter(get, day, planOf(get)[day]?.[index]));
     return null;
   },
 
@@ -225,7 +230,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (next !== plan) putPlan(get, next);
   },
 
-  removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index), skipsAfterLeaving(get, day, planOf(get)[day]?.[index])); },
+  removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index), skipsAfterLeaving(get, day, planOf(get)[day]?.[index]), repeatSkipsAfter(get, day, planOf(get)[day]?.[index])); },
 
   // Daily snacks (brief daily-snacks): the saved list in cfg.diet.snacks, shown in Snack on every day of the plan window.
   saveDailySnacks(list: DailySnack[]) {
@@ -261,6 +266,53 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const it = planOf(get)[day]?.[index];
     if (!it || it.e?.length) return;
     putPlan(get, removeItem(planOf(get), day, index));
+  },
+
+  // Repeats (brief nutrition-meal-labels-year-repeat): cfg.diet.repeats, each stored once and shown on its weekdays of every week in the plan window.
+  // Saving one from a planned item on `day` starts it that day (no back-fill); `rid` edits the days of a repeat already there.
+  saveRepeat(day, item, days, rid) {
+    const r = saveRepeat(get().cfg.diet?.repeats ?? [], { ...(rid ? { rid } : {}), item, days, from: day });
+    if (r.list === null) return r.error;
+    get().mutateCfg(c => {
+      const next = { ...(c.diet || {}), repeats: r.list };
+      const skips = dropRepeatSkips(next.repeatSkips, r.list);
+      if (Object.keys(skips).length) next.repeatSkips = skips; else delete next.repeatSkips;
+      const clean = normDietCfg(next, ymd(new Date()));
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+    return null;
+  },
+
+  // Stop repeating: the repeat and its skips go, on every day. Items already stored on a day stay.
+  stopRepeat(rid) {
+    get().mutateCfg(c => {
+      const left = removeRepeat(c.diet?.repeats ?? [], rid), next = { ...(c.diet || {}) };
+      if (left.length) next.repeats = left; else delete next.repeats;
+      const skips = dropRepeatSkips(next.repeatSkips, left);
+      if (Object.keys(skips).length) next.repeatSkips = skips; else delete next.repeatSkips;
+      const clean = normDietCfg(next, ymd(new Date()));
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+  },
+
+  // Skip this day only: the repeat is not shown on that day and shows on the others.
+  skipRepeatDay(day, rid) { putPlan(get, planOf(get), undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid)); },
+
+  // A repeat that is only shown becomes a real item of that day (so it can be ticked, changed or moved) and the repeat is skipped that day, so moving or removing the item does not bring the repeat back; the index of the real item, or an error text (the day is full or outside the window).
+  realizeRepeat(day, rid) {
+    const rep = get().cfg.diet?.repeats?.find(r => r.rid === rid);
+    if (!rep) return 'That repeat is gone.';
+    const r = addItem(planOf(get), day, { k: rep.k, id: rep.id, ...(rep.x ? { x: rep.x } : {}), ...(rep.s ? { s: rep.s } : {}) }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
+    if (r.plan === null) return r.error;
+    putPlan(get, r.plan, undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid));
+    return r.plan[day]!.length - 1;
+  },
+
+  // Takes back an item realizeRepeat just stored when what it was stored for did not happen (the log failed): it goes back to being shown.
+  unstoreRepeat(day, index, rid) {
+    const it = planOf(get)[day]?.[index];
+    if (!it || it.e?.length) return;
+    putPlan(get, removeItem(planOf(get), day, index), undefined, unskipRepeat(get().cfg.diet?.repeatSkips, day, rid));
   },
 
   setPlanEaten(day, index, ids) { putPlan(get, setEaten(planOf(get), day, index, ids)); },
