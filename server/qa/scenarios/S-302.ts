@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-302', feature: 'Receipt share', title: 'The receipt sheet splits the whole receipt and says who owes what', persona: 'grocery-shopper', brief: 'receipt-share', device: true,
   steps: [
-    'On your own account on a phone, open Groceries, Shopping and press Scan receipt, then photograph a receipt with a few items from your list (Grocery shopper has the sharing group Home with Sam and Alex).',
+    'On your own account on a phone, open Groceries, Shopping and press Scan receipt, then Camera, and photograph a receipt with a few items from your list (Grocery shopper has the sharing group Home with Sam and Alex).',
     'In the sheet find the box "Split this receipt" under the line that checks the total; do not press Apply yet.',
     'Press the chip in that box (it reads Just me, or the usual split), tick Sam, and read the line under the chip.',
   ],
