@@ -64,7 +64,7 @@ export function cleanReceipt(raw: unknown, known: ReadonlySet<string>): ReceiptR
   const paid = cents(o.paid, 1);
   if (paid !== null) receipt.paidCents = paid;
   const rewards = cents(o.rewards, 1);
-  if (rewards !== null) receipt.rewardsCents = rewards;
+  if (rewards !== null && (total === null || rewards <= total)) receipt.rewardsCents = rewards; // a credit above the printed total is a misread: left to the person to type
   return { kind: 'ok', receipt };
 }
 

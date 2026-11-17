@@ -174,7 +174,7 @@ export default function ReceiptSheet() {
     finished.current = true; dropDraft(); // applied: nothing left to resume
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || out.unticked || real.taxStore || real.credit || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || out.unticked || real.taxStore || real.creditStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;
@@ -218,6 +218,7 @@ export default function ReceiptSheet() {
         <div className="rcnums"><span>Lines {money(plan.check.linesCents)}</span><span>Tax {money(plan.check.taxCents)}</span>{plan.check.totalCents !== null && <span>Receipt total {money(plan.check.totalCents)}</span>}
           <label className="rcrew">Rewards $<input type="text" inputMode="decimal" placeholder="0.00" maxLength={9} aria-label={`Rewards${taxStore ? ` at ${taxStore}` : ''}, dollars`} value={rewardsText ?? centsText(scanned?.rewardsCents ?? null)} onChange={e => setRewardsText(e.target.value)} aria-invalid={rewardsParse?.ok === false} /></label>
           {paid !== null && <span className="rcpaid">You paid {money(paid)}</span>}</div>
+        {paid !== null && !taxStore && <small>Pick a store above so the rewards also come off this month&apos;s spend.</small>}
         {rewardsParse?.ok === false && <small className="gerr" role="alert">{rewardsParse.error}</small>}
         <small>{check.text}</small>
       </div>

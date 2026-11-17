@@ -16,6 +16,8 @@ describe('cleanReceipt subtotal, rewards and paid', () => {
     const r = cleanReceipt({ ...raw, subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567 }, known);
     expect(r).toMatchObject({ kind: 'ok', receipt: { subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567 } });
     expect(r).toMatchObject({ receipt: { rewardsCents: 1727 } }); // the rewards credit is kept: the sheet shows it and Apply writes it beside the tax
+    const over = cleanReceipt({ ...raw, rewards: 999999 }, known); // above the printed total: a misread, dropped
+    expect(over.kind === 'ok' && 'rewardsCents' in over.receipt).toBe(false);
     const none = cleanReceipt({ ...raw, rewards: 0 }, known); // zero, negative or not a number: none
     expect(none.kind === 'ok' && 'rewardsCents' in none.receipt).toBe(false);
     const route = cleanReceiptAnswer({ result: { kind: 'ok', receipt: { lines: [{ text: 'EGGS', qty: 1, grossCents: 500, discountCents: 0, matchId: null }], rewardsCents: 1727 } } }, known);

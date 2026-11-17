@@ -2,12 +2,12 @@ import { money } from './grocery.js';
 import type { Check, Plan } from './groceryReceipt.js';
 
 // Brief receipt-apply-footer: the words on the receipt sheet's bottom bar and when Apply needs a second tap. Pure; ReceiptApplyBar only draws them.
-type Counts = Pick<Plan, 'items' | 'itemsCents' | 'taxStore' | 'untick'> & { credit?: number } & { check: Pick<Check, 'taxCents'> };
+type Counts = Pick<Plan, 'items' | 'itemsCents' | 'taxStore' | 'untick'> & { credit?: number; creditStore?: string | null } & { check: Pick<Check, 'taxCents'> };
 
 const noun = (n: number) => (n === 1 ? 'item' : 'items');
 
 /** The tax is part of what Apply writes only when a store is set for it, and the rewards credit comes off it the same way (never below 0). */
-export const applyTotalCents = (p: Counts): number => Math.max(0, p.itemsCents + (p.taxStore ? p.check.taxCents : 0) - (p.taxStore ? p.credit ?? 0 : 0));
+export const applyTotalCents = (p: Counts): number => Math.max(0, p.itemsCents + (p.taxStore ? p.check.taxCents : 0) - (p.creditStore ? p.credit ?? 0 : 0));
 
 /** The Apply button says what it will do: "Apply 5 items, $40.69", or "Move 2 items back to Shopping" when that is all there is. */
 export function applyLabel(p: Counts): string {
@@ -17,7 +17,7 @@ export function applyLabel(p: Counts): string {
 
 /** The line above the button: the same facts as before (items, tax, new items, items moving back), plus whether the receipt total matches. */
 export function applySummary(p: Counts, newCount: number, mismatch: boolean): string {
-  const parts = [`${p.items} ${noun(p.items)}, ${money(p.itemsCents)}${p.taxStore ? ` + ${p.taxStore} tax ${money(p.check.taxCents)}` : ''}${p.taxStore && p.credit ? ` - rewards ${money(p.credit)}` : ''}`];
+  const parts = [`${p.items} ${noun(p.items)}, ${money(p.itemsCents)}${p.taxStore ? ` + ${p.taxStore} tax ${money(p.check.taxCents)}` : ''}${p.creditStore && p.credit ? ` - rewards ${money(p.credit)}` : ''}`];
   if (newCount > 0) parts.push(`${newCount} new ${noun(newCount)} will be added`);
   if (p.untick.length > 0) parts.push(`${p.untick.length} will move back to Shopping`);
   if (mismatch) parts.push('The lines and tax do not match the receipt total');

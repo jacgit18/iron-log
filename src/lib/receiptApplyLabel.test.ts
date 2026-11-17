@@ -10,10 +10,11 @@ describe('applyLabel', () => {
     expect(applyTotalCents(plan())).toBe(4069);
   });
   it('takes the rewards credit off the total when a store is set, never below 0', () => {
-    expect(applyLabel(plan({ credit: 1727 }))).toBe('Apply 5 items, $23.42');
-    expect(applyLabel(plan({ credit: 1727, taxStore: null }))).toBe('Apply 5 items, $38.57');
-    expect(applyTotalCents(plan({ credit: 999999 }))).toBe(0);
-    expect(applySummary(plan({ credit: 1727 }), 0, false)).toContain('rewards $17.27');
+    expect(applyLabel(plan({ credit: 1727, creditStore: 'Aldi' }))).toBe('Apply 5 items, $23.42');
+    expect(applyLabel(plan({ credit: 1727, creditStore: 'Aldi', taxStore: null }))).toBe('Apply 5 items, $21.30'); // a receipt with no tax still takes the credit off
+    expect(applyLabel(plan({ credit: 1727, creditStore: null }))).toBe('Apply 5 items, $40.69'); // no store set: no credit written
+    expect(applyTotalCents(plan({ credit: 999999, creditStore: 'Aldi' }))).toBe(0);
+    expect(applySummary(plan({ credit: 1727, creditStore: 'Aldi' }), 0, false)).toContain('rewards $17.27');
   });
   it('uses the singular for one item', () => {
     expect(applyLabel(plan({ items: 1, itemsCents: 349, taxStore: null }))).toBe('Apply 1 item, $3.49');

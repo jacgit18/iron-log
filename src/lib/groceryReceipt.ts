@@ -37,11 +37,11 @@ export interface Where { at: string | null; makeUsual: boolean | null; g: Grocer
 
 /** `subtotalCents`: the receipt's printed subtotal (null: none); `subtotalDiffCents`: the part of it the lines do not explain (positive: a row is missing from the lines; null when there is no subtotal). */
 export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null; subtotalCents: number | null; subtotalDiffCents: number | null }
-/** `credit`: the rewards credit in cents Apply writes beside the tax (0 when none, or when no store is set for it). */
+/** `credit`: the rewards credit in cents Apply writes beside the tax (0 when none, or when no store is set for it); `creditStore` is that store (it does not depend on the receipt having tax). */
 /** `notes` says why a ticked line was left out of the writes (by line index): a weight that cannot be matched to the item's unit. */
 /** `moves`: the items to mark bought at the receipt's store (none when no store is known); `makeUsual`: Apply also makes that store their usual one. */
 /** `untick`: ticked items the receipt does not show that the person chose to untick (brief receipt-reconcile-ticked); Apply unticks them and Undo ticks them back. `planReceipt` leaves it empty: the review sheet sets it from the person's choices. */
-export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; credit: number; notes: Record<number, string>; moves: Move[]; makeUsual: boolean; untick: string[] }
+export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; credit: number; creditStore: string | null; notes: Record<number, string>; moves: Move[]; makeUsual: boolean; untick: string[] }
 
 const GRAMS: Record<ReceiptUnit, number> = { lb: 453.59237, kg: 1000, oz: 28.349523125 };
 /** A weight in another unit (2.2 lb in kg is 1), to two decimals, the way a count is kept. */
@@ -134,7 +134,7 @@ export function planReceipt(receipt: Receipt, choices: readonly Choice[], listIt
   if (taxOn) steps.push({ kind: 'tax', store: taxStore, cents: receipt.taxCents! });
   const credit = taxStore !== null && (receipt.rewardsCents ?? 0) > 0 ? receipt.rewardsCents! : 0;
   const moves = where?.at ? movesFor(steps, items, where.at, where) : [];
-  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, credit, notes, moves, makeUsual: moves.length > 0 && (where?.makeUsual ?? moves.every(m => !m.usual)), untick: [] };
+  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, credit, creditStore: credit > 0 ? taxStore : null, notes, moves, makeUsual: moves.length > 0 && (where?.makeUsual ?? moves.every(m => !m.usual)), untick: [] };
 }
 
 /** The items of the plan that are not already bought at `at` this month. An item added from the sheet keeps the store its own form chose; an item with a split of its own (or one on its line) keeps it whatever the store. */
@@ -215,7 +215,7 @@ export function takeSnapshot(plan: Plan, month: string, lines: Record<string, Gr
     const it = created.includes(s.id) ? undefined : items.find(i => i.id === s.id); // a created item is removed on Undo, so its usual values need no restoring
     if (it) snap.usual[s.id] = { qty: it.qty, cents: it.cents, ...(plan.makeUsual && plan.moves.some(m => m.id === s.id) ? { store: it.store } : {}) }; // the usual store is put back only when Apply changes it
   }
-  if (plan.credit > 0 && plan.taxStore !== null) snap.credit = { store: plan.taxStore, cents: own(credit, plan.taxStore) ?? null }; // the store's credit as it was: set, changed or none
+  if (plan.credit > 0 && plan.creditStore !== null) snap.credit = { store: plan.creditStore, cents: own(credit, plan.creditStore) ?? null }; // the store's credit as it was: set, changed or none
   for (const id of plan.untick) if (!(id in snap.lines)) snap.lines[id] = lines[id] ? structuredClone(lines[id]!) : null; // an unticked line is put back exactly as it was
   return snap;
 }
@@ -233,7 +233,7 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
     if (move && plan.makeUsual) { const err = api.makeGroceryStoreUsual(month, s.id); if (err) out?.refused.push(`${move.name} (${err})`); }
     done++;
   }
-  if (plan.credit > 0 && plan.taxStore !== null) api.setGroceryCredit?.(month, plan.taxStore, plan.credit);
+  if (plan.credit > 0 && plan.creditStore !== null) api.setGroceryCredit?.(month, plan.creditStore, plan.credit);
   for (const id of plan.untick) if (api.setGroceryGot(month, id, false) && out) out.unticked = (out.unticked ?? 0) + 1; // after the items: a ticked item the receipt does not show, unticked by choice
   return done;
 }

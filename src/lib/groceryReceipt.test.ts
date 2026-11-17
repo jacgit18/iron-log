@@ -340,9 +340,15 @@ describe('rewards credit (brief receipt-rewards-credit)', () => {
     expect(plan.credit).toBe(1727);
     expect(planReceipt(bjs, choice, items, null).credit).toBe(0);
     expect(planReceipt(withRewards(bjs, null), choice, items, "BJ's").credit).toBe(0);
+    const noTax = planReceipt({ ...bjs, taxCents: 0 }, choice, items, "BJ's"); // a zero-tax receipt still carries its credit
+    expect(noTax).toMatchObject({ taxStore: null, credit: 1727, creditStore: "BJ's" });
+    expect(planReceipt(bjs, choice, items, null)).toMatchObject({ credit: 0, creditStore: null });
     const calls: string[] = [];
     const api = { setGroceryGot: () => true, setGroceryQty() {}, setGroceryCents() {}, setGroceryPrices() {}, setGroceryTax: (_m: string, s: string, c: number | null) => { calls.push(`tax ${s} ${c}`); },
       setGroceryCredit: (_m: string, s: string, c: number | null) => { calls.push(`credit ${s} ${c}`); }, restoreGroceryLine() {}, updateGroceryItem: () => null, removeGroceryItem() {}, setGroceryLineStore: () => null, makeGroceryStoreUsual: () => null } as unknown as GroceryApi;
+    applyPlan(noTax, '2026-11', api);
+    expect(calls).toEqual(["credit BJ's 1727"]);
+    calls.length = 0;
     applyPlan(plan, '2026-11', api);
     expect(calls).toEqual(["tax BJ's 679", "credit BJ's 1727"]);
     for (const was of [undefined, { "BJ's": 500 }]) {
