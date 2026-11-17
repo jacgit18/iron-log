@@ -262,3 +262,19 @@ describe('est without vitamins (brief recipe-auto-nutrition)', () => {
     expect(normRecipe({ id: 'r2', n: 'Stew', cat: 'protein', ing: [], steps: [], kcal: 300, p: 20, est: { of: 1, n: 2 } })!.est).toEqual({ of: 1, n: 2 });
   });
 });
+
+describe('meal: a food\'s usual meal (brief nutrition-meal-labels-year-repeat)', () => {
+  const base = { id: 'r1', n: 'Oats', cat: 'other', ing: [], steps: [] };
+  it('keeps one of the four meals, and round-trips', () => {
+    for (const meal of ['breakfast', 'lunch', 'dinner', 'snack'] as const) expect(normRecipe({ ...base, meal })).toMatchObject({ meal });
+    expect(validRecipe(normRecipe({ ...base, meal: 'dinner' }))).toBe(true);
+  });
+  it('drops an unknown or non-text meal and leaves the key out, and drops unknown keys', () => {
+    for (const bad of ['brunch', '', 5, null, ['lunch'], 'Lunch']) expect('meal' in normRecipe({ ...base, meal: bad })!).toBe(false);
+    expect('meal' in normRecipe(base)!).toBe(false);
+    expect('later' in normRecipe({ ...base, meal: 'lunch', later: 1 })!).toBe(false);
+  });
+  it('sits beside a Drink label without touching it', () => {
+    expect(normRecipe({ ...base, meal: 'snack', uses: ['drink'] })).toMatchObject({ meal: 'snack', uses: ['drink'] });
+  });
+});

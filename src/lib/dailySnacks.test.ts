@@ -4,7 +4,7 @@ import type { DietCfg, Recipe } from '../types.ts';
 import { boardDay } from './weekBoard.js';
 import { addSnack, effectivePlan, removeSnack, setSnackPortion, skipSnack, snackPortion, snacksShownOn } from './dailySnacks.js';
 
-const today = '2026-11-12', tomorrow = '2026-11-13', far = '2026-11-26';
+const today = '2026-11-12', tomorrow = '2026-11-13', far = '2027-11-13';
 const recipes: Recipe[] = [
   { id: 'yog', n: 'Yogurt', cat: 'sides', ing: [], steps: [], kcal: 120, p: 17 },
   { id: 'bar', n: 'Bar', cat: 'sides', ing: [], steps: [], kcal: 210, p: 20 },
@@ -32,7 +32,7 @@ describe('the plan as the board shows it', () => {
     expect(p[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }, { k: 'r', id: 'bar', x: 2, s: 'snack', v: true }]);
   });
   it('leaves the stored plan alone', () => { effectivePlan(diet, [today], today); expect(diet.plan![today]).toHaveLength(1); });
-  it('adds nothing outside today and the next 13 days', () => {
+  it('adds nothing outside today and the next 364 days', () => {
     expect(effectivePlan(diet, ['2026-11-11'], today)['2026-11-11']).toBeUndefined();
     expect(effectivePlan(diet, [far], today)[far]).toBeUndefined();
   });

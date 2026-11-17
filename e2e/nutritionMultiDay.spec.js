@@ -107,10 +107,10 @@ test('Add on a day ahead: This day on plans one card per day to the last plannab
   let s = await openAdd(page, 'Recipes');
   await s.getByRole('group', { name: 'Which meal' }).getByRole('button', { name: 'Dinner', exact: true }).click();
   await s.getByRole('group', { name: 'Add to' }).getByRole('button', { name: 'This day on' }).click();
-  await expect(s.getByText('to Wed 7: one plan card per day.')).toBeVisible(); // the last plannable day is Oct 7
+  await expect(s.getByText('to Thu 8: one plan card per day.')).toBeVisible(); // 14 days from tomorrow (Sep 25 to Oct 8)
   await s.getByLabel('Find a recipe').fill('Chili');
   await s.getByRole('button', { name: 'Plan Chili for Dinner' }).click();
-  await expect(s.getByRole('status').last()).toHaveText('Planned Chili for Dinner on 13 days.');
+  await expect(s.getByRole('status').last()).toHaveText('Planned Chili for Dinner on 14 days.');
   await expect(col(page, '2026-09-26').locator('.wb-card', { hasText: 'Chili' })).toBeVisible();
   await s.getByRole('group', { name: 'Add to' }).getByRole('button', { name: 'Pick days' }).click();
   await s.getByLabel('Find a recipe').fill('Rice');

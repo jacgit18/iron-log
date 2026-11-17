@@ -364,7 +364,7 @@ describe('the meal planner', () => {
     expect(st().addPlanItem(today, 'm', 'zzz')).toMatch(/gone/);
     st().addPlanItem(today, 'r', 'r1');
     expect(st().addPlanItem(today, 'r', 'r1')).toMatch(/already/);
-    expect(st().addPlanItem('2020-01-01', 'r', 'r2')).toMatch(/two weeks/);
+    expect(st().addPlanItem('2020-01-01', 'r', 'r2')).toMatch(/52 weeks/);
   });
   it('sets a portion and removes an item; removing the last leaves no plan or diet key behind', () => {
     st().addPlanItem(today, 'r', 'r1');
@@ -651,7 +651,7 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
   it('copyPlanItems puts the card in the same meal on each day in one write, skipping full and duplicate days', () => {
     expect(st().addPlanItem(today, 'r', 'rc', 'dinner')).toBeNull();
     expect(st().addPlanItem(at(2), 'r', 'rc', 'dinner')).toBeNull();
-    const r = st().copyPlanItems(today, 0, [at(1), at(2), at(3), at(20)]);
+    const r = st().copyPlanItems(today, 0, [at(1), at(2), at(3), at(365)]);
     expect(r.done).toEqual([at(1), at(3)]);
     expect(r.skipped.map(s => s.reason)).toEqual(['already there', 'out of reach']);
     expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner' }]);
@@ -663,7 +663,7 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
   });
   it('addPlanItemToDays plans one recipe on several days in one write, skipping duplicates and days out of reach', () => {
     expect(st().addPlanItem(at(2), 'r', 'rc', 'lunch')).toBeNull();
-    const r = st().addPlanItemToDays('r', 'rc', [at(1), at(2), at(3), at(20)], 'lunch');
+    const r = st().addPlanItemToDays('r', 'rc', [at(1), at(2), at(3), at(365)], 'lunch');
     expect(r.error).toBeNull();
     expect(r.done).toEqual([at(1), at(3)]);
     expect(r.skipped.map(x => x.reason)).toEqual(['already there', 'out of reach']);

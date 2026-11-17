@@ -24,7 +24,7 @@ export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries
 
 /** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. A day holds MAX_PLAN_ITEMS planned things; a listed daily snack (`snacks` is the list) never counts toward that, and is held to MAX_DAY_ITEMS in all. */
 export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[]): Made {
-  if (!inWindow(day, today)) return fail('You can plan today and the next two weeks.');
+  if (!inWindow(day, today)) return fail('You can plan today and the next 52 weeks.');
   const list = plan[day] ?? [];
   if (list.some(i => samePlanItem(i, item))) return fail('That is already in that meal.'); // the same food may be in two different meals
   if (isDailySnackItem(item, snacks) ? list.length >= MAX_DAY_ITEMS : plannedCount(list, snacks) >= MAX_PLAN_ITEMS) return fail(`A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`);

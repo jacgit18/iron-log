@@ -12,8 +12,8 @@ describe('dayReason', () => {
   it('greys the own day, a source on a future day, and days outside the window', () => {
     expect(dayReason(linked, today, today)).toBe('That is its own day.');
     expect(dayReason({ kind: 'eaten', entry: { d: '2026-11-16', from: 'r1' } }, '2026-11-15', today)).toBe('Only food you ate can move or copy.');
-    expect(dayReason(linked, '2026-11-28', today)).toBe('You can plan the next two weeks.'); // today + 14
-    expect(dayReason(linked, '2026-11-27', today)).toBeNull(); // today + 13
+    expect(dayReason(linked, '2027-11-14', today)).toBe('You can plan the next 52 weeks.'); // today + 365
+    expect(dayReason(linked, '2027-11-13', today)).toBeNull(); // today + 364
     expect(dayReason(linked, shiftDay(oldestDay(today), -1), today)).toMatch(/400 days/);
     expect(dayReason(linked, oldestDay(today), today)).toBeNull();
   });
@@ -24,18 +24,18 @@ describe('dayReason', () => {
   });
   it('a planned item goes to today and days ahead, not before today or to its own day', () => {
     expect(dayReason({ kind: 'plan', day: '2026-11-16' }, today, today)).toBeNull();
-    expect(dayReason(planned, '2026-11-13', today)).toBe('You can plan today and the next two weeks.');
+    expect(dayReason(planned, '2026-11-13', today)).toBe('You can plan today and the next 52 weeks.');
     expect(dayReason(planned, today, today)).toBe('That is its own day.');
-    expect(dayReason(planned, '2026-11-28', today)).toBe('You can plan the next two weeks.');
+    expect(dayReason(planned, '2027-11-14', today)).toBe('You can plan the next 52 weeks.');
   });
-  it('the last plannable day is today + 13', () => { expect(lastPlanDay(today)).toBe('2026-11-27'); });
+  it('the last plannable day is today + 364', () => { expect(lastPlanDay(today)).toBe('2027-11-13'); });
 });
 
 describe('pickerDays', () => {
-  it('runs from the oldest kept day to today + 13 with a reason per greyed day', () => {
+  it('runs from the oldest kept day to today + 364 with a reason per greyed day', () => {
     const all = pickerDays(linked, today);
     expect(all[0]!.id).toBe(oldestDay(today));
-    expect(all.at(-1)!.id).toBe('2026-11-27');
+    expect(all.at(-1)!.id).toBe('2027-11-13');
     expect(all.find(d => d.id === today)).toMatchObject({ label: 'Sat 14 · today', reason: 'That is its own day.' });
     expect(all.filter(d => d.id > today).every(d => d.reason === null)).toBe(true);
     expect(pickerDays(oneOff, today).filter(d => d.id > today).every(d => d.reason === ONE_OFF_REASON)).toBe(true);
@@ -52,10 +52,12 @@ describe('pickerWeek', () => {
     expect(n.days.find(d => d.id === '2026-11-16')).toMatchObject({ reason: null, label: 'Mon 16' });
   });
   it('the last week greys the days beyond the window and has no next arrow', () => {
-    const w = pickerWeek(linked, today, '2026-11-22');
+    const w = pickerWeek(linked, today, '2027-11-07');
     expect(w.next).toBeNull();
-    expect(w.days.find(d => d.id === '2026-11-27')!.reason).toBeNull();
-    expect(w.days.find(d => d.id === '2026-11-28')!.reason).toBe('You can plan the next two weeks.');
+    expect(w.days.find(d => d.id === '2027-11-13')!.reason).toBeNull(); // the last day, a Saturday, ends the week: nothing greyed
+    const wed = '2026-11-11', v = pickerWeek({ kind: 'plan', day: wed }, wed, '2027-11-07'); // a Wednesday today puts the window's end mid-week
+    expect(v.days.find(d => d.id === '2027-11-10')!.reason).toBeNull();
+    expect(v.days.find(d => d.id === '2027-11-11')!.reason).toBe('You can plan the next 52 weeks.');
   });
   it('clamps a week outside the range and has no previous arrow at the start', () => {
     const { first, last } = pickerWeekRange(linked, today);
@@ -117,13 +119,15 @@ describe('goLabel, onwardDays, plannedText (the Add sheet and the buttons)', () 
     expect(goLabel('Move', ['2026-11-15'])).toBe('Move to Sun 15');
     expect(goLabel('Copy', ['2026-11-15', '2026-11-16'])).toBe('Copy to 2 days');
   });
-  it('"This day on" runs from the day to today + 13, one entry each', () => {
+  it('"This day on" runs from the day for 14 days, cut at the last plannable day', () => {
     const d = onwardDays('2026-11-20', today);
     expect(d[0]).toBe('2026-11-20');
-    expect(d.at(-1)).toBe(lastPlanDay(today));
-    expect(d).toHaveLength(8);
+    expect(d.at(-1)).toBe('2026-12-03');
+    expect(d).toHaveLength(14);
     expect(onwardDays(today, today)).toHaveLength(14);
-    expect(onwardDays('2026-11-30', today)).toEqual([]);
+    expect(onwardDays('2027-11-10', today)).toEqual(['2027-11-10', '2027-11-11', '2027-11-12', '2027-11-13']); // cut at today + 364
+    expect(onwardDays('2020-01-01', today)[0]).toBe(today);
+    expect(onwardDays('2027-11-14', today)).toEqual([]);
   });
   it('says what was planned and what was skipped', () => {
     expect(plannedText('Soup', 'Lunch', ['2026-11-15', '2026-11-16'], [{ day: '2026-11-17', reason: 'full' }])).toBe('Planned Soup for Lunch on 2 days. Skipped Tue 17: full.');
