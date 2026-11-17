@@ -30,7 +30,8 @@ const bad = () => `Give it a name, calories (1 to ${MAX_KCAL.toLocaleString('en-
 const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
 
 // The plan lives in cfg.diet.plan (brief diet-meal-planner), keyed by date; every write goes back through normDietCfg with today, which drops earlier days.
-const drinksOf = (get: StoreGet) => drinkIdsOf(get().recipes), planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
+const drinksOf = (get: StoreGet) => drinkIdsOf(get().recipes);
+const planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
 const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>, repeatSkips?: Record<string, string[]>) => get().mutateCfg(c => {
   const next = { ...(c.diet || {}) };
   if (Object.keys(plan).length) next.plan = plan; else delete next.plan;
@@ -255,7 +256,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const have = (planOf(get)[day] ?? []).findIndex(i => i.k === 'r' && i.id === id && i.s === 'snack');
     if (have >= 0) return have;
     const listed = get().cfg.diet?.snacks?.find(x => x.id === id);
-    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()), get().cfg.diet?.snacks); // a listed snack never counts toward the day's 8 planned things, so a full day still lets it be ticked
+    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get)); // a listed snack never counts toward the day's 8 planned things, so a full day still lets it be ticked
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return r.plan[day]!.length - 1;

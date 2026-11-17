@@ -20,6 +20,7 @@ export default function DayColumn({ v, today, selected, onPick, onLog, onMsg, on
       </div>
       <DayMeters v={v} />
       {v.kind !== 'past' && <MealSections view={v.plan} placed={v.placed.meals} today={today} editable={editable} onLog={onLog} onMsg={onMsg} onAdd={onAdd} />}
+      {/* Drinks are planned things, and the plan holds no past days (prunePlan), so a past day has none to show; its drinks that were drunk are eaten rows in "Not in a meal". */}
       {v.kind !== 'past' && <DrinksSection view={v.plan} today={today} onLog={onLog} onMsg={onMsg} />}
       {v.kind !== 'future' && <NotInMeal day={v.day} entries={v.placed.none} onMsg={onMsg} always={v.kind === 'past'} />}
       {v.fatNote && <p className="wb-fatnote">{v.fatNote}</p>}

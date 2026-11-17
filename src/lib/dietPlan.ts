@@ -24,7 +24,7 @@ export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries
 
 /** Why `list` (a day's stored items) can take no more of `item`, or null: a planned thing is held to MAX_PLAN_ITEMS (a listed daily snack and a drink never count toward it), a drink to MAX_DAY_DRINKS, all together to MAX_DAY_ITEMS. */
 export function fullReason(list: readonly PlanItem[], item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): string | null {
-  if (list.length >= MAX_DAY_ITEMS) return `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.`;
+  if (list.length >= MAX_DAY_ITEMS) return `A day can hold ${MAX_DAY_ITEMS} things in all, drinks and daily snacks included. Remove one to add another.`;
   if (isDrinkItem(item, drinks)) return list.filter(i => isDrinkItem(i, drinks)).length >= MAX_DAY_DRINKS ? `A day can hold ${MAX_DAY_DRINKS} drinks. Remove one to add another.` : null;
   if (isDailySnackItem(item, snacks)) return null;
   return plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS ? `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` : null;

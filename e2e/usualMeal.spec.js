@@ -52,9 +52,9 @@ test('the add sheet pre-picks the usual meal, a pressed meal wins, and a hand-pl
   const fri = col(page, FRI);
   await expect(fri.locator('.wb-slot', { hasText: 'Breakfast' }).locator('.wb-card')).toContainText('Oatmeal');
   await expect(fri.locator('.wb-slot', { hasText: 'Dinner' }).locator('.wb-card')).toContainText('Oatmeal');
-  // The saved recipe: its usual meal is stored, so the stored plan item has no meal of its own and the board reads the recipe.
+  // The first copy was added with no meal pressed, so it is stored with no meal of its own and follows the recipe; the second was pressed into Dinner, so it keeps it.
   const plan = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:config/main') || '{}').diet?.plan?.['2026-09-25']);
-  expect(plan).toEqual([{ k: 'r', id: 'oats', s: 'breakfast' }, { k: 'r', id: 'oats', s: 'dinner' }]);
+  expect(plan).toEqual([{ k: 'r', id: 'oats' }, { k: 'r', id: 'oats', s: 'dinner' }]);
 });
 
 test('an item with no meal of its own follows the food, and a change of usual meal moves it on every day', async ({ page }) => {
