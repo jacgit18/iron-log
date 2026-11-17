@@ -84,7 +84,7 @@ export default function ReceiptSheet() {
   const initialChoices = useMemo(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId })), [receipt]);
   const edited = isEdited({ choices, initial: initialChoices, renames: Object.keys(renames).length, touched: touched.size, noRemember: noRemember.size, separate: separate.size, staged: stagedRaw.length, unticked: unticked.size, keep, formOpen: form !== null, storePicked: pickedStore !== '', shared: shareChoices !== NO_CHOICES });
   const live = useRef({ edited, asking });
-  live.current = { edited, asking };
+  useEffect(() => { live.current = { edited, asking }; }); // the guard below reads the latest values when Back arrives
   useEffect(() => setLeaveGuard({ holds: () => shouldAskOnBack(live.current.edited, live.current.asking), ask: () => setAsking(true) }), []);
   useEffect(() => {
     if (!receipt || finished.current) return;

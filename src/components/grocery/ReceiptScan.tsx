@@ -33,9 +33,11 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const canScan = withoutUsed(g, months).items.length > 0;
 
   // A receipt closed without Apply or Discard stays as a draft for 2 hours (brief receipt-back-guard): the Resume row reopens the sheet with this screen's own callbacks.
-  const [draft, setDraft] = useState<Draft | null>(() => readDraft(Date.now()));
+  const readNow = () => ({ draft: readDraft(Date.now()), at: Date.now() });
+  const [left, setLeft] = useState<{ draft: Draft | null; at: number }>(readNow); // `at`: when it was read, for the age shown
+  const draft = left.draft;
   const sheetOpen = useAppStore(s => s.modal?.type === 'receipt');
-  useEffect(() => { if (!sheetOpen) setDraft(readDraft(Date.now())); }, [sheetOpen]); // the sheet just closed (or the page just opened): read what it left
+  useEffect(() => useAppStore.subscribe((s, p) => { if (p.modal?.type === 'receipt' && s.modal?.type !== 'receipt') setLeft(readNow()); }), []); // eslint-disable-line react-hooks/exhaustive-deps -- the receipt sheet just closed: read what it left
   const resume = () => {
     if (!draft) return;
     useAppStore.getState().openModal({ type: 'receipt', receipt: draft.receipt, remembered: {}, mk: draft.mk, restore: draft.restore, onApplied: (a: Applied) => setApplied({ ...a, mk: draft.mk, t: Date.now() }) });
@@ -74,7 +76,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   };
   const notes = (
     <>
-      {draft && !sheetOpen && <ReceiptResume draft={draft} now={Date.now()} onResume={resume} onDiscard={() => { dropDraft(); setDraft(null); }} />}
+      {draft && !sheetOpen && <ReceiptResume draft={draft} now={left.at} onResume={resume} onDiscard={() => { dropDraft(); setLeft({ draft: null, at: left.at }); }} />}
       {msg && <p className="note" role="status">{msg}</p>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'
