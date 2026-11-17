@@ -43,6 +43,14 @@ test('Save for later closes with no prompt, the row survives a reload, and Resum
   await expect(oil(page)).not.toBeChecked();
 });
 
+test('Save for later keeps the sheet open and says so when the device refuses the write', async ({ page }) => {
+  await scan(page);
+  await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('QuotaExceededError'); }; });
+  await page.getByRole('button', { name: 'Save for later' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Could not save on this device');
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
+});
+
 test('two left receipts are two rows; Resume opens its own and Apply removes only that one', async ({ page }) => {
   await scan(page); await page.getByRole('button', { name: 'Close' }).click();
   await scan(page); await page.getByRole('button', { name: 'Close' }).click();

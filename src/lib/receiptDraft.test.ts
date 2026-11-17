@@ -150,6 +150,23 @@ describe('the device calls', () => {
     expect(readDrafts(Date.now())).toEqual([]);
     vi.unstubAllGlobals();
   });
+  it('keepDraft says false when the storage refuses a write (full or private), and keeps what was there', () => {
+    const loc = fake();
+    vi.stubGlobal('localStorage', loc);
+    expect(keepDraft(draft({ savedAt: Date.now() }))).toBe(true);
+    loc.setItem = () => { throw new Error('QuotaExceededError'); };
+    expect(keepDraft(draft({ id: 'b', savedAt: Date.now() }))).toBe(false);
+    expect(readDrafts(Date.now()).map(d => d.id)).toEqual(['a']);
+    vi.unstubAllGlobals();
+  });
+  it('dropAllDrafts erases a list of several drafts, not just the newest', () => {
+    vi.stubGlobal('localStorage', fake());
+    for (const id of ['a', 'b', 'c']) keepDraft(draft({ id, savedAt: Date.now() }));
+    expect(readDrafts(Date.now())).toHaveLength(3);
+    dropAllDrafts();
+    expect(readDrafts(Date.now())).toEqual([]);
+    vi.unstubAllGlobals();
+  });
   it('dropAllDrafts also removes a leftover old session draft', () => {
     const ses = fake({ [LEGACY_KEY]: 'x' });
     vi.stubGlobal('localStorage', fake()); vi.stubGlobal('sessionStorage', ses);

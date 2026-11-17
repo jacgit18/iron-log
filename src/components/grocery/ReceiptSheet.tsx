@@ -113,7 +113,7 @@ export default function ReceiptSheet() {
   const [saveError, setSaveError] = useState('');
   // Save for later (brief receipt-drafts-list): writes the draft as it is now and closes with no prompt; a storage that refuses keeps the sheet open and says so.
   const saveLater = () => {
-    const d: Draft = { id: draftId.current, savedAt: Date.now(), mk, receipt: receipt!, restore: snapshot() as unknown as Record<string, unknown> };
+    const d: Draft = { id: draftId.current, savedAt: Date.now(), mk, receipt: scanned!, restore: snapshot() as unknown as Record<string, unknown> };
     if (!keepDraft(d)) { setSaveError('Could not save on this device. Apply it now, or close and try again.'); return; }
     finished.current = true; pending.current = null;
     closeModal();
