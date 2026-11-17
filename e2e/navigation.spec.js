@@ -160,6 +160,26 @@ test('picking a week from the dropdown keeps the address; Back and a reload leav
   await expect(page.locator('.nb-weekname')).toHaveText('This week'); // a reload shows this week, as it always did
 });
 
+test('the week dropdown takes focus when it opens, a key picks a week, and Escape returns focus to the week name', async ({ page }) => {
+  await openNutrition(page);
+  const name = page.locator('.nb-weekname');
+  await name.focus();
+  await page.keyboard.press('Enter');
+  const list = page.getByRole('dialog', { name: 'Choose a week' });
+  await expect(list).toBeVisible();
+  await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('.nb-wp-pop'))).toBe(true); // focus is inside the list, on the shown week
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter'); // the next week in the list
+  await expect(list).toHaveCount(0);
+  await expect(name).toHaveText('Next week');
+  await expect(name).toBeFocused();
+  await name.press('Enter');
+  await expect(list).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(list).toHaveCount(0);
+  await expect(name).toBeFocused();
+});
+
 test('the arrows and the list end at 52 weeks ahead and at last week', async ({ page }) => {
   await openNutrition(page);
   await page.locator('.nb-weekname').click();
