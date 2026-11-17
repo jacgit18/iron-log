@@ -15,7 +15,11 @@ describe('cleanReceipt subtotal, rewards and paid', () => {
   it('keeps the BJ\'s totals apart: subtotal, total before rewards and the card charge', () => {
     const r = cleanReceipt({ ...raw, subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567 }, known);
     expect(r).toMatchObject({ kind: 'ok', receipt: { subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567 } });
-    expect(r.kind === 'ok' && 'rewardsCents' in r.receipt).toBe(false); // the rewards credit is not kept: nothing reads it
+    expect(r).toMatchObject({ receipt: { rewardsCents: 1727 } }); // the rewards credit is kept: the sheet shows it and Apply writes it beside the tax
+    const none = cleanReceipt({ ...raw, rewards: 0 }, known); // zero, negative or not a number: none
+    expect(none.kind === 'ok' && 'rewardsCents' in none.receipt).toBe(false);
+    const route = cleanReceiptAnswer({ result: { kind: 'ok', receipt: { lines: [{ text: 'EGGS', qty: 1, grossCents: 500, discountCents: 0, matchId: null }], rewardsCents: 1727 } } }, known);
+    expect(route).toMatchObject({ receipt: { rewardsCents: 1727 } });
   });
   it('a coupon row with no item above it comes in as a negative line that matches nothing', () => {
     const r = cleanReceipt({ lines: [{ text: 'ECPN-IRISH S', total: -200, match: 'eggs' }, { text: 'EGGS', total: 500, match: 'eggs' }] }, known);

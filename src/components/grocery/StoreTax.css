@@ -1,6 +1,11 @@
 @layer base, components;
 @layer components {
 /* A store's tax for the month, under its heading: the Tax checkbox, the dollar box and the percent it comes to. */
+.gtaxrow {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--sp-16);
+}
 .gtaxset {
   display: flex;
   align-items: center;

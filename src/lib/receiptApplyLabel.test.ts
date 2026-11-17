@@ -9,6 +9,12 @@ describe('applyLabel', () => {
     expect(applyLabel(plan({ taxStore: null }))).toBe('Apply 5 items, $38.57');
     expect(applyTotalCents(plan())).toBe(4069);
   });
+  it('takes the rewards credit off the total when a store is set, never below 0', () => {
+    expect(applyLabel(plan({ credit: 1727 }))).toBe('Apply 5 items, $23.42');
+    expect(applyLabel(plan({ credit: 1727, taxStore: null }))).toBe('Apply 5 items, $38.57');
+    expect(applyTotalCents(plan({ credit: 999999 }))).toBe(0);
+    expect(applySummary(plan({ credit: 1727 }), 0, false)).toContain('rewards $17.27');
+  });
   it('uses the singular for one item', () => {
     expect(applyLabel(plan({ items: 1, itemsCents: 349, taxStore: null }))).toBe('Apply 1 item, $3.49');
   });

@@ -1,6 +1,7 @@
 import { signIn } from '../sync/devUser.js';
 import type { Receipt } from '../shared/receipt.js';
 import { money } from './grocery.js';
+import { paidAfterRewards } from './groceryReceipt.js';
 
 // Saved receipt photos, app side (brief receipt-save-photo): the opt-in save after Apply, the list, the note, the photo and the delete. The photo goes up in a
 // separate call after Apply and only when the box was ticked; every failure comes back as a plain reason, never a throw. The pure parts (what is sent, how a
@@ -17,7 +18,7 @@ const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2
 
 /** The fields the server keeps with the photo: the month on screen and the values the person reviewed. A date or total the scan could not read is left blank. The saved total (and the CSV export) is the amount charged, `paidCents`, falling back to the printed total. */
 export function keepMeta(receipt: Receipt, mk: string): KeepMeta {
-  const total = receipt.paidCents ?? receipt.totalCents; // the amount charged (after a rewards credit) when the receipt shows it, else the printed total
+  const total = paidAfterRewards(receipt) ?? receipt.paidCents ?? receipt.totalCents; // You paid: the total less the rewards on the sheet; else the amount charged when the receipt shows it, else the printed total
   return { month: mk, store: (receipt.store ?? '').slice(0, 60), receiptDate: isDay(receipt.date) ? receipt.date : null, totalCents: Number.isInteger(total) && total! >= 0 ? total! : null };
 }
 

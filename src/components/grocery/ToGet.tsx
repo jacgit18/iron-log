@@ -71,9 +71,9 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
   const removed = removedBoughtByStore(g, month);
   const taxRow = (store: string) => {
     if (!store) return null;
-    const mine = everBought.filter(i => i.store === store); const cents = own(month.tax, store);
-    if (!cents && !mine.some(i => lineOf(i, month).got)) return null;
-    return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} subtotal={tally(mine, month).spent - (cents ?? 0)} />;
+    const mine = everBought.filter(i => i.store === store); const cents = own(month.tax, store); const credit = own(month.credit, store);
+    if (!cents && !credit && !mine.some(i => lineOf(i, month).got)) return null;
+    return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} credit={credit} subtotal={tally(mine, { ...month, tax: undefined, credit: undefined }).spent} />;
   };
   const listStores = new Set(list.map(i => i.store));
   const goneOnly = onBought && chip === ALL_CHIP ? Object.keys(removed).filter(store => store && !listStores.has(store)) : [];

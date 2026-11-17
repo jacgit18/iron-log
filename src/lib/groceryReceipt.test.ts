@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { NEW_STORE, addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
+import { NEW_STORE, addedText, applyPlan, paidAfterRewards, parseRewards, receiptTotal, withRewards, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];
@@ -311,5 +311,46 @@ describe('an item added to the store the receipt is adding', () => {
   });
   it('uses a Store choice no store name can equal', () => {
     expect(NEW_STORE).toMatch(/^\u0001/);
+  });
+});
+
+describe('rewards credit (brief receipt-rewards-credit)', () => {
+  // The owner's BJ's receipt: subtotal 566.15, tax 6.79, total 572.94, rewards 17.27, paid 555.67.
+  const bjs: Receipt = { store: "BJ'S", subtotalCents: 56615, taxCents: 679, totalCents: 57294, rewardsCents: 1727, paidCents: 55567, lines: [{ text: 'A', qty: 1, grossCents: 56615, discountCents: 0, matchId: 'eggs' }] };
+  it('You paid is the receipt total less the rewards, and absent when there are none', () => {
+    expect(paidAfterRewards(bjs)).toBe(55567);
+    expect(paidAfterRewards(withRewards(bjs, null))).toBeNull();
+    expect(receiptTotal({ ...bjs, totalCents: undefined })).toBe(57294); // no printed total: lines + tax
+    expect(paidAfterRewards({ ...bjs, rewardsCents: 99999 })).toBe(0);
+  });
+  it('the total check keeps comparing lines + tax with the printed total, before rewards', () => {
+    expect(checkText(checkTotals(bjs))).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
+  });
+  it('parses the Rewards box: empty is none, a bad amount is an error, above the total is refused', () => {
+    expect(parseRewards('', 57294)).toEqual({ ok: true, cents: null });
+    expect(parseRewards('20.00', 57294)).toEqual({ ok: true, cents: 2000 });
+    expect(parseRewards('$17.27', 57294)).toEqual({ ok: true, cents: 1727 });
+    for (const bad of ['abc', '-3', '0', '1.234']) expect(parseRewards(bad, 57294)).toMatchObject({ ok: false });
+    expect(parseRewards('600.00', 57294)).toMatchObject({ ok: false });
+    expect(parseRewards('572.94', 57294)).toEqual({ ok: true, cents: 57294 });
+  });
+  it('the plan carries the credit only for a store that is set, and Apply writes it beside the tax; Undo puts it back as it was', () => {
+    const choice: Choice[] = [{ itemId: 'eggs', include: true }];
+    const plan = planReceipt(bjs, choice, items, "BJ's");
+    expect(plan.credit).toBe(1727);
+    expect(planReceipt(bjs, choice, items, null).credit).toBe(0);
+    expect(planReceipt(withRewards(bjs, null), choice, items, "BJ's").credit).toBe(0);
+    const calls: string[] = [];
+    const api = { setGroceryGot: () => true, setGroceryQty() {}, setGroceryCents() {}, setGroceryPrices() {}, setGroceryTax: (_m: string, s: string, c: number | null) => { calls.push(`tax ${s} ${c}`); },
+      setGroceryCredit: (_m: string, s: string, c: number | null) => { calls.push(`credit ${s} ${c}`); }, restoreGroceryLine() {}, updateGroceryItem: () => null, removeGroceryItem() {}, setGroceryLineStore: () => null, makeGroceryStoreUsual: () => null } as unknown as GroceryApi;
+    applyPlan(plan, '2026-11', api);
+    expect(calls).toEqual(["tax BJ's 679", "credit BJ's 1727"]);
+    for (const was of [undefined, { "BJ's": 500 }]) {
+      const snap = takeSnapshot(plan, '2026-11', {}, items, undefined, [], was);
+      expect(snap.credit).toEqual({ store: "BJ's", cents: was ? 500 : null });
+      calls.length = 0; restoreSnapshot(snap, api);
+      expect(calls).toContain(`credit BJ's ${was ? 500 : null}`);
+    }
+    expect(takeSnapshot(planReceipt(withRewards(bjs, null), choice, items, "BJ's"), '2026-11', {}, items, undefined).credit).toBeUndefined();
   });
 });

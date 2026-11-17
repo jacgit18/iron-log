@@ -55,7 +55,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
   };
   // Whether any past month still leans on a store: a bought line pinned to it, its tax, or who paid there.
   // A settled mark (`store\npayer\nperson`, paidKey) names it too: dropping the store would orphan the mark and the card it belongs to (N-17b).
-  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.payer, name) !== undefined || Object.keys(m.paid ?? {}).some(k => k.split('\n')[0] === name));
+  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.credit, name) !== undefined || own(m.payer, name) !== undefined || Object.keys(m.paid ?? {}).some(k => k.split('\n')[0] === name));
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
     if (get().blocked()) return 'Still loading your data…';
     const g = structuredClone(get().grocery);
@@ -643,6 +643,14 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     restoreGroceryLine(month, id, line) {
       if (!MONTH_RE.test(month) || get().blocked() || !get().grocery.items.some(i => i.id === id)) return; // blocked: sync is loading, so an Undo does not write
       mutateMonth(month, m => { if (line && Object.keys(line).length) m.lines[id] = line; else delete m.lines[id]; });
+    },
+    setGroceryCredit(month, store, cents) {
+      if (cents !== null && (cleanCents(cents) == null || cents <= 0)) return;
+      mutateMonth(month, m => {
+        const credit = { ...(m.credit ?? {}) };
+        if (cents) credit[store] = cents; else delete credit[store];
+        if (Object.keys(credit).length) m.credit = credit; else delete m.credit;
+      });
     },
     setGroceryTax(month, store, cents) {
       if (cents !== null && (cleanCents(cents) == null || cents <= 0)) return;
