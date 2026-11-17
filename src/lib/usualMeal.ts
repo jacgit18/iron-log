@@ -29,3 +29,9 @@ export function setBeverage(current: readonly RecipeUse[], cat: RecipeCategory, 
   const base = defaultUsesFor(cat);
   return base.includes('drink') ? ['meal'] : base;
 }
+
+/** The meal a recipe is planned into from the add sheet: the person's own pick when they pressed a meal (or opened the sheet from an empty meal's Add), else the recipe's usual meal, else the sheet's start pick (the clock's, or the last one used). */
+export const planMealFor = (recipe: Pick<Recipe, 'meal'> | undefined, picked: PlanSlot, explicit: boolean): PlanSlot => (explicit ? picked : startMealFor(recipe, picked));
+
+/** The line on a recipe or food card: "Usual meal: Breakfast", or null when it has none. */
+export const usualMealLine = (recipe: Pick<Recipe, 'meal'>): string | null => (recipe.meal ? `Usual meal: ${recipe.meal[0]!.toUpperCase()}${recipe.meal.slice(1)}` : null);

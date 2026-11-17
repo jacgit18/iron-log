@@ -8,6 +8,7 @@ import type { AmountRow } from '../../lib/foodAmountRows.js';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
 import { marksOf } from '../../lib/plate.js';
 import { usesOf } from '../../lib/recipeUses.js';
+import { setBeverage } from '../../lib/usualMeal.js';
 import { readyMadeValues } from '../../lib/readyMade.js';
 import { planFill } from '../../lib/labelFill.js';
 import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
@@ -18,8 +19,9 @@ import FoodAmountRows from '../diet/FoodAmountRows.js';
 import FoodSearch, { type FoodFill } from '../diet/FoodSearch.js';
 import CountsAsChips from './CountsAsChips.js';
 import UsedAsChips from './UsedAsChips.js';
+import UsualMealPicker from './UsualMealPicker.js';
 import { useCountsAs } from './useCountsAs.js';
-import type { Recipe, RecipeUse } from '../../types.ts';
+import type { PlanSlot, Recipe, RecipeUse } from '../../types.ts';
 
 const FOOD_USES: readonly RecipeUse[] = ['ingredient', 'ready', 'drink'];
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
@@ -38,6 +40,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
   const [uses, setUses] = useState<RecipeUse[]>(() => (recipe ? usesOf(recipe) : [DEFAULT_FOOD_TYPE])); // brief recipes-used-as-ingredients-tab: one or more of Ingredient, Ready to eat, Drink; starts on Ready to eat // brief food-type-and-migration: required, starts on Ready to eat (a food saved before types existed saves with its first Type too)
+  const [meal, setMeal] = useState<PlanSlot | undefined>(recipe?.meal); // brief nutrition-meal-labels-year-repeat: the food's usual meal
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [note, setNote] = useState(recipe?.note ?? '');
   const [pack, setPack] = useState(str(recipe?.servings));
@@ -76,7 +79,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const save = () => {
     const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack, usual, unit, plural });
     if ('error' in v) { setErr(v.error); return; }
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ing: [], steps: [], ...v, ...withMicro(microOfRows(live.rows).micro), note });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', ...(meal ? { meal } : {}), type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ing: [], steps: [], ...v, ...withMicro(microOfRows(live.rows).micro), note });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null);
@@ -106,6 +109,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
       <UsedAsChips value={uses} options={FOOD_USES} onChange={setUses} />
+      <UsualMealPicker meal={meal} beverage={uses.includes('drink')} onMeal={setMeal} onBeverage={on => setUses(setBeverage(uses, 'ready', on))} />
       <CountsAsChips value={countsAs.shown(autoMarks)} picked={countsAs.picked} onChange={countsAs.pick} onAuto={countsAs.reset} />
       <div className="rc-nutfields">
         <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => { setKcal(e.target.value); setErr(''); }} /></label>

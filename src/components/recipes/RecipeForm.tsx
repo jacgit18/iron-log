@@ -15,9 +15,11 @@ import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
-import type { Recipe, RecipeCategory, RecipeIngredient, RecipeUse } from '../../types.ts';
+import { setBeverage } from '../../lib/usualMeal.js';
+import type { PlanSlot, Recipe, RecipeCategory, RecipeIngredient, RecipeUse } from '../../types.ts';
 import CountsAsChips from './CountsAsChips.js';
 import UsedAsChips from './UsedAsChips.js';
+import UsualMealPicker from './UsualMealPicker.js';
 import { useCountsAs } from './useCountsAs.js';
 import IngredientList from './IngredientList.js';
 import { rowsFromMicro } from '../../lib/foodAmountRows.js';
@@ -57,6 +59,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [usesPicked, setUsesPicked] = useState(!!recipe?.uses);
   const pickUses = (next: RecipeUse[]) => { setUsesNow(next); setUsesPicked(true); };
   const pickCat = (c: RecipeCategory) => { setCat(c); if (!usesPicked) setUsesNow(defaultUsesFor(c)); };
+  const [meal, setMeal] = useState<PlanSlot | undefined>(recipe?.meal); // brief nutrition-meal-labels-year-repeat: the food's usual meal
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
@@ -168,7 +171,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
     const microOut = recipeMicroToSave({ fromParts, rolled: rolled?.micro, rows, kcalText: kcal, kcalFrom: microKcal }); // from the parts, or the typed rows of a recipe on its own numbers
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}), ...(recipe?.usual !== undefined ? { usual: recipe.usual } : {}) }); // a usual amount has no field here (ReadyMadeForm edits it): it passes through unchanged
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(meal ? { meal } : {}), ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}), ...(recipe?.usual !== undefined ? { usual: recipe.usual } : {}) }); // a usual amount has no field here (ReadyMadeForm edits it): it passes through unchanged
     if (e) { fail(fieldForSaveError(e), e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -258,6 +261,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
         </label>
         {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
         <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
+        <UsualMealPicker meal={meal} beverage={uses.includes('drink')} onMeal={setMeal} onBeverage={on => pickUses(setBeverage(uses, cat, on))} />
         <div className="rc-meta">
           <label>Category
             <select value={cat} onChange={e => pickCat(e.target.value as RecipeCategory)}>

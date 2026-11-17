@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
-import { USUAL_MEAL_CHOICES, followsUsualMeal, mealOfItem, setBeverage, startMealFor, usualMealOf } from './usualMeal.js';
+import { USUAL_MEAL_CHOICES, followsUsualMeal, mealOfItem, planMealFor, setBeverage, startMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
 
 const foods: Pick<Recipe, 'id' | 'meal'>[] = [{ id: 'oats', meal: 'breakfast' }, { id: 'rice' }, { id: 'tea', meal: 'snack' }];
 const r = (id: string, s?: PlanItem['s']): PlanItem => ({ k: 'r', id, ...(s ? { s } : {}) });
@@ -49,5 +49,20 @@ describe('the form and the add sheet', () => {
     expect(setBeverage(['drink'], 'protein', false)).toEqual(['meal', 'ingredient']);
     expect(setBeverage(['drink'], 'drinks', false)).toEqual(['meal']);
     expect(setBeverage(['meal'], 'other', false)).toEqual(['meal']);
+  });
+});
+
+describe('planMealFor', () => {
+  it('uses the usual meal until the person picks a meal themselves', () => {
+    expect(planMealFor({ meal: 'dinner' }, 'lunch', false)).toBe('dinner');
+    expect(planMealFor({ meal: 'dinner' }, 'lunch', true)).toBe('lunch');
+    expect(planMealFor({}, 'lunch', false)).toBe('lunch');
+  });
+});
+
+describe('usualMealLine', () => {
+  it('names the meal on the card, or is null', () => {
+    expect(usualMealLine({ meal: 'breakfast' })).toBe('Usual meal: Breakfast');
+    expect(usualMealLine({})).toBeNull();
   });
 });
