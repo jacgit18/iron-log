@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterSheetClose, leaveSheet, navOf, onPop, opsFor, startBackNav } from './backNav';
+import { activeLeaveGuard, afterSheetClose, closeOrAsk, leaveSheet, navOf, onPop, opsFor, setLeaveGuard, startBackNav, type LeaveGuard } from './backNav';
 
 const board = { tab: 'board', modal: false };
 const daily = { tab: 'daily', modal: false };
@@ -53,7 +53,7 @@ describe('onPop', () => {
 
 describe('startBackNav', () => {
   // A tiny history and store: enough to see the entries it makes and what Back does to the store.
-  const setup = () => {
+  const setup = (getGuard?: () => LeaveGuard | null) => {
     const entries: unknown[] = [null]; let i = 0; let pop: ((e: { state: unknown }) => void) | undefined;
     const listeners = new Set<() => void>();
     const st = { tab: 'board', modal: null as unknown, setTab(t: string) { st.tab = t; listeners.forEach(f => f()); }, closeModal() { st.modal = null; listeners.forEach(f => f()); } };
@@ -65,8 +65,8 @@ describe('startBackNav', () => {
       back: () => { i--; pop?.({ state: entries[i] }); },
     };
     const win = { addEventListener: (_: 'popstate', f: (e: { state: unknown }) => void) => { pop = f; }, removeEventListener: () => { pop = undefined; } };
-    const stop = startBackNav(store, history, win);
-    return { st, history, stop, back: () => history.back(), tabEntry: () => (entries[i] as { nav: { tab: string } }).nav.tab };
+    const stop = startBackNav(store, history, win, getGuard);
+    return { st, history, stop, back: () => history.back(), entries: () => entries.length, tabEntry: () => (entries[i] as { nav: { tab: string } }).nav.tab };
   };
   it('Back walks the tabs, then stops at the first one', () => {
     const a = setup();
@@ -83,6 +83,53 @@ describe('startBackNav', () => {
   });
   it('stops listening when stopped', () => {
     const a = setup(); a.stop(); a.st.setTab('daily'); expect(a.tabEntry()).toBe('board');
+  });
+  describe('a guarded sheet (brief receipt-back-guard)', () => {
+    const guarded = (edited: boolean) => {
+      const g = { edited, asks: 0, holds() { return g.edited; }, ask() { g.asks++; } };
+      const a = setup(() => g);
+      a.st.setTab('daily'); a.st.modal = {}; a.st.setTab('daily'); // the sheet opens on the daily tab
+      return { a, g };
+    };
+    it('Back on an edited sheet keeps it open, asks, and puts its entry back so the next Back asks again', () => {
+      const { a, g } = guarded(true);
+      a.back();
+      expect(a.st.modal).not.toBeNull(); expect(g.asks).toBe(1); expect(a.st.tab).toBe('daily');
+      a.back();
+      expect(a.st.modal).not.toBeNull(); expect(g.asks).toBe(2);
+    });
+    it('Discard (the sheet closing itself) takes the entry back, and the next Back goes to the previous tab', () => {
+      const { a } = guarded(true);
+      a.back(); a.st.closeModal();
+      expect(a.tabEntry()).toBe('daily');
+      a.back(); expect(a.st.tab).toBe('board');
+    });
+    it('Back on an untouched guarded sheet closes it as before', () => {
+      const { a, g } = guarded(false);
+      a.back();
+      expect(a.st.modal).toBeNull(); expect(g.asks).toBe(0);
+    });
+    it('a sheet with no guard closes on Back exactly as before', () => {
+      const a = setup(() => null);
+      a.st.setTab('daily'); a.st.modal = {}; a.st.setTab('daily');
+      a.back(); expect(a.st.modal).toBeNull();
+    });
+  });
+});
+
+describe('leave guard registry', () => {
+  it('holds only while registered, and a later guard survives an earlier one being removed', () => {
+    const one = { holds: () => true, ask() {} }; const two = { holds: () => true, ask() {} };
+    const offOne = setLeaveGuard(one); const offTwo = setLeaveGuard(two);
+    offOne(); expect(activeLeaveGuard()).toBe(two);
+    offTwo(); expect(activeLeaveGuard()).toBeNull();
+  });
+  it('closeOrAsk asks when the guard holds and closes otherwise', () => {
+    let closed = 0, asked = 0;
+    closeOrAsk(() => { closed++; }, { holds: () => true, ask: () => { asked++; } });
+    closeOrAsk(() => { closed++; }, { holds: () => false, ask: () => { asked++; } });
+    closeOrAsk(() => { closed++; }, null);
+    expect({ closed, asked }).toEqual({ closed: 2, asked: 1 });
   });
 });
 

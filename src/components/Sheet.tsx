@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, type ElementType, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useAppStore } from '../store/useAppStore.js';
 import { input } from '../hooks/useFocusKeeper.js';
+import { closeOrAsk } from '../lib/backNav.js';
 import { isTouchScreen, revealField } from '../lib/revealField.js';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
@@ -67,7 +68,7 @@ export default function Sheet({ as: Tag = 'div', className = '', children, ...re
     <div
       className="scrim"
       onPointerDown={e => { downOnScrim.current = e.target === e.currentTarget; }}
-      onClick={e => { if (e.target === e.currentTarget && downOnScrim.current) closeModal(); }}
+      onClick={e => { if (e.target === e.currentTarget && downOnScrim.current) closeOrAsk(closeModal); }}
     >
       {Tag === 'form' ? (
         <div ref={ref} role="dialog" aria-modal="true" tabIndex={-1} className={`sheet ${className}`.trim()} onKeyDown={trap}>
