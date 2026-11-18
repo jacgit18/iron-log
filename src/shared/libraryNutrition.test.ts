@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cleanNutrition, countLines, estimateServings, ingredientHash, isCounted, isTrusted, passesShowRule, perServing, rescaleForServings, servedNutrition, servingsFor, sourceServings,
+  cleanNutrition, countLines, estimateServings, ingredientHash, isCounted, isTrusted, passesShowRule, perServing, PORTION_FALLBACK_G, PORTION_G, rescaleForServings, servedNutrition, servingsFor, sourceServings,
   totalGrams, type CountLine, type LibraryNutrition,
 } from './libraryNutrition.js';
 
@@ -18,10 +18,14 @@ describe('servings', () => {
     expect(servingsFor(undefined, 50, 'protein')).toEqual({ servings: 2, estimated: true }); // under the floor: stored as 2, still flagged
     expect(servingsFor(0, 1000, 'protein')?.estimated).toBe(true);
   });
+  it('holds the owner-approved typical portions (2026-11-18 full resolve), so a typo fails', () => {
+    expect(PORTION_G).toEqual({ protein: 319, carbs: 240, sides: 248, sauces: 182, seasonings: 15, drinks: 195, breakfast: 228, dessert: 155, other: 273 });
+    expect(PORTION_FALLBACK_G).toBe(244);
+  });
   it('keeps an estimate between 2 and 24', () => {
     expect(estimateServings(100000, 'drinks')).toBe(24);
     expect(estimateServings(1, 'other')).toBe(2);
-    expect(estimateServings(600, 'sauces')).toBe(10);
+    expect(estimateServings(600, 'sauces')).toBe(3);
     expect(estimateServings(600, 'ready')).toBe(2); // a category with no portion uses the fallback
   });
   it('has no servings, and so no numbers, with neither a source value nor grams', () => {

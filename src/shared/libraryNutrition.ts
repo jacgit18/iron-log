@@ -83,10 +83,10 @@ export const totalGrams = (lines: readonly CountLine[]): number => lines.reduce(
 
 /** Typical grams of one serving by category, for estimating servings where the source has none. Set 2026-11-18 (owner-approved) from the medians of the
  *  full Library resolve: 1,097 recipes with a stated servings value, 3,001 recipes with numbers. A category with fewer than 10 such recipes falls back to
- *  `PORTION_FALLBACK_G` (the median of all of them, 244). Held by the owner: sauces stays 60 (the run's median, 182, looks wrong) and seasonings stays 15
- *  (only 3 recipes, below the minimum). */
+ *  `PORTION_FALLBACK_G` (the median of all of them, 244). Seasonings stays 15 (only 3 recipes, below the minimum); sauces is the run's median, 182
+ *  (31 recipes; owner, 2026-11-18, after the first hold at 60: the median servings error on those recipes is 200% at 60 g and 50% at 182 g). */
 export const PORTION_G: Partial<Record<RecipeCategory, number>> = {
-  protein: 319, carbs: 240, sides: 248, sauces: 60, seasonings: 15, drinks: 195, breakfast: 228, dessert: 155, other: 273,
+  protein: 319, carbs: 240, sides: 248, sauces: 182, seasonings: 15, drinks: 195, breakfast: 228, dessert: 155, other: 273,
 };
 export const PORTION_FALLBACK_G = 244;
 
