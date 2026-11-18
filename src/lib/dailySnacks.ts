@@ -1,6 +1,7 @@
 import { MAX_DAILY_SNACKS } from '../shared/diet.js';
 import type { DailySnack, DietCfg, PlanItem } from '../types.ts';
 import { inWindow, type Plan } from './dietPlan.js';
+import { withRepeats } from './repeats.js';
 
 /* ---------- Daily snacks (brief daily-snacks): a saved list that shows in Snack on every day of the plan window. Pure; the store writes it and the board draws it. ---------- */
 
@@ -13,19 +14,20 @@ export function snacksShownOn(day: string, plan: Plan, snacks: readonly DailySna
   return snacks.filter(s => !skipped.includes(s.id) && !real.some(i => i.k === 'r' && i.id === s.id));
 }
 
-/** The plan as the board shows it: each day in the window gets its shown daily snacks after its real items, in Snack, marked `v` (never stored). The same object when there is nothing to add, so memos hold. */
+/** The plan as the board shows it: each day in the window gets its shown daily snacks (in Snack) and its shown repeats (in their meal) after its real items, marked `v` (never stored). The same object when there is nothing to add, so memos hold. A repeat of a food a daily snack already shows that day stays hidden (same food, same meal). */
 export function effectivePlan(diet: DietCfg | undefined, days: readonly string[], today: string): Plan {
   const plan: Plan = diet?.plan ?? {};
-  if (!diet?.snacks?.length) return plan;
   let out: Plan | null = null;
-  for (const day of days) {
-    if (!inWindow(day, today)) continue;
-    const shown = snacksShownOn(day, plan, diet.snacks, diet.snackSkips);
-    if (!shown.length) continue;
-    const added: PlanItem[] = shown.map(s => ({ k: 'r', id: s.id, ...(s.x ? { x: s.x } : {}), s: 'snack', v: true }));
-    (out ??= { ...plan })[day] = [...(plan[day] ?? []), ...added];
+  if (diet?.snacks?.length) {
+    for (const day of days) {
+      if (!inWindow(day, today)) continue;
+      const shown = snacksShownOn(day, plan, diet.snacks, diet.snackSkips);
+      if (!shown.length) continue;
+      const added: PlanItem[] = shown.map(s => ({ k: 'r', id: s.id, ...(s.x ? { x: s.x } : {}), s: 'snack', v: true }));
+      (out ??= { ...plan })[day] = [...(plan[day] ?? []), ...added];
+    }
   }
-  return out ?? plan;
+  return withRepeats(out ?? plan, diet?.repeats, diet?.repeatSkips, days, today);
 }
 
 type Edit = { list: DailySnack[]; error: null } | { list: null; error: string };
