@@ -47,7 +47,7 @@ test('Save for later keeps the sheet open and says so when the device refuses th
   await scan(page);
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('QuotaExceededError'); }; });
   await page.getByRole('button', { name: 'Save for later' }).click();
-  await expect(page.getByRole('dialog')).toContainText('Could not save on this device');
+  await expect(page.getByRole('dialog')).toContainText('Could not save: this device refused it');
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt' })).toBeVisible();
 });
 
