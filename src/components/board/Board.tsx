@@ -211,7 +211,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   // The phone's filter row, the top of the joined card (brief board-card-filters-weight): the Sort button (opens the Sort and filter sheet) at the left, the Injury prevention switch at the right, the summary of what is on under them. Body weight is the card's `under`.
   const cardHead = (
     <>
-      <button type="button" className="btn wdc-sort" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
+      <button type="button" className="btn wdc-sort" aria-label={boardFilterCount(filter) ? `Sort ${boardFilterCount(filter)} on, and filter` : 'Sort and filter'} onClick={() => st.openModal({ type: 'boardfilter' })}>
         <Icon name="filter" /><span aria-hidden="true">Sort</span>{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
       </button>
       <InjurySwitch />

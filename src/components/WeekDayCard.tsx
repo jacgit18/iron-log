@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { tabAfterKey, type DayTab } from '../lib/weekDayTabs.js';
 import './WeekDayCard.css';
 
@@ -15,11 +15,16 @@ export default function WeekDayCard({ children, tabs, selected, onPick, idPrefix
     return () => { ro.disconnect(); document.documentElement.style.removeProperty('--wdc-h'); };
   }, [!footer]); // eslint-disable-line react-hooks/exhaustive-deps
   const head = useRef<HTMLDivElement>(null);
-  useEffect(() => { // a card with a header (the Board's phone filter row) scrolls that row away and pins the rest: it publishes the header's height as the pin offset (WeekDayCard.css)
+  useLayoutEffect(() => { // a card with a header (the Board's phone filter row) scrolls that row away and pins the rest: it publishes the header's height as the pin offset (--wdc-hh, on the card) and the pinned part's height for the scroll offset (--wdc-pin, on the page); measured before paint so the row is never pinned for a frame
     const el = card.current, h = head.current; if (!header || !el || !h) return;
-    const set = () => el.style.setProperty('--wdc-hh', `${Math.round(h.getBoundingClientRect().height)}px`);
-    set(); const ro = new ResizeObserver(set); ro.observe(h);
-    return () => { ro.disconnect(); el.style.removeProperty('--wdc-hh'); };
+    const root = document.documentElement;
+    const set = () => {
+      const hh = Math.round(h.getBoundingClientRect().height);
+      el.style.setProperty('--wdc-hh', `${hh}px`);
+      root.style.setProperty('--wdc-pin', `${Math.round(el.getBoundingClientRect().height) - hh}px`);
+    };
+    set(); const ro = new ResizeObserver(set); ro.observe(h); ro.observe(el);
+    return () => { ro.disconnect(); el.style.removeProperty('--wdc-hh'); root.style.removeProperty('--wdc-pin'); };
   }, [!header]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className={`wdc${header ? ' wdc-hasHead' : ''}`} ref={card}>

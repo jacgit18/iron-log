@@ -7,7 +7,7 @@ test('phone: the card holds the filter row, the week row, the day tabs and Body 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   const card = page.locator('.wdc');
-  await expect(card.locator('.wdc-head').getByRole('button', { name: /^Sort and filter/ })).toBeVisible();
+  await expect(card.locator('.wdc-head').getByRole('button', { name: /^Sort\b.*filter/ })).toBeVisible();
   await expect(card.locator('.wdc-head .injsw')).toBeVisible();
   await expect(card.locator('.bwrow')).toHaveCount(1);
   await expect(page.locator('.bwrow')).toHaveCount(1);
@@ -29,6 +29,23 @@ test('phone: the filter row scrolls away, the week row, day tabs and Body weight
   await expect(page.locator('.wdc .bwrow')).toBeInViewport();
   const head = await box(page, '.wdc-head');
   expect(head.y + head.height).toBeLessThanOrEqual(2); // scrolled up out of view (its bottom edge at the top)
+  const at = await page.evaluate(() => ({ y: scrollY, room: document.documentElement.scrollHeight - innerHeight }));
+  expect(at.y).toBeGreaterThan(0); // the page was tall enough to scroll, so the check above is not vacuous
+  const tabs = await box(page, '.wdc-tabs');
+  await page.evaluate(() => window.scrollTo(0, 900));
+  expect((await box(page, '.wdc-tabs')).y).toBeCloseTo(tabs.y, 0); // the pinned part does not move once the filter row is gone
+});
+
+test('the card changes above 700 px: 700 draws the phone card with the filter row and Body weight, 701 the desktop week card', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('.wdc .wdc-head .injsw')).toBeVisible();
+  await expect(page.locator('.wdc .bwrow')).toHaveCount(1);
+  await expect(page.locator('.wsec')).toHaveCount(0);
+  await page.setViewportSize({ width: 701, height: 844 });
+  await expect(page.locator('.wdc')).toHaveCount(0);
+  await expect(page.locator('.wsec .filterbar')).toBeVisible();
+  await expect(page.locator('.wsec .bwrow')).toHaveCount(1);
 });
 
 test('phone: Body weight saved from the card shows in the card', async ({ page }) => {

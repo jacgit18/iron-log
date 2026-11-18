@@ -54,7 +54,7 @@ test('the Board has its own Injury prevention switch, and it agrees with Setting
 test('on a phone the Board switch sits beside the Sort button, outside the sort and filter group, and still toggles', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const sw = page.locator('.boardroot').getByRole('switch', { name: /Injury prevention/ });
-  const toggleBtn = page.getByRole('button', { name: /^Sort and filter/ });
+  const toggleBtn = page.getByRole('button', { name: /^Sort\b.*filter/ });
   const a = await toggleBtn.boundingBox();
   const b = await sw.locator('xpath=..').boundingBox();
   expect(Math.abs(a.y + a.height / 2 - (b.y + b.height / 2))).toBeLessThan(6);
