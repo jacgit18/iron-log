@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { acrossPeople, acrossStores } from './groceryAcrossStores.js';
 import { byStore, normGrocery, paidKey } from './grocery.js';
-import { groupOfStore, monthOwes, partiesFor, purchasesOf } from './grocerySettle.js';
+import { groupOfStore, monthOwes, monthShare, partiesFor, purchasesOf } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import { normGroceryGroup, validGroceryGroup } from '../shared/grocery.js';
 import type { Grocery, GroceryGroup, GroceryMonth } from '../types.ts';
@@ -110,5 +110,9 @@ describe('acrossPeople', () => {
   it('is null with one store or no group', () => {
     expect(acrossPeople(g, { lines: { tp: { got: true } }, pulled: [] })).toBeNull();
     expect(acrossPeople({ ...g, groups: [] }, month)).toBeNull();
+  });
+  it('keeps the You row equal to the card\'s own Paid and Your share', () => {
+    const a = acrossPeople(g, month)!; const { paid, yours } = monthShare(g, month);
+    expect([a.people[0]!.paid, a.people[0]!.share]).toEqual([paid, yours]);
   });
 });

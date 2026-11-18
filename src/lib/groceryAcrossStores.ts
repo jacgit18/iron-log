@@ -1,4 +1,4 @@
-import { everyone, payerOf, purchasesOf, storeSettlement, storeStatus, storesBought } from './grocerySettle.js';
+import { everyone, payerOf, purchasesOf, storeSettlement, storeStatus, storesBought, type MonthPurchase } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -18,9 +18,8 @@ export interface AcrossPerson {
 export interface Across { people: AcrossPerson[]; net: number }
 
 /** The netted amounts per person, or null when there is nothing to net: the block only helps once more than one store was bought from and a group exists. */
-export function acrossStores(g: Grocery, m: GroceryMonth): Across | null {
+export function acrossStores(g: Grocery, m: GroceryMonth, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): Across | null {
   if (!g.groups?.length) return null;
-  const purchases = purchasesOf(g, m);
   const stores = storesBought(g, purchases);
   if (stores.length < 2) return null;
   const names = new Map(everyone(g).map(p => [p.id, p.n]));
@@ -46,9 +45,8 @@ export interface PersonMonth { id: string; name: string; paid: number; share: nu
 export interface AcrossTotals { people: PersonMonth[]; paid: number; share: number }
 
 /** Each person's Paid and Share over the month's stores, you first, then the groups' order (people who are gone keep a row when they have money in this month); null on the same gate as `acrossStores` (a group and 2 or more stores) and when only one person has money in the month. */
-export function acrossPeople(g: Grocery, m: GroceryMonth): AcrossTotals | null {
+export function acrossPeople(g: Grocery, m: GroceryMonth, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): AcrossTotals | null {
   if (!g.groups?.length) return null;
-  const purchases = purchasesOf(g, m);
   const stores = storesBought(g, purchases);
   if (stores.length < 2) return null;
   const by = new Map<string, PersonMonth>();
