@@ -8,7 +8,7 @@ import { moveMeals, remapPlan } from '../lib/quickMeals.js';
 import { plannedText, resultText, type SkippedDay } from '../lib/dayPicker.js';
 import { copyEaten, copyEatenMany } from '../lib/moveCopyEaten.js';
 import { shortDay } from '../lib/nutritionBoard.js';
-import { followFoodMeal } from '../lib/usualMeal.js';
+import { followFoodMeal, snackMealOf } from '../lib/usualMeal.js';
 import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
 import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { drinkIdsOf } from '../lib/recipeUses.js';
@@ -45,7 +45,7 @@ const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>, re
 // A listed daily snack (brief daily-snacks) that leaves a day from Snack (removed there, or moved to another day) is skipped on that day, so its listed copy does not come back in its place.
 // Only an item in Snack counts: the same recipe planned by hand in another meal is the person's own plan, and taking it out leaves the listed snack as it was.
 const skipsAfterLeaving = (get: StoreGet, day: string, item: { k: string; id: string; s?: string } | undefined): Record<string, string[]> | undefined =>
-  item && item.k === 'r' && item.s === 'snack' && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
+  item && item.k === 'r' && item.s === snackMealOf(item.id, get().recipes) && get().cfg.diet?.snacks?.some(x => x.id === item.id) ? skipSnack(get().cfg.diet?.snackSkips, day, item.id) : undefined;
 
 // A stored item that stands for a repeat (the same food in the same meal, on a day the repeat shows) and leaves its place skips that repeat on that day, so the repeat does not come back where the item was.
 const repeatSkipsAfter = (get: StoreGet, day: string, item: PlanItem | undefined): Record<string, string[]> | undefined => repeatSkipsAfterLeaving(get().cfg.diet?.repeats, get().cfg.diet?.repeatSkips, day, item);
@@ -241,7 +241,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   followFoodMeal(id, meal) {
     const plan = planOf(get), next = followFoodMeal(plan, id, meal);
     if (next !== plan) putPlan(get, next);
-    // A repeat naming a meal moves with its stored copies (else the repeat shows again in its old meal beside them). Listed daily snacks are not touched: they are always drawn in Snack (see PR 1040 notes).
+    // A repeat naming a meal moves with its stored copies (else the repeat shows again in its old meal beside them). A listed daily snack is drawn in the food's usual meal (`snackMealOf`), so it follows without a write.
     const d = get().cfg.diet, reps = d?.repeats, retargeted = reps ? retargetRepeats(reps, id, meal) : undefined;
     if (reps && retargeted !== reps) get().mutateCfg(c => { if (c.diet) c.diet = { ...c.diet, repeats: [...retargeted!] }; });
   },
@@ -273,10 +273,11 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
 
   // A listed snack that is only shown becomes a real item of that day's Snack (so it can be ticked, changed or moved); the index of the real item, or an error text (the day is outside the plan window).
   realizeDailySnack(day, id) {
-    const have = (planOf(get)[day] ?? []).findIndex(i => i.k === 'r' && i.id === id && i.s === 'snack');
+    const meal = snackMealOf(id, get().recipes); // Snack, or the food's usual meal when it has another
+    const have = (planOf(get)[day] ?? []).findIndex(i => i.k === 'r' && i.id === id && i.s === meal);
     if (have >= 0) return have;
     const listed = get().cfg.diet?.snacks?.find(x => x.id === id);
-    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: 'snack' }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get)); // a listed snack never counts toward the day's 8 planned things, so a full day still lets it be ticked
+    const r = addItem(planOf(get), day, { k: 'r', id, ...(listed?.x ? { x: listed.x } : {}), s: meal }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get)); // a listed snack never counts toward the day's 8 planned things, so a full day still lets it be ticked
     if (r.plan === null) return r.error;
     putPlan(get, r.plan);
     return r.plan[day]!.length - 1;

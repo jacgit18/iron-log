@@ -58,3 +58,6 @@ export function followFoodMeal(plan: Record<string, PlanItem[]>, id: string, mea
   }
   return next ?? plan;
 }
+
+/** The meal a listed daily snack is drawn and stored in: Snack, unless its food has a usual meal of another one (owner, 2026-11-18: a food's meal holds on every day, daily snacks included). */
+export const snackMealOf = (id: string, recipes: Foods): PlanSlot => { const u = usualMealOf(id, recipes); return u && u !== 'snack' ? u : 'snack'; };

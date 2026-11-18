@@ -536,6 +536,13 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
     expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }]);
   });
+  it('a listed snack whose food has another usual meal is stored in that meal when ticked or changed', () => {
+    st().setFoodMeal('yog', 'breakfast');
+    st().saveDailySnacks([{ id: 'yog' }]);
+    const i = st().realizeDailySnack(today, 'yog') as number;
+    expect(st().cfg.diet!.plan![today]![i]).toEqual({ k: 'r', id: 'yog', s: 'breakfast' });
+    expect(st().realizeDailySnack(today, 'yog')).toBe(i); // a second tap finds the stored one
+  });
   it('a shown snack changed in portion or moved is stored first, at the index realizeDailySnack returns, and the other listed snack is untouched', () => {
     st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
     const i = st().realizeDailySnack(today, 'bar') as number;
