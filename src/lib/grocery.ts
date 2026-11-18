@@ -337,7 +337,7 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const lines: Record<string, GroceryLine> = {};
     Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; else if (!listed.has(id) && !g.items.some(x => x.id === id)) lines[id] = l; }); // a removed item's purchase keeps its own id
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
-    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.credit ? { credit: fm.credit } : {}), ...(fm.paid ? { paid: fm.paid } : {}), ...(fm.carried ? { carried: fm.carried } : {}) };
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.credit ? { credit: fm.credit } : {}), ...(fm.rcpts ? { rcpts: fm.rcpts } : {}), ...(fm.paid ? { paid: fm.paid } : {}), ...(fm.carried ? { carried: fm.carried } : {}) };
     if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }

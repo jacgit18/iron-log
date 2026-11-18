@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { centsText, money, parseDollars } from '../../lib/grocery.js';
+import { receiptsText } from '../../lib/groceryLedger.js';
 import { taxPercentText } from '../../lib/groceryTax.js';
 import './StoreTax.css';
 
 // The sales tax a store's receipt shows for this month, typed in dollars (Tax checkbox, then the amount), and beside it the rewards credit the receipt took off (Rewards
 // checkbox, then the amount; brief receipt-rewards-credit). Tax is added to what you spent there and Rewards taken off, so the totals match what the card was charged.
 // The percent beside the tax is only what the amount comes to on the ticked items, to show it looks right.
-interface BoxProps { label: 'Tax' | 'Rewards'; store: string; cents: number | undefined; write: (c: number | null) => void; bad: string; onError?: (msg: string | null) => void; note?: string | null }
+interface BoxProps { label: 'Tax' | 'Rewards'; store: string; cents: number | undefined; write: (c: number | null) => void; bad: string; onError?: (msg: string | null) => void; note?: string | null; receipts?: number }
 
-function MoneyBox({ label, store, cents, write, bad, onError, note }: BoxProps) {
+function MoneyBox({ label, store, cents, write, bad, onError, note, receipts = 0 }: BoxProps) {
   const [on, setOn] = useState(!!cents);
   const [text, setText] = useState(centsText(cents ?? null));
   const [err, setErr] = useState<string | null>(null);
@@ -38,17 +39,18 @@ function MoneyBox({ label, store, cents, write, bad, onError, note }: BoxProps) 
         </label>
       )}
       {on && note && <span className="note gtaxpct">{note}</span>}
+      {on && receipts > 0 && <span className="note gtaxrcpt">{receiptsText(receipts)}</span>}
       {err && <span className="note gerr" role="alert">{err}</span>}
     </div>
   );
 }
 
-export default function StoreTax({ mk, store, cents, credit, subtotal, onError }: { mk: string; store: string; cents: number | undefined; credit?: number | undefined; subtotal: number; onError?: (msg: string | null) => void }) {
+export default function StoreTax({ mk, store, cents, credit, taxReceipts = 0, creditReceipts = 0, subtotal, onError }: { mk: string; store: string; cents: number | undefined; credit?: number | undefined; taxReceipts?: number; creditReceipts?: number; subtotal: number; onError?: (msg: string | null) => void }) {
   const pct = taxPercentText(cents ?? 0, subtotal);
   return (
     <div className="gtaxrow">
-      <MoneyBox label="Tax" store={store} cents={cents} bad="Tax is dollars, like 2.22." onError={onError} write={c => useAppStore.getState().setGroceryTax(mk, store, c)} note={pct ? `${pct} of ${money(subtotal)}` : null} />
-      <MoneyBox label="Rewards" store={store} cents={credit} bad="Rewards is dollars, like 17.27." onError={onError} write={c => useAppStore.getState().setGroceryCredit(mk, store, c)} />
+      <MoneyBox label="Tax" store={store} cents={cents} bad="Tax is dollars, like 2.22." onError={onError} write={c => useAppStore.getState().setGroceryTax(mk, store, c)} note={pct ? `${pct} of ${money(subtotal)}` : null} receipts={taxReceipts} />
+      <MoneyBox label="Rewards" store={store} cents={credit} bad="Rewards is dollars, like 17.27." onError={onError} write={c => useAppStore.getState().setGroceryCredit(mk, store, c)} receipts={creditReceipts} />
     </div>
   );
 }

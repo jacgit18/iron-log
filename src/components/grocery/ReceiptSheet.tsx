@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { NEW_STORE, addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, paidAfterRewards, parseRewards, planReceipt, proposeItem, receiptTotal, remapPlan, restoreSnapshot, stageDraft, stagedAt, takeSnapshot, withRewards, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
+import { NEW_STORE, addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, paidAfterRewards, parseRewards, planReceipt, proposeItem, receiptTotal, remapPlan, restoreSnapshot, stageDraft, stagedAt, takeSnapshot, withRewards, withoutReceiptMoney, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
 import { aliasAddsFor, applyNames, movedFrom, resolveName, savedNamesText, type RowEdit } from '../../lib/groceryAliases.js';
 import { MAX_STORES, RESERVED_STORE, centsText, isReservedName, money, monthLabel, withoutUsed } from '../../lib/grocery.js';
+import { duplicateOf, freshKey } from '../../lib/groceryLedger.js';
 import { allPeople, hasSharing } from '../../lib/grocerySettle.js';
 import { groupLines, mergeNote, rowAsLine } from '../../lib/receiptGroup.js';
 import { ME } from '../../lib/grocerySplit.js';
@@ -62,6 +63,7 @@ export default function ReceiptSheet() {
   const [shareChoices, setShareChoices] = useState<ShareChoices>(restore?.shareChoices ?? NO_CHOICES); // brief receipt-share: who shares what this receipt buys (null: each line keeps its usual)
   const [splitHidden, setSplitHidden] = useState(false); // Not now on the offer to make a sharing group
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(() => new Set(restore?.unticked)); // brief receipt-reconcile-ticked: ticked items the receipt does not show that the person chose to untick (off for every receipt)
+  const [again, setAgain] = useState(false); // brief receipt-tax-adds-up: a receipt already applied this month adds its tax and rewards again only when this is ticked (off for every receipt)
   const [stagedRaw, setStaged] = useState<Staged[]>(() => restore?.staged ?? []);
   const [form, setForm] = useState<{ line: number; draft: ItemDraft; error: string } | null>(null); // one form open at a time
   const seq = useRef(restore?.seq ?? 0);
@@ -120,6 +122,9 @@ export default function ReceiptSheet() {
     closeModal();
   };
   if (!receipt || !plan || !rec) return null;
+  const dup = plan.receiptKey ? duplicateOf(monthData?.rcpts, plan.receiptKey) : null; // the same receipt (store, date, total, tax) is already in this month's ledger
+  const skipMoney = !!dup && !again;
+  const toWrite = skipMoney ? withoutReceiptMoney(plan) : plan; // what Apply will write: without the money, the bar and the Applied notice do not mention it
   const people = allPeople(g);
   const sharing = hasSharing(g) && people.length > 0; // the split shows where sharing shows today: once a group exists
   const withItem = [...listed, ...staged.map(x => ({ ...x, every: false, out: false }))];
@@ -167,13 +172,15 @@ export default function ReceiptSheet() {
   const apply = () => {
     if (newStore) { const err = useAppStore.getState().addGroceryStore(newStore); if (err) { setStoreError(err); return; } } // before the items, so a new item bought there finds the store; a store that cannot be made stops Apply with nothing written
     const made = createStaged(plan, staged, { addGroceryItem: useAppStore.getState().addGroceryItem, items: () => useAppStore.getState().grocery.items });
-    const real = remapPlan(plan, made.ids);
+    const mapped = remapPlan(plan, made.ids);
+    const real = skipMoney ? withoutReceiptMoney(mapped) : mapped.receiptKey ? { ...mapped, receiptKey: freshKey(useAppStore.getState().groceryMonths[mk]?.rcpts, mapped.receiptKey) } : mapped; // a receipt filed again (the tick, or one too bare to tell from another) gets its own key
     const st = useAppStore.getState(); // read after the items were made
     const month = st.groceryMonths[mk];
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!), month?.credit);
     if (newStore) snap.addedStore = newStore;
-    const out: { refused: string[]; unticked?: number } = { refused: [] };
+    const out: { refused: string[]; unticked?: number; moneyFiled?: boolean } = { refused: [] };
     const done = applyPlan(real, mk, st, out, receipt.date); // the receipt's date stamps what it buys
+    if (snap.receipt && out.moneyFiled === false) delete snap.receipt; // the key was already in the ledger: Undo must not remove an earlier receipt's entry and money
     const used = new Set(real.steps.flatMap(x => (x.kind === 'tax' ? [] : [x.id])));
     if (sharing) applyShares(shareWrites(shareChoices, shareRows, new Map(Object.entries(made.ids))).filter(w => used.has(w.id)), mk, useAppStore.getState()); // after the plan; Undo restores the lines as they were
     const edits: RowEdit[] = rows.map(r => { const c = choices[r.lines[0]!]!; return { text: r.text, itemId: c.itemId, include: c.include, touched: touched.has(r.key), remember: !noRemember.has(r.key) }; });
@@ -225,6 +232,12 @@ export default function ReceiptSheet() {
             {g.stores.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
+      )}
+      {dup && (
+        <div className="note rcdup" role="status">
+          <span>Already applied to {monthLabel(mk)}: {receipt.store ?? taxStore}{receipt.date ? `, ${receipt.date}` : ''}. Tax and rewards are not added again.</span>
+          <label className="rckeep" htmlFor="rc-again"><input id="rc-again" type="checkbox" checked={again} onChange={e => setAgain(e.target.checked)} /> Add tax and rewards again anyway</label>
+        </div>
       )}
       <div className={`rccheck${check.ok ? '' : ' bad'}`} role="status">
         <div className="rcnums"><span>Lines {money(plan.check.linesCents)}</span><span>Tax {money(plan.check.taxCents)}</span>{plan.check.totalCents !== null && <span>Receipt total {money(plan.check.totalCents)}</span>}
@@ -333,7 +346,7 @@ export default function ReceiptSheet() {
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>
       {asking
         ? <ReceiptLeave onKeep={() => setAsking(false)} onDiscard={discard} />
-        : <ReceiptApplyBar plan={plan} newCount={newCount} disabled={nothing || !!nameError} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} onSave={saveLater} saveError={saveError} />}
+        : <ReceiptApplyBar plan={toWrite} newCount={newCount} disabled={nothing || !!nameError} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} onSave={saveLater} saveError={saveError} />}
     </Sheet>
   );
 }
