@@ -6,7 +6,11 @@ import './WeekPicker.css';
 // The list of weeks (brief nutrition-meal-labels-year-repeat, option A): one button per week, "Earlier" above this week and "Coming up" below it, the shown week marked and scrolled into view. Drawn by the dropdown on a desktop and by the sheet on a phone; the rules (which weeks, their names) are `weekChoices` in lib/nutritionBoard.ts.
 export default function WeekList({ choices, current, onPick }: { choices: WeekChoice[]; current: number; onPick: (offset: number) => void }) {
   const on = useRef<HTMLButtonElement>(null);
-  useEffect(() => { on.current?.scrollIntoView({ block: 'center' }); on.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { // the shown week in the middle of the list's own scroll box; scrollIntoView would also scroll the page, which closes the dropdown
+    const el = on.current, box = el?.closest<HTMLElement>('.nb-wp-pop, .nbsheet');
+    if (el && box) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top - box.clientHeight / 2 + el.offsetHeight / 2;
+    el?.focus({ preventScroll: true });
+  }, []);
   const earlier = choices.filter(c => c.offset < 0), ahead = choices.filter(c => c.offset >= 0);
   const group = (label: string, list: WeekChoice[]) => list.length > 0 && (
     <li role="presentation" className="nb-wl-group">
