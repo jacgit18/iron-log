@@ -136,12 +136,12 @@ export function planReceipt(receipt: Receipt, choices: readonly Choice[], listIt
   if (taxOn) steps.push({ kind: 'tax', store: taxStore, cents: receipt.taxCents! });
   const credit = taxStore !== null && (receipt.rewardsCents ?? 0) > 0 ? receipt.rewardsCents! : 0;
   const moves = where?.at ? movesFor(steps, items, where.at, where) : [];
-  const receiptKey = taxStore !== null && (taxOn || credit > 0) ? receiptKeyOf(receipt, taxStore) : undefined;
+  const receiptKey = taxStore !== null && (taxOn || credit > 0) ? receiptKeyOf(receipt, taxStore, credit) : undefined;
   return { ...(receiptKey ? { receiptKey } : {}), steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, credit, creditStore: credit > 0 ? taxStore : null, notes, moves, makeUsual: moves.length > 0 && (where?.makeUsual ?? moves.every(m => !m.usual)), untick: [] };
 }
 
 /** The ledger key of a receipt applied at a store: the store, its date, the printed total and the tax. */
-const receiptKeyOf = (r: Receipt, store: string): string => receiptKey(store, r.date, r.totalCents, r.taxCents);
+const receiptKeyOf = (r: Receipt, store: string, credit: number): string => receiptKey(store, r.date, r.totalCents, r.taxCents, credit);
 
 /** The plan without the receipt's tax and rewards: for a receipt already applied this month, whose money must not be added a second time (the items are written as before, they are idempotent). */
 export function withoutReceiptMoney(plan: Plan): Plan {

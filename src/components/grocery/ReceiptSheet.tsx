@@ -173,7 +173,7 @@ export default function ReceiptSheet() {
     if (newStore) { const err = useAppStore.getState().addGroceryStore(newStore); if (err) { setStoreError(err); return; } } // before the items, so a new item bought there finds the store; a store that cannot be made stops Apply with nothing written
     const made = createStaged(plan, staged, { addGroceryItem: useAppStore.getState().addGroceryItem, items: () => useAppStore.getState().grocery.items });
     const mapped = remapPlan(plan, made.ids);
-    const real = skipMoney ? withoutReceiptMoney(mapped) : dup && mapped.receiptKey ? { ...mapped, receiptKey: freshKey(useAppStore.getState().groceryMonths[mk]?.rcpts, mapped.receiptKey) } : mapped; // an again-tick files the receipt under its own key
+    const real = skipMoney ? withoutReceiptMoney(mapped) : mapped.receiptKey ? { ...mapped, receiptKey: freshKey(useAppStore.getState().groceryMonths[mk]?.rcpts, mapped.receiptKey) } : mapped; // a receipt filed again (the tick, or one too bare to tell from another) gets its own key
     const st = useAppStore.getState(); // read after the items were made
     const month = st.groceryMonths[mk];
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!), month?.credit);

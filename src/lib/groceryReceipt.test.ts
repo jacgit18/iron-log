@@ -363,6 +363,13 @@ describe('rewards credit (brief receipt-rewards-credit)', () => {
     filed.length = 0; restoreSnapshot(snap, ledgerApi);
     expect(filed).toEqual([['undo', '2026-11', plan.receiptKey]]);
     expect(takeSnapshot(planReceipt(withRewards(bjs, null), choice, items, "BJ's"), '2026-11', {}, items, undefined).credit).toBeUndefined();
+    // Apply reports whether it filed the money, so the sheet can drop the Undo key when the add was refused (the key was already there).
+    const refused = { ...ledgerApi, applyGroceryReceiptMoney: () => false } as unknown as GroceryApi;
+    const out: { refused: string[]; moneyFiled?: boolean } = { refused: [] };
+    applyPlan(plan, '2026-11', refused, out);
+    expect(out.moneyFiled).toBe(false);
+    applyPlan(plan, '2026-11', ledgerApi, out);
+    expect(out.moneyFiled).toBe(true);
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryMonth } from '../types.ts';
-import { addReceiptMoney, duplicateOf, freshKey, mergeLedger, mergeMoney, receiptCount, receiptKey, receiptsText, removeReceiptMoney } from './groceryLedger.js';
+import { addReceiptMoney, duplicateOf, guardable, freshKey, mergeLedger, mergeMoney, receiptCount, receiptKey, receiptsText, removeReceiptMoney } from './groceryLedger.js';
 
 const month = (m: Partial<GroceryMonth> = {}): GroceryMonth => ({ lines: {}, pulled: [], ...m });
 const A = receiptKey("BJ's", '2026-11-03', 5679, 679), B = receiptKey("BJ's", '2026-11-20', 5352, 352);
@@ -85,5 +85,35 @@ describe('merging two devices', () => {
   it('one side unchanged takes the other, and no base means this device over the other', () => {
     expect(mergeMoney('tax', base, base, withB(base))).toEqual({ "BJ's": 1031 });
     expect(mergeMoney('tax', null, month({ tax: { X: 1 } }), month({ tax: { X: 2, Y: 3 } }))).toEqual({ X: 1, Y: 3 });
+  });
+});
+
+describe('review fixes (PR 1036)', () => {
+  it('no base: two different receipts for one store, each explained by its own ledger, both count', () => {
+    const o = month(), t = month();
+    addReceiptMoney(o, A, "BJ's", 679, 0); addReceiptMoney(t, B, "BJ's", 352, 0);
+    const m = mergeMoney('tax', null, o, t);
+    expect(m).toEqual({ "BJ's": 1031 });
+    expect(Object.keys(mergeLedger(null, o, t)).sort()).toEqual([A, B].sort());
+  });
+  it('no base, unexplained totals: this device wins the store and the ledger holds only its receipts', () => {
+    const o = month({ tax: { "BJ's": 500 } }), t = month();
+    addReceiptMoney(t, B, "BJ's", 352, 0);
+    expect(mergeMoney('tax', null, o, t)).toEqual({ "BJ's": 500 });
+    expect(mergeLedger(null, o, t)).toEqual({});
+  });
+  it('a typed conflict does not leave the other side\'s receipt in the ledger without its money', () => {
+    const base = month(); addReceiptMoney(base, A, "BJ's", 679, 0);
+    const typed = structuredClone(base); typed.tax = { "BJ's": 5 };
+    const theirs = structuredClone(base); addReceiptMoney(theirs, B, "BJ's", 352, 0);
+    expect(mergeMoney('tax', base, typed, theirs)).toEqual({ "BJ's": 5 });
+    expect(Object.keys(mergeLedger(base, typed, theirs))).toEqual([A]);
+  });
+  it('a receipt with no date and no total is never a repeat, and the credit is part of the key', () => {
+    const k = receiptKey("BJ's", undefined, undefined, 300);
+    expect(guardable(k)).toBe(false);
+    expect(duplicateOf({ [k]: { store: "BJ's", tax: 300 } }, k)).toBeNull();
+    expect(guardable(A)).toBe(true);
+    expect(receiptKey("BJ's", '2026-11-03', 5679, 679, 100)).not.toBe(A);
   });
 });
