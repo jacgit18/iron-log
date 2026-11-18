@@ -909,24 +909,33 @@ describe('video link from the log sheet', () => {
 });
 
 describe('bug check fixes', () => {
-  it('"default everywhere" from the log clears a slot default saved earlier; the card then shows its own program phase', () => {
-    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
+  it('"default everywhere" from the log leaves a slot default on a card with its own program phase, and the picked phase shows this week', () => {
+    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'exp' } } });
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
     st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeExDefault: true });
     const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
-    expect(st().cfg.phDef['A-d1s6:0']).toBeUndefined();
+    expect(st().cfg.phDef['A-d1s6:0']).toBe('exp');
     expect(st().cfg.exPh.chestpress).toBe('hyp');
-    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('strength'); // its own phase outranks the exercise default
+    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('hyp'); // the phase picked for this log stays this week; the slot default is untouched
   });
-  it('"default everywhere" also drops a phase picked for another day of the same week', () => {
+  it('"default everywhere" keeps the phase you just picked on a card whose program phase differs', () => {
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeExDefault: true }); // chest press card A-d1s6 is Strength in the program
+    const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
+    expect(st().cfg.exPh.chestpress).toBe('hyp');
+    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('hyp'); // not snapped back to Strength
+    expect(st().logs.chestpress.at(-1).ph).toBe('hyp');
+  });
+  it('"default everywhere" does not drop a phase picked for another card of the exercise that has its own phase', () => {
     const slots = st().activeSlots(); const seen = {}; let pair = null;
     slots.forEach(sl => sl.items.forEach((x, i) => { if (seen[x.ex] && seen[x.ex][0].id !== sl.id && !pair) pair = [seen[x.ex], [sl, i]]; (seen[x.ex] = seen[x.ex] || [sl, i]); }));
     const [[a, ai], [b, bi]] = pair;
     st().mutateWeek(w => { w.ph[`${b.id}:${bi}`] = 'strength'; });
     st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp', makeExDefault: true });
     const card = st().activeSlots().find(x => x.id === b.id);
-    expect(st().week.ph[`${b.id}:${bi}`]).toBeUndefined();
-    expect(phaseOf(st().cfg, st().week, card, bi)).toBe(card.items[bi].ph ?? 'hyp'); // back to its own program phase
+    expect(card.items[bi].ph).toBeTruthy();
+    expect(st().week.ph[`${b.id}:${bi}`]).toBe('strength');
+    expect(phaseOf(st().cfg, st().week, card, bi)).toBe('strength'); // its own pick stays
   });
   it('a 1RM does not set the target; a weight you log does, for the same exercise and phase on other days', async () => {
     const { targetOf, planRows } = await import('../lib/logic.js');
@@ -971,19 +980,19 @@ describe('bug check fixes', () => {
     expect(st().cfg.phDef['A-d1s6:0']).toBe('hyp');
     expect(st().cfg.exPh.chestpress).toBe('hyp');
   });
-  it('the Details default phase also clears slot defaults for that exercise; the card shows its own phase', () => {
-    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
+  it('the Details default phase leaves a slot default on a card with its own phase', () => {
+    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'exp' } } });
     st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
     const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
-    expect(st().cfg.phDef['A-d1s6:0']).toBeUndefined();
-    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('strength');
+    expect(st().cfg.phDef['A-d1s6:0']).toBe('exp');
+    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('exp');
   });
-  it('"default everywhere" on a one-week card keeps the phase it was added with', () => {
+  it('"default everywhere" on a one-week card shows the phase picked in the log sheet', () => {
     st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
     const card = st().activeSlots().find(s => s.added);
     st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength', makeExDefault: true });
     expect(st().cfg.exPh.chestpress).toBe('strength');
-    expect(phaseOf(st().cfg, st().week, st().slotById(card.id), 0)).toBe('hyp');
+    expect(phaseOf(st().cfg, st().week, st().slotById(card.id), 0)).toBe('strength');
   });
   it('built-in Canoe Stretch and Desk Bands are normal cards that log, in their Home section', () => {
     st().checkCard('A-d3s9', true); // Desk Bands, Day 3 (Home)
