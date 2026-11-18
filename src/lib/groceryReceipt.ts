@@ -237,7 +237,7 @@ export function takeSnapshot(plan: Plan, month: string, lines: Record<string, Gr
 }
 
 /** Runs the plan: each item is ticked bought for the month, marked bought at the receipt's store when it is not there already, then gets its count and price (or its packs' prices), and the store's tax is set. With `makeUsual` the receipt's store also becomes the item's usual one; an item that action refuses (the name is already there) is named in `out.refused` and stays bought at the store for the month only. Returns how many items were written. */
-export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[]; unticked?: number }, at?: string): number { // `at`: the receipt's date, the stamp of what it buys
+export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[]; unticked?: number; moneyFiled?: boolean }, at?: string): number { // `at`: the receipt's date, the stamp of what it buys
   let done = 0;
   for (const s of plan.steps) {
     if (s.kind === 'tax') { if (!plan.receiptKey || !api.applyGroceryReceiptMoney) api.setGroceryTax(month, s.store, s.cents); continue; } // with a ledger the money is filed once, after the items
@@ -252,7 +252,7 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
   if (plan.receiptKey && api.applyGroceryReceiptMoney) {
     const tax = plan.steps.find((x): x is Extract<Step, { kind: 'tax' }> => x.kind === 'tax');
     const store = tax?.store ?? plan.creditStore;
-    if (store) api.applyGroceryReceiptMoney(month, plan.receiptKey, store, tax?.cents ?? 0, plan.credit); // adds to what the store already has this month
+    if (store) { const filed = api.applyGroceryReceiptMoney(month, plan.receiptKey, store, tax?.cents ?? 0, plan.credit); if (out) out.moneyFiled = filed; } // adds to what the store already has this month; false when the key was already filed (a sync landed first), so Undo must not take it back
   } else if (plan.credit > 0 && plan.creditStore !== null) api.setGroceryCredit?.(month, plan.creditStore, plan.credit);
   for (const id of plan.untick) if (api.setGroceryGot(month, id, false) && out) out.unticked = (out.unticked ?? 0) + 1; // after the items: a ticked item the receipt does not show, unticked by choice
   return done;

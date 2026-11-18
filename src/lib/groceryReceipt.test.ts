@@ -383,3 +383,13 @@ describe('receipt money in the month ledger (brief receipt-tax-adds-up)', () => 
     expect(w.steps.map(s => s.kind)).toEqual(['single']);
   });
 });
+
+describe('Undo only takes back money Apply filed (review of PR 1036)', () => {
+  it('reports whether the receipt money was filed, so a refused add is not undone', () => {
+    const p = planReceipt({ store: "BJ's", date: '2026-11-03', taxCents: 100, totalCents: 1100, lines: [{ text: 'E', qty: 1, grossCents: 1000, discountCents: 0, matchId: 'eggs' }] }, [{ itemId: 'eggs', include: true }], [item('eggs', 'Eggs')], "BJ's");
+    const api = { setGroceryGot: () => true, setGroceryQty() {}, setGroceryCents() {}, setGroceryPrices() {}, restoreGroceryLine() {}, markGroceryFromReceipt() {}, applyGroceryReceiptMoney: () => false } as unknown as GroceryApi;
+    const out: { refused: string[]; moneyFiled?: boolean } = { refused: [] };
+    applyPlan(p, '2026-11', api, out);
+    expect(out.moneyFiled).toBe(false);
+  });
+});

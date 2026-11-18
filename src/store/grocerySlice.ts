@@ -56,7 +56,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
   };
   // Whether any past month still leans on a store: a bought line pinned to it, its tax, or who paid there.
   // A settled mark (`store\npayer\nperson`, paidKey) names it too: dropping the store would orphan the mark and the card it belongs to (N-17b).
-  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.credit, name) !== undefined || own(m.payer, name) !== undefined || Object.keys(m.paid ?? {}).some(k => k.split('\n')[0] === name));
+  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.credit, name) !== undefined || own(m.payer, name) !== undefined || Object.values(m.rcpts ?? {}).some(e => e.store === name) || Object.keys(m.paid ?? {}).some(k => k.split('\n')[0] === name));
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
     if (get().blocked()) return 'Still loading your data…';
     const g = structuredClone(get().grocery);

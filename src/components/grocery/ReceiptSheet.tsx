@@ -178,8 +178,9 @@ export default function ReceiptSheet() {
     const month = st.groceryMonths[mk];
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!), month?.credit);
     if (newStore) snap.addedStore = newStore;
-    const out: { refused: string[]; unticked?: number } = { refused: [] };
+    const out: { refused: string[]; unticked?: number; moneyFiled?: boolean } = { refused: [] };
     const done = applyPlan(real, mk, st, out, receipt.date); // the receipt's date stamps what it buys
+    if (snap.receipt && out.moneyFiled === false) delete snap.receipt; // the key was already in the ledger: Undo must not remove an earlier receipt's entry and money
     const used = new Set(real.steps.flatMap(x => (x.kind === 'tax' ? [] : [x.id])));
     if (sharing) applyShares(shareWrites(shareChoices, shareRows, new Map(Object.entries(made.ids))).filter(w => used.has(w.id)), mk, useAppStore.getState()); // after the plan; Undo restores the lines as they were
     const edits: RowEdit[] = rows.map(r => { const c = choices[r.lines[0]!]!; return { text: r.text, itemId: c.itemId, include: c.include, touched: touched.has(r.key), remember: !noRemember.has(r.key) }; });
