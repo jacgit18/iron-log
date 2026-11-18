@@ -143,7 +143,7 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
         <span className="note">How much the suggested weight goes up by. Saved for {ex.n} on every day and every week.</span>
       </StepField>
       {!s.experiment && <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>}
-      <label className="inline"><input type="checkbox" checked={makeExDefault} onChange={e => setMakeExDefault(e.target.checked)} /> Make this phase the default for {ex.n} everywhere</label>
+      <label className="inline"><input type="checkbox" checked={makeExDefault} onChange={e => setMakeExDefault(e.target.checked)} /> Make this phase the default for {ex.n} on cards with no phase of their own</label>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (

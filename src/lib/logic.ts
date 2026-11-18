@@ -56,8 +56,10 @@ export function ranFor(prog: Program, pk: ProgKey, w: WeekIn, key: string): Week
 export const isTimed = (ph: PhaseKey | null | undefined) => ph === 'iso' || ph === 'mob';
 export const round = (w: number) => w < 50 ? Math.round(w / 2.5) * 2.5 : Math.round(w / 5) * 5;
 export const itemKey = (slot: { id: string }, idx: number) => `${slot.id}:${idx}`;
-// A phase picked for one week beats the slot's saved default, which beats the exercise's default (all its cards), which beats the program's.
-export const defaultPhase = (cfg: Cfg, slot: { id: string; items: CardItem[] }, idx: number): PhaseKey | null => cfg.phDef[itemKey(slot, idx)] ?? (cfg.exPh && cfg.exPh[slot.items[idx].ex]) ?? slot.items[idx].ph ?? null;
+// A phase picked for one week beats the slot's saved default, which beats the card's own program phase, which beats the exercise's default.
+// The card's own phase outranks the exercise default so one exercise trained in several phases keeps each card's phase and reps;
+// the exercise default only fills a card that has no phase of its own.
+export const defaultPhase = (cfg: Cfg, slot: { id: string; items: CardItem[] }, idx: number): PhaseKey | null => cfg.phDef[itemKey(slot, idx)] ?? slot.items[idx].ph ?? (cfg.exPh && cfg.exPh[slot.items[idx].ex]) ?? null;
 export function phaseOf(cfg: Cfg, week: WeekIn, slot: { id: string; items: CardItem[] }, idx: number): PhaseKey | null { return (week.ph || {})[itemKey(slot, idx)] ?? defaultPhase(cfg, slot, idx); }
 export function rxOf(cfg: Cfg, item: Partial<CardItem>, ph: PhaseKey | null | undefined): string { if (item.rx && ph === item.ph) return item.rx; if (ph) return cfg.rxOverride[ph] || PHASES[ph].rx; return item.rx || ''; }
 
