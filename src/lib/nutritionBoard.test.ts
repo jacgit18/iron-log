@@ -351,6 +351,16 @@ describe('eaten food in meals (brief nutrition-items-row-sheet-and-more)', () =>
     expect(p.meals.lunch.map(e => e.id)).toEqual(['c']);
     expect(p.none.map(e => e.id)).toEqual(['b']);
   });
+  it('food logged from a recipe with a usual meal goes to that meal ahead of the hour; on a past day, which draws no meals, it stays in "Not in a meal"', () => {
+    const recipes = [{ id: 'cereal', meal: 'breakfast' as const }];
+    const now = placeEaten(TODAY, TODAY, [{ ...at('a', 20), from: 'cereal' }, at('b', undefined)], emptyPlan, recipes);
+    expect(now.meals.breakfast.map(e => e.id)).toEqual(['a']);
+    expect(now.none.map(e => e.id)).toEqual(['b']);
+    const past = '2026-11-05';
+    const old = placeEaten(past, TODAY, [{ ...at('a', 20), d: past, from: 'cereal' }], emptyPlan, recipes);
+    expect(old.none.map(e => e.id)).toEqual(['a']);
+    expect(Object.values(old.meals).flat()).toEqual([]);
+  });
   it('every entry on a past day goes to "Not in a meal", hour or not', () => {
     const past = '2026-11-05';
     const p = placeEaten(past, TODAY, [{ ...at('a', 8), d: past }, { ...at('b', undefined), d: past }], emptyPlan);

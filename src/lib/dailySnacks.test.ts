@@ -31,6 +31,12 @@ describe('the plan as the board shows it', () => {
     expect(p[today]).toEqual([{ k: 'r', id: 'yog', s: 'lunch' }, { k: 'r', id: 'bar', x: 2, s: 'snack', v: true }]);
     expect(p[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }, { k: 'r', id: 'bar', x: 2, s: 'snack', v: true }]);
   });
+  it('draws a listed snack in its food\'s usual meal when that is not Snack, else in Snack', () => {
+    const d: DietCfg = { snacks: [{ id: 'yog' }, { id: 'bar' }] };
+    const p = effectivePlan(d, [today], today, [{ id: 'yog', meal: 'breakfast' }, { id: 'bar', meal: 'snack' }]);
+    expect(p[today]!.map(i => [i.id, i.s])).toEqual([['yog', 'breakfast'], ['bar', 'snack']]);
+    expect(effectivePlan(d, [today], today)[today]!.map(i => i.s)).toEqual(['snack', 'snack']);
+  });
   it('leaves the stored plan alone', () => { effectivePlan(diet, [today], today); expect(diet.plan![today]).toHaveLength(1); });
   it('adds nothing outside today and the next 364 days', () => {
     expect(effectivePlan(diet, ['2026-11-11'], today)['2026-11-11']).toBeUndefined();
@@ -45,7 +51,7 @@ describe('the plan as the board shows it', () => {
     const d = boardDay(effectivePlan({ snacks: [{ id: 'yog' }, { id: 'bar' }] }, [tomorrow], today), tomorrow, recipes, [], 2000);
     expect(d.slots.map(s => s.slot)).toEqual(['breakfast', 'lunch', 'snack', 'dinner']); // no "not set" group: every item has a meal
     const snack = d.slots.find(s => s.slot === 'snack')!;
-    expect(snack.items.map(i => i.r.name)).toEqual(['Yogurt', 'Bar']);
+    expect(snack.items.map(i => i.r.name)).toEqual(['Bar', 'Yogurt']);
     expect(snack.items.every(i => i.virtual)).toBe(true);
     expect(d.kcal).toBe(330);
     expect(snack.kcal).toBe(330);

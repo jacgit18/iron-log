@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
-import { USUAL_MEAL_CHOICES, followsUsualMeal, mealOfItem, planMealFor, setBeverage, startMealFor, storedMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
+import { USUAL_MEAL_CHOICES, followFoodMeal, followsUsualMeal, mealOfItem, planMealFor, setBeverage, startMealFor, storedMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
 
 const foods: Pick<Recipe, 'id' | 'meal'>[] = [{ id: 'oats', meal: 'breakfast' }, { id: 'rice' }, { id: 'tea', meal: 'snack' }];
 const r = (id: string, s?: PlanItem['s']): PlanItem => ({ k: 'r', id, ...(s ? { s } : {}) });
@@ -77,5 +77,23 @@ describe('Beverage off keeps the other labels, and an add follows the usual meal
     expect(storedMealFor({ meal: 'breakfast' }, 'lunch', true)).toBe('lunch');
     expect(storedMealFor({}, 'lunch', false)).toBe('lunch');
     expect(storedMealFor(undefined, 'lunch', false)).toBe('lunch');
+  });
+});
+
+describe('followFoodMeal', () => {
+  it('moves the hand-placed copies of that recipe to the meal on every day, and touches nothing else', () => {
+    const plan = { '2026-11-18': [r('oats', 'lunch'), r('rice', 'dinner')], '2026-11-19': [r('oats', 'snack'), r('oats')], '2026-11-20': [r('rice')] };
+    const next = followFoodMeal(plan, 'oats', 'breakfast');
+    expect(next['2026-11-18']).toEqual([r('oats', 'breakfast'), r('rice', 'dinner')]);
+    expect(next['2026-11-19']).toEqual([r('oats', 'breakfast'), r('oats')]);
+    expect(next['2026-11-20']).toBe(plan['2026-11-20']);
+  });
+  it('skips a copy when the day already holds the food in that meal', () => {
+    const plan = { d: [r('oats', 'breakfast'), r('oats', 'lunch')] };
+    expect(followFoodMeal(plan, 'oats', 'breakfast')).toBe(plan);
+  });
+  it('returns the same plan when nothing changed', () => {
+    const plan = { d: [r('oats')] };
+    expect(followFoodMeal(plan, 'oats', 'breakfast')).toBe(plan);
   });
 });

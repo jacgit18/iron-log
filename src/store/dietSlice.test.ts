@@ -478,6 +478,23 @@ describe('Undo of a move respects the 20 a day limit (brief nutrition-move-copy-
   });
 });
 
+describe('a food\'s meal follows it across days (owner, 2026-11-18)', () => {
+  const d1 = ymd(new Date()), d2 = ymd(new Date(Date.now() + 864e5)), d3 = ymd(new Date(Date.now() + 2 * 864e5));
+  beforeEach(() => { useAppStore.setState({ recipes: [{ id: 'cer', n: 'Cereal', cat: 'breakfast' as const, ing: [], steps: [], kcal: 120, p: 3 }] }); });
+  it('moving a card to another meal on its day sets the usual meal and moves the hand-placed copies on other days', () => {
+    st().addPlanItem(d1, 'r', 'cer', 'snack'); st().addPlanItem(d2, 'r', 'cer', 'lunch'); st().addPlanItem(d3, 'r', 'cer', 'dinner');
+    expect(st().movePlanItem(d1, 0, d1, 'breakfast')).toBeNull();
+    expect(st().recipes[0]!.meal).toBe('breakfast');
+    const plan = st().cfg.diet!.plan!;
+    expect([plan[d1]![0]!.s, plan[d2]![0]!.s, plan[d3]![0]!.s]).toEqual(['breakfast', 'breakfast', 'breakfast']);
+  });
+  it('moving a card to another day leaves the usual meal alone', () => {
+    st().addPlanItem(d1, 'r', 'cer', 'snack');
+    expect(st().movePlanItem(d1, 0, d2, 'lunch')).toBeNull();
+    expect(st().recipes[0]!.meal).toBeUndefined();
+  });
+});
+
 describe('daily snacks (brief daily-snacks)', () => {
   const today = ymd(new Date());
   const tomorrow = ymd(new Date(Date.now() + 864e5));
@@ -518,6 +535,13 @@ describe('daily snacks (brief daily-snacks)', () => {
     st().skipDailySnack(today, 'yog');
     expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
     expect(st().cfg.diet!.snacks).toEqual([{ id: 'yog' }]);
+  });
+  it('a listed snack whose food has another usual meal is stored in that meal when ticked or changed', () => {
+    st().setFoodMeal('yog', 'breakfast');
+    st().saveDailySnacks([{ id: 'yog' }]);
+    const i = st().realizeDailySnack(today, 'yog') as number;
+    expect(st().cfg.diet!.plan![today]![i]).toEqual({ k: 'r', id: 'yog', s: 'breakfast' });
+    expect(st().realizeDailySnack(today, 'yog')).toBe(i); // a second tap finds the stored one
   });
   it('a shown snack changed in portion or moved is stored first, at the index realizeDailySnack returns, and the other listed snack is untouched', () => {
     st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
@@ -706,6 +730,16 @@ describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
     expect(st().cfg.diet!.plan![d]).toEqual([{ k: 'r', id: 'r2', s: 'snack' }]);
     expect(st().movePlanItem(d, 0, d, 'lunch')).toBeNull();
     expect(effectivePlan(st().cfg.diet, [d], today)[d]).toEqual([{ k: 'r', id: 'r2', s: 'lunch' }]);
+  });
+  it('moving a stored copy of a repeated food to another meal retargets the repeat, so no second copy shows in the old meal', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r2', s: 'snack' }, [0, 1, 2, 3, 4, 5, 6]);
+    const d = week(1);
+    const i = st().realizeRepeat(d, st().cfg.diet!.repeats![0]!.rid) as number;
+    expect(st().movePlanItem(d, i, d, 'lunch')).toBeNull();
+    expect(st().cfg.diet!.repeats![0]!.s).toBe('lunch');
+    const meals = effectivePlan(st().cfg.diet, [d, week(2)], today);
+    expect(meals[d]!.map(x => x.s)).toEqual(['lunch']);
+    expect(meals[week(2)]!.map(x => x.s)).toEqual(['lunch']);
   });
   it('a stored item that stands for a repeat and is removed does not come back on that day, but does on the next', () => {
     st().addPlanItem(week(1), 'r', 'r2', 'snack');
