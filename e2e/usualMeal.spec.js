@@ -57,7 +57,7 @@ test('the add sheet pre-picks the usual meal, a pressed meal wins, and a hand-pl
   expect(plan).toEqual([{ k: 'r', id: 'oats' }, { k: 'r', id: 'oats', s: 'dinner' }]);
 });
 
-test('an item with no meal of its own follows the food, and a change of usual meal moves it on every day', async ({ page }) => {
+test('a change of usual meal moves the food on every day, including a copy placed by hand (PR 1040)', async ({ page }) => {
   await seed(page, [mk('oats', 'Oatmeal', { meal: 'breakfast' })]);
   await page.evaluate(() => localStorage.setItem('ironlog:config/main', JSON.stringify({ diet: { plan: { '2026-09-24': [{ k: 'r', id: 'oats' }], '2026-09-25': [{ k: 'r', id: 'oats' }], '2026-09-26': [{ k: 'r', id: 'oats', s: 'dinner' }] } } })));
   await page.reload();
@@ -77,7 +77,8 @@ test('an item with no meal of its own follows the food, and a change of usual me
   await openNutrition(page);
   await expect(inSlot('2026-09-25', 'Snack')).toContainText('Oatmeal');
   await expect(inSlot('2026-09-24', 'Snack')).toContainText('Oatmeal');
-  await expect(inSlot('2026-09-26', 'Dinner')).toContainText('Oatmeal');
+  await expect(inSlot('2026-09-26', 'Snack')).toContainText('Oatmeal'); // placed by hand in Dinner before: the food's meal now holds on every day
+  await expect(inSlot('2026-09-26', 'Dinner')).toHaveCount(0);
   await expect(inSlot('2026-09-25', 'Breakfast')).toHaveCount(0);
 });
 

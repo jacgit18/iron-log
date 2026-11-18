@@ -17,6 +17,12 @@ describe('boardDay', () => {
     expect(d.slots[4]).toMatchObject({ slot: 'dinner', kcal: 400, share: 971 });
     expect(d.slots[0]!.items.map(x => x.r.name)).toEqual(['Salad']);
   });
+  it('items sit A to Z in each meal whatever order they were added in, and keep their plan position', () => {
+    const d = boardDay({ [D]: [pi('toast', 'snack'), pi('salad', 'snack'), pi('rice', 'snack'), pi('chili', 'snack')] }, D, recipes, [], null);
+    const snack = d.slots.find(x => x.slot === 'snack')!;
+    expect(snack.items.map(x => x.r.name)).toEqual(['Chili', 'Rice', 'Salad', 'Toast']);
+    expect(snack.items.map(x => x.index)).toEqual([3, 2, 1, 0]);
+  });
   it('checks a meal against what it needs and offers the partner first', () => {
     const d = boardDay({ [D]: [pi('chili', 'dinner')] }, D, recipes, [], null);
     const dinner = d.slots.find(s => s.slot === 'dinner')!;

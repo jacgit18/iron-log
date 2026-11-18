@@ -1,7 +1,8 @@
 import { MAX_DAILY_SNACKS } from '../shared/diet.js';
-import type { DailySnack, DietCfg, PlanItem } from '../types.ts';
+import type { DailySnack, DietCfg, PlanItem, Recipe } from '../types.ts';
 import { inWindow, type Plan } from './dietPlan.js';
 import { withRepeats } from './repeats.js';
+import { snackMealOf } from './usualMeal.js';
 
 /* ---------- Daily snacks (brief daily-snacks): a saved list that shows in Snack on every day of the plan window. Pure; the store writes it and the board draws it. ---------- */
 
@@ -15,7 +16,7 @@ export function snacksShownOn(day: string, plan: Plan, snacks: readonly DailySna
 }
 
 /** The plan as the board shows it: each day in the window gets its shown daily snacks (in Snack) and its shown repeats (in their meal) after its real items, marked `v` (never stored). The same object when there is nothing to add, so memos hold. A repeat of a food a daily snack already shows that day stays hidden (same food, same meal). */
-export function effectivePlan(diet: DietCfg | undefined, days: readonly string[], today: string): Plan {
+export function effectivePlan(diet: DietCfg | undefined, days: readonly string[], today: string, recipes: readonly Pick<Recipe, 'id' | 'meal'>[] = []): Plan {
   const plan: Plan = diet?.plan ?? {};
   let out: Plan | null = null;
   if (diet?.snacks?.length) {
@@ -23,7 +24,7 @@ export function effectivePlan(diet: DietCfg | undefined, days: readonly string[]
       if (!inWindow(day, today)) continue;
       const shown = snacksShownOn(day, plan, diet.snacks, diet.snackSkips);
       if (!shown.length) continue;
-      const added: PlanItem[] = shown.map(s => ({ k: 'r', id: s.id, ...(s.x ? { x: s.x } : {}), s: 'snack', v: true }));
+      const added: PlanItem[] = shown.map(s => ({ k: 'r', id: s.id, ...(s.x ? { x: s.x } : {}), s: snackMealOf(s.id, recipes), v: true }));
       (out ??= { ...plan })[day] = [...(plan[day] ?? []), ...added];
     }
   }

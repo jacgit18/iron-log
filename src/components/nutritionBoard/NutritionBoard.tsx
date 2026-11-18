@@ -53,7 +53,7 @@ export default function NutritionBoard() {
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
   const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
-  const plan = useMemo(() => effectivePlan(cfg.diet, days, today), [cfg.diet, days, today]); // the stored plan plus the saved daily snacks shown on each day (brief daily-snacks)
+  const plan = useMemo(() => effectivePlan(cfg.diet, days, today, recipes), [cfg.diet, days, today, recipes]); // the stored plan plus the saved daily snacks shown on each day (brief daily-snacks)
   const legacy = useLegacyMeals();
   const targets = useMemo(() => {
     const { latest, goalLb, weeksLeft } = recommendInputs(cfg.bwGoal, body, now);
