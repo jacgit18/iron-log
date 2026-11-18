@@ -78,6 +78,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
     set({ recipes: settleMeals(d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item]) }); // meals built from this one follow its numbers and name
     get().saveRecipes();
+    if (item.meal && kept?.meal !== item.meal) get().followFoodMeal(item.id, item.meal); // a new usual meal reaches every day the food is planned on (owner, 2026-11-18)
     return null;
   },
 

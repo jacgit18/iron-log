@@ -127,3 +127,16 @@ export function repeatSummary(days: readonly number[], meal: string, fromName: s
   if (!days.length) return 'Pick at least one day.';
   return `${daysName(days)} in ${meal}, every week from ${fromName} for the next 52 weeks. Nothing is copied: change or stop it here.`;
 }
+
+/** `list` with every repeat of the recipe `id` that names a meal moved to `meal`, so the repeat keeps matching the stored copies that moved with it (a stored item stands for a repeat when food and meal match). A repeat is left alone when moving it would clash with another repeat of the same food in that meal on a shared weekday. The same array when nothing changed. */
+export function retargetRepeats(list: readonly RepeatItem[], id: string, meal: PlanSlot): readonly RepeatItem[] {
+  let changed = false;
+  const out = list.map(r => {
+    if (r.k !== 'r' || r.id !== id || !r.s || r.s === meal) return r;
+    const moved = { ...r, s: meal };
+    if (list.some(o => o !== r && o.rid !== r.rid && samePlanItem({ k: o.k, id: o.id, ...(o.s ? { s: o.s } : {}) }, { k: moved.k, id: moved.id, s: meal }) && o.days.some(d => moved.days.includes(d)))) return r;
+    changed = true;
+    return moved;
+  });
+  return changed ? out : list;
+}
