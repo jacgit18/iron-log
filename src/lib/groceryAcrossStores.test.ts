@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acrossStores } from './groceryAcrossStores.js';
+import { acrossPeople, acrossStores } from './groceryAcrossStores.js';
 import { byStore, normGrocery, paidKey } from './grocery.js';
 import { groupOfStore, monthOwes, partiesFor, purchasesOf } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
@@ -77,5 +77,38 @@ describe('acrossStores', () => {
     expect(acrossStores(g, { lines: { tp: { got: true } }, pulled: [] })).toBeNull();
     expect(acrossStores({ ...g, groups: [] }, month)).toBeNull();
     expect(acrossStores(g, { lines: { tea: { got: true }, tp: { got: true, share: { with: [] } } }, pulled: [] })).toBeNull();
+  });
+});
+
+describe('acrossPeople', () => {
+  const sum = (a: NonNullable<ReturnType<typeof acrossPeople>>) => [a.paid, a.share];
+  it('adds each person\'s paid and share over the stores, you first, and the All row is the bills', () => {
+    const a = acrossPeople(g, month)!;
+    // BJ's $30.00 (you paid) and Aldi $9.00 (Sister paid), split three ways: $10.00 and $3.00 each.
+    expect(a.people.map(p => [p.name, p.paid, p.share])).toEqual([['You', 3000, 1300], ['Sister', 900, 1300], ['Mom', 0, 1300]]);
+    expect(sum(a)).toEqual([3900, 3900]);
+  });
+  it('does not move with Mark paid', () => {
+    const settled: GroceryMonth = { ...month, paid: { [paidKey("BJ's", ME, 'mom')]: 1000, [paidKey('Aldi', 'sis', ME)]: 300 } };
+    expect(acrossPeople(g, settled)).toEqual(acrossPeople(g, month));
+  });
+  it('carries the receipt tax and a payer\'s remainder, so the shares still add up to the bills', () => {
+    const taxed: GroceryMonth = { ...month, tax: { "BJ's": 301, Aldi: 100 } };
+    const a = acrossPeople(g, taxed)!;
+    expect(a.people.reduce((x, p) => x + p.paid, 0)).toBe(3301 + 1000);
+    expect(a.people.reduce((x, p) => x + p.share, 0)).toBe(3301 + 1000);
+    expect(a.people.find(p => p.id === 'sis')!.paid).toBe(1000);
+  });
+  it('gives a person who left the group a row in a month they have money in, and no row for a zero', () => {
+    const gone: Grocery = { ...g, groups: [{ ...family, people: [{ id: 'sis', n: 'Sister', gone: true }, { id: 'mom', n: 'Mom' }] }] };
+    const a = acrossPeople(gone, month)!;
+    expect(a.people.map(p => p.id)).toEqual([ME, 'sis', 'mom']);
+    const onlyYou: GroceryMonth = { lines: { tp: { got: true, share: { with: [] } }, rice: { got: true, share: { with: [] } } }, pulled: [] };
+    expect(acrossPeople(g, onlyYou)).toBeNull(); // only you: nothing to compare
+    expect(acrossPeople({ ...gone, items: gone.items.map(i => (i.id === 'soap' ? i : { ...i, share: { with: ['sis'] } })) }, month)!.people.map(p => p.id)).toEqual([ME, 'sis']); // Mom has nothing, so no row
+  });
+  it('is null with one store or no group', () => {
+    expect(acrossPeople(g, { lines: { tp: { got: true } }, pulled: [] })).toBeNull();
+    expect(acrossPeople({ ...g, groups: [] }, month)).toBeNull();
   });
 });
