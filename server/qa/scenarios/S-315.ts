@@ -5,12 +5,12 @@ const scenario: Scenario = {
   steps: [
     'On Shopping press Scan receipt, then Photos, and pick a photo of a receipt. Wait for the sheet titled Receipt.',
     'Press Close.',
-    'On the "Resume your receipt" row press Discard.',
+    'On the Draft receipt row press Discard.',
     'Reload the page and open Shopping again.',
   ],
   expected: [
     'Discard removes the row at once.',
-    'After the reload there is still no "Resume your receipt" row.',
+    'After the reload there is still no Draft receipt row.',
   ],
 };
 

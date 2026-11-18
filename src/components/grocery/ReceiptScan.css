@@ -226,9 +226,22 @@
 .rcsumbad {
   color: var(--warn-ink);
 }
+.rcbtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
 .rcapply {
-  width: 100%;
+  flex: 1 1 12rem;
   min-height: 48px;
+}
+.rcsave {
+  flex: 0 1 auto;
+  min-height: 48px;
+}
+.rcsaveerr {
+  margin: var(--sp-8) 0 0;
+  text-align: center;
 }
 @container (max-width: 640px) {
   .rchead {

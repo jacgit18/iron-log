@@ -1,10 +1,32 @@
 @layer base, components;
 @layer components {
-/* The Resume row under Scan receipt (brief receipt-back-guard): a bordered card with the draft's store and age, and two buttons. */
+/* The Drafts rows under Scan receipt (briefs receipt-back-guard, receipt-drafts-list): a block with a heading, then one bordered row per draft with its store, date, lines, total and age, and two buttons. */
+.rcdrafts {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.rcdraftshead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-4) var(--sp-8);
+  margin: 0 0 var(--sp-8);
+}
+.rcdraftshead span {
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.rcdraftlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 .rcresume {
   display: flex;
   flex-wrap: wrap;
-  flex: 1 1 100%;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-8);

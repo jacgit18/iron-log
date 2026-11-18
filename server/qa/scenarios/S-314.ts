@@ -10,7 +10,7 @@ const scenario: Scenario = {
   ],
   expected: [
     'Back closes the sheet at once with no "Leave this receipt?" bar.',
-    'The "Resume your receipt" row shows with "closed just now" and Resume reopens the receipt as scanned.',
+    'The Draft receipt row shows with "saved just now" and Resume reopens the receipt as scanned.',
     'The click outside an untouched sheet closes it without asking.',
   ],
 };

@@ -9,7 +9,7 @@ const scenario: Scenario = {
   ],
   expected: [
     'Discard closes the sheet and nothing was applied: the Shopping summary is unchanged.',
-    'No "Resume your receipt" row shows under Scan receipt.',
+    'No "Draft receipt" row shows under Scan receipt.',
   ],
 };
 
