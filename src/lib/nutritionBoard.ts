@@ -5,6 +5,7 @@ import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';
 import type { Plan } from './dietPlan.js';
 import { portionTag } from './supplementPortion.js';
+import { usualMealOf } from './usualMeal.js';
 import { SLOTS, scheduleOf, slotTally } from './supplements.js';
 import { boardDay, type BoardDay } from './weekBoard.js';
 import { HOT_OZ, TRAIN_OZ_PER_30, fmtOz, goalFor, sumOz } from './water.js';
@@ -171,13 +172,15 @@ export function mealForHour(hour: number): PlanSlot {
 }
 
 export interface EatenPlacement { meals: Record<PlanSlot, DietEntry[]>; none: DietEntry[] }
-/** The day's eaten food, minus what a planned item's check added (the planned card shows that one itself), placed: today's entries with an hour go to their meal; an entry with no hour, and every entry on another day, goes to the "Not in a meal" group. */
-export function placeEaten(day: string, today: string, eaten: readonly DietEntry[], plan: BoardDay): EatenPlacement {
+/** The day's eaten food, minus what a planned item's check added (the planned card shows that one itself), placed: food logged from a recipe with a usual meal goes to that meal on any day (owner, 2026-11-18); else today's entries with an hour go to their meal; an entry with no hour, and every other entry on another day, goes to the "Not in a meal" group. */
+export function placeEaten(day: string, today: string, eaten: readonly DietEntry[], plan: BoardDay, recipes: readonly Pick<Recipe, 'id' | 'meal'>[] = []): EatenPlacement {
   const checked = new Set(plan.slots.flatMap(s => s.items.flatMap(x => x.r.item.e ?? [])));
   const out: EatenPlacement = { meals: { breakfast: [], lunch: [], dinner: [], snack: [] }, none: [] };
   for (const e of eaten) {
     if (checked.has(e.id)) continue;
-    if (day === today && typeof e.t === 'number') out.meals[mealForHour(e.t)].push(e); else out.none.push(e);
+    const usual = e.from ? usualMealOf(e.from, recipes) : undefined;
+    if (usual) out.meals[usual].push(e);
+    else if (day === today && typeof e.t === 'number') out.meals[mealForHour(e.t)].push(e); else out.none.push(e);
   }
   return out;
 }
@@ -219,7 +222,7 @@ export function dayView(day: string, today: string, a: { plan: Plan; recipes: Re
     meter('water', 'Water', 'oz', sumOz(a.supp.water[day]), water.oz),
   ];
   const fatNote = !ahead && eaten.length > 0 && missingCarbsFat(a.diet, day) ? 'Carbs and fat count only what you enter.' : null;
-  return { day, kind: dayKind(day, today), meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote, planLine: planLine(plan, ahead), placed: placeEaten(day, today, eaten, plan) };
+  return { day, kind: dayKind(day, today), meters, supps: suppMeter(a.supp, day), plan, eaten, fatNote, planLine: planLine(plan, ahead), placed: placeEaten(day, today, eaten, plan, a.recipes) };
 }
 
 /** The Supplements meter (drawn before Water): "2 of 4 taken" fills 50%; nothing scheduled says "None scheduled" with an empty bar. Counts ticks on any day. */

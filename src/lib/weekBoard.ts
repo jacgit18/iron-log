@@ -50,12 +50,13 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
   const foods = live.map(x => ({ r: { ...(x.r.kcal !== undefined ? { kcal: x.r.kcal } : {}), ...(x.fat !== undefined ? { f: x.fat } : {}) }, x: 1 }));
   const drinkIds = drinkIdsOf(recipes);
   const isDrink = (x: BoardItem) => isDrinkItem(x.r.item, drinkIds);
-  const drinks = rows.filter(isDrink);
+  const byName = (a: BoardItem, b: BoardItem) => a.r.name.localeCompare(b.r.name, undefined, { sensitivity: 'base' }) || a.index - b.index; // A to Z in every meal, whatever order the items were added or moved in (owner, 2026-11-18); `index` still points at the plan position
+  const drinks = rows.filter(isDrink).sort(byName);
   const meal = rows.filter(x => !isDrink(x));
   const slots: BoardSlot[] = [];
   const order: (PlanSlot | null)[] = [null, ...PLAN_SLOTS];
   for (const slot of order) {
-    const here = meal.filter(x => (mealOfItem(x.r.item, recipes) ?? null) === slot);
+    const here = meal.filter(x => (mealOfItem(x.r.item, recipes) ?? null) === slot).sort(byName);
     if (slot === null && here.length === 0) continue;
     const foodsHere = here.flatMap(x => (x.r.recipe ? [x.r.recipe] : []));
     const chk = slot && !here.some(x => x.r.meal) ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };

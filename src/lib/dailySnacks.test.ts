@@ -45,7 +45,7 @@ describe('the plan as the board shows it', () => {
     const d = boardDay(effectivePlan({ snacks: [{ id: 'yog' }, { id: 'bar' }] }, [tomorrow], today), tomorrow, recipes, [], 2000);
     expect(d.slots.map(s => s.slot)).toEqual(['breakfast', 'lunch', 'snack', 'dinner']); // no "not set" group: every item has a meal
     const snack = d.slots.find(s => s.slot === 'snack')!;
-    expect(snack.items.map(i => i.r.name)).toEqual(['Yogurt', 'Bar']);
+    expect(snack.items.map(i => i.r.name)).toEqual(['Bar', 'Yogurt']);
     expect(snack.items.every(i => i.virtual)).toBe(true);
     expect(d.kcal).toBe(330);
     expect(snack.kcal).toBe(330);

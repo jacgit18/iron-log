@@ -326,6 +326,8 @@ export interface DietSlice {
   addPlanItemToDays(kind: 'r' | 'm', id: string, days: string[], slot?: PlanSlot): BatchResult; // one recipe or saved meal on several days in one plan write; days that can't take it are skipped and named (`message` is empty on success: the caller words it)
   addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
+  setFoodMeal(id: string, meal: PlanSlot | undefined): string | null; // sets a food's usual meal (a recipe's `meal`) and makes every planned copy of it follow it; an error text, or null
+  followFoodMeal(id: string, meal: PlanSlot): void; // moves every hand-placed planned copy of the recipe to `meal`
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
   removePlanItem(day: string, index: number): void; // a listed daily snack removed from a day is skipped on that day only
   saveDailySnacks(list: DailySnack[]): void; // the daily snack list (cfg.diet.snacks, at most 6; brief daily-snacks); an empty list clears it

@@ -1,4 +1,5 @@
 import type { PlanItem, PlanSlot, Recipe, RecipeCategory, RecipeUse } from '../types.ts';
+import { samePlanItem } from '../shared/diet.js';
 import { defaultUsesFor } from './recipeUses.js';
 
 /* ---------- A food's usual meal (brief nutrition-meal-labels-year-repeat): the meal a board item follows when the person has not put it in one. Pure; the board and the add sheet read it. ---------- */
@@ -40,3 +41,20 @@ export const planMealFor = (recipe: Pick<Recipe, 'meal'> | undefined, picked: Pl
 
 /** The line on a recipe or food card: "Usual meal: Breakfast", or null when it has none. */
 export const usualMealLine = (recipe: Pick<Recipe, 'meal'>): string | null => (recipe.meal ? `Usual meal: ${recipe.meal[0]!.toUpperCase()}${recipe.meal.slice(1)}` : null);
+
+/** The plan with every hand-placed copy of recipe `id` moved to `meal` on every day, so the food sits where its usual meal says (owner, 2026-11-18). Copies with no meal of their own already follow the recipe and are left alone. A copy is skipped when the day already holds the food in that meal (a day never holds it twice in one meal). Returns `plan` itself when nothing changed. */
+export function followFoodMeal(plan: Record<string, PlanItem[]>, id: string, meal: PlanSlot): Record<string, PlanItem[]> {
+  let next: Record<string, PlanItem[]> | null = null;
+  for (const [day, items] of Object.entries(plan)) {
+    let changed = false;
+    const out = items.map(it => {
+      if (it.k !== 'r' || it.id !== id || !it.s || it.s === meal) return it;
+      const moved: PlanItem = { ...it, s: meal };
+      if (items.some(x => x !== it && samePlanItem(x, moved)) ) return it;
+      changed = true;
+      return moved;
+    });
+    if (changed) { next ??= { ...plan }; next[day] = out; }
+  }
+  return next ?? plan;
+}

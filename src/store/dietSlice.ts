@@ -8,6 +8,7 @@ import { moveMeals, remapPlan } from '../lib/quickMeals.js';
 import { plannedText, resultText, type SkippedDay } from '../lib/dayPicker.js';
 import { copyEaten, copyEatenMany } from '../lib/moveCopyEaten.js';
 import { shortDay } from '../lib/nutritionBoard.js';
+import { followFoodMeal } from '../lib/usualMeal.js';
 import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
 import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { drinkIdsOf } from '../lib/recipeUses.js';
@@ -222,8 +223,24 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   movePlanItem(day, index, toDay, slot) {
     const r = moveItem(planOf(get), day, index, toDay, slot, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
     if (r.plan === null) return r.error;
-    putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, planOf(get)[day]?.[index]) : undefined, repeatSkipsAfter(get, day, planOf(get)[day]?.[index]));
+    const was = planOf(get)[day]?.[index];
+    putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, was) : undefined, repeatSkipsAfter(get, day, was));
+    // A recipe moved to another meal of the same day makes that meal the food's usual meal: every other day follows it (owner, 2026-11-18).
+    if (toDay === day && slot && was?.k === 'r' && was.s !== slot) get().setFoodMeal(was.id, slot);
     return null;
+  },
+
+  setFoodMeal(id, meal) {
+    if (!get().recipes.some(r => r.id === id)) return 'That food is gone.';
+    set({ recipes: get().recipes.map(r => { if (r.id !== id) return r; const { meal: _old, ...rest } = r; return meal ? { ...rest, meal } : rest; }) });
+    get().saveRecipes();
+    if (meal) get().followFoodMeal(id, meal);
+    return null;
+  },
+
+  followFoodMeal(id, meal) {
+    const plan = planOf(get), next = followFoodMeal(plan, id, meal);
+    if (next !== plan) putPlan(get, next);
   },
 
   setPlanPortion(day, index, portion) {
