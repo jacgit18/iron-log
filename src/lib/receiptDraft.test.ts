@@ -54,6 +54,13 @@ describe('draft list storage', () => {
     expect(list).toHaveLength(MAX_DRAFTS);
     expect(list.map(d => d.id)).toEqual(['d5', 'd4', 'd3', 'd2', 'd1']);
   });
+  it('saveDraft refuses a sixth new draft and leaves the five kept, but still updates one of them', () => {
+    const s = fake();
+    for (let i = 0; i < MAX_DRAFTS; i++) saveDraft(s, draft({ id: `d${i}`, savedAt: NOW - (10 - i) * 1000 }), NOW);
+    expect(saveDraft(s, draft({ id: 'new', savedAt: NOW }), NOW)).toBe(false);
+    expect(saveDraft(s, draft({ id: 'd0', savedAt: NOW }), NOW)).toBe(true);
+    expect(loadDrafts(s, NOW).map(d => d.id).sort()).toEqual(['d0', 'd1', 'd2', 'd3', 'd4']);
+  });
   it('expires a draft after 7 days, keeps one a moment younger, and removes the expired from storage', () => {
     const s = fake(); s.m.set(DRAFTS_KEY, raw(draft({ id: 'old', savedAt: NOW - DRAFT_MAX_MS }), draft({ id: 'new', savedAt: NOW - DRAFT_MAX_MS + 1000 })));
     expect(loadDrafts(s, NOW).map(d => d.id)).toEqual(['new']);

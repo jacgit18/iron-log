@@ -90,15 +90,18 @@ export function loadDrafts(storage: Store, now: number): Draft[] {
   const raw = readRaw(storage);
   if (raw === undefined || raw === null) return [];
   const list = parseDrafts(raw, now);
-  if (JSON.stringify(list) !== raw) writeList(storage, list);
+  let stored = -1; try { const v: unknown = JSON.parse(raw); stored = Array.isArray(v) ? v.length : -1; } catch { /* unreadable: rewritten below */ }
+  if (stored !== list.length) writeList(storage, list); // only when a draft was dropped (expired or bad): a read never rewrites a list that is intact
   return list;
 }
 
-/** Keeps the draft (replacing the one with its id). False when the storage refuses (private window, full): the caller says so. */
+/** Keeps the draft (replacing the one with its id). False when the storage refuses (private window, full) or when MAX_DRAFTS others are kept: a new draft never pushes a kept one out, the caller says so. */
 export function saveDraft(storage: Store, d: Draft, now: number = Date.now()): boolean {
   const raw = readRaw(storage);
   if (raw === undefined) return false;
-  return writeList(storage, upsertDraft(parseDrafts(raw, now), d));
+  const list = parseDrafts(raw, now);
+  if (list.length >= MAX_DRAFTS && !list.some(x => x.id === d.id)) return false;
+  return writeList(storage, upsertDraft(list, d));
 }
 
 /** Removes one draft by id. */
@@ -144,7 +147,7 @@ export function relinkDraft(d: Draft, itemIds: ReadonlySet<string>): { receipt: 
   const receipt = scan ? { ...d.receipt, lines } : d.receipt;
   const cs = d.restore?.choices;
   if (!d.restore || !Array.isArray(cs) || cs.length !== d.receipt.lines.length) return { receipt, restore: d.restore, n: scan }; // the sheet reads the receipt's own matches when there are no usable edits
-  let n = 0;
+  let n = 0; // with usable edits the sheet reads the saved choices, not the receipt's matches, so only a choice that changed is worth a note
   const choices = (cs as { itemId: string | null; include: boolean }[]).map(c => { if (!gone(c.itemId)) return c; n++; return { itemId: null, include: false }; });
   return { receipt, restore: { ...d.restore, choices }, n };
 }

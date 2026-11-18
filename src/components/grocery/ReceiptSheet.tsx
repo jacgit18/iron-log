@@ -100,8 +100,10 @@ export default function ReceiptSheet() {
   // The first write is at once (a receipt closed a moment after it opened still leaves a draft); later edits are written 500 ms after the last one, and a pending one is flushed when the sheet closes.
   const written = useRef(false);
   const pending = useRef<Draft | null>(null);
+  const [saveError, setSaveError] = useState('');
   useEffect(() => {
     if (!scanned || finished.current) return;
+    setSaveError(''); // an edit since a failed Save for later: the old message no longer describes the sheet
     const d: Draft = { id: draftId.current, savedAt: Date.now(), mk, receipt: scanned, restore: snapshot() as unknown as Record<string, unknown> };
     if (!written.current) { written.current = true; keepDraft(d); return; }
     pending.current = d;
@@ -110,11 +112,10 @@ export default function ReceiptSheet() {
   }, [scanned, mk, choices, renames, touched, noRemember, separate, pickedStore, stagedRaw, unticked, shareChoices, usual, typedName, addOn, rewardsText]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot() reads exactly these
   useEffect(() => () => { if (pending.current && !finished.current) keepDraft(pending.current); }, []);
   const discard = () => { finished.current = true; dropDraft(draftId.current); closeModal(); };
-  const [saveError, setSaveError] = useState('');
   // Save for later (brief receipt-drafts-list): writes the draft as it is now and closes with no prompt; a storage that refuses keeps the sheet open and says so.
   const saveLater = () => {
     const d: Draft = { id: draftId.current, savedAt: Date.now(), mk, receipt: scanned!, restore: snapshot() as unknown as Record<string, unknown> };
-    if (!keepDraft(d)) { setSaveError('Could not save on this device. Apply it now, or close and try again.'); return; }
+    if (!keepDraft(d)) { setSaveError('Could not save: this device refused it, or 5 drafts are already kept (discard one on Shopping first). Apply it now, or close and try again.'); return; }
     finished.current = true; pending.current = null;
     closeModal();
   };
