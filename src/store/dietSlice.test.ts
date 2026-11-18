@@ -478,6 +478,23 @@ describe('Undo of a move respects the 20 a day limit (brief nutrition-move-copy-
   });
 });
 
+describe('a food\'s meal follows it across days (owner, 2026-11-18)', () => {
+  const d1 = ymd(new Date()), d2 = ymd(new Date(Date.now() + 864e5)), d3 = ymd(new Date(Date.now() + 2 * 864e5));
+  beforeEach(() => { useAppStore.setState({ recipes: [{ id: 'cer', n: 'Cereal', cat: 'breakfast' as const, ing: [], steps: [], kcal: 120, p: 3 }] }); });
+  it('moving a card to another meal on its day sets the usual meal and moves the hand-placed copies on other days', () => {
+    st().addPlanItem(d1, 'r', 'cer', 'snack'); st().addPlanItem(d2, 'r', 'cer', 'lunch'); st().addPlanItem(d3, 'r', 'cer', 'dinner');
+    expect(st().movePlanItem(d1, 0, d1, 'breakfast')).toBeNull();
+    expect(st().recipes[0]!.meal).toBe('breakfast');
+    const plan = st().cfg.diet!.plan!;
+    expect([plan[d1]![0]!.s, plan[d2]![0]!.s, plan[d3]![0]!.s]).toEqual(['breakfast', 'breakfast', 'breakfast']);
+  });
+  it('moving a card to another day leaves the usual meal alone', () => {
+    st().addPlanItem(d1, 'r', 'cer', 'snack');
+    expect(st().movePlanItem(d1, 0, d2, 'lunch')).toBeNull();
+    expect(st().recipes[0]!.meal).toBeUndefined();
+  });
+});
+
 describe('daily snacks (brief daily-snacks)', () => {
   const today = ymd(new Date());
   const tomorrow = ymd(new Date(Date.now() + 864e5));

@@ -172,14 +172,14 @@ export function mealForHour(hour: number): PlanSlot {
 }
 
 export interface EatenPlacement { meals: Record<PlanSlot, DietEntry[]>; none: DietEntry[] }
-/** The day's eaten food, minus what a planned item's check added (the planned card shows that one itself), placed: food logged from a recipe with a usual meal goes to that meal on any day (owner, 2026-11-18); else today's entries with an hour go to their meal; an entry with no hour, and every other entry on another day, goes to the "Not in a meal" group. */
+/** The day's eaten food, minus what a planned item's check added (the planned card shows that one itself), placed: food logged from a recipe with a usual meal goes to that meal today and ahead (owner, 2026-11-18); else today's entries with an hour go to their meal; an entry with no hour, and every other entry on another day, goes to the "Not in a meal" group. */
 export function placeEaten(day: string, today: string, eaten: readonly DietEntry[], plan: BoardDay, recipes: readonly Pick<Recipe, 'id' | 'meal'>[] = []): EatenPlacement {
   const checked = new Set(plan.slots.flatMap(s => s.items.flatMap(x => x.r.item.e ?? [])));
   const out: EatenPlacement = { meals: { breakfast: [], lunch: [], dinner: [], snack: [] }, none: [] };
   for (const e of eaten) {
     if (checked.has(e.id)) continue;
     const usual = e.from ? usualMealOf(e.from, recipes) : undefined;
-    if (usual) out.meals[usual].push(e);
+    if (usual && day >= today) out.meals[usual].push(e); // a past day draws no meals, only "Not in a meal", so its rows stay there or they would show nowhere
     else if (day === today && typeof e.t === 'number') out.meals[mealForHour(e.t)].push(e); else out.none.push(e);
   }
   return out;

@@ -226,7 +226,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const was = planOf(get)[day]?.[index];
     putPlan(get, r.plan, toDay !== day ? skipsAfterLeaving(get, day, was) : undefined, repeatSkipsAfter(get, day, was));
     // A recipe moved to another meal of the same day makes that meal the food's usual meal: every other day follows it (owner, 2026-11-18).
-    if (toDay === day && slot && was?.k === 'r' && was.s !== slot) get().setFoodMeal(was.id, slot);
+    if (toDay === day && slot && was?.k === 'r' && !drinksOf(get).has(was.id) && get().recipes.find(r => r.id === was.id)?.meal !== slot) get().setFoodMeal(was.id, slot);
     return null;
   },
 
