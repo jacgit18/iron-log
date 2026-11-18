@@ -35,8 +35,9 @@ test('the table gives each person Paid and Share over both stores, with an All r
 
 test('Mark paid does not change the table', async ({ page }) => {
   await seed(page);
-  const all = async () => (await table(page).locator('tbody tr').all()).length && Promise.all((await table(page).locator('tbody tr').all()).map(cells));
+  const all = async () => Promise.all((await table(page).locator('tbody tr').all()).map(cells));
   const before = await all();
+  expect(before).toHaveLength(4); // three people and the All row, so the comparison is not of nothing
   await page.getByRole('button', { name: /^Mark paid/ }).first().click();
   await expect(table(page)).toBeVisible();
   expect(await all()).toEqual(before);

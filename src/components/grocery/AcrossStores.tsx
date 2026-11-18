@@ -33,7 +33,7 @@ export default function AcrossStores({ g, month }: { g: Grocery; month: GroceryM
           </tbody>
         </table>
       )}
-      {t && <p className="gacrossnote">Share is what each person's items and tax come to, over all stores. Mark paid does not change it.</p>}
+      {t && <p className="gacrossnote">Share is what each person's items and tax come to, less any rewards credit, over all stores. Mark paid does not change it.</p>}
     </section>
   );
 }

@@ -10,7 +10,7 @@ const scenario: Scenario = {
   expected: [
     'Under those lines is a table titled "Everyone across all stores" with the columns Person, Paid and Share, and a final row All.',
     'You is the first row; Sam and Alex follow with their share of the Costco items (and of the other store if it is split), and a person with no money at all has no row.',
-    'In the All row, Paid and Share are the same amount, and it equals the total of the store bills. The note under the table reads "Share is what each person\'s items and tax come to, over all stores. Mark paid does not change it."',
+    'In the All row, Paid and Share are the same amount, and it equals the total of the store bills. The note under the table reads "Share is what each person\'s items and tax come to, less any rewards credit, over all stores. Mark paid does not change it."',
   ],
 };
 
