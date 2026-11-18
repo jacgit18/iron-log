@@ -1,5 +1,5 @@
 import { skipSnack } from '../lib/dailySnacks.js';
-import { dropRepeatSkips, removeRepeat, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, unskipRepeat } from '../lib/repeats.js';
+import { dropRepeatSkips, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, unskipRepeat } from '../lib/repeats.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, inWindow, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
@@ -241,6 +241,9 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   followFoodMeal(id, meal) {
     const plan = planOf(get), next = followFoodMeal(plan, id, meal);
     if (next !== plan) putPlan(get, next);
+    // A repeat naming a meal moves with its stored copies (else the repeat shows again in its old meal beside them). Listed daily snacks are not touched: they are always drawn in Snack (see PR 1040 notes).
+    const d = get().cfg.diet, reps = d?.repeats, retargeted = reps ? retargetRepeats(reps, id, meal) : undefined;
+    if (reps && retargeted !== reps) get().mutateCfg(c => { if (c.diet) c.diet = { ...c.diet, repeats: [...retargeted!] }; });
   },
 
   setPlanPortion(day, index, portion) {

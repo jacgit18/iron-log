@@ -724,6 +724,16 @@ describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
     expect(st().movePlanItem(d, 0, d, 'lunch')).toBeNull();
     expect(effectivePlan(st().cfg.diet, [d], today)[d]).toEqual([{ k: 'r', id: 'r2', s: 'lunch' }]);
   });
+  it('moving a stored copy of a repeated food to another meal retargets the repeat, so no second copy shows in the old meal', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r2', s: 'snack' }, [0, 1, 2, 3, 4, 5, 6]);
+    const d = week(1);
+    const i = st().realizeRepeat(d, st().cfg.diet!.repeats![0]!.rid) as number;
+    expect(st().movePlanItem(d, i, d, 'lunch')).toBeNull();
+    expect(st().cfg.diet!.repeats![0]!.s).toBe('lunch');
+    const meals = effectivePlan(st().cfg.diet, [d, week(2)], today);
+    expect(meals[d]!.map(x => x.s)).toEqual(['lunch']);
+    expect(meals[week(2)]!.map(x => x.s)).toEqual(['lunch']);
+  });
   it('a stored item that stands for a repeat and is removed does not come back on that day, but does on the next', () => {
     st().addPlanItem(week(1), 'r', 'r2', 'snack');
     st().saveRepeat(week(1), { k: 'r', id: 'r2', s: 'snack' }, every);
