@@ -22,7 +22,8 @@ html:has(.wdc) {
   top: calc(env(safe-area-inset-top, 0px) - var(--wdc-hh, 0px));
 }
 html:has(.wdc-hasHead) {
-  scroll-padding-top: calc(var(--wdc-pin, 168px) + var(--sp-8) + env(safe-area-inset-top, 0px)); /* --wdc-pin: the pinned part's measured height (WeekDayCard.tsx) */
+  scroll-padding-top: calc(var(--wdc-pin, 168px) + var(--sp-8) + env(safe-area-inset-top, 0px));
+  /* --wdc-pin: the pinned part's measured height (WeekDayCard.tsx) */
 }
 .wdc-head {
   display: flex;
