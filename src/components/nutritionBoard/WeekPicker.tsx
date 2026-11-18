@@ -13,14 +13,12 @@ export default function WeekPicker({ today, offset, range, phone, dates, onPick 
   const close = () => { setOpen(false); btn.current?.focus({ preventScroll: true }); };
   useEffect(() => {
     if (!open) return;
-    const r = btn.current!.getBoundingClientRect();
-    setAt({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 328)) });
+    const place = () => { const r = btn.current!.getBoundingClientRect(); setAt({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 328)) }); }; // the dropdown follows the week name when the page scrolls or resizes; it never closes by itself
+    place();
     const away = (e: MouseEvent) => { if (!(e.target as Element).closest('.nb-wp-pop, .nb-weekname')) setOpen(false); };
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
-    const hide = () => setOpen(false);
-    const gone = (e: Event) => { if (!(e.target as Element | Document).nodeType || !(e.target as Element).closest?.('.nb-wp-pop')) setOpen(false); }; // the page moving closes it; the list scrolling itself does not
-    document.addEventListener('mousedown', away); document.addEventListener('keydown', key); window.addEventListener('resize', hide); window.addEventListener('scroll', gone, true);
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', key); window.removeEventListener('resize', hide); window.removeEventListener('scroll', gone, true); };
+    document.addEventListener('mousedown', away); document.addEventListener('keydown', key); window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', key); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [open]);
   const choices = open ? weekChoices(today, range) : [];
   const toggle = () => {

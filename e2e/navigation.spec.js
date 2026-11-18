@@ -168,6 +168,8 @@ test('the week dropdown takes focus when it opens, a key picks a week, and Escap
   const list = page.getByRole('dialog', { name: 'Choose a week' });
   await expect(list).toBeVisible();
   await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('.nb-wp-pop'))).toBe(true); // focus is inside the list, on the shown week
+  await page.evaluate(() => { window.scrollBy(0, 40); window.dispatchEvent(new Event('scroll')); document.dispatchEvent(new Event('scroll')); window.dispatchEvent(new Event('resize')); });
+  await expect(list).toBeVisible(); // a page scroll or resize moves the dropdown, it does not close it
   await page.keyboard.press('Tab');
   await page.keyboard.press('Enter'); // the next week in the list
   await expect(list).toHaveCount(0);
