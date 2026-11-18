@@ -107,6 +107,10 @@ describe('acrossPeople', () => {
     expect(acrossPeople(g, onlyYou)).toBeNull(); // only you: nothing to compare
     expect(acrossPeople({ ...gone, items: gone.items.map(i => (i.id === 'soap' ? i : { ...i, share: { with: ['sis'] } })) }, month)!.people.map(p => p.id)).toEqual([ME, 'sis']); // Mom has nothing, so no row
   });
+  it('keeps the All row adding up to the bills with a rewards credit, whoever paid', () => {
+    const a = acrossPeople(g, { ...month, credit: { "BJ's": 2500, Aldi: 400 } })!;
+    expect(a.paid).toBe(a.share);
+  });
   it('is null with one store or no group', () => {
     expect(acrossPeople(g, { lines: { tp: { got: true } }, pulled: [] })).toBeNull();
     expect(acrossPeople({ ...g, groups: [] }, month)).toBeNull();
