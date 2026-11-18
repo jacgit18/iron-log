@@ -303,7 +303,9 @@ export interface GroceryData extends Grocery { months: Record<string, GroceryMon
 /** `credit`: the rewards or points credit in cents printed on the receipt for each store this month, taken off what you spent there (brief receipt-rewards-credit); no entry means none. */
 /** `tax`: the sales tax in cents typed from the receipt for each store this month, on top of what the ticked lines cost; no entry means none. */
 /** `paid`: which owed amounts have been settled outside the app, by `paidKey(store, payer, person)`: the cents that were settled (the row counts as paid only while it is not above that, so a later purchase that raises it shows as owed again), or `false` for a person marked Share already paid whose amount you say is not paid. An entry is kept only when it differs from the default, so no entry means the default. */
-export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number>; credit?: Record<string, number>; paid?: Record<string, number | false>; carried?: string }
+/** `rcpts` (brief receipt-tax-adds-up): the receipts Apply added to `tax` and `credit`, by `receiptKey`: the store and the tax and rewards cents that receipt put into that store's total. It lets Undo take back exactly that part, a receipt applied twice be noticed, and two devices' receipts add up when they sync. The totals stay the store's month figures; no entry means no receipt was applied this way. */
+export interface RcptEntry { store: string; tax?: number; credit?: number }
+export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number>; credit?: Record<string, number>; rcpts?: Record<string, RcptEntry>; paid?: Record<string, number | false>; carried?: string }
 
 export type StretchTier = 'primary' | 'secondary' | '';
 /** `catalogId`: added from the catalog (ADR 026, 027): a Library stretch, its name kept from the catalog. Without it the stretch is Custom. */
