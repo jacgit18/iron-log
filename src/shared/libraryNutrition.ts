@@ -81,13 +81,14 @@ export const totalGrams = (lines: readonly CountLine[]): number => lines.reduce(
 
 /* ---- Servings ---- */
 
-/** Typical grams of one serving by category, for estimating servings where the source has none (owner default 2026-11-15). Placeholder values until the
- *  100-recipe sample replaces them with the median grams per serving of the recipes with a known servings value, per category; a category with too few
- *  known recipes falls back to `PORTION_FALLBACK_G`. */
+/** Typical grams of one serving by category, for estimating servings where the source has none. Set 2026-11-18 (owner-approved) from the medians of the
+ *  full Library resolve: 1,097 recipes with a stated servings value, 3,001 recipes with numbers. A category with fewer than 10 such recipes falls back to
+ *  `PORTION_FALLBACK_G` (the median of all of them, 244). Held by the owner: sauces stays 60 (the run's median, 182, looks wrong) and seasonings stays 15
+ *  (only 3 recipes, below the minimum). */
 export const PORTION_G: Partial<Record<RecipeCategory, number>> = {
-  protein: 250, carbs: 220, sides: 180, sauces: 60, seasonings: 15, drinks: 250, breakfast: 220, dessert: 120, other: 200,
+  protein: 319, carbs: 240, sides: 248, sauces: 60, seasonings: 15, drinks: 195, breakfast: 228, dessert: 155, other: 273,
 };
-export const PORTION_FALLBACK_G = 200;
+export const PORTION_FALLBACK_G = 244;
 
 /** The servings value the source gives (a whole number 1 to 99), or undefined. Never turned into 1 when it is missing. */
 export const sourceServings = (v: unknown): number | undefined => (wholeIn(v, 1, MAX_SOURCE_SERVINGS) ? v : undefined);

@@ -14,7 +14,7 @@ describe('servings', () => {
     expect(servingsFor(20, 100, 'protein')).toEqual({ servings: 20, estimated: false });
   });
   it('estimates and flags when the source has none, never silently 1', () => {
-    expect(servingsFor(undefined, 1000, 'protein')).toEqual({ servings: 4, estimated: true });
+    expect(servingsFor(undefined, 1000, 'protein')).toEqual({ servings: 3, estimated: true });
     expect(servingsFor(undefined, 50, 'protein')).toEqual({ servings: 2, estimated: true }); // under the floor: stored as 2, still flagged
     expect(servingsFor(0, 1000, 'protein')?.estimated).toBe(true);
   });
@@ -22,7 +22,7 @@ describe('servings', () => {
     expect(estimateServings(100000, 'drinks')).toBe(24);
     expect(estimateServings(1, 'other')).toBe(2);
     expect(estimateServings(600, 'sauces')).toBe(10);
-    expect(estimateServings(600, 'ready')).toBe(3); // a category with no portion uses the fallback
+    expect(estimateServings(600, 'ready')).toBe(2); // a category with no portion uses the fallback
   });
   it('has no servings, and so no numbers, with neither a source value nor grams', () => {
     expect(servingsFor(undefined, 0, 'protein')).toBeUndefined();
