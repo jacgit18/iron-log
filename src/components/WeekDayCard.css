@@ -17,6 +17,47 @@ html:has(.wdc) {
   box-shadow: 0 0 0 var(--sp-6) var(--bg);
   overflow: hidden;
 }
+.wdc-hasHead {
+  /* the filter row scrolls away; the week row, day tabs and what sits under them stay pinned */
+  top: calc(env(safe-area-inset-top, 0px) - var(--wdc-hh, 0px));
+}
+html:has(.wdc-hasHead) {
+  scroll-padding-top: calc(var(--wdc-pin, 168px) + var(--sp-8) + env(safe-area-inset-top, 0px));
+  /* --wdc-pin: the pinned part's measured height (WeekDayCard.tsx) */
+}
+.wdc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4) var(--sp-8);
+  padding: var(--sp-4) var(--sp-6);
+  border-bottom: 1px solid var(--line);
+}
+.wdc-head .filtersummary {
+  min-height: 36px;
+}
+.wdc-sort {
+  position: relative;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.wdc-sort .filterbadge {
+  position: static;
+  margin-inline-start: var(--sp-2);
+}
+.wdc-under {
+  border-top: 1px solid var(--line);
+}
+.wdc-under .bwrow {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: var(--sp-4) var(--sp-6);
+  background: none;
+}
 .wdc-week {
   display: flex;
   align-items: center;

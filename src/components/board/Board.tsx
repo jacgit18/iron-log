@@ -208,6 +208,22 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   // Only the phone card draws them. The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
   const tabs: DayTab[] = wide ? [] : DAYS.map(d => ({ ...countTab(String(d), `D${d}`, `Day ${d}`, tally(cols[d], week), rest.includes(d) ? 'rest' : undefined), swapped: !!swapFlash?.includes(d) }));
 
+  // The phone's filter row, the top of the joined card (brief board-card-filters-weight): the Sort button (opens the Sort and filter sheet) at the left, the Injury prevention switch at the right, the summary of what is on under them. Body weight is the card's `under`.
+  const cardHead = (
+    <>
+      <button type="button" className="btn wdc-sort" aria-label={boardFilterCount(filter) ? `Sort ${boardFilterCount(filter)} on, and filter` : 'Sort and filter'} onClick={() => st.openModal({ type: 'boardfilter' })}>
+        <Icon name="filter" /><span aria-hidden="true">Sort</span>{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
+      </button>
+      <InjurySwitch />
+      {boardFilterCount(filter) > 0 && (
+        <div className="filtersummary" role="status">
+          <span>{boardFilterSummary(muscleName, eqLabel)}</span>
+          <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
+        </div>
+      )}
+    </>
+  );
+
   const filterbar = (
     <div className="filterbar">
       {wide && (
@@ -230,17 +246,6 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
         </div>
       )}
       <InjurySwitch />
-      {!wide && (
-        <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
-          <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
-        </button>
-      )}
-      {!wide && boardFilterCount(filter) > 0 && (
-        <div className="filtersummary" role="status">
-          <span>{boardFilterSummary(muscleName, eqLabel)}</span>
-          <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
-        </div>
-      )}
       {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
       {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
     </div>
@@ -270,9 +275,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
         <>
           {missingNotice}
           {firstRun}
-          {filterbar}
-          <WeekDayCard tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
-          <BodyWeightRow draft={bodyWeight} />
+          <WeekDayCard header={cardHead} under={<BodyWeightRow draft={bodyWeight} />} tabs={tabs} selected={String(day)} idPrefix="daytab-" controls={id => `col-${id}`} onPick={id => st.setMDay(Number(id))} afterClick={() => window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' })}>{weekRow}</WeekDayCard>
           {notices}
         </>
       )}
