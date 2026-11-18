@@ -1,4 +1,4 @@
-import type { GroceryBuy, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson, GroceryShare, GroceryStore, GroceryUnit } from '../types.ts';
+import type { GroceryBuy, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson, GroceryShare, GroceryStore, GroceryUnit, RcptEntry } from '../types.ts';
 import { str } from './stretchWeek.js';
 
 /* ---------- Grocery list shapes: one item, one store, one month ----------
@@ -7,7 +7,7 @@ import { str } from './stretchWeek.js';
    say whether a value is already clean, for the API to refuse what the app would never send (ADR 039). */
 
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999, MAX_PRICES = 50;
-export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120, MAX_PAID = 600;
+export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120, MAX_PAID = 600, MAX_RCPTS = 300, MAX_RCPT_KEY = 120;
 export const MAX_ALIASES = 20, MAX_ALIAS = 60; // receipt names per item (brief receipt-rename-memory); a receipt line's text is at most 60 characters
 export const MAX_BUYS = 20; // closed purchases of one item in one month (brief grocery-purchase-log)
 export const MAX_GROUPS = 10, MAX_PEOPLE = 10, MAX_PERSON = 40;
@@ -208,6 +208,12 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
     const cents = cleanCents(c);
     if (store !== '__proto__' && store.length <= MAX_STORE && cents) credit[store] = cents;
   });
+  const rcpts: Record<string, RcptEntry> = {}; // the receipts Apply added to tax and credit (brief receipt-tax-adds-up): key to the store and the cents that receipt put in
+  Object.entries(asObject(raw.rcpts) ?? {}).slice(0, MAX_RCPTS).forEach(([key, v]) => {
+    const e = asObject(v), store = typeof e?.store === 'string' ? e.store : '';
+    const t = cleanCents(e?.tax), c = cleanCents(e?.credit);
+    if (key !== '__proto__' && key.length <= MAX_RCPT_KEY && store && store.length <= MAX_STORE && (t || c)) rcpts[key] = { store, ...(t ? { tax: t } : {}), ...(c ? { credit: c } : {}) };
+  });
   // Which owed amounts are settled, flat so that two devices merge it key by key: "store\npayer\nperson" (a store name never holds a newline) to the cents settled, or false for not paid.
   const paid: Record<string, number | false> = {};
   Object.entries(asObject(raw.paid) ?? {}).slice(0, MAX_PAID).forEach(([key, v]) => {
@@ -215,8 +221,8 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
     if ((v === false || (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= MAX_CENTS)) && !rest.length && store !== undefined && store.length <= MAX_STORE && by && who && by.length <= MAX_ID && who.length <= MAX_ID && who !== 'me') paid[key] = v; // a "you owe" row has the payer as its person: payer and person are the same id there
   });
   const carried = typeof raw.carried === 'string' && MONTH_RE.test(raw.carried) ? raw.carried : undefined; // the month whose At home ticks this one started from (ADR 079)
-  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}), ...(Object.keys(credit).length ? { credit } : {}), ...(Object.keys(paid).length ? { paid } : {}), ...(carried ? { carried } : {}) };
+  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}), ...(Object.keys(credit).length ? { credit } : {}), ...(Object.keys(rcpts).length ? { rcpts } : {}), ...(Object.keys(paid).length ? { paid } : {}), ...(carried ? { carried } : {}) };
 }
 /** The key a settled mark is kept under: the store, who paid the bill ('me' or a person's id) and the person whose amount it is. */
 export const paidKey = (store: string, payer: string, person: string) => `${store}\n${payer}\n${person}`;
-export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length && !Object.keys(m.credit ?? {}).length && !Object.keys(m.paid ?? {}).length && !m.carried; // the marker keeps an emptied month from being seeded again
+export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length && !Object.keys(m.credit ?? {}).length && !Object.keys(m.rcpts ?? {}).length && !Object.keys(m.paid ?? {}).length && !m.carried; // the marker keeps an emptied month from being seeded again

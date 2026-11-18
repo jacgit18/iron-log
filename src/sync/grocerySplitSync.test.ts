@@ -182,3 +182,15 @@ describe('a month\'s rewards credit merges store by store like tax (brief receip
     expect(documentFor(kind('grocery/2026-09'), mirrorOf(rows))).toEqual(month({ "BJ's": 1727 }));
   });
 });
+
+describe('two receipts applied on two devices add up (brief receipt-tax-adds-up)', () => {
+  const m = (tax: number, rcpts: Record<string, { store: string; tax: number }>): GroceryMonth => ({ lines: { rice: { got: true } }, pulled: [], tax: { "BJ's": tax }, rcpts });
+  const A = { "A": { store: "BJ's", tax: 679 } };
+  it('keeps both receipts through mergeGroceryMonth3, and the ledger with them', () => {
+    const base = m(679, A);
+    const ours = m(1031, { ...A, B: { store: "BJ's", tax: 352 } }), theirs = m(889, { ...A, C: { store: "BJ's", tax: 210 } });
+    const out = mergeGroceryMonth3(base, ours, theirs).week;
+    expect(out.tax).toEqual({ "BJ's": 1241 });
+    expect(Object.keys(out.rcpts ?? {}).sort()).toEqual(['A', 'B', 'C']);
+  });
+});

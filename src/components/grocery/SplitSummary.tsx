@@ -38,7 +38,7 @@ export default function SplitSummary({ g, month, mk }: { g: Grocery; month: Groc
         <div><dt>Still owed to you</dt><dd className={owed ? 'gowed' : undefined}>{money(owed)}</dd></div>
         {youOwe > 0 && <div><dt>You still owe</dt><dd>{money(youOwe)}</dd></div>}
       </dl>
-      <AcrossStores g={g} month={month} />
+      <AcrossStores g={g} month={month} purchases={purchases} />
       {cards.map(({ store, payer, s: st, t }) => (
         <div key={store || '_'} className="gsplitcard">
           <div className="gsplithead">

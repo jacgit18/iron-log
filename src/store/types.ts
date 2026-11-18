@@ -413,6 +413,8 @@ export interface GrocerySlice {
   setGroceryReceiptShare(month: string, id: string, share: GroceryShare | null): void; // a receipt's split for one line, this month's line only (the item's usual split is not touched)
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
   setGroceryCredit(month: string, store: string, cents: number | null): void; // the receipt's rewards credit for that store this month, in cents, taken off what was spent there; null clears it
+  applyGroceryReceiptMoney(month: string, key: string, store: string, tax: number, credit: number): boolean; // adds a receipt's tax and rewards to the store's totals and records it in the month's ledger (brief receipt-tax-adds-up); false when the key is already there, or sync is loading
+  undoGroceryReceiptMoney(month: string, key: string): void; // takes that receipt's recorded part back out of the totals and drops its entry; nothing when the entry is gone
   setGroceryTax(month: string, store: string, cents: number | null): void; // the receipt's sales tax for that store this month, in cents; null clears it
   setGroceryPayer(month: string, store: string, personId: string | null): void; // who paid for that store this month; null is you
   setGroceryPaid(month: string, store: string, person: string, paid: boolean): void; // an owed amount of that store this month has (or has not) been settled outside the app; amounts never change
