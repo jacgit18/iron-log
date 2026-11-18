@@ -6,7 +6,8 @@ import { LS } from '../lib/storage.js';
 import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor, untickBlock, usedOneTime
 } from '../lib/grocery.js';
-import { cleanAliases, cleanShare } from '../shared/grocery.js';
+import { addReceiptMoney, removeReceiptMoney } from '../lib/groceryLedger.js';
+import { MAX_RCPT_KEY, MAX_STORE, cleanAliases, cleanShare } from '../shared/grocery.js';
 import { validGroceryBudget } from '../shared/validate.js';
 import { storeStatus } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
@@ -651,6 +652,18 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (cents) credit[store] = cents; else delete credit[store];
         if (Object.keys(credit).length) m.credit = credit; else delete m.credit;
       });
+    },
+    applyGroceryReceiptMoney(month, key, store, tax, credit) {
+      if (!MONTH_RE.test(month) || get().blocked() || key.length > MAX_RCPT_KEY || store.length > MAX_STORE || [tax, credit].some(c => cleanCents(c) == null)) return false;
+      const have = get().groceryMonths[month];
+      if (have?.rcpts && key in have.rcpts) return false; // already in: a double tap adds nothing
+      let ok = false;
+      mutateMonth(month, m => { ok = addReceiptMoney(m, key, store, tax, credit); });
+      return ok;
+    },
+    undoGroceryReceiptMoney(month, key) {
+      if (!get().groceryMonths[month]?.rcpts?.[key]) return; // gone already (undone, or removed on another device): nothing to take back
+      mutateMonth(month, m => { removeReceiptMoney(m, key); });
     },
     setGroceryTax(month, store, cents) {
       if (cents !== null && (cleanCents(cents) == null || cents <= 0)) return;

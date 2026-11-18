@@ -2,6 +2,7 @@ import { normGroceryMonth } from '../shared/grocery.js';
 import { MAX_LEGS, normSplit, normWeek } from '../shared/week.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { mergeWeek } from '../lib/entryMerge.js';
+import { mergeLedger, mergeMoney } from '../lib/groceryLedger.js';
 import { stable } from './canon.js';
 import type { GroceryLine, GroceryMonth, MoveLeg, StretchWeek, Week } from '../types.ts';
 
@@ -160,10 +161,11 @@ export function mergeGroceryMonth3(baseIn: unknown, oursIn: unknown, theirsIn: u
   const pulled = base ? Object.keys(mergeMap(flags(base.pulled), flags(ours.pulled), flags(theirs.pulled))) : [...new Set([...ours.pulled, ...theirs.pulled])];
   // Who paid for each store, store by store like the lines.
   const payer = base ? mergeMap(base.payer ?? {}, ours.payer ?? {}, theirs.payer ?? {}) : { ...theirs.payer, ...ours.payer };
-  const tax = base ? mergeMap(base.tax ?? {}, ours.tax ?? {}, theirs.tax ?? {}) : { ...theirs.tax, ...ours.tax }; // each store's tax, store by store too
-  const credit = base ? mergeMap(base.credit ?? {}, ours.credit ?? {}, theirs.credit ?? {}) : { ...theirs.credit, ...ours.credit }; // each store's rewards credit, store by store too
+  const tax = mergeMoney('tax', base, ours, theirs); // each store's tax, store by store too; receipts both devices added are summed (brief receipt-tax-adds-up)
+  const credit = mergeMoney('credit', base, ours, theirs); // each store's rewards credit, the same way
+  const rcpts = mergeLedger(base, ours, theirs); // the receipts that were applied, key by key
   const paid = base ? mergeMap(base.paid ?? {}, ours.paid ?? {}, theirs.paid ?? {}) : { ...theirs.paid, ...ours.paid }; // each settled mark, key by key
-  const month = normGroceryMonth({ lines, pulled, payer, tax, credit, paid, carried: ours.carried ?? theirs.carried }); // the once-only marker: either side's wins (ADR 079)
+  const month = normGroceryMonth({ lines, pulled, payer, tax, credit, rcpts, paid, carried: ours.carried ?? theirs.carried }); // the once-only marker: either side's wins (ADR 079)
   return { week: month, tookTheirs: !same(month, ours), unskipped: false };
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { NEW_STORE, addedText, applyPlan, paidAfterRewards, parseRewards, receiptTotal, withRewards, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
+import { NEW_STORE, addedText, applyPlan, paidAfterRewards, parseRewards, receiptTotal, withRewards, withoutReceiptMoney, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];
@@ -191,10 +191,11 @@ describe('applyPlan and restoreSnapshot', () => {
     const priced = [item('eggs', 'Eggs', { qty: 1, cents: 1100 }), item('oil', 'Kirkland olive oil', { qty: 2, cents: null })];
     const p = planReceipt({ lines: [{ text: 'EGGS', qty: 2, grossCents: 2698, discountCents: 0, matchId: 'eggs' }, { text: 'OIL', qty: 1, grossCents: 1499, discountCents: 0, matchId: 'oil' }], taxCents: 204 }, [{ itemId: 'eggs', include: true }, { itemId: 'oil', include: true }], priced, "BJ's");
     const snap = takeSnapshot(p, '2026-11', lines, priced, { "BJ's": 150 });
-    expect(snap).toEqual({ month: '2026-11', lines: { eggs: { got: true, qty: 1, cents: 1100 }, oil: null }, usual: { eggs: { qty: 1, cents: 1100 }, oil: { qty: 2, cents: null } }, tax: { store: "BJ's", cents: 150 } });
+    expect(snap).toEqual({ month: '2026-11', lines: { eggs: { got: true, qty: 1, cents: 1100 }, oil: null }, usual: { eggs: { qty: 1, cents: 1100 }, oil: { qty: 2, cents: null } }, tax: null, receipt: "BJ's|?|?|204" }); // the money is filed in the month's ledger, so Undo takes that receipt's part back instead of restoring a number
     const { api, calls } = makeApi();
+    api.undoGroceryReceiptMoney = (m, key) => { calls.push(`undo money ${m} ${key}`); };
     restoreSnapshot(snap, api);
-    expect(calls).toEqual(['restore eggs {"got":true,"qty":1,"cents":1100}', 'restore oil null', 'usual eggs {"qty":1,"cents":1100}', 'usual oil {"qty":2,"cents":null}', "tax BJ's 150"]);
+    expect(calls).toEqual(['restore eggs {"got":true,"qty":1,"cents":1100}', 'restore oil null', 'usual eggs {"qty":1,"cents":1100}', 'usual oil {"qty":2,"cents":null}', "undo money 2026-11 BJ's|?|?|204"]);
   });
 });
 
@@ -351,12 +352,34 @@ describe('rewards credit (brief receipt-rewards-credit)', () => {
     calls.length = 0;
     applyPlan(plan, '2026-11', api);
     expect(calls).toEqual(["tax BJ's 679", "credit BJ's 1727"]);
-    for (const was of [undefined, { "BJ's": 500 }]) {
-      const snap = takeSnapshot(plan, '2026-11', {}, items, undefined, [], was);
-      expect(snap.credit).toEqual({ store: "BJ's", cents: was ? 500 : null });
-      calls.length = 0; restoreSnapshot(snap, api);
-      expect(calls).toContain(`credit BJ's ${was ? 500 : null}`);
-    }
+    // With the month's ledger the money is filed once and Undo takes only that receipt's part back.
+    const filed: unknown[][] = [];
+    const ledgerApi = { ...api, applyGroceryReceiptMoney: (...a: unknown[]) => { filed.push(a); return true; }, undoGroceryReceiptMoney: (...a: unknown[]) => { filed.push(['undo', ...a]); } } as unknown as GroceryApi;
+    applyPlan(plan, '2026-11', ledgerApi);
+    expect(filed).toEqual([['2026-11', plan.receiptKey, "BJ's", 679, 1727]]);
+    const snap = takeSnapshot(plan, '2026-11', {}, items, undefined, [], { "BJ's": 500 });
+    expect(snap).toMatchObject({ receipt: plan.receiptKey, tax: null });
+    expect(snap.credit).toBeUndefined();
+    filed.length = 0; restoreSnapshot(snap, ledgerApi);
+    expect(filed).toEqual([['undo', '2026-11', plan.receiptKey]]);
     expect(takeSnapshot(planReceipt(withRewards(bjs, null), choice, items, "BJ's"), '2026-11', {}, items, undefined).credit).toBeUndefined();
+  });
+});
+
+describe('receipt money in the month ledger (brief receipt-tax-adds-up)', () => {
+  const choice: Choice[] = [{ itemId: 'eggs', include: true }];
+  const one = (date: string, tax: number, rewards?: number): Receipt => ({ store: "BJ's", date, taxCents: tax, totalCents: 5000 + tax, ...(rewards ? { rewardsCents: rewards } : {}), lines: [{ text: 'EGGS', qty: 1, grossCents: 5000, discountCents: 0, matchId: 'eggs' }] });
+  const eggs = [item('eggs', 'Eggs')];
+  it('keys a receipt by store, date, total and tax, and sets it only when there is a store and an amount', () => {
+    expect(planReceipt(one('2026-11-03', 352), choice, eggs, "BJ's").receiptKey).toBe("BJ's|2026-11-03|5352|352");
+    expect(planReceipt(one('2026-11-03', 352), choice, eggs, null).receiptKey).toBeUndefined();
+    expect(planReceipt(one('2026-11-03', 0), choice, eggs, "BJ's").receiptKey).toBeUndefined();
+  });
+  it('drops the tax and rewards of a receipt already applied, leaving the items', () => {
+    const p = planReceipt(one('2026-11-03', 352, 100), choice, eggs, "BJ's");
+    const w = withoutReceiptMoney(p);
+    expect(w).toMatchObject({ taxStore: null, credit: 0, creditStore: null, items: 1 });
+    expect(w.receiptKey).toBeUndefined();
+    expect(w.steps.map(s => s.kind)).toEqual(['single']);
   });
 });

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { byStore, carriedCount, emptyMonth, gotLast, groupTag, inMonth, lineCost, lineOf, money, monthLabel, onList, own, removedBought, shiftMonth, tally, untickBlock, usedOneTime } from '../../lib/grocery.js';
+import { receiptCount } from '../../lib/groceryLedger.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { hasSharing } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
@@ -73,7 +74,7 @@ export default function ToGet({ g, months, nowKey, mode, off0, onOff, priceFor, 
     if (!store) return null;
     const mine = everBought.filter(i => i.store === store); const cents = own(month.tax, store); const credit = own(month.credit, store);
     if (!cents && !credit && !mine.some(i => lineOf(i, month).got)) return null;
-    return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} credit={credit} subtotal={tally(mine, { ...month, tax: undefined, credit: undefined }).spent} />;
+    return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} credit={credit} taxReceipts={receiptCount(month, store, 'tax')} creditReceipts={receiptCount(month, store, 'credit')} subtotal={tally(mine, { ...month, tax: undefined, credit: undefined }).spent} />;
   };
   const listStores = new Set(list.map(i => i.store));
   const goneOnly = onBought && chip === ALL_CHIP ? Object.keys(removed).filter(store => store && !listStores.has(store)) : [];

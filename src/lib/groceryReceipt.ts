@@ -2,6 +2,7 @@ import type { Grocery, GroceryItem, GroceryLine, GroceryUnit } from '../types.ts
 import type { GroceryForm } from '../store/types.ts';
 import type { Receipt, ReceiptLine, ReceiptUnit } from '../shared/receipt.js';
 import { MAX_ITEMS, MAX_PRICES, centsText, cleanQty, lineTotal, money, own, parseDollars } from './grocery.js';
+import { receiptKey } from './groceryLedger.js';
 import { groupOfStore } from './grocerySettle.js';
 
 export { applySavedNames } from './groceryAliases.js'; // saved receipt names map a scanned line to its item before any model guess (brief receipt-rename-memory)
@@ -37,11 +38,12 @@ export interface Where { at: string | null; makeUsual: boolean | null; g: Grocer
 
 /** `subtotalCents`: the receipt's printed subtotal (null: none); `subtotalDiffCents`: the part of it the lines do not explain (positive: a row is missing from the lines; null when there is no subtotal). */
 export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null; subtotalCents: number | null; subtotalDiffCents: number | null }
+/** `receiptKey`: the ledger key Apply files the receipt's tax and rewards under (set when there is a store and an amount; brief receipt-tax-adds-up). */
 /** `credit`: the rewards credit in cents Apply writes beside the tax (0 when none, or when no store is set for it); `creditStore` is that store (it does not depend on the receipt having tax). */
 /** `notes` says why a ticked line was left out of the writes (by line index): a weight that cannot be matched to the item's unit. */
 /** `moves`: the items to mark bought at the receipt's store (none when no store is known); `makeUsual`: Apply also makes that store their usual one. */
 /** `untick`: ticked items the receipt does not show that the person chose to untick (brief receipt-reconcile-ticked); Apply unticks them and Undo ticks them back. `planReceipt` leaves it empty: the review sheet sets it from the person's choices. */
-export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; credit: number; creditStore: string | null; notes: Record<number, string>; moves: Move[]; makeUsual: boolean; untick: string[] }
+export interface Plan { receiptKey?: string; steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; credit: number; creditStore: string | null; notes: Record<number, string>; moves: Move[]; makeUsual: boolean; untick: string[] }
 
 const GRAMS: Record<ReceiptUnit, number> = { lb: 453.59237, kg: 1000, oz: 28.349523125 };
 /** A weight in another unit (2.2 lb in kg is 1), to two decimals, the way a count is kept. */
@@ -134,7 +136,17 @@ export function planReceipt(receipt: Receipt, choices: readonly Choice[], listIt
   if (taxOn) steps.push({ kind: 'tax', store: taxStore, cents: receipt.taxCents! });
   const credit = taxStore !== null && (receipt.rewardsCents ?? 0) > 0 ? receipt.rewardsCents! : 0;
   const moves = where?.at ? movesFor(steps, items, where.at, where) : [];
-  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, credit, creditStore: credit > 0 ? taxStore : null, notes, moves, makeUsual: moves.length > 0 && (where?.makeUsual ?? moves.every(m => !m.usual)), untick: [] };
+  const receiptKey = taxStore !== null && (taxOn || credit > 0) ? receiptKeyOf(receipt, taxStore) : undefined;
+  return { ...(receiptKey ? { receiptKey } : {}), steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, credit, creditStore: credit > 0 ? taxStore : null, notes, moves, makeUsual: moves.length > 0 && (where?.makeUsual ?? moves.every(m => !m.usual)), untick: [] };
+}
+
+/** The ledger key of a receipt applied at a store: the store, its date, the printed total and the tax. */
+const receiptKeyOf = (r: Receipt, store: string): string => receiptKey(store, r.date, r.totalCents, r.taxCents);
+
+/** The plan without the receipt's tax and rewards: for a receipt already applied this month, whose money must not be added a second time (the items are written as before, they are idempotent). */
+export function withoutReceiptMoney(plan: Plan): Plan {
+  const { receiptKey: _k, ...rest } = plan;
+  return { ...rest, steps: plan.steps.filter(s => s.kind !== 'tax'), taxStore: null, credit: 0, creditStore: null };
 }
 
 /** The items of the plan that are not already bought at `at` this month. An item added from the sheet keeps the store its own form chose; an item with a split of its own (or one on its line) keeps it whatever the store. */
@@ -188,6 +200,8 @@ export function checkText(c: Check): { ok: boolean; text: string } {
 
 /** The store actions Apply and Undo use. All exist already except `restoreGroceryLine`, which puts back one line exactly as it was. `removeGroceryItem` with `quiet` removes an item Apply created without the usual Removed notice, which would compete with the receipt Undo. */
 export interface GroceryApi {
+  applyGroceryReceiptMoney?(month: string, key: string, store: string, tax: number, credit: number): boolean;
+  undoGroceryReceiptMoney?(month: string, key: string): void;
   removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   setGroceryGot(month: string, id: string, on: boolean, at?: string): boolean;
   markGroceryFromReceipt?(month: string, id: string): void; // the line says a receipt ticked it, so a later receipt does not list it as missing
@@ -202,20 +216,22 @@ export interface GroceryApi {
   makeGroceryStoreUsual(month: string, id: string): string | null;
   removeGroceryStore?(name: string, opts?: { quiet?: boolean }): string | null;
 }
+/** `receipt` (brief receipt-tax-adds-up): the ledger key Apply filed the receipt's tax and rewards under; Undo takes that receipt's part back out instead of restoring a number (so `tax` and `credit` are left empty then). */
 /** `created`: ids of the items Apply made from staged ones, which Undo removes (left out when there are none). */
 /** `names` and `aliases` (brief receipt-rename-memory): each item Apply renamed or gave receipt names, as it was ([] is none); Undo puts them back. */
-export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; credit?: { store: string; cents: number | null }; created?: string[]; names?: Record<string, string>; aliases?: Record<string, string[]> }
+export interface Snapshot { month: string; addedStore?: string; lines: Record<string, GroceryLine | null>; usual: Record<string, { qty: number; cents: number | null; store?: string }>; tax: { store: string; cents: number | null } | null; receipt?: string; credit?: { store: string; cents: number | null }; created?: string[]; names?: Record<string, string>; aliases?: Record<string, string[]> }
 
 /** What Apply is about to change, so Undo can put it back: each touched line as it is now (null: none), each item's usual count and price, and the store's tax. */
 export function takeSnapshot(plan: Plan, month: string, lines: Record<string, GroceryLine>, items: readonly GroceryItem[], tax: Record<string, number> | undefined, created: readonly string[] = [], credit?: Record<string, number>): Snapshot {
   const snap: Snapshot = { month, lines: {}, usual: {}, tax: null, ...(created.length ? { created: [...created] } : {}) };
   for (const s of plan.steps) {
-    if (s.kind === 'tax') { snap.tax = { store: s.store, cents: tax?.[s.store] ?? null }; continue; }
+    if (s.kind === 'tax') { if (!plan.receiptKey) snap.tax = { store: s.store, cents: tax?.[s.store] ?? null }; continue; }
     snap.lines[s.id] = lines[s.id] ? structuredClone(lines[s.id]!) : null;
     const it = created.includes(s.id) ? undefined : items.find(i => i.id === s.id); // a created item is removed on Undo, so its usual values need no restoring
     if (it) snap.usual[s.id] = { qty: it.qty, cents: it.cents, ...(plan.makeUsual && plan.moves.some(m => m.id === s.id) ? { store: it.store } : {}) }; // the usual store is put back only when Apply changes it
   }
-  if (plan.credit > 0 && plan.creditStore !== null) snap.credit = { store: plan.creditStore, cents: own(credit, plan.creditStore) ?? null }; // the store's credit as it was: set, changed or none
+  if (plan.receiptKey) snap.receipt = plan.receiptKey;
+  else if (plan.credit > 0 && plan.creditStore !== null) snap.credit = { store: plan.creditStore, cents: own(credit, plan.creditStore) ?? null }; // the store's credit as it was: set, changed or none
   for (const id of plan.untick) if (!(id in snap.lines)) snap.lines[id] = lines[id] ? structuredClone(lines[id]!) : null; // an unticked line is put back exactly as it was
   return snap;
 }
@@ -224,7 +240,7 @@ export function takeSnapshot(plan: Plan, month: string, lines: Record<string, Gr
 export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[]; unticked?: number }, at?: string): number { // `at`: the receipt's date, the stamp of what it buys
   let done = 0;
   for (const s of plan.steps) {
-    if (s.kind === 'tax') { api.setGroceryTax(month, s.store, s.cents); continue; }
+    if (s.kind === 'tax') { if (!plan.receiptKey || !api.applyGroceryReceiptMoney) api.setGroceryTax(month, s.store, s.cents); continue; } // with a ledger the money is filed once, after the items
     if (!api.setGroceryGot(month, s.id, true, at)) continue; // false: nothing changed (sync still loading)
     api.markGroceryFromReceipt?.(month, s.id);
     const move = plan.moves.find(m => m.id === s.id);
@@ -233,7 +249,11 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
     if (move && plan.makeUsual) { const err = api.makeGroceryStoreUsual(month, s.id); if (err) out?.refused.push(`${move.name} (${err})`); }
     done++;
   }
-  if (plan.credit > 0 && plan.creditStore !== null) api.setGroceryCredit?.(month, plan.creditStore, plan.credit);
+  if (plan.receiptKey && api.applyGroceryReceiptMoney) {
+    const tax = plan.steps.find((x): x is Extract<Step, { kind: 'tax' }> => x.kind === 'tax');
+    const store = tax?.store ?? plan.creditStore;
+    if (store) api.applyGroceryReceiptMoney(month, plan.receiptKey, store, tax?.cents ?? 0, plan.credit); // adds to what the store already has this month
+  } else if (plan.credit > 0 && plan.creditStore !== null) api.setGroceryCredit?.(month, plan.creditStore, plan.credit);
   for (const id of plan.untick) if (api.setGroceryGot(month, id, false) && out) out.unticked = (out.unticked ?? 0) + 1; // after the items: a ticked item the receipt does not show, unticked by choice
   return done;
 }
@@ -246,6 +266,7 @@ export function restoreSnapshot(snap: Snapshot, api: GroceryApi): void {
   for (const [id, u] of Object.entries(snap.usual)) if (u.store !== undefined) api.updateGroceryItem(id, u);
   for (const [id, line] of Object.entries(snap.lines)) api.restoreGroceryLine(snap.month, id, line);
   for (const [id, u] of Object.entries(snap.usual)) if (u.store === undefined) api.updateGroceryItem(id, u);
+  if (snap.receipt) api.undoGroceryReceiptMoney?.(snap.month, snap.receipt);
   if (snap.tax) api.setGroceryTax(snap.month, snap.tax.store, snap.tax.cents);
   if (snap.credit) api.setGroceryCredit?.(snap.month, snap.credit.store, snap.credit.cents);
   for (const id of snap.created ?? []) api.removeGroceryItem(id, { quiet: true }); // after its line is gone
