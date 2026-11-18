@@ -1,5 +1,5 @@
 import type { AccountState } from '../sync/account.js';
-import { dropDraft } from './receiptDraft.js';
+import { dropAllDrafts } from './receiptDraft.js';
 
 /* ---------- Who sees the app, and who sees the landing page ----------
    With syncing on (the deployed build), a visitor this browser has never seen signed in gets a landing page with the sign-in button
@@ -50,4 +50,4 @@ export async function decideGate(me: () => Promise<AccountState>, storage: GateS
 
 /** After signing out on purpose, or deleting the account: the next load starts at the landing page. */
 /** Forgets who was signed in on this device. A receipt left open (lib/receiptDraft.ts) is the same person's, so it goes too. */
-export const forgetSession = (storage: Pick<GateStorage, 'remove'>) => { storage.remove(KNOWN_KEY); storage.remove(ADMIN_KEY); storage.remove(PAID_KEY); dropDraft(); };
+export const forgetSession = (storage: Pick<GateStorage, 'remove'>) => { storage.remove(KNOWN_KEY); storage.remove(ADMIN_KEY); storage.remove(PAID_KEY); dropAllDrafts(); };

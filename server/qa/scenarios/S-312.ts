@@ -9,7 +9,7 @@ const scenario: Scenario = {
   ],
   expected: [
     'Close shuts the sheet without asking.',
-    'A row reads "Resume your receipt" with the store (if one was read), the number of lines and "closed just now", and has two buttons, Resume and Discard.',
+    'A block headed "Draft receipt" (with "Kept on this device for 7 days") shows one row: the store and date in bold, then the number of lines, the total (if the scan read one) and "saved just now", with two buttons, Resume and Discard.',
     'Resume reopens the Receipt sheet with the line still unticked, and the Resume row is hidden while the sheet is open.',
   ],
 };
