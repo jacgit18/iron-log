@@ -93,3 +93,26 @@ describe('what is stored is cleaned', () => {
     expect(normDietCfg({ snacks: [], snackSkips: {} }, today)).toBeUndefined();
   });
 });
+
+describe('effectivePlan with repeats', () => {
+  const today = '2026-11-16';
+  const diet = (extra: object) => ({ plan: {}, ...extra }) as import('../types.ts').DietCfg;
+  it('adds a repeat on its days after the stored items, in its meal', () => {
+    const d = diet({ plan: { '2026-11-17': [{ k: 'r', id: 'oats', s: 'breakfast' }] }, repeats: [{ rid: 'rp1', k: 'r', id: 'almonds', s: 'snack', days: [2, 3], from: today }] });
+    const p = effectivePlan(d, ['2026-11-17', '2026-11-18', '2026-11-19'], today);
+    expect(p['2026-11-17']!.map(i => i.id)).toEqual(['oats', 'almonds']);
+    expect(p['2026-11-17']![1]).toMatchObject({ v: true, rp: 'rp1', s: 'snack' });
+    expect(p['2026-11-18']!.map(i => i.id)).toEqual(['almonds']);
+    expect(p['2026-11-19']).toBeUndefined();
+  });
+  it('keeps daily snacks as before, and a repeat of a listed snack in Snack does not show twice', () => {
+    const d = diet({ snacks: [{ id: 'apple' }], repeats: [{ rid: 'rp1', k: 'r', id: 'apple', s: 'snack', days: [0, 1, 2, 3, 4, 5, 6], from: today }] });
+    const p = effectivePlan(d, ['2026-11-17'], today);
+    expect(p['2026-11-17']).toHaveLength(1);
+    expect(p['2026-11-17']![0]).toMatchObject({ id: 'apple', s: 'snack', v: true });
+  });
+  it('is the stored plan itself when nothing shows', () => {
+    const d = diet({ repeats: [{ rid: 'rp1', k: 'r', id: 'a', days: [1], from: today }] });
+    expect(effectivePlan(d, ['2026-11-17'], today)).toBe(d.plan);
+  });
+});

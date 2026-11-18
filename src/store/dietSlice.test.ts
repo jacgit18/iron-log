@@ -674,3 +674,96 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
     expect(st().cfg.diet!.plan).toEqual(before);
   });
 });
+
+describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
+  const today = ymd(new Date());
+  const recipe = (id: string, n: string) => ({ id, n, cat: 'protein' as const, ing: [{ n: 'Rice' }], steps: [], kcal: 300, p: 20 });
+  const every = [0, 1, 2, 3, 4, 5, 6];
+  const week = (n: number) => shiftDay(today, 7 * n);
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe('r1', 'Oats'), recipe('r2', 'Almonds')] }); });
+
+  it('stores one repeat and shows it on the same weekday of every week in the window', () => {
+    expect(st().saveRepeat(today, { k: 'r', id: 'r1', s: 'breakfast' }, every)).toBeNull();
+    expect(st().cfg.diet!.repeats).toHaveLength(1);
+    expect(st().cfg.diet!.plan).toBeUndefined(); // nothing copied into days
+    for (const n of [1, 12, 52]) expect(effectivePlan(st().cfg.diet, [week(n)], today)[week(n)]).toMatchObject([{ id: 'r1', s: 'breakfast', v: true }]);
+    expect(effectivePlan(st().cfg.diet, [week(53)], today)[week(53)]).toBeUndefined();
+  });
+  it('skipping one day removes only that day; stopping removes every day', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r1' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    st().skipRepeatDay(week(1), rid);
+    const shows = (d: string) => (effectivePlan(st().cfg.diet, [d], today)[d] ?? []).length;
+    expect([shows(week(1)), shows(week(2)), shows(shiftDay(week(1), 1))]).toEqual([0, 1, 1]);
+    st().stopRepeat(rid);
+    expect(st().cfg.diet).toBeUndefined(); // the repeat and its skip are both gone, so no diet key is left
+    expect(shows(week(2))).toBe(0);
+  });
+  it('realizing a shown repeat stores a real item and skips the repeat there, so moving it does not bring a second one back', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r2', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid, d = week(1);
+    expect(st().realizeRepeat(d, rid)).toBe(0);
+    expect(st().cfg.diet!.plan![d]).toEqual([{ k: 'r', id: 'r2', s: 'snack' }]);
+    expect(st().movePlanItem(d, 0, d, 'lunch')).toBeNull();
+    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toEqual([{ k: 'r', id: 'r2', s: 'lunch' }]);
+  });
+  it('a stored item that stands for a repeat and is removed does not come back on that day, but does on the next', () => {
+    st().addPlanItem(week(1), 'r', 'r2', 'snack');
+    st().saveRepeat(week(1), { k: 'r', id: 'r2', s: 'snack' }, every);
+    st().removePlanItem(week(1), 0);
+    expect((effectivePlan(st().cfg.diet, [week(1)], today)[week(1)] ?? []).length).toBe(0);
+    expect(effectivePlan(st().cfg.diet, [week(2)], today)[week(2)]).toHaveLength(1);
+  });
+  it('unstoring after a failed log restores the shown repeat', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r1' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid, d = week(1);
+    const at = st().realizeRepeat(d, rid) as number;
+    st().unstoreRepeat(d, at, rid);
+    expect(st().cfg.diet!.plan).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toHaveLength(1);
+  });
+  it('refuses no days and a thirteenth repeat, and edits the days of one that is there', () => {
+    expect(st().saveRepeat(today, { k: 'r', id: 'r1' }, [])).toMatch(/at least one day/);
+    st().saveRepeat(today, { k: 'r', id: 'r1' }, [1]);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().saveRepeat(today, { k: 'r', id: 'r1' }, [2, 3], rid)).toBeNull();
+    expect(st().cfg.diet!.repeats![0]!.days).toEqual([2, 3]);
+    for (let i = 0; i < 11; i++) st().saveRepeat(today, { k: 'r', id: `x${i}` }, [1]);
+    expect(st().saveRepeat(today, { k: 'r', id: 'r2' }, [1])).toMatch(/12 repeats/);
+  });
+});
+
+describe('a shown repeat on a full day, and a deleted recipe', () => {
+  const today = ymd(new Date()), d = shiftDay(today, 7);
+  const recipes = (n: number) => useAppStore.setState({ recipes: Array.from({ length: n }, (_, i) => ({ id: `f${i}`, n: `F${i}`, cat: 'protein' as const, ing: [{ n: 'x' }], steps: [], kcal: 100, p: 5 })) });
+  it('at the 8-item cap is refused with a message and nothing is skipped or stored', () => {
+    recipes(10);
+    for (let i = 0; i < 8; i++) expect(st().addPlanItem(d, 'r', `f${i}`)).toBeNull();
+    st().saveRepeat(today, { k: 'r', id: 'f8' }, [0, 1, 2, 3, 4, 5, 6]);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().realizeRepeat(d, rid)).toMatch(/8 things/);
+    expect(st().cfg.diet!.plan![d]).toHaveLength(8);
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toHaveLength(9); // still shown, so a person can skip it
+  });
+  it('a snack repeat is stored even on a full day (like a daily snack the cleaner keeps it) and what is stored is what the cleaner keeps', () => {
+    recipes(10);
+    for (let i = 0; i < 8; i++) st().addPlanItem(d, 'r', `f${i}`);
+    st().saveRepeat(today, { k: 'r', id: 'f8', s: 'snack' }, [0, 1, 2, 3, 4, 5, 6]);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    const at = st().realizeRepeat(d, rid);
+    if (typeof at === 'number') expect(st().cfg.diet!.plan![d]![at]).toMatchObject({ id: 'f8', s: 'snack' }); // the index points at the stored item
+    else expect(st().cfg.diet!.repeatSkips).toBeUndefined(); // refused: nothing skipped
+  });
+  it('deleting a recipe takes its repeats and their skips; Undo brings them back', () => {
+    recipes(3);
+    st().saveRepeat(today, { k: 'r', id: 'f0' }, [1, 2]);
+    st().saveRepeat(today, { k: 'r', id: 'f1' }, [1, 2]);
+    st().skipRepeatDay(d, st().cfg.diet!.repeats![0]!.rid);
+    st().removeRecipe('f0');
+    expect(st().cfg.diet!.repeats!.map(r => r.id)).toEqual(['f1']);
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
+    st().undoRemoved();
+    expect(st().cfg.diet!.repeats!.map(r => r.id).sort()).toEqual(['f0', 'f1']);
+  });
+});

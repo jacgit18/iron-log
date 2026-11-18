@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, dayGroups, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -33,12 +33,6 @@ describe('week days', () => {
     expect(weekDates('2026-12-01', 0)).toBe('Nov 29 to Dec 5');
     expect(weekLabel('2026-12-01', 0)).toBe('This week · Nov 29 to Dec 5');
   });
-  it('the dropdown has three groups of seven and marks today', () => {
-    const g = dayGroups(TODAY);
-    expect(g.map(x => x.label)).toEqual(['Last week', 'This week', 'Next week']);
-    expect(g.every(x => x.days.length === 7)).toBe(true);
-    expect(g[1]!.days[0]!.label).toBe('Sun 8 · today');
-  });
 });
 
 describe('a mid-week today', () => {
@@ -51,11 +45,13 @@ describe('a mid-week today', () => {
     expect(weekOf(THU, '2026-11-15')).toBe(1);
     expect(weekLabel(THU, 0)).toBe('This week · Nov 8 to 14');
   });
-  it('the board runs from last Sunday to the Saturday after next; Saturday is a week end, Sunday the next start', () => {
+  it('the board runs from last Sunday (or the oldest logged week) to the last week of the plan window; Saturday is a week end, Sunday the next start', () => {
     expect(onBoard(THU, '2026-11-01')).toBe(true);
     expect(onBoard(THU, '2026-10-31')).toBe(false);
+    expect(onBoard(THU, '2026-10-31', '2026-10-20')).toBe(true);
     expect(onBoard(THU, '2026-11-21')).toBe(true);
-    expect(onBoard(THU, '2026-11-22')).toBe(false);
+    expect(onBoard(THU, '2027-11-13')).toBe(true); // 52 weeks (364 days) after Thu 2026-11-12 is Thu 2027-11-11; its week ends Sat 2027-11-13
+    expect(onBoard(THU, '2027-11-14')).toBe(false);
     expect(weekOf('2026-11-14', '2026-11-14')).toBe(0); // Saturday is still this week; the next day starts next week
     expect(weekOf('2026-11-14', '2026-11-15')).toBe(1);
   });
@@ -66,7 +62,50 @@ describe('the board range', () => {
     expect(onBoard(TODAY, '2026-11-01')).toBe(true);
     expect(onBoard(TODAY, '2026-10-31')).toBe(false);
     expect(onBoard(TODAY, '2026-11-21')).toBe(true);
-    expect(onBoard(TODAY, '2026-11-22')).toBe(false);
+    expect(onBoard(TODAY, '2026-11-22')).toBe(true); // weeks run on for 52 weeks now
+    expect(onBoard(TODAY, '2027-11-14')).toBe(false);
+  });
+  it('week numbers reach any week, not only the three around today', () => {
+    expect(weekOf(TODAY, '2026-12-06')).toBe(4);
+    expect(weekOf(TODAY, '2026-10-04')).toBe(-5);
+    expect(weekDays(TODAY, 4)[0]).toBe('2026-12-06');
+    expect(weekDays(TODAY, -5)[6]).toBe('2026-10-10');
+    expect(weekOf(TODAY, weekDays(TODAY, 30)[3]!)).toBe(30);
+  });
+  it('the range ends 52 weeks ahead and, with nothing logged, at last week', () => {
+    expect(weekRange(TODAY)).toEqual({ min: -1, max: 52 });
+    expect(weekRange('2026-11-14')).toEqual({ min: -1, max: 52 });
+    expect(weekRange('2026-11-08')).toEqual({ min: -1, max: 52 });
+  });
+  it('the range reaches back to the oldest logged week and no further than the log keeps', () => {
+    expect(weekRange(TODAY, '2026-10-04').min).toBe(-5);
+    expect(weekRange(TODAY, '2026-10-31').min).toBe(-2);
+    expect(weekRange(TODAY, '2026-11-09').min).toBe(-1); // a recent entry never shortens it below last week
+    expect(weekRange(TODAY, '2020-01-01').min).toBeGreaterThan(-60);
+    expect(oldestLogged([{ d: '2026-11-03' }, { d: '2026-10-04' }, { d: '2026-11-09' }])).toBe('2026-10-04');
+    expect(oldestLogged([])).toBeUndefined();
+  });
+  it('a step stops at both ends', () => {
+    const r = weekRange(TODAY, '2026-10-04');
+    expect(stepWeek(0, -1, r)).toBe(-1);
+    expect(stepWeek(-5, -1, r)).toBeNull();
+    expect(stepWeek(52, 1, r)).toBeNull();
+    expect(stepWeek(51, 1, r)).toBe(52);
+  });
+  it('names far weeks by distance and lists every week once', () => {
+    expect(weekName(0)).toBe('This week');
+    expect(weekName(1)).toBe('Next week');
+    expect(weekName(5)).toBe('In 5 weeks');
+    expect(weekName(-3)).toBe('3 weeks ago');
+    const list = weekChoices(TODAY, { min: -2, max: 52 });
+    expect(list).toHaveLength(55);
+    expect(list[0]!.offset).toBe(-2);
+    expect(list.find(c => c.offset === 0)!.label).toBe('This week · Nov 8 to 14');
+    expect(new Set(list.map(c => c.dates)).size).toBe(55);
+  });
+  it('arriving on a week shows today in this week and the first day of any other', () => {
+    expect(dayOnArrival(TODAY, 0)).toBe(TODAY);
+    expect(dayOnArrival(TODAY, 3)).toBe('2026-11-29');
   });
 });
 

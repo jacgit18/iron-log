@@ -5,7 +5,7 @@ import { runInstantLog } from '../../lib/instantLog.js';
 import { recommendInputs } from '../../lib/manageTargets.js';
 import { planLog, type Resolved } from '../../lib/dietPlan.js';
 import { recommend, targetsFor } from '../../lib/dietTarget.js';
-import { ADD_FLOWS, addingTo, dayView, foodEditable, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, windowDays, WEEK_NAME, WEEK_OFFSETS, type WeekOffset } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addingTo, dayOnArrival, dayView, foodEditable, oldestLogged, stepWeek, toolbarFlows, weekDates, weekDays, weekLabel, weekOf, weekRange, windowDays, type WeekOffset } from '../../lib/nutritionBoard.js';
 import { nutritionTabs, shadeTabs } from '../../lib/weekDayTabs.js';
 import { dayToShow, setPickedDay, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { ymd } from '../../shared/dates.js';
@@ -22,6 +22,7 @@ import ScanFood from '../diet/ScanFood.js';
 import DayColumn from './DayColumn.js';
 import type { Say } from '../../lib/eatenStep.js';
 import ShoppingButton from './ShoppingButton.js';
+import WeekPicker from './WeekPicker.js';
 import { useDaysShown, usePhoneHeader } from './useWideBoard.js';
 import '../diet/board/WeekBoard.css';
 import './NutritionBoard.css';
@@ -46,7 +47,9 @@ export default function NutritionBoard() {
   const [undo, setUndo] = useState<(() => void) | null>(null); // the status line's Undo (a log, a saved usual portion); any new sentence without one clears it
   const setMsg: Say = (t, u) => { setMsgText(t); setUndo(u ? () => u : null); };
   const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
-  const day = dayToShow(kept, today);
+  const oldest = useMemo(() => oldestLogged(diet), [diet]); // the oldest logged day sets how far back the weeks reach
+  const range = useMemo(() => weekRange(today, oldest), [today, oldest]);
+  const day = dayToShow(kept, today, oldest);
   const offset = weekOf(today, day);
   const days = useMemo(() => weekDays(today, offset), [today, offset]);
   const shownDays = windowDays(days, windowDays(days, anchor, shown).includes(day) ? anchor : day, shown);
@@ -59,7 +62,8 @@ export default function NutritionBoard() {
   }, [cfg.bwGoal, cfg.diet, body, now]);
   const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets })), [days, today, plan, recipes, legacy, diet, supp, body, targets]);
   const st = () => useAppStore.getState();
-  const goWeek = (o: WeekOffset) => { setPicked(o === 0 ? today : weekDays(today, o)[0]!); setMsg(''); };
+  const goWeek = (o: WeekOffset) => { setPicked(dayOnArrival(today, o)); setMsg(''); };
+  const prevWeek = stepWeek(offset, -1, range), nextWeek = stepWeek(offset, 1, range); // null at an end: the arrow stops
   const log = (r: Resolved, index: number) => {
     const out = planLog(r, st().diet, today, recipes);
     if ('error' in out) { setMsg(out.error); return; }
@@ -72,9 +76,9 @@ export default function NutritionBoard() {
   const target = addingTo(day, today);
   const weekSwitch = (
     <div className="weeknav nb-weeksw" role="group" aria-label="Week">
-      <button type="button" className="btn sm" aria-label="Previous week" aria-disabled={offset === WEEK_OFFSETS[0]} onClick={() => { if (offset > WEEK_OFFSETS[0]!) goWeek((offset - 1) as WeekOffset); }}><Icon name="chevron-left" /></button>
-      <span className="nb-weekname cond" data-dates={weekDates(today, offset)}>{WEEK_NAME[offset]}</span>
-      <button type="button" className="btn sm" aria-label="Next week" aria-disabled={offset === WEEK_OFFSETS[WEEK_OFFSETS.length - 1]} onClick={() => { if (offset < WEEK_OFFSETS[WEEK_OFFSETS.length - 1]!) goWeek((offset + 1) as WeekOffset); }}><Icon name="chevron-right" /></button>
+      <button type="button" className="btn sm" aria-label="Previous week" aria-disabled={prevWeek === null} onClick={() => { if (prevWeek !== null) goWeek(prevWeek); }}><Icon name="chevron-left" /></button>
+      <WeekPicker today={today} offset={offset} range={range} phone={phone} dates={weekDates(today, offset)} onPick={goWeek} />
+      <button type="button" className="btn sm" aria-label="Next week" aria-disabled={nextWeek === null} onClick={() => { if (nextWeek !== null) goWeek(nextWeek); }}><Icon name="chevron-right" /></button>
       {offset !== 0 && <button type="button" className="btn sm ghost" onClick={() => goWeek(0)}>This week</button>}
     </div>
   );
