@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildReport } from './lib/qaReport.mjs';
+import { buildReport, buildSmokeBlock } from './lib/qaReport.mjs';
 import { renderReport, standalone } from './lib/qaReportHtml.mjs';
 import { SCENARIOS } from '../server/qa/scenarios';
 import { automationOf } from '../server/qa/scenarioAutomation';
@@ -202,5 +202,65 @@ describe('renderReport', () => {
     expect(phonePart).toContain('S-10');
     expect(notRunPart).not.toContain('S-10');
     expect(notRunPart).toContain('S-03');
+  });
+});
+
+describe('buildSmokeBlock', () => {
+  const now = new Date('2026-11-16T21:00:00Z');
+  const run = (createdAt: string, conclusion: string | null, status = 'completed', url = 'https://github.com/o/r/actions/runs/1') => ({ createdAt, conclusion, status, headSha: 'abc', url });
+
+  it('is unavailable when gh gave nothing usable', () => {
+    for (const bad of [null, undefined, 'x', {}]) expect(buildSmokeBlock(bad as never, now)).toEqual({ available: false });
+  });
+
+  it('counts passed and failed runs in the last 7 days and names the newest run, whatever the row order', () => {
+    const b = buildSmokeBlock([run('2026-11-14T15:00:00Z', 'success'), run('2026-11-16T20:21:42Z', 'success', 'completed', 'https://github.com/o/r/actions/runs/9'), run('2026-11-15T15:00:00Z', 'failure')], now);
+    expect(b).toMatchObject({ available: true, runs: 3, passed: 2, failed: 1, windowDays: 7 });
+    expect(b.last).toEqual({ at: '2026-11-16T20:21:42Z', result: 'passed', url: 'https://github.com/o/r/actions/runs/9' });
+  });
+
+  it('leaves a run older than 7 days out of the counts but still shows it as the last run', () => {
+    const b = buildSmokeBlock([run('2026-11-01T08:15:00Z', 'failure')], now);
+    expect(b).toMatchObject({ runs: 0, passed: 0, failed: 0 });
+    expect(b.last).toMatchObject({ result: 'failed' });
+  });
+
+  it('a run in progress is running, a cancelled one is in neither count, a timeout is a failure', () => {
+    const b = buildSmokeBlock([run('2026-11-16T20:00:00Z', null, 'in_progress'), run('2026-11-15T20:00:00Z', 'cancelled'), run('2026-11-14T20:00:00Z', 'timed_out')], now);
+    expect(b.last?.result).toBe('running');
+    expect(b).toMatchObject({ runs: 3, passed: 0, failed: 1 });
+  });
+
+  it('no runs at all is available with last null; a row with a bad date is skipped', () => {
+    expect(buildSmokeBlock([], now)).toMatchObject({ available: true, runs: 0, last: null });
+    expect(buildSmokeBlock([{ createdAt: 'nope' } as never], now).last).toBeNull();
+  });
+});
+
+describe('renderReport smoke block', () => {
+  const report = buildReport([sc('S-01', 'A')], () => undefined, []);
+  const now = new Date('2026-11-16T21:00:00Z');
+
+  it('says the status is not available when there is no smoke data, and the page still renders', () => {
+    for (const smoke of [undefined, buildSmokeBlock(null, now)]) {
+      const out = renderReport(report, { smoke });
+      expect(out).toContain('Smoke status not available.');
+      expect(out).toContain('CI evidence');
+    }
+  });
+
+  it('draws the last run, the 7-day counts and a link, labelled as CI evidence apart from scenario results', () => {
+    const out = renderReport(report, { smoke: buildSmokeBlock([{ createdAt: '2026-11-16T20:21:42Z', conclusion: 'success', status: 'completed', url: 'https://github.com/o/r/actions/runs/9' }], now) });
+    expect(out).toContain('CI evidence');
+    expect(out).toContain('not a scenario result');
+    expect(out).toContain('2026-11-16 20:21 UTC');
+    expect(out).toContain('<b>1</b> runs, <b>1</b> passed, <b>0</b> failed');
+    expect(out).toContain('href="https://github.com/o/r/actions/runs/9"');
+  });
+
+  it('draws no link for a url that is not on github.com and escapes it', () => {
+    const out = renderReport(report, { smoke: buildSmokeBlock([{ createdAt: '2026-11-16T20:21:42Z', conclusion: 'failure', status: 'completed', url: 'javascript:"><script>x</script>' }], now) });
+    expect(out).not.toContain('javascript:');
+    expect(out).toContain('failed');
   });
 });

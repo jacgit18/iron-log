@@ -38,7 +38,7 @@ test.beforeEach(async ({ page }) => { await asAdmin(page); await page.reload(); 
 test('Close is in the header and never applies; the bottom bar has no Cancel', async ({ page }) => {
   const sheet = await open(page, 3847);
   await expect(sheet.locator('.rctop').getByRole('button', { name: 'Close' })).toBeVisible();
-  await expect(sheet.locator('.rcfoot').getByRole('button')).toHaveCount(1);
+  await expect(sheet.locator('.rcfoot').getByRole('button')).toHaveText(['Apply 2 items, $30.47', 'Save for later']); // Apply and the drafts list's Save for later (brief receipt-drafts-list); no Cancel
   await expect(sheet.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
   await sheet.locator('#rc-cancel').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -50,8 +50,9 @@ test('the bar shows a summary and one wide Apply that names the items and total;
   const apply = sheet.locator('#rc-apply');
   await expect(sheet.locator('.rcsum')).toHaveText('2 items, $30.47.');
   await expect(apply).toHaveText('Apply 2 items, $30.47');
-  const w = await apply.evaluate(el => [el.getBoundingClientRect().width, el.closest('.rcfoot').getBoundingClientRect().width]);
-  expect(w[0]).toBeGreaterThan(w[1] - 2);
+  const w = await apply.evaluate(el => [el.getBoundingClientRect().width, document.getElementById('rc-save-later').getBoundingClientRect().width, el.closest('.rcfoot').getBoundingClientRect().width]);
+  expect(w[0]).toBeGreaterThan(w[1]); // Apply stays the wide one; Save for later sits beside it (brief receipt-drafts-list)
+  expect(w[0] + w[1]).toBeGreaterThan(w[2] * 0.8);
   await apply.click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('status').filter({ hasText: 'Applied 2 items' })).toBeVisible();

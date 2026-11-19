@@ -56,7 +56,7 @@ export interface SettleRow {
   kind: 'covered' | 'owesPayer' | 'owesYou' | 'youOwe';
   cents: number;
 }
-export interface Settlement { bill: number; /** the sales tax inside `bill` */ tax: number; yourShare: number; owedToYou: number; youOwe: number; rows: SettleRow[] }
+export interface Settlement { bill: number; /** the sales tax inside `bill` */ tax: number; /** the rewards credit taken off `bill` (0 when none) */ credit: number; yourShare: number; owedToYou: number; youOwe: number; rows: SettleRow[] }
 
 /** Share `tax` cents out in proportion to each person's total of the subtotal. Each other person gets the rounded share (never more than is
  *  left); you take the remainder, or the last person does when you are not in it, so the tax adds up exactly. */
@@ -71,12 +71,27 @@ export function addTax(totals: Record<string, number>, tax: number): Record<stri
   return out;
 }
 
+/** Take `credit` cents off the shares, in proportion to each person's total before tax (`base`), like `addTax` in reverse: each other person gets the rounded share (never more than
+ *  they owe or than is left), you take the remainder (the last person when you are not in it). `credit` is capped at what is owed, so no one's share goes below zero. */
+export function addCredit(base: Record<string, number>, totals: Record<string, number>, credit: number): Record<string, number> {
+  const ids = Object.keys(totals); const sub = ids.reduce((a, id) => a + (base[id] ?? 0), 0); const owed = ids.reduce((a, id) => a + (totals[id] ?? 0), 0);
+  let left = Math.min(credit, owed);
+  if (left <= 0) return bag(totals);
+  const out = bag(totals);
+  if (sub <= 0) { out[ME] = (out[ME] ?? 0) - Math.min(left, out[ME] ?? 0); return out; }
+  const absorber = ids.includes(ME) ? ME : ids[ids.length - 1]!;
+  ids.forEach(id => { if (id === absorber) return; const take = Math.min(Math.round((credit * (base[id] ?? 0)) / sub), left, out[id] ?? 0); out[id] = (out[id] ?? 0) - take; left -= take; });
+  out[absorber] = Math.max(0, (out[absorber] ?? 0) - left);
+  return out;
+}
+
 /** Who pays whom for a set of purchases. `payer` is who put the bill on their card: `ME` (the others owe you) or a person (you owe them your
  *  share). `covered` is the set of people whose share is already paid, so nothing is asked of them. `tax` (cents, worked out on the whole
  *  subtotal) is on the bill and shared in proportion to what each person's items came to. */
-export function settle(purchases: readonly Purchase[], payer: string, covered: ReadonlySet<string>, tax = 0): Settlement {
-  const totals = addTax(totalsOf(purchases), tax);
-  const subtotal = purchases.reduce((a, p) => a + p.cents, 0); const bill = subtotal + tax;
+export function settle(purchases: readonly Purchase[], payer: string, covered: ReadonlySet<string>, tax = 0, credit = 0): Settlement {
+  const base = totalsOf(purchases);
+  const subtotal = purchases.reduce((a, p) => a + p.cents, 0); const taken = Math.min(Math.max(credit, 0), subtotal + tax); const bill = subtotal + tax - taken;
+  const totals = addCredit(base, addTax(base, tax), taken);
   const yourShare = totals[ME] ?? 0;
   const rows: SettleRow[] = [];
   let owedToYou = 0, youOwe = 0;
@@ -88,5 +103,5 @@ export function settle(purchases: readonly Purchase[], payer: string, covered: R
     } else rows.push({ id, kind: 'owesPayer', cents });
   });
   if (payer !== ME && yourShare > 0) { rows.unshift({ id: payer, kind: 'youOwe', cents: yourShare }); youOwe = yourShare; }
-  return { bill, tax, yourShare, owedToYou, youOwe, rows };
+  return { bill, tax, credit: taken, yourShare, owedToYou, youOwe, rows };
 }

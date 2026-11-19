@@ -123,13 +123,13 @@ test('desktop: the body weight is not on the Stretches view', async ({ page }) =
   await expect(page.locator('.bwrow')).toHaveCount(0);
 });
 
-test('phone: the body weight stays under the notices, not next to the mode menu', async ({ page }) => {
+test('phone: the body weight sits in the joined week card, not next to the mode menu', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
   await expect(page.locator('.wsec .bwrow')).toHaveCount(0);
   await expect(page.locator('.wsec')).toHaveCount(0); // the desktop card is not drawn
   await expect(page.locator('.boardtabtop #board-mode')).toHaveCount(1); // the mode menu stays in the Workout / Stretches row
-  await expect(page.locator('.boardroot > .bwrow')).toHaveCount(1);
+  await expect(page.locator('.wdc .bwrow')).toHaveCount(1);
 });
 
 // The body weight is drawn in one of two places (in the week card above 700px, under the notices below), so the form's state lives above both:
@@ -137,21 +137,21 @@ test('phone: the body weight stays under the notices, not next to the mode menu'
 test('turning the screen across 700px in the middle of a body weight entry keeps what was typed', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  await page.locator('.boardroot > .bwrow input').fill('181.5');
+  await page.locator('.wdc .bwrow input').fill('181.5');
   await page.setViewportSize({ width: 1280, height: 900 }); // landscape: the row moves into the week card
   await expect(page.locator('.wsec .bwrow input')).toHaveValue('181.5');
   await page.setViewportSize({ width: 375, height: 812 }); // and back under the notices
-  await expect(page.locator('.boardroot > .bwrow input')).toHaveValue('181.5');
+  await expect(page.locator('.wdc .bwrow input')).toHaveValue('181.5');
 });
 
 test('turning the screen across 700px in the middle of editing a saved body weight keeps the form open', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  await page.locator('.boardroot > .bwrow input').fill('180');
-  await page.locator('.boardroot > .bwrow').getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('.boardroot > .bwrow b')).toHaveText('180 lb');
-  await page.locator('.boardroot > .bwrow').getByRole('button', { name: 'Edit' }).click();
-  await page.locator('.boardroot > .bwrow input').fill('182');
+  await page.locator('.wdc .bwrow input').fill('180');
+  await page.locator('.wdc .bwrow').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.wdc .bwrow b')).toHaveText('180 lb');
+  await page.locator('.wdc .bwrow').getByRole('button', { name: 'Edit' }).click();
+  await page.locator('.wdc .bwrow input').fill('182');
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(page.locator('.wsec .bwrow input')).toHaveValue('182'); // still editing, number kept
   await page.locator('.wsec .bwrow').getByRole('button', { name: 'Save' }).click();

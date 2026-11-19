@@ -4,7 +4,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-53', feature: 'Receipt scan', title: 'Scan a Costco receipt and apply it', persona: 'grocery-shopper', brief: 'receipt-scan', device: true,
   steps: [
-    'On a phone, with items like the ones on your receipt. On Groceries, Shopping, press Scan receipt and photograph a Costco receipt.',
+    'On a phone, with items like the ones on your receipt. On Groceries, Shopping, press Scan receipt, then Camera, and photograph a Costco receipt.',
     'In the sheet, compare each line with the paper: the item it matched, the quantity and the price after the instant savings. Change one match and untick one line.',
     'Check the Total check line, pick the store for the tax if it asks, then press Apply and look at the list; then press Undo.',
   ],

@@ -10,7 +10,7 @@ import PortionStepper from '../../PortionStepper.js';
 import { MicroLine, MicroList } from '../../nutritionBoard/MicroLine.js';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Copy to, Move to and Remove. Copy to and Move to open a sheet with the day picker (PlanMoveSheet, brief nutrition-multi-day-picker).
-// A listed daily snack that is only shown on this day (`item.virtual`, brief daily-snacks) is stored as a real item of the day first when it is ticked, changed or moved; its Remove skips it for this day only; it is not dragged.
+// A listed daily snack or a repeat that is only shown on this day (`item.virtual`, briefs daily-snacks and nutrition-meal-labels-year-repeat) is stored as a real item of the day first when it is ticked, changed or moved; its Remove skips it for this day only; it is not dragged.
 export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg }: {
   item: BoardItem; day: string; today: string; open: boolean;
   onOpen: () => void; onLog: (r: BoardItem['r'], index: number) => void; onMsg: (t: string) => void;
@@ -27,7 +27,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   // The item's place in the stored plan: a shown daily snack is stored now (never refused for a full day: snacks do not count toward the 8).
   const real = (): number => {
     if (!item.virtual) return index;
-    const at = st().realizeDailySnack(day, r.item.id);
+    const at = r.item.rp ? st().realizeRepeat(day, r.item.rp) : st().realizeDailySnack(day, r.item.id);
     if (typeof at === 'string') { onMsg(at); return -1; }
     return at;
   };
@@ -41,6 +41,9 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   };
   // Copy to and Move to open the picker sheet; a shown daily snack is stored only when the sheet's button is pressed (`prepare`), so closing the sheet leaves nothing behind.
   const pick = (mode: 'copy' | 'move') => { st().openModal({ type: 'nbplanmove', mode, day, name: r.name, slot: r.item.s, prepare: stillHere, onMsg }); onOpen(); }; // the card folds as the sheet opens
+  // Repeat opens the Repeat sheet for this food on this day; a daily snack has its own list (Daily snacks), so it has no Repeat button.
+  const repeatable = day >= today && !r.gone && (!item.virtual || !!r.item.rp);
+  const repeat = () => { st().openModal({ type: 'nbrepeat', day, name: r.name, item: { k: r.item.k, id: r.item.id, ...(r.item.x ? { x: r.item.x } : {}), ...(r.item.s ? { s: r.item.s } : {}) }, ...(r.item.rp ? { rp: r.item.rp } : {}), onMsg }); onOpen(); };
   const portion = (to: number) => { const at = real(); if (at >= 0) st().setPlanPortion(day, at, to); };
   const tickedStep = (step: { count: number; plan: number | null } | null) => {
     if (!entry || !step) return;
@@ -55,7 +58,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
     const at = real();
     if (at < 0) return;
     onLog(r, at);
-    if (item.virtual) st().unstoreDailySnack(day, at); // a log that failed leaves nothing stored: the snack is only shown again
+    if (item.virtual) { if (r.item.rp) st().unstoreRepeat(day, at, r.item.rp); else st().unstoreDailySnack(day, at); } // a log that failed leaves nothing stored: the snack or repeat is only shown again
   };
   return (
     <div className={`wb-cardwrap${eaten ? ' eaten' : ''}`}>
@@ -78,8 +81,10 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
           {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={more === null} onClick={() => more !== null && portion(more)}>More</button>}
           <button type="button" className="btn sm" aria-label={`Copy ${r.name}`} aria-haspopup="dialog" onClick={() => pick('copy')}>Copy to…</button>
           <button type="button" className="btn sm" aria-label={`Move ${r.name}`} aria-haspopup="dialog" onClick={() => pick('move')}>Move to…</button>
+          {r.gone && r.item.rp && <ArmedButton className="btn sm" aria-label={`Stop repeating ${r.name}`} label="Stop repeating" armedLabel="Tap again to stop" onConfirm={() => { st().stopRepeat(r.item.rp!); onOpen(); }} />}
+          {repeatable && <button type="button" className="btn sm" aria-label={`Repeat ${r.name}`} aria-haspopup="dialog" onClick={repeat}>Repeat…</button>}
           {item.virtual
-            ? <ArmedButton className="btn sm" aria-label={`Skip ${r.name} today`} label="Skip today" armedLabel="Tap again to skip" onConfirm={() => { st().skipDailySnack(day, r.item.id); onOpen(); }} />
+            ? <ArmedButton className="btn sm" aria-label={r.item.rp ? `Skip ${r.name} this day` : `Skip ${r.name} today`} label={r.item.rp ? 'Skip this day' : 'Skip today'} armedLabel="Tap again to skip" onConfirm={() => { if (r.item.rp) st().skipRepeatDay(day, r.item.rp); else st().skipDailySnack(day, r.item.id); onOpen(); }} />
             : <ArmedButton className="btn sm" aria-label={`Remove ${r.name}`} label="Remove" armedLabel="Tap again to remove" onConfirm={() => { st().removePlanItem(day, index); onOpen(); }} />}
         </div>
       )}

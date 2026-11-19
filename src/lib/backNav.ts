@@ -33,8 +33,30 @@ type Store = { getState(): { tab: string; modal: unknown; setTab(t: string): voi
 type Hist = { state: unknown; replaceState(s: unknown, t: string): void; pushState(s: unknown, t: string): void; back(): void };
 type Win = { addEventListener(e: 'popstate', fn: (ev: { state: unknown }) => void): void; removeEventListener(e: 'popstate', fn: (ev: { state: unknown }) => void): void };
 
-/** Keeps the history in step with the store's tab and sheet, and the store in step with Back. Returns the function that stops it. */
-export function startBackNav(store: Store, history: Hist, win: Win): () => void {
+/** A sheet that asks before Back closes it (brief receipt-back-guard). Opt-in: only the open sheet that registers one is held, every other sheet closes as before.
+ *  `holds()` says Back must not close it now (it has edits, or its prompt is showing); `ask()` shows the prompt. */
+export interface LeaveGuard { holds(): boolean; ask(): void; cancel?(): boolean }
+let guard: LeaveGuard | null = null;
+/** Registers the open sheet's guard; the returned function removes it (a later sheet's guard is left alone). */
+export function setLeaveGuard(g: LeaveGuard): () => void {
+  guard = g;
+  return () => { if (guard === g) guard = null; };
+}
+export const activeLeaveGuard = (): LeaveGuard | null => guard;
+/** Closes the sheet, unless its guard holds it: then the prompt shows instead. For a tap outside the sheet and Escape, which would otherwise close it at once. */
+export function closeOrAsk(close: () => void, g: LeaveGuard | null = guard): void {
+  if (g?.holds()) g.ask(); else close();
+}
+
+/** Escape: takes an open prompt back when the guard has one (`cancel` answers true), otherwise like `closeOrAsk`. */
+export function escapeOrAsk(close: () => void, g: LeaveGuard | null = guard): void {
+  if (g?.cancel?.()) return;
+  closeOrAsk(close, g);
+}
+
+/** Keeps the history in step with the store's tab and sheet, and the store in step with Back. Returns the function that stops it.
+ *  A guarded sheet that Back would close is kept: its entry is pushed again (so the next Back asks again) and its prompt shows. */
+export function startBackNav(store: Store, history: Hist, win: Win, getGuard: () => LeaveGuard | null = activeLeaveGuard): () => void {
   const read = (): Nav => { const s = store.getState(); return { tab: s.tab, modal: s.modal !== null }; };
   let cur = read(); // what the history entries were last made for
   let popping = false; // the store is changing because Back did, so the history already says so
@@ -51,6 +73,8 @@ export function startBackNav(store: Store, history: Hist, win: Win): () => void 
   });
   const onPopState = (e: { state: unknown }) => {
     const todo = onPop(e.state, cur);
+    const g = todo.closeModal && !todo.tab ? getGuard() : null;
+    if (g?.holds()) { history.pushState({ nav: cur }, ''); g.ask(); return; } // the sheet's own entry again: the store did not change, so no other entry is touched
     popping = true;
     try {
       if (todo.tab) store.getState().setTab(todo.tab);

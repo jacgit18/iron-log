@@ -46,7 +46,32 @@ function bar(t) {
   return `<div class="bar" role="img" aria-label="${parts.map(([k, n]) => `${n} ${KIND_LABEL[k].toLowerCase()}`).join(', ')}">${segs}</div>`;
 }
 
-/** The page body for the Artifact tool. `opts.generatedOn` is `YYYY-MM-DD`; `opts.source` names the results file (a file name, not a path). */
+/** The "Agent activity" block: plain facts about agent use, nothing about what an agent wrote. */
+function activityBlock(a) {
+  if (!a) return '';
+  const when = d => (d ? esc(d.slice(0, 10)) : a.recorded ? 'never' : 'not recorded');
+  return `<section class="activity" aria-labelledby="act-h"><h2 id="act-h">Agent activity</h2><ul class="facts">
+<li>Last agent result <b>${a.lastRunnerResult ? esc(a.lastRunnerResult) : 'none yet'}</b></li>
+<li>Last Runner start <b>${when(a.runnerLastRun)}</b>, Keeper <b>${when(a.keeperLastRun)}</b>, Reporter <b>${when(a.reporterLastRun)}</b></li>
+<li>Entries recorded by an agent <b>${a.entriesBy.claude}</b>, by you <b>${a.entriesBy.owner}</b></li>
+<li><b>${a.staleScenarios === null ? 'unknown' : a.staleScenarios}</b> scenarios with no result in ${a.staleDays} days</li>
+</ul></section>`;
+}
+
+/** The nightly smoke block (CI evidence). `smoke` is `buildSmokeBlock`'s answer; undefined or unavailable shows one line. */
+function smokeBlock(smoke) {
+  const head = '<h2>Nightly smoke <span class="tag">CI evidence</span></h2>';
+  const note = '<p class="hint">The Playwright smoke run by GitHub Actions. It is not a scenario result and is counted nowhere above.</p>';
+  if (!smoke || !smoke.available) return `<section class="smoke" aria-label="Nightly smoke">${head}<p class="empty">Smoke status not available.</p></section>`;
+  if (!smoke.last) return `<section class="smoke" aria-label="Nightly smoke">${head}${note}<p class="empty">No smoke run found.</p></section>`;
+  const { last } = smoke;
+  const when = esc(last.at.replace('T', ' ').replace(/:\d\d(\.\d+)?Z$/, ' UTC'));
+  const pill = { passed: 'p-confirmed', failed: 'p-fail', running: 'p-proposed', cancelled: 'p-blocked' }[last.result];
+  const link = last.url && last.url.startsWith('https://github.com/') ? ` <a href="${esc(last.url)}" rel="noreferrer">Open the latest run</a>` : '';
+  return `<section class="smoke" aria-label="Nightly smoke">${head}${note}<p class="smokeline"><span class="pill ${pill}">${esc(last.result)}</span> Last run <b>${when}</b>.${link}</p><p class="smokeline">Last ${smoke.windowDays} days: <b>${smoke.runs}</b> runs, <b>${smoke.passed}</b> passed, <b>${smoke.failed}</b> failed.</p></section>`;
+}
+
+/** The page body for the Artifact tool. `opts.generatedOn` is `YYYY-MM-DD`; `opts.source` names the results file (a file name, not a path). `opts.smoke` is `buildSmokeBlock`'s answer. */
 export function renderReport(report, opts = {}) {
   const { totals, device, recorded } = report;
   const t = { ...totals, proposedPass: report.proposed.length, confirmedPass: report.confirmed.length };
@@ -110,6 +135,7 @@ h2 { font-size: 1.15rem; }
 .seg { min-width: 3px; }
 .s-confirmed { background: var(--pass); } .s-proposed { background: var(--prop); } .s-fail { background: var(--fail); } .s-blocked { background: var(--warn); } .s-notrun { background: var(--none); opacity: 0.45; }
 .facts { color: var(--muted); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.activity { display: grid; gap: 6px; } .activity h2 { font-size: 1rem; }
 .facts b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding-block: 8px; z-index: 5; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
@@ -141,6 +167,11 @@ select { font: inherit; font-size: 0.9rem; color: var(--fg); background: var(--s
 .note { margin: 6px 0 0; font-size: 0.88rem; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
 .note.open { display: block; }
 .note.none { color: var(--muted); cursor: default; font-style: italic; }
+.smoke { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--surface); display: grid; gap: 4px; }
+.smoke h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.smoke .hint, .smoke .empty { margin: 0; }
+.smokeline { margin: 0; overflow-wrap: anywhere; }
+.smokeline a { color: var(--accent); }
 .foot { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); padding-top: 12px; }
 @media (prefers-reduced-motion: no-preference) { .stat { transition: border-color 0.15s; } .stat:hover { border-color: var(--accent); } }
 </style>
@@ -161,6 +192,8 @@ ${bar(t)}
 <li><b>${report.agentRunnableNotRun}</b> not-run scenarios an agent may try</li>
 <li>Last result <b>${report.lastDate ? esc(report.lastDate) : 'none yet'}</b></li>
 </ul>
+${activityBlock(report.agentActivity)}
+${smokeBlock(opts.smoke)}
 <div class="filters">
 <label for="f-kind">Show<select id="f-kind"><option value="all">Everything</option><option value="fail">Fail</option><option value="blocked">Blocked</option><option value="proposed">Pass, proposed</option><option value="confirmed">Pass, confirmed</option><option value="notrun">Not run</option></select></label>
 <label for="f-feature">Feature<select id="f-feature"><option value="all">All features</option>${featureOptions}</select></label>

@@ -11,6 +11,38 @@ const OUTCOME_ORDER = { fail: 0, blocked: 1 };
 /** A note is free text written by a person or an agent and sometimes quotes a test account's address (`name@qa.invalid`, or masked `n***@qa.invalid`). The page shows none. */
 const redact = text => text.replace(/[\w.*+-]+@[\w-]+(\.[\w-]+)+/g, '[email]').replace(/\b(?:[\w-]+\.)+invalid\b/gi, '[test domain]').replace(/\s+/g, ' ').trim();
 
+const DAY_MS = 86400000;
+export const STALE_DAYS = 30;
+/**
+ * The "agent activity" block (brief qa-agent-activity-log): when agents last recorded, how many entries each side recorded, and the live scenarios nothing has been
+ * recorded for in 30 days. `today` is `YYYY-MM-DD` (null skips the stale count); `activity` is `summarizeActivity` output, or null when no activity file exists.
+ */
+export function buildAgentActivity(scenarios, results, { today = null, activity = null } = {}) {
+  const live = scenarios.filter(s => !s.retired);
+  const by = { claude: 0, owner: 0 };
+  const newest = new Map();
+  let lastRunnerResult = null;
+  for (const e of results) {
+    if (e.by in by) by[e.by] += 1;
+    if (e.by === 'claude' && (!lastRunnerResult || e.date > lastRunnerResult)) lastRunnerResult = e.date;
+    if (!newest.has(e.id) || e.date > newest.get(e.id)) newest.set(e.id, e.date);
+  }
+  const age = d => (today ? Math.floor((Date.parse(today) - Date.parse(d)) / DAY_MS) : null);
+  const stale = today ? live.filter(s => !newest.has(s.id) || age(newest.get(s.id)) > STALE_DAYS).length : null;
+  const seen = name => (activity ? activity[name] : null);
+  return {
+    lastRunnerResult,
+    entriesBy: by,
+    staleScenarios: stale,
+    staleDays: STALE_DAYS,
+    /** Last start of each agent from the SubagentStart hook's file; `recorded` false means there is no such file (the hook never ran here), not that the agent never ran. */
+    recorded: activity !== null,
+    keeperLastRun: seen('qa-scenario-keeper')?.lastStart ?? null,
+    runnerLastRun: seen('qa-scenario-runner')?.lastStart ?? null,
+    reporterLastRun: seen('qa-results-reporter')?.lastStart ?? null,
+  };
+}
+
 /**
  * @param scenarios every scenario (retired ones are left out of everything)
  * @param automationOf id -> `{ auto }` or undefined (untagged)
@@ -18,7 +50,7 @@ const redact = text => text.replace(/[\w.*+-]+@[\w-]+(\.[\w-]+)+/g, '[email]').r
  * @returns totals, owner-facing counts and four sorted sections: `attention` (latest result fail or blocked, whoever recorded it), `proposed` (passes an agent
  * recorded, waiting for the owner's spot-check), `confirmed` (passes the owner recorded) and `notRun` (grouped by feature).
  */
-export function buildReport(scenarios, automationOf, results) {
+export function buildReport(scenarios, automationOf, results, ctx = {}) {
   const live = scenarios.filter(s => !s.retired);
   const latest = latestById(results); // real results only: an emulated phone run never stands in for one
   const emulatedLatest = latestEmulatedById(results);
@@ -86,6 +118,7 @@ export function buildReport(scenarios, automationOf, results) {
     /** Not-run scenarios an agent may record a real result for: everything that is not phone-only (a phone one can only be tried emulated). */
     agentRunnableNotRun: notRunGroups.reduce((n, g) => n + g.rows.filter(r => r.agentRunnable).length, 0),
     lastDate,
+    agentActivity: buildAgentActivity(scenarios, results, ctx),
     features,
     attention,
     /** Phone-only scenarios not failing or blocked, each with a `state`; the renderer lists them in their own section and leaves them out of the others. */
@@ -93,5 +126,36 @@ export function buildReport(scenarios, automationOf, results) {
     proposed,
     confirmed,
     notRun: notRunGroups,
+  };
+}
+
+const RESULT_OF = { success: 'passed', failure: 'failed', timed_out: 'failed', startup_failure: 'failed', cancelled: 'cancelled', skipped: 'cancelled' };
+/** passed, failed, cancelled or running (a run that has not completed has no conclusion yet). Anything unknown counts as cancelled: in neither number. */
+const smokeResult = r => (r.status && r.status !== 'completed' ? 'running' : (RESULT_OF[r.conclusion] ?? 'cancelled'));
+
+/**
+ * The nightly smoke (`.github/workflows/qa-smoke.yml`) as a small block: CI evidence, never mixed into the scenario results above.
+ * @param rows `gh run list --json conclusion,status,createdAt,headSha,url` rows, or null when `gh` could not be read
+ * @param now the moment the window ends (a Date); the window is the 7 days before it
+ * @returns `{ available: false }`, or `{ available: true, runs, windowDays, passed, failed, last }` where `last` is the newest run
+ * (`{ at, result, url }`) or null when there is no run at all.
+ */
+export function buildSmokeBlock(rows, now) {
+  if (!Array.isArray(rows)) return { available: false };
+  const valid = rows
+    .filter(r => r && typeof r.createdAt === 'string' && Number.isFinite(Date.parse(r.createdAt)))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const windowDays = 7;
+  const from = now.getTime() - windowDays * DAY_MS;
+  const inWindow = valid.filter(r => Date.parse(r.createdAt) >= from && Date.parse(r.createdAt) <= now.getTime());
+  const results = inWindow.map(smokeResult);
+  const newest = valid[0];
+  return {
+    available: true,
+    runs: inWindow.length,
+    windowDays,
+    passed: results.filter(x => x === 'passed').length,
+    failed: results.filter(x => x === 'failed').length,
+    last: newest ? { at: newest.createdAt, result: smokeResult(newest), url: typeof newest.url === 'string' ? newest.url : null } : null,
   };
 }

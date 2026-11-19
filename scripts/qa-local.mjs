@@ -13,7 +13,7 @@
 // (the `npm run db:start` container). The database named in it is never written to: only a new database next to it is.
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, openSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, constants as fsConstants, existsSync, fstatSync, ftruncateSync, openSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync, writeSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -64,7 +64,7 @@ export async function finishStop(state, withClient, removeFiles) {
   return dropScratch(state, withClient);
 }
 const SCRATCH_NAME = /^iron_qa_run_[0-9a-f]{8}$/;
-const RESERVED_PORTS = new Set([4173, 3103, 3104, 5433]); // other sessions' preview server, the two e2e-qa servers, the shared Postgres
+const RESERVED_PORTS = new Set([3101, 3102, 4173, 3103, 3104, 5433]); // the two e2e servers, other sessions' preview server, the two e2e-qa servers, the shared Postgres
 
 /** Why a base URL may not be opened, or null. Only http on this machine, and no credentials in the address. */
 export function urlProblem(raw) {
@@ -93,12 +93,14 @@ export function dropProblem(name, state) {
   return null;
 }
 
-/** Why `raw` is not the address of the stack this script started (`stateUrl`), or null. Same machine is not enough: another local app is not the stack. */
+/** Why `raw` is not the address of a stack this script started (`stateUrl`: one address or a list of the live ones), or null. Same machine is not enough: another local app is not the stack. */
 export function originProblem(raw, stateUrl) {
   const bad = urlProblem(raw);
   if (bad) return bad;
-  if (!stateUrl) return 'no stack is running: run start first';
-  return new URL(raw).origin === new URL(stateUrl).origin ? null : `${new URL(raw).origin} is not the stack this script started (${new URL(stateUrl).origin})`;
+  const stacks = [stateUrl].flat().filter(Boolean); // one address, or the addresses of every live stack
+  if (!stacks.length) return 'no stack is running: run start first';
+  const origin = new URL(raw).origin;
+  return stacks.some(u => new URL(u).origin === origin) ? null : `${origin} is not the stack this script started (${stacks.map(u => new URL(u).origin).join(', ')})`;
 }
 
 /** Whether a process (its command line and working directory) is this checkout's server, so a pid read from an old state file is not killed by mistake. */
@@ -145,22 +147,103 @@ export async function freePort() {
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const stateFile = process.env.QA_LOCAL_STATE_FILE ?? join(tmpdir(), `qa-local-${createHash('sha1').update(root).digest('hex').slice(0, 10)}.json`); // one stack per checkout (the variable is for tests)
-const readState = () => (existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : null);
-/** The address of the stack this script started for this checkout, or null (no password: the QA Runner's hook reads only this). */
-export const readStackUrl = () => { try { const url = readState()?.url; return typeof url === 'string' ? url : null; } catch { return null; } }; // an unreadable state file means no stack: the hook then refuses navigate, and status and stop still run
+/** The recorded state, or null when there is no file. A file that is there but cannot be read (a link, a pipe, bad JSON, another user's) throws, so callers refuse instead of starting over it. */
+const readState = () => {
+  let text;
+  try { text = readStateText(stateFile); } catch (e) { if (e?.code === 'ENOENT') return null; throw e; } // the same checked read the hook uses
+  return JSON.parse(text);
+};
+/** The reason a state file could not be read, as one line, for a refusal. */
+export const stateProblem = (e, path) => `the state file ${path} cannot be used (${String(e?.code ?? e?.message ?? e).split('\n')[0]}); look at it, then delete it by hand`;
+/** Makes the state file: it must not exist (O_EXCL) and a link planted at the path is not followed (O_NOFOLLOW), so a symlink put there after the check fails closed instead of sending the scratch password elsewhere. */
+export function createStateFile(path, text) {
+  const fd = openSync(path, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW, 0o600);
+  try { writeSync(fd, text); } finally { closeSync(fd); }
+}
+/** Rewrites the state file `start` made: opened without following a link and without creating, and only if it is still a regular file of this user. */
+export function updateStateFile(path, text, uid = process.getuid?.()) {
+  const fd = openSync(path, fsConstants.O_WRONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
+  try {
+    const st = fstatSync(fd);
+    if (!st.isFile() || st.uid !== uid) throw new Error(`${path} is not a regular file of this user`);
+    ftruncateSync(fd, 0);
+    writeSync(fd, text, 0);
+  } finally { closeSync(fd); }
+}
+/** Whether a recorded stack is one this script started and that is still up: a 127.0.0.1 http address whose port is the recorded port (not a reserved one), and a pid that is really that stack's server. `isAlive(pid, state)` is replaceable for tests. */
+export function liveStackUrl(state, isAlive = pidIsStackServer) {
+  try {
+    if (!state || typeof state.url !== 'string' || !Number.isInteger(state.port) || !Number.isInteger(state.pid) || state.pid <= 0) return null;
+    const u = new URL(state.url);
+    if (u.protocol !== 'http:' || u.hostname !== '127.0.0.1' || u.port !== String(state.port) || RESERVED_PORTS.has(state.port)) return null;
+    return isAlive(state.pid, state) === true ? u.origin : null;
+  } catch { return null; }
+}
+/** Whether a process is the server `start` spawned for this state: its command line names server/index.ts, its working folder is a checkout (has scripts/qa-local.mjs), and its environment holds exactly what `start` sets for the server (NODE_ENV=test, HOST=127.0.0.1, AUTH_TEST_SIGNIN=true, PORT the recorded port, DATABASE_URL naming the recorded scratch database). Any missing piece is a reason. Pure; the readings are passed in. */
+export function stackServerProblem({ cmdline, cwd, environ }, state, isCheckout) {
+  if (typeof cwd !== 'string' || !pidIsStack(cmdline, cwd, cwd)) return 'not a server/index.ts process';
+  if (!isCheckout(cwd)) return 'its working folder is not a checkout';
+  if (typeof environ !== 'string') return 'its environment cannot be read';
+  const env = new Map(environ.split('\0').filter(Boolean).map(kv => { const i = kv.indexOf('='); return [kv.slice(0, i), kv.slice(i + 1)]; }));
+  for (const [k, v] of [['NODE_ENV', 'test'], ['HOST', '127.0.0.1'], ['AUTH_TEST_SIGNIN', 'true'], ['PORT', String(state.port)]]) if (env.get(k) !== v) return `its ${k} is not what start sets`;
+  let live; let recorded;
+  try { live = new URL(env.get('DATABASE_URL') ?? ''); recorded = new URL(state.scratch); } catch { return 'its DATABASE_URL or the recorded scratch URL cannot be read'; }
+  let dbName = null;
+  try { dbName = decodeURIComponent(live.pathname.slice(1)); } catch { /* unreadable */ }
+  if (typeof state.db !== 'string' || !SCRATCH_NAME.test(state.db) || dbName !== state.db) return 'its DATABASE_URL is not the recorded scratch database';
+  if (live.hostname !== recorded.hostname || live.port !== recorded.port) return 'its DATABASE_URL has another host or port than the recorded scratch URL';
+  if (live.search !== recorded.search) return 'its DATABASE_URL has another query than the recorded scratch URL';
+  return null;
+}
+/** Reads /proc for the pid and applies stackServerProblem; fails closed (false) when /proc cannot be read or the process is gone. */
+function pidIsStackServer(pid, state) {
+  try {
+    const at = f => readFileSync(`/proc/${pid}/${f}`, 'utf8');
+    return stackServerProblem({ cmdline: at('cmdline').replaceAll('\0', ' '), cwd: readlinkSync(`/proc/${pid}/cwd`), environ: at('environ') }, state, d => existsSync(join(d, 'scripts', 'qa-local.mjs'))) === null;
+  } catch { return false; }
+}
+const STATE_MAX_BYTES = 4096;
+/** Reads a state file through one descriptor: opened without following a link and without waiting on a pipe, then checked (regular file, this user's, small) with fstat on that descriptor, so the file cannot change between the check and the read. Throws when any check fails. `uid` is replaceable for tests. */
+export function readStateText(path, uid = process.getuid?.()) {
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
+  try {
+    const st = fstatSync(fd);
+    if (!st.isFile() || st.uid !== uid || st.size > STATE_MAX_BYTES) throw new Error(`${path} is not a small regular file of this user`);
+    return readFileSync(fd, 'utf8');
+  } finally { closeSync(fd); }
+}
+/** The addresses of every live stack this script started, from any checkout or worktree (each keeps its own state file in the temp folder). The hook runs from the main checkout while the Runner's `start` may run in a worktree, so it cannot read just its own checkout's file. The variable names one file (tests). Only a state file written by `start` for a still-running server counts, so another local service is never an address. */
+export const readStackUrls = (uid = process.getuid?.()) => {
+  let files;
+  try { files = process.env.QA_LOCAL_STATE_FILE ? [process.env.QA_LOCAL_STATE_FILE] : readdirSync(tmpdir()).filter(f => /^qa-local-[0-9a-f]{10}\.json$/.test(f)).map(f => join(tmpdir(), f)); } catch { return []; }
+  const urls = [];
+  for (const f of files) { try { const u = liveStackUrl(JSON.parse(readStateText(f, uid))); if (u) urls.push(u); } catch { /* unreadable: not a stack */ } }
+  return urls;
+};
+/** The Runner hook's call log (one line per call; brief qa-agent-activity-log): one per checkout, named like the state file (the variable is for tests). */
+export const hookLogFile = () => process.env.QA_HOOK_LOG_FILE ?? join(tmpdir(), `qa-runner-hook-${createHash('sha1').update(root).digest('hex').slice(0, 10)}.log`);
 /** Where the agent saves evidence: the one folder it may write, named the same way the hook names it. */
 export const evidenceRoot = () => join(tmpdir(), 'qa-runs');
 const fail = (msg, code = 1) => { console.error(`qa-local: ${msg}`); process.exit(code); };
 
 async function main() {
   const [cmd, arg] = process.argv.slice(2);
+  if (cmd === 'hook-log') { // what the Runner's hook did: calls, refusals, first and last time. `--clear` starts a fresh log before a run.
+    const { describeGuardLog, summarizeGuardLog } = await import('./lib/qaActivity.mjs');
+    const file = hookLogFile();
+    if (arg === '--clear') { rmSync(file, { force: true }); console.log(`hook log cleared: ${file}`); return; }
+    let text = '';
+    try { text = readFileSync(file, 'utf8'); } catch (e) { if (e?.code !== 'ENOENT') fail(`cannot read ${file}: ${e.message}`); }
+    console.log(describeGuardLog(summarizeGuardLog(text)));
+    return;
+  }
   const pgModule = await import('pg');
   const pg = pgModule.default;
   const withClient = async (url, fn) => { const c = new pg.Client({ connectionString: url }); await c.connect(); try { return await fn(c); } finally { await c.end(); } };
   const given = process.env.QA_LOCAL_PG ?? process.env.DATABASE_URL ?? 'postgres://ironlog:ironlog@127.0.0.1:5433/ironlog';
 
   if (cmd === 'check-url') {
-    const why = originProblem(arg ?? '', readState()?.url);
+    const why = originProblem(arg ?? '', readStackUrls()); // the same rule as the Runner's hook: any live stack
     if (why) fail(`refused: ${why}`);
     console.log('ok');
     return;
@@ -168,7 +251,9 @@ async function main() {
 
   if (cmd === 'start') {
     const { pickerEnv } = await import('../server/qa/localAdmin.ts');
-    if (readState()) fail(`a stack is already running for this checkout (${stateFile}); run stop first`);
+    let existing;
+    try { existing = readState(); } catch (e) { fail(`refused: ${stateProblem(e, stateFile)}`, 2); }
+    if (existing) fail(`a stack is already running for this checkout (${stateFile}); run stop first`);
     const bad = serverProblem(given);
     if (bad) fail(`refused: ${bad}`, 2);
     const base = new URL(given); base.searchParams.set('sslmode', 'disable');
@@ -181,7 +266,8 @@ async function main() {
     const port = await freePort();
     const url = `http://127.0.0.1:${port}`;
     const out = openSync(join(tmpdir(), `qa-local-${db}.log`), 'a');
-    writeFileSync(stateFile, JSON.stringify({ db, login, port, url, pid: null, scratch: scratch.href, app: appUrl.href, base: base.href, log: join(tmpdir(), `qa-local-${db}.log`) }), { mode: 0o600 }); // holds the scratch login's password: owner-only
+    const record = { db, login, port, url, pid: null, scratch: scratch.href, app: appUrl.href, base: base.href, log: join(tmpdir(), `qa-local-${db}.log`) };
+    try { createStateFile(stateFile, JSON.stringify(record)); } catch (e) { fail(`refused: ${stateProblem(e, stateFile)}`, 2); } // holds the scratch login's password: owner-only, never through a link
     try {
       await withClient(maintenance.href, async c => { await c.query(`create database "${db}"`); await c.query(`comment on database "${db}" is '${SCRATCH_MARK}'`); });
       execFileSync('npx', ['dbmate', 'up'], { cwd: root, env: { ...process.env, DATABASE_URL: scratch.href, DBMATE_NO_DUMP_SCHEMA: 'true', DBMATE_MIGRATIONS_DIR: 'db/migrations' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -193,12 +279,12 @@ async function main() {
         BETTER_AUTH_SECRET: 'e2e-only-secret-e2e-only-secret-e2e-only-secret', GOOGLE_CLIENT_ID: 'e2e-client.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'e2e-client-secret',
         DATABASE_URL: scratch.href, APP_DATABASE_URL: appUrl.href, ...pickerEnv(scratch.href) } });
       child.unref();
-      writeFileSync(stateFile, JSON.stringify({ ...readState(), pid: child.pid }), { mode: 0o600 });
+      updateStateFile(stateFile, JSON.stringify({ ...record, pid: child.pid }));
       for (let i = 0; i < 90; i++) {
-        try { if ((await fetch(`${url}/api/health/db`)).ok) { console.log(JSON.stringify({ url, port, database: db, pid: child.pid, log: readState().log, evidence: evidenceRoot() })); return; } } catch { /* not up yet */ }
+        try { if ((await fetch(`${url}/api/health/db`)).ok) { console.log(JSON.stringify({ url, port, database: db, pid: child.pid, log: record.log, evidence: evidenceRoot() })); return; } } catch { /* not up yet */ }
         await new Promise(r => setTimeout(r, 1000));
       }
-      throw new Error(`the server did not answer on ${url} in 90 s (log: ${readState().log})`);
+      throw new Error(`the server did not answer on ${url} in 90 s (log: ${record.log})`);
     } catch (e) {
       console.error(`qa-local: start failed: ${e.stderr?.toString() || e.message}`);
       await stop();
@@ -207,7 +293,8 @@ async function main() {
   }
 
   if (cmd === 'seed') {
-    const state = readState();
+    let state;
+    try { state = readState(); } catch (e) { fail(`refused: ${stateProblem(e, stateFile)}`, 2); }
     if (!state) fail('no stack is running: run start first');
     const why = urlProblem(state.url) ?? serverProblem(state.scratch);
     if (why) fail(`refused: ${why}`, 2);
@@ -248,7 +335,7 @@ async function main() {
     return;
   }
   if (cmd === 'stop') { await stop(); return; }
-  fail('usage: qa-local.mjs start [--no-build] | seed <persona-id> | check-url <url> | status | stop', 2);
+  fail('usage: qa-local.mjs start [--no-build] | seed <persona-id> | check-url <url> | status | stop | hook-log [--clear]', 2);
 
   async function stop() {
     let state = null;

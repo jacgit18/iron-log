@@ -80,10 +80,10 @@ describe('plannedShoppingIds (daily snacks into Shopping)', () => {
     expect(plannedShoppingIds(diet({ plan, snacks: [{ id: 's1' }] }), ['2026-11-09'], today, all, e)).toEqual([]);
     expect(plannedShoppingIds(diet({ plan, snacks: [{ id: 's1' }] }), days, today, all, e)).toEqual(['s1']);
   });
-  it('shows no snack outside today to today + 13, past days, or for a removed recipe or empty list', () => {
+  it('shows no snack outside today to today + 364, past days, or for a removed recipe or empty list', () => {
     const d = diet({ snacks: [{ id: 's1' }, { id: 'gone' }] });
-    expect(plannedShoppingIds(d, ['2026-11-23'], today, all, [])).toEqual([]); // today + 14
-    expect(plannedShoppingIds(d, ['2026-11-22'], today, all, [])).toEqual(['s1']); // today + 13
+    expect(plannedShoppingIds(d, ['2027-11-09'], today, all, [])).toEqual([]); // today + 365
+    expect(plannedShoppingIds(d, ['2027-11-08'], today, all, [])).toEqual(['s1']); // today + 364
     expect(plannedShoppingIds(d, ['2026-11-08'], today, all, [])).toEqual([]);
     expect(plannedShoppingIds(undefined, days, today, all, [])).toEqual([]);
   });

@@ -1,6 +1,6 @@
 import { MAX_GROUPS, MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
-import { buysOf, buyCost, closedCost } from './groceryPurchases.js';
+import { buysOf, buyCost } from './groceryPurchases.js';
 import { sortByName } from './sort.js';
 import type { Grocery, GroceryData, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
 
@@ -239,20 +239,25 @@ export const removedBought = (g: Grocery, m: GroceryMonth): GroceryItem[] =>
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
 export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.filter(p => !p.gone).length}`;
 
+/** What one store's purchases come to: the items plus the receipt's tax, less its rewards credit, never below zero (brief receipt-rewards-credit). */
+export const storeSpend = (items: number, tax: number, credit: number): number => Math.max(0, items + tax - credit);
+
 /** Counts and money for a set of items: how many are ticked, what the list is expected to cost, and what the ticked ones cost. `spent` adds the
  *  month's tax for each store that has something ticked here (the receipt's tax, typed in); `planned` is what the prices come to before tax. */
 export function tally(items: GroceryItem[], m: GroceryMonth) {
-  let got = 0, planned = 0, spent = 0, unpriced = 0;
-  const boughtAt = new Set<string>();
+  let got = 0, planned = 0, unpriced = 0;
+  const at = new Map<string, number>(); // what was bought at each store, before its tax and rewards credit
+  const add = (store: string, cents: number) => at.set(store, (at.get(store) ?? 0) + cents);
   items.forEach(i => {
     const l = lineOf(i, m); const t = lineCost(l);
     planned += t; if (l.cents == null && !l.prices) unpriced++;
-    if (l.got) { got++; spent += t; boughtAt.add(i.store); }
+    if (l.got) { got++; add(i.store, t); }
     const raw = m.lines[i.id]; // purchases closed by Ran out still count as spent, at the store each was bought at
-    if (raw?.buys?.length) { spent += closedCost(raw); buysOf(raw).forEach(b => boughtAt.add(b.store ?? i.store)); }
+    if (raw?.buys?.length) buysOf(raw).forEach(b => add(b.store ?? i.store, buyCost(b)));
   });
   let taxed = false; // whether any tax was added: only a store with something ticked counts
-  boughtAt.forEach(store => { const t = own(m.tax, store) ?? 0; if (t) { spent += t; taxed = true; } });
+  let spent = 0;
+  at.forEach((cents, store) => { const t = own(m.tax, store) ?? 0; if (t) taxed = true; spent += storeSpend(cents, t, own(m.credit, store) ?? 0); });
   return { count: items.length, got, planned, spent, unpriced, taxed };
 }
 
@@ -261,14 +266,14 @@ export function tally(items: GroceryItem[], m: GroceryMonth) {
 export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, endKey: string, count: number) {
   return Array.from({ length: count }, (_, i) => {
     const key = shiftMonth(endKey, i - count + 1); const m = months[key];
-    let spent = 0, bought = 0; const boughtAt = new Set<string>();
+    let bought = 0; const at = new Map<string, number>(); const add = (store: string, cents: number) => at.set(store, (at.get(store) ?? 0) + cents);
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       const it = g.items.find(x => x.id === id);
-      buysOf(l).forEach(b => { bought++; boughtAt.add(b.store ?? storeFor(g, it ?? removedItem(g, id, l), m!)); spent += buyCost(b); }); // closed by Ran out
+      buysOf(l).forEach(b => { bought++; add(b.store ?? storeFor(g, it ?? removedItem(g, id, l), m!), buyCost(b)); }); // closed by Ran out
       if (!l.got) return;
-      bought++; boughtAt.add(storeFor(g, it ?? removedItem(g, id, l), m!)); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
+      bought++; add(storeFor(g, it ?? removedItem(g, id, l), m!), l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null)));
     });
-    boughtAt.forEach(store => { spent += own(m?.tax, store) ?? 0; }); // each store's tax from the receipt
+    let spent = 0; at.forEach((cents, store) => { spent += storeSpend(cents, own(m?.tax, store) ?? 0, own(m?.credit, store) ?? 0); }); // each store's tax from the receipt, less its rewards credit
     return { key, spent, bought };
   });
 }
@@ -332,14 +337,14 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const lines: Record<string, GroceryLine> = {};
     Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; else if (!listed.has(id) && !g.items.some(x => x.id === id)) lines[id] = l; }); // a removed item's purchase keeps its own id
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
-    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.paid ? { paid: fm.paid } : {}), ...(fm.carried ? { carried: fm.carried } : {}) };
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.credit ? { credit: fm.credit } : {}), ...(fm.rcpts ? { rcpts: fm.rcpts } : {}), ...(fm.paid ? { paid: fm.paid } : {}), ...(fm.carried ? { carried: fm.carried } : {}) };
     if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }
     const mergedLines = { ...m.lines, ...have.lines }; const mergedPulled = [...new Set([...have.pulled, ...m.pulled])];
-    const mergedPayer = { ...m.payer, ...have.payer }; const mergedTax = { ...m.tax, ...have.tax }; const mergedPaid = { ...m.paid, ...have.paid }; // what is here wins, per store (and per settled mark)
-    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length || Object.keys(mergedPaid).length !== Object.keys(have.paid ?? {}).length || (!have.carried && m.carried)) {
-      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}), ...(Object.keys(mergedPaid).length ? { paid: mergedPaid } : {}), ...((have.carried ?? m.carried) ? { carried: have.carried ?? m.carried } : {}) }; changed = true;
+    const mergedPayer = { ...m.payer, ...have.payer }; const mergedTax = { ...m.tax, ...have.tax }; const mergedCredit = { ...m.credit, ...have.credit }; const mergedPaid = { ...m.paid, ...have.paid }; // what is here wins, per store (and per settled mark)
+    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length || Object.keys(mergedCredit).length !== Object.keys(have.credit ?? {}).length || Object.keys(mergedPaid).length !== Object.keys(have.paid ?? {}).length || (!have.carried && m.carried)) {
+      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}), ...(Object.keys(mergedCredit).length ? { credit: mergedCredit } : {}), ...(Object.keys(mergedPaid).length ? { paid: mergedPaid } : {}), ...((have.carried ?? m.carried) ? { carried: have.carried ?? m.carried } : {}) }; changed = true;
     }
   });
   return { grocery: g, months, changed };
