@@ -383,7 +383,7 @@ export interface SavedMeal { id: string; n: string; items: SavedItem[] }
 export type PlanSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 /** One planned item (brief diet-meal-planner): a recipe (`k` 'r') or a saved meal (`k` 'm') by id; `x` is the recipe's portion (0.5 to 10), left out when it is 1. */
 /** `e` are the ids of the food-log entries that checking the item as eaten added; it counts as eaten while any of them is still in the log. */
-export interface PlanItem { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot; e?: string[]; /** Shown from the daily snack list, not stored (brief daily-snacks): never written to the plan; ticking or changing it stores a real item first. */ v?: true; /** Set with `v` on an item shown from a repeat: that repeat's `rid`, so a tap can skip it for one day. Never stored. */ rp?: string }
+export interface PlanItem { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot; e?: string[]; /** Shown from the daily snack list, not stored (brief daily-snacks): never written to the plan; ticking or changing it stores a real item first. */ v?: true; /** Set with `v` on an item shown from a repeat: that repeat's `rid`, so a tap can skip it for one day. Never stored. */ rp?: string; /** Marked planned (brief nutrition-board-available-list): only items with `p` count toward the day's 8. Absent means available. */ p?: true }
 /** One daily snack (brief daily-snacks): a recipe or food by id with its portion (0.5 to 10, left out when 1). Kept in `cfg.diet.snacks`, shown in Snack on every day of the plan window. */
 export interface DailySnack { id: string; x?: number }
 /** `mealsMoved` (brief saved-meals-into-recipes) is the saved-meal id to the Recipes meal it became, so each moves once. */
