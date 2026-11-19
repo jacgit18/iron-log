@@ -128,15 +128,16 @@ export function repeatSummary(days: readonly number[], meal: string, fromName: s
   return `${daysName(days)} in ${meal}, every week from ${fromName} for the next 52 weeks. Nothing is copied: change or stop it here.`;
 }
 
-/** `list` with every repeat of the recipe `id` that names a meal moved to `meal`, so the repeat keeps matching the stored copies that moved with it (a stored item stands for a repeat when food and meal match). A repeat is left alone when moving it would clash with another repeat of the same food in that meal on a shared weekday. The same array when nothing changed. */
+/** `list` with every repeat of the recipe `id` that names a meal moved to `meal`, so the repeat keeps matching the stored copies that moved with it (a stored item stands for a repeat when food and meal match). A repeat is left alone when moving it would clash with another repeat of the same food in that meal on a shared weekday (including one moved earlier in the same call). The same array when nothing changed. */
 export function retargetRepeats(list: readonly RepeatItem[], id: string, meal: PlanSlot): readonly RepeatItem[] {
+  const out = [...list]; // the clash is checked against the repeats as already moved in this pass, so two repeats that would overlap in `meal` do not both move
   let changed = false;
-  const out = list.map(r => {
-    if (r.k !== 'r' || r.id !== id || !r.s || r.s === meal) return r;
+  out.forEach((r, i) => {
+    if (r.k !== 'r' || r.id !== id || !r.s || r.s === meal) return;
     const moved = { ...r, s: meal };
-    if (list.some(o => o !== r && o.rid !== r.rid && samePlanItem({ k: o.k, id: o.id, ...(o.s ? { s: o.s } : {}) }, { k: moved.k, id: moved.id, s: meal }) && o.days.some(d => moved.days.includes(d)))) return r;
+    if (out.some(o => o !== r && o.rid !== r.rid && samePlanItem({ k: o.k, id: o.id, ...(o.s ? { s: o.s } : {}) }, { k: moved.k, id: moved.id, s: meal }) && o.days.some(d => moved.days.includes(d)))) return;
+    out[i] = moved;
     changed = true;
-    return moved;
   });
   return changed ? out : list;
 }
