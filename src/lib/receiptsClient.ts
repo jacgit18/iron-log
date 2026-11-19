@@ -7,7 +7,8 @@ import { paidAfterRewards } from './groceryReceipt.js';
 // separate call after Apply and only when the box was ticked; every failure comes back as a plain reason, never a throw. The pure parts (what is sent, how a
 // row reads, how the list is grouped, the words) are unit-tested; the calls are covered by e2e/receiptSave.spec.js.
 
-export interface SavedReceipt { id: string; savedAt: string; month: string; receiptDate: string | null; store: string; totalCents: number | null; note: string; sizeBytes: number }
+export interface SavedReceipt { id: string; savedAt: string; month: string; receiptDate: string | null; store: string; totalCents: number | null; note: string; sizeBytes: number; status: 'to_log' | 'logged' }
+export type ReceiptStatus = SavedReceipt['status'];
 export interface SavedList { receipts: SavedReceipt[]; count: number; bytes: number; maxReceipts: number; maxBytes: number }
 /** What the person reviewed at Apply, as the server stores it next to the photo. */
 export interface KeepMeta { month: string; store: string; receiptDate: string | null; totalCents: number | null }
@@ -65,8 +66,8 @@ async function call(path: string, init: RequestInit & { json?: unknown } = {}): 
 }
 
 /** Keep one photo (the base64 JPEG that was scanned) with what the person reviewed. */
-export async function saveReceipt(image: string, meta: KeepMeta): Promise<{ ok: true; receipt: SavedReceipt } | SaveFailure> {
-  const res = await call('', { method: 'POST', json: { image, month: meta.month, store: meta.store, receiptDate: meta.receiptDate, totalCents: meta.totalCents } });
+export async function saveReceipt(image: string, meta: KeepMeta, status: ReceiptStatus = 'logged'): Promise<{ ok: true; receipt: SavedReceipt } | SaveFailure> {
+  const res = await call('', { method: 'POST', json: { image, month: meta.month, store: meta.store, receiptDate: meta.receiptDate, totalCents: meta.totalCents, status } });
   if (!res) return { ok: false, reason: 'offline' };
   if (res.status === 409) return { ok: false, reason: 'cap' };
   if (res.status === 429) return { ok: false, reason: 'limit' };
@@ -84,6 +85,20 @@ export async function listReceipts(): Promise<({ ok: true } & SavedList) | { ok:
 export async function saveNote(id: string, note: string): Promise<{ ok: true; receipt: SavedReceipt } | { ok: false; reason: 'offline' | 'unavailable' }> {
   const res = await call(`/${id}`, { method: 'PATCH', json: { note } });
   if (!res) return { ok: false, reason: 'offline' };
+  if (!res.ok) return { ok: false, reason: 'unavailable' };
+  try { return { ok: true, receipt: ((await res.json()) as { receipt: SavedReceipt }).receipt }; } catch { return { ok: false, reason: 'unavailable' }; }
+}
+
+/** What may change on a saved receipt after it is saved (the server's `cleanPatch`). `ifStatus` makes it a no-op, answered `taken`, when another device already moved the receipt on. */
+export interface ReceiptChange { status?: ReceiptStatus; ifStatus?: ReceiptStatus; store?: string; receiptDate?: string | null; totalCents?: number | null; month?: string }
+export type ChangeFailure = { ok: false; reason: 'offline' | 'unavailable' | 'taken' | 'gone' };
+
+/** Change a To log receipt on Apply (status, store, date, total, month) or put it back on Undo. Never a second upload. */
+export async function updateReceipt(id: string, change: ReceiptChange): Promise<{ ok: true; receipt: SavedReceipt } | ChangeFailure> {
+  const res = await call(`/${id}`, { method: 'PATCH', json: change });
+  if (!res) return { ok: false, reason: 'offline' };
+  if (res.status === 409) return { ok: false, reason: 'taken' };
+  if (res.status === 404) return { ok: false, reason: 'gone' };
   if (!res.ok) return { ok: false, reason: 'unavailable' };
   try { return { ok: true, receipt: ((await res.json()) as { receipt: SavedReceipt }).receipt }; } catch { return { ok: false, reason: 'unavailable' }; }
 }
