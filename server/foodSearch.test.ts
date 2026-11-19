@@ -73,6 +73,12 @@ describe('GET /api/foods/search', () => {
     expect(ask).not.toHaveBeenCalled();
   });
 
+  it('a query of only characters USDA rejects answers no foods without asking USDA or using the allowance', async () => {
+    const ask = vi.fn();
+    const base = await start({ key: 'k', fetch: ask as unknown as typeof fetch });
+    for (const q of ['//', '()', '/ /']) { const res = await fetch(`${base}?q=${encodeURIComponent(q)}`); expect(res.status).toBe(200); expect(await res.json()).toEqual({ ok: true, hits: [] }); }
+    expect(ask).not.toHaveBeenCalled();
+  });
   it('answers 503 when no key is set', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const base = await start({});

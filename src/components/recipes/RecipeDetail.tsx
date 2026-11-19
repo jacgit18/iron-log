@@ -11,6 +11,7 @@ import { mealMicroBreakdown } from '../../lib/mealMicroBreakdown.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { canFill } from '../../lib/recipeFill.js';
+import { usualMealLine } from '../../lib/usualMeal.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { macroLine } from '../../lib/macroLine.js';
 import { servingLine } from '../../lib/recipeServing.js';
@@ -40,6 +41,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const grocery = useMemo(() => withoutUsed(groceryAll, months), [groceryAll, months]); // a used one-time item is no longer something you have
   const [msg, setMsg] = useState('');
   const [tonight, setTonight] = useState<number | null>(null); // "Cook for": servings to cook; the amounts shown scale to it, nothing is saved
+  const usual = usualMealLine(recipe);
   const shown = recipe.servings ? tonight ?? recipe.servings : null;
   const month = monthKey(new Date());
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes), [recipe, grocery, months, month, recipes]);
@@ -101,6 +103,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         {strip}
         {bar}
         <RecipeMicro key={recipe.id} recipe={recipe} />
+        {usual && <p className="note">{usual}</p>}
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
         <GoesWith recipe={recipe} mine={mine} {...(onOpen ? { onOpen } : {})} />
@@ -111,7 +114,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
     <section className="panel rc-detail" aria-labelledby="rc-h">
       <BackBar onBack={onBack} />
       <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />}</div>
-      <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
+      <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}{usual && ` · ${usual}`}</p>
       {recipe.url && <div className="note"><WatchLink url={recipe.url} name={recipe.n} size="large" /></div>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {strip}

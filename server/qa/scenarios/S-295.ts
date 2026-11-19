@@ -10,7 +10,7 @@ const scenario: Scenario = {
   expected: [
     'Under Workout and Stretches there is one bordered card. Its first row has the week arrows, date range and This week at the left and the program switch, the mode menu and Body weight with Save at the right. Under a hairline, its second row has Sort by muscle, Equipment (and Clear once one is set) at the left and Injury prevention at the right.',
     'Every control does what it did before. The notices (the local-save tip, the unchecked-exercises notice) sit under the card, above the seven day columns, which are unchanged.',
-    'At the narrower widths the rows wrap onto more lines inside the card; nothing runs past the card or scrolls sideways. On a phone the card does not exist: Board keeps the joined week and day card, with Body weight and the notices under it.',
+    'At the narrower widths the rows wrap onto more lines inside the card; nothing runs past the card or scrolls sideways. On a phone the card does not exist: Board keeps the joined week and day card, which holds the Sort and Injury row and Body weight; the notices sit under it.',
   ],
 };
 

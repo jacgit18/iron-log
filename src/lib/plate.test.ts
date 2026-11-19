@@ -47,7 +47,7 @@ describe('marksOf', () => {
     expect(marksOf(chili)).toEqual(['protein']);
     expect(marksOf(rice)).toEqual(['carb']);
     expect(marksOf(salad)).toEqual(['veg']);
-    expect(marksOf(rec('shake', 'drinks', { p: 40 }))).toEqual(['protein']);
+    expect(marksOf(rec('shake', 'drinks', { p: 40 }))).toEqual([]); // a drink has no plate role (owner 2026-11-17, brief nutrition-meal-labels-year-repeat); it used to read protein
     expect(marksOf(rec('plain', 'other'))).toEqual([]);
   });
   it('falls back to its own category and protein when no part of a meal resolves', () => {
@@ -102,5 +102,22 @@ describe('the Counts as chips', () => {
     expect(countsToSave(false, ['protein', 'veg'])).toBeUndefined();
     expect(countsToSave(true, ['protein'])).toEqual(['protein']);
     expect(countsToSave(true, ['protein', 'veg'])).toEqual(['protein', 'veg']);
+  });
+});
+
+describe('drinks are outside the plate check (brief nutrition-meal-labels-year-repeat)', () => {
+  const tea = rec('tea', 'protein', { uses: ['drink'], p: 40 });
+  it('a drink covers nothing, whatever its category or protein', () => { expect(marksOf(tea)).toEqual([]); });
+  it('a drink by category or type with no saved label covers nothing either', () => {
+    expect(marksOf(rec('old', 'drinks', { p: 40 }))).toEqual([]);
+    expect(marksOf(rec('cola', 'ready', { type: 'drink' }))).toEqual([]);
+  });
+  it('does not count toward a slot, and a slot of only drinks has nothing to check', () => {
+    expect(plateCheck('breakfast', [tea, rice]).have).toEqual(['carb']);
+    expect(plateCheck('breakfast', [tea, rice]).missing).toEqual(['protein']);
+    expect(plateCheck('breakfast', [tea])).toEqual({ need: [], have: [], missing: [] });
+  });
+  it('a drink-labeled meal keeps its marks nowhere: its own counts are ignored too', () => {
+    expect(marksOf(rec('shake', 'protein', { uses: ['drink'], counts: ['protein'] }))).toEqual([]);
   });
 });

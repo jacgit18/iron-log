@@ -19,5 +19,5 @@ export function subscribePickedDay(f: () => void): () => void {
 }
 export const usePickedDay = (): string | null => useSyncExternalStore(subscribePickedDay, getPickedDay, getPickedDay);
 
-/** The day to show: the kept one while it is still on the board, else today. */
-export const dayToShow = (picked: string | null, today: string): string => (picked && onBoard(today, picked) ? picked : today);
+/** The day to show: the kept one while it is still on the board (`oldest` is the oldest logged day, which sets how far back the weeks reach), else today. */
+export const dayToShow = (picked: string | null, today: string, oldest?: string): string => (picked && onBoard(today, picked, oldest) ? picked : today);

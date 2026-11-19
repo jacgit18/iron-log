@@ -46,8 +46,8 @@ describe('rollUp and outcomeOf', () => {
 
   it('estimates and flags servings when the source has none (never a silent 1)', () => {
     const r = recipe('c:wbc:a', ['a', 'b', 'c', 'd'], { cat: 'protein' });
-    const o = outcomeOf(r, ['a', 'b', 'c', 'd'].map(l => food(l, { grams: 250 })));
-    expect(o).toMatchObject({ kind: 'record', record: { servings: 4, sEst: true, kcal: 500 } });
+    const o = outcomeOf(r, ['a', 'b', 'c', 'd'].map(l => food(l, { grams: 319 })));
+    expect(o).toMatchObject({ kind: 'record', record: { servings: 4, sEst: true, kcal: 638 } });
   });
 
   it('gives no numbers under the half floor, and says why', () => {

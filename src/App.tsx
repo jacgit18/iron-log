@@ -23,7 +23,7 @@ import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { appTitle } from './lib/envName.js';
 import { useQa } from './sync/qaState.js';
-import { startBackNav } from './lib/backNav.js';
+import { escapeOrAsk, startBackNav } from './lib/backNav.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { parseRoute, routeHash } from './lib/route.js';
 import { ROUTE_EVENT } from './components/useRoute.js';
@@ -142,7 +142,7 @@ export default function App() {
   useWaterReminder();
   useEffect(() => { void renewPush(); }, []); // a browser can drop a push subscription; this puts it back (admin-only, and only if this device turned push on)
   useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') escapeOrAsk(closeModal); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [closeModal]);

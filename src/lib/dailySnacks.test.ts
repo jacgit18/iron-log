@@ -4,7 +4,7 @@ import type { DietCfg, Recipe } from '../types.ts';
 import { boardDay } from './weekBoard.js';
 import { addSnack, effectivePlan, removeSnack, setSnackPortion, skipSnack, snackPortion, snacksShownOn } from './dailySnacks.js';
 
-const today = '2026-11-12', tomorrow = '2026-11-13', far = '2026-11-26';
+const today = '2026-11-12', tomorrow = '2026-11-13', far = '2027-11-13';
 const recipes: Recipe[] = [
   { id: 'yog', n: 'Yogurt', cat: 'sides', ing: [], steps: [], kcal: 120, p: 17 },
   { id: 'bar', n: 'Bar', cat: 'sides', ing: [], steps: [], kcal: 210, p: 20 },
@@ -31,8 +31,14 @@ describe('the plan as the board shows it', () => {
     expect(p[today]).toEqual([{ k: 'r', id: 'yog', s: 'lunch' }, { k: 'r', id: 'bar', x: 2, s: 'snack', v: true }]);
     expect(p[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }, { k: 'r', id: 'bar', x: 2, s: 'snack', v: true }]);
   });
+  it('draws a listed snack in its food\'s usual meal when that is not Snack, else in Snack', () => {
+    const d: DietCfg = { snacks: [{ id: 'yog' }, { id: 'bar' }] };
+    const p = effectivePlan(d, [today], today, [{ id: 'yog', meal: 'breakfast' }, { id: 'bar', meal: 'snack' }]);
+    expect(p[today]!.map(i => [i.id, i.s])).toEqual([['yog', 'breakfast'], ['bar', 'snack']]);
+    expect(effectivePlan(d, [today], today)[today]!.map(i => i.s)).toEqual(['snack', 'snack']);
+  });
   it('leaves the stored plan alone', () => { effectivePlan(diet, [today], today); expect(diet.plan![today]).toHaveLength(1); });
-  it('adds nothing outside today and the next 13 days', () => {
+  it('adds nothing outside today and the next 364 days', () => {
     expect(effectivePlan(diet, ['2026-11-11'], today)['2026-11-11']).toBeUndefined();
     expect(effectivePlan(diet, [far], today)[far]).toBeUndefined();
   });
@@ -45,7 +51,7 @@ describe('the plan as the board shows it', () => {
     const d = boardDay(effectivePlan({ snacks: [{ id: 'yog' }, { id: 'bar' }] }, [tomorrow], today), tomorrow, recipes, [], 2000);
     expect(d.slots.map(s => s.slot)).toEqual(['breakfast', 'lunch', 'snack', 'dinner']); // no "not set" group: every item has a meal
     const snack = d.slots.find(s => s.slot === 'snack')!;
-    expect(snack.items.map(i => i.r.name)).toEqual(['Yogurt', 'Bar']);
+    expect(snack.items.map(i => i.r.name)).toEqual(['Bar', 'Yogurt']);
     expect(snack.items.every(i => i.virtual)).toBe(true);
     expect(d.kcal).toBe(330);
     expect(snack.kcal).toBe(330);
@@ -91,5 +97,28 @@ describe('what is stored is cleaned', () => {
     const cfg: DietCfg = { snacks: [{ id: 'yog', x: 2 }], snackSkips: { [today]: ['yog'] } };
     expect(normDietCfg(cfg, today)).toEqual(cfg);
     expect(normDietCfg({ snacks: [], snackSkips: {} }, today)).toBeUndefined();
+  });
+});
+
+describe('effectivePlan with repeats', () => {
+  const today = '2026-11-16';
+  const diet = (extra: object) => ({ plan: {}, ...extra }) as import('../types.ts').DietCfg;
+  it('adds a repeat on its days after the stored items, in its meal', () => {
+    const d = diet({ plan: { '2026-11-17': [{ k: 'r', id: 'oats', s: 'breakfast' }] }, repeats: [{ rid: 'rp1', k: 'r', id: 'almonds', s: 'snack', days: [2, 3], from: today }] });
+    const p = effectivePlan(d, ['2026-11-17', '2026-11-18', '2026-11-19'], today);
+    expect(p['2026-11-17']!.map(i => i.id)).toEqual(['oats', 'almonds']);
+    expect(p['2026-11-17']![1]).toMatchObject({ v: true, rp: 'rp1', s: 'snack' });
+    expect(p['2026-11-18']!.map(i => i.id)).toEqual(['almonds']);
+    expect(p['2026-11-19']).toBeUndefined();
+  });
+  it('keeps daily snacks as before, and a repeat of a listed snack in Snack does not show twice', () => {
+    const d = diet({ snacks: [{ id: 'apple' }], repeats: [{ rid: 'rp1', k: 'r', id: 'apple', s: 'snack', days: [0, 1, 2, 3, 4, 5, 6], from: today }] });
+    const p = effectivePlan(d, ['2026-11-17'], today);
+    expect(p['2026-11-17']).toHaveLength(1);
+    expect(p['2026-11-17']![0]).toMatchObject({ id: 'apple', s: 'snack', v: true });
+  });
+  it('is the stored plan itself when nothing shows', () => {
+    const d = diet({ repeats: [{ rid: 'rp1', k: 'r', id: 'a', days: [1], from: today }] });
+    expect(effectivePlan(d, ['2026-11-17'], today)).toBe(d.plan);
   });
 });

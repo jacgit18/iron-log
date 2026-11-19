@@ -4,7 +4,7 @@ const scenario: Scenario = {
   id: 'S-304', feature: 'Receipt share', title: 'With no sharing group the sheet offers one and brings the receipt back', persona: 'grocery-shopper', brief: 'receipt-share', device: true,
   steps: [
     'On a phone, open Inventory, press Sharing groups and remove the group Home (this test account only), then close the panel.',
-    'On Shopping press Scan receipt and photograph a receipt with items from your list.',
+    'On Shopping press Scan receipt, then Camera, and photograph a receipt with items from your list.',
     'In the sheet read the card under the total check, then press "Make a sharing group".',
     'In Sharing groups type the group name Home and the people Sam, Alex, press Add group, then Done.',
   ],

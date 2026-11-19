@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, removedBought, shiftMonth, spendByMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, removedBought, shiftMonth, spendByMonth, tally, monthEmpty, own,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -113,6 +113,35 @@ describe('groups and totals', () => {
     expect(row!.spent).toBe(base!.spent + 107 + 160);
     expect(row!.bought).toBe(base!.bought);
   });
+  it('takes the store\'s rewards credit off spent after its tax, never below 0 for that store (brief receipt-rewards-credit)', () => {
+    const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [], tax: { 'Veg market': 107 }, credit: { 'Veg market': 500, Costco: 900 } }; // 12.00 + 1.07 - 5.00; Costco has nothing ticked
+    const plain = tally(onList(g, { ...m, credit: undefined }, true), { ...m, credit: undefined });
+    expect(tally(onList(g, m, true), m).spent).toBe(plain.spent - 500);
+    const big: GroceryMonth = { ...m, credit: { 'Veg market': 99999 } };
+    expect(tally(onList(g, big, true), big).spent).toBe(0);
+    expect(tally(onList(g, { ...m, credit: {} }, true), { ...m, credit: {} }).spent).toBe(plain.spent);
+    const [row] = spendByMonth(g, { '2026-09': m }, '2026-09', 1);
+    const [base] = spendByMonth(g, { '2026-09': { ...m, credit: undefined } }, '2026-09', 1);
+    expect(row!.spent).toBe(base!.spent - 500); // the chart shows the same figure as the tile
+    expect(spendByMonth(g, { '2026-09': big }, '2026-09', 1)[0]!.spent).toBe(0);
+  });
+  it('a purchase closed by Ran out at another store takes that store\'s tax and credit, not the item\'s usual store\'s', () => {
+    const m: GroceryMonth = { lines: { kale: { buys: [{ at: '2026-09-02T10:00', qty: 1, cents: 1000, store: 'Costco' }] } }, pulled: [], tax: { 'Veg market': 107, Costco: 50 }, credit: { 'Veg market': 400, Costco: 200 } }; // kale's usual store is Veg market
+    expect(tally(onList(g, m, true), m).spent).toBe(1000 + 50 - 200);
+  });
+  it('reads a store called constructor as having no credit', () => {
+    const m: GroceryMonth = { lines: {}, pulled: [], credit: { Costco: 100 } };
+    expect(own(m.credit, 'constructor')).toBeUndefined();
+    expect(own(m.credit, 'Costco')).toBe(100);
+  });
+  it('keeps the credit through the month clean-up, a backup file and the import merge, and counts it as data', () => {
+    const raw = { lines: {}, pulled: [], credit: { "BJ's": 1727, bad: -5, '__proto__': 9, zero: 0 } };
+    expect(normGroceryMonth(raw).credit).toEqual({ "BJ's": 1727 });
+    expect(monthEmpty({ lines: {}, pulled: [], credit: { "BJ's": 1727 } })).toBe(false);
+    expect(monthEmpty({ lines: {}, pulled: [] })).toBe(true);
+    const file = normGroceryData({ ...g, months: { '2026-09': { lines: { kale: { got: true } }, pulled: [], credit: { 'Veg market': 300 } } } });
+    expect(file?.months['2026-09']?.credit).toEqual({ 'Veg market': 300 });
+  });
   it('an item sits under the store it was bought at that month, and its usual store when there is no choice or the choice is gone', () => {
     const kale = g.items.find(i => i.id === 'kale')!; // usual store: Veg market
     const month = (store?: string): GroceryMonth => ({ lines: store === undefined ? {} : { kale: { store } }, pulled: [] });
@@ -203,6 +232,12 @@ describe('the data file part', () => {
     expect(r.months['2026-01']).toEqual({ lines: { kale: { got: true }, rice: { qty: 5 } }, pulled: [] });
     expect(r.months['2026-02'].lines.oats.got).toBe(true);
     expect(mergeGrocery(g, {}, { ...g, months: {} }).changed).toBe(false);
+  });
+  it('import merge brings a missing store\'s credit and keeps the one here', () => {
+    const inc = normGroceryData({ ...g, months: { '2026-03': { lines: { kale: { got: true } }, pulled: [], credit: { Costco: 500, 'Veg market': 100 } } } })!;
+    const here: Record<string, GroceryMonth> = { '2026-03': { lines: { kale: { got: true } }, pulled: [], credit: { 'Veg market': 250 } } };
+    const r = mergeGrocery(g, here, inc);
+    expect(r.months['2026-03']!.credit).toEqual({ Costco: 500, 'Veg market': 250 });
   });
 });
 

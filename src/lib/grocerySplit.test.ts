@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ME, addTax, partiesOf, settle, splitCents, totalsOf } from './grocerySplit.js';
+import { ME, addCredit, addTax, partiesOf, settle, splitCents, totalsOf } from './grocerySplit.js';
 import type { GroceryGroup } from '../types.ts';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, c) => a + c, 0);
@@ -78,7 +78,7 @@ describe('settle', () => {
   });
   it('a purchase that is all yours settles nothing', () => {
     const s = settle([{ cents: 1500, parties: [ME] }], ME, new Set());
-    expect(s).toEqual({ bill: 1500, tax: 0, yourShare: 1500, owedToYou: 0, youOwe: 0, rows: [] });
+    expect(s).toEqual({ bill: 1500, tax: 0, credit: 0, yourShare: 1500, owedToYou: 0, youOwe: 0, rows: [] });
   });
   it('a purchase that is not yours is all owed to you', () => {
     const s = settle([{ cents: 899, parties: ['sis', 'mom'] }], ME, new Set());
@@ -109,5 +109,30 @@ describe('tax on a bill', () => {
     expect(s.rows).toEqual([{ id: 'sis', kind: 'owesYou', cents: 3266 }, { id: 'mom', kind: 'covered', cents: 3266 }]);
     expect(s.yourShare + s.owedToYou + 3266).toBe(s.bill);
     expect(settle([{ cents: 9000, parties: [ME] }], ME, new Set(), 799)).toMatchObject({ bill: 9799, yourShare: 9799 }); // all yours: all of it is your spending
+  });
+});
+
+describe('rewards credit on a bill (brief receipt-rewards-credit)', () => {
+  it('shares the credit in proportion to each person\'s subtotal, you taking the odd cent, and adds up exactly', () => {
+    const base = { [ME]: 3000, sis: 3000, mom: 3000 };
+    const out = addCredit(base, addTax(base, 799), 1727);
+    expect(sum(out)).toBe(9000 + 799 - 1727);
+    expect(out.sis).toBe(3266 - Math.round((1727 * 3000) / 9000)); // 576 off
+    expect(out[ME]).toBeGreaterThan(out.sis!); // the odd cents land on you
+    expect(addCredit(base, base, 0)).toEqual(base);
+  });
+  it('is capped at what is owed and never leaves a negative share', () => {
+    const out = addCredit({ [ME]: 1000, sis: 3000 }, { [ME]: 1000, sis: 3000 }, 99999);
+    expect(out).toEqual({ [ME]: 0, sis: 0 });
+  });
+  it('settle: the bill is subtotal + tax - credit and the split follows; an unshared bill is yours alone', () => {
+    const buys = [{ cents: 3000, parties: [ME, 'sis'] }, { cents: 3000, parties: [ME] }];
+    const none = settle(buys, ME, new Set(), 100, 0);
+    const withCredit = settle(buys, ME, new Set(), 100, 500);
+    expect(withCredit.bill).toBe(none.bill - 500);
+    expect(withCredit.credit).toBe(500);
+    expect(withCredit.yourShare + withCredit.owedToYou).toBe(withCredit.bill); // you paid: your share and what they owe you are the bill
+    expect(settle(buys, ME, new Set(), 0, 999999).bill).toBe(0); // floor 0
+    expect(settle(buys, ME, new Set(), 100, 0).credit).toBe(0);
   });
 });

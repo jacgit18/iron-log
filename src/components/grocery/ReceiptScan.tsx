@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { keepFailText, saveReceipt, type KeepMeta, type SaveFailure } from '../../lib/receiptsClient.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
+import { dropDraft, readDrafts, relinkDraft, type Draft } from '../../lib/receiptDraft.js';
 import { RECEIPT_TEXT, scanReceipt } from '../../lib/scanPhoto.js';
 import { takeReadyResume } from '../../lib/sharingIntent.js';
 import type { ItemRef } from '../../shared/receipt.js';
@@ -9,6 +10,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { Grocery } from '../../types.ts';
 import Notice, { UNDO_MS } from '../Notice.js';
 import { navigate } from '../useRoute.js';
+import ReceiptResume from './ReceiptResume.js';
 import './ReceiptScan.css';
 
 // Scan receipt (brief receipt-scan): admin only. Two buttons (the camera, and the photo library: Android's photo picker offers no camera), the call to
@@ -29,6 +31,21 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const [kept, setKept] = useState<{ image: string; meta: KeepMeta; busy: boolean; fail: SaveFailure['reason'] | null } | null>(null);
   const months = useAppStore(s => s.groceryMonths);
   const canScan = withoutUsed(g, months).items.length > 0;
+
+  // A receipt left without Apply or Discard stays as a draft on this device for 7 days, up to 5 (briefs receipt-back-guard and receipt-drafts-list): the Drafts rows reopen the sheet with this screen's own callbacks.
+  const readNow = () => ({ drafts: readDrafts(Date.now()), at: Date.now() });
+  const [left, setLeft] = useState<{ drafts: Draft[]; at: number }>(readNow); // `at`: when it was read, for the age shown
+  const drafts = left.drafts;
+  const sheetOpen = useAppStore(s => s.modal?.type === 'receipt');
+  useEffect(() => useAppStore.subscribe((s, p) => { if (p.modal?.type === 'receipt' && s.modal?.type !== 'receipt') setLeft(readNow()); }), []); // eslint-disable-line react-hooks/exhaustive-deps -- the receipt sheet just closed: read what it left
+  useEffect(() => { if (!left.drafts.length) return; const t = window.setInterval(() => setLeft(readNow()), 60_000); return () => window.clearInterval(t); }, [left.drafts.length]); // eslint-disable-line react-hooks/exhaustive-deps -- keeps the ages shown, and drops a row when its draft expires
+  const resume = (id: string) => {
+    const d = readDrafts(Date.now()).find(x => x.id === id); // read again: it may have expired or been used in another tab since the row was drawn
+    if (!d) { setLeft(readNow()); return; }
+    const st = useAppStore.getState();
+    const r = relinkDraft(d, new Set(withoutUsed(st.grocery, st.groceryMonths).items.map(i => i.id))); // an item deleted since becomes "no match"
+    st.openModal({ type: 'receipt', receipt: r.receipt, remembered: {}, mk: d.mk, restore: r.restore, draftId: d.id, relinked: r.n, onApplied: (a: Applied) => setApplied({ ...a, mk: d.mk, t: Date.now() }) });
+  };
 
   // Uploads the photo kept in memory. On a failure the photo stays here for Try again until the notice is dismissed or the page closes.
   const keep = async (image: string, meta: KeepMeta) => {
@@ -63,6 +80,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   };
   const notes = (
     <>
+      {drafts.length > 0 && !sheetOpen && <ReceiptResume drafts={drafts} now={left.at} onResume={resume} onDiscard={id => { dropDraft(id); setLeft(readNow()); }} />}
       {msg && <p className="note" role="status">{msg}</p>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'
@@ -82,30 +100,48 @@ export function useReceiptScan(g: Grocery, mk: string) {
       {canScan && <input ref={library} type="file" accept="image/*" hidden aria-label="Receipt photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />}
     </>
   );
-  const hasNotes = !!msg || !!kept || (!!applied && applied.mk === mk);
+  const hasNotes = drafts.length > 0 || !!msg || !!kept || (!!applied && applied.mk === mk);
   return { canScan, busy, inputs, notes, hasNotes, openCamera: () => camera.current?.click(), openLibrary: () => library.current?.click() };
 }
 export type ReceiptScanState = ReturnType<typeof useReceiptScan>;
 
-/** Pick from photos and Saved receipts as the entries of Shopping's More menu on a phone (the same buttons, ids and gates as the row's). */
-export function ReceiptMenu({ r }: { r: ReceiptScanState }) {
-  const shut = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget.closest('details')?.removeAttribute('open'); // the menu closes when one of its receipt buttons is pressed, so it cannot sit over the sheet that opens next
-  return (
-    <>
-      {r.canScan && <button type="button" className="btn sm ghost" id="groc-scan-pick" disabled={r.busy} onClick={e => { shut(e); r.openLibrary(); }}>Pick from photos</button>}
-      <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>
-    </>
-  );
+/** Saved receipts as the entry of Shopping's More menu on a phone (the same button, id and gate as the row's). Picking a saved photo is in the Scan receipt chooser (brief receipt-pick-photo). */
+export function ReceiptMenu() {
+  const shut = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget.closest('details')?.removeAttribute('open'); // the menu closes when its receipt button is pressed, so it cannot sit over the page that opens next
+  return <button type="button" className="btn sm ghost" id="groc-receipts" onClick={e => { shut(e); navigate('daily/grocery/receipts', 'push'); }}>Saved receipts</button>;
 }
 
-// `phone`: only Scan receipt shows here, full width; Pick from photos and Saved receipts are in the More menu (ReceiptMenu) and their notices still show under it.
+// Scan receipt opens a small chooser, Camera or Photos (brief receipt-pick-photo, owner picked option B from a preview): the camera input has `capture`, the library input has none, so Android's
+// photo picker opens for Photos. The chooser closes on a pick (focus goes back to Scan receipt, so it is not lost when the pressed button unmounts), on Escape (that key stops here and does not
+// reach App's global close), on a second press of Scan receipt, on a tap outside the row and when focus leaves it. It also shuts when scanning becomes unavailable or starts, so it never reopens by itself.
+// On a phone it is the full-width row's second line; Saved receipts stays in More.
 export default function ReceiptScan({ r, phone }: { r: ReceiptScanState; phone?: boolean }) {
+  const [choosing, setChoosing] = useState(false);
+  const scanBtn = useRef<HTMLButtonElement>(null);
+  const row = useRef<HTMLDivElement>(null);
+  const open = choosing && r.canScan && !r.busy;
+  if (choosing && (!r.canScan || r.busy)) setChoosing(false); // adjusting state while rendering: it shuts when scanning is unavailable or starts, so it cannot reopen by itself
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (!row.current?.contains(e.target as Node)) setChoosing(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
   if (phone && !r.canScan && !r.hasNotes) return null;
+  const pick = (go: () => void) => { setChoosing(false); scanBtn.current?.focus(); go(); };
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setChoosing(false); scanBtn.current?.focus(); } };
+  const onBlur = (e: FocusEvent<HTMLDivElement>) => { if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) setChoosing(false); };
   return (
-    <div className={phone ? 'rcscan rcphone' : 'rcscan'}>
+    <div ref={row} className={phone ? 'rcscan rcphone' : 'rcscan'} onKeyDown={onKey} onBlur={onBlur}>
       {r.inputs}
-      {r.canScan && <button type="button" className="btn sm" id="groc-scan" disabled={r.busy} onClick={r.openCamera}>{r.busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
-      {!phone && <ReceiptMenu r={r} />}
+      {r.canScan && <button type="button" ref={scanBtn} className="btn sm" id="groc-scan" disabled={r.busy} aria-expanded={open} aria-controls={open ? 'groc-scan-choose' : undefined} onClick={() => setChoosing(c => !c)}>{r.busy ? 'Reading receipt...' : 'Scan receipt'}</button>}
+      {!phone && <ReceiptMenu />}
+      {open && (
+        <div className="rcchoose" id="groc-scan-choose" role="group" aria-label="Scan receipt from">
+          <button type="button" className="btn sm" id="groc-scan-camera" autoFocus onClick={() => pick(r.openCamera)}>Camera</button>
+          <button type="button" className="btn sm" id="groc-scan-pick" onClick={() => pick(r.openLibrary)}>Photos</button>
+        </div>
+      )}
       {r.notes}
     </div>
   );

@@ -1,6 +1,7 @@
 import { signIn } from '../sync/devUser.js';
 import type { Receipt } from '../shared/receipt.js';
 import { money } from './grocery.js';
+import { paidAfterRewards } from './groceryReceipt.js';
 
 // Saved receipt photos, app side (brief receipt-save-photo): the opt-in save after Apply, the list, the note, the photo and the delete. The photo goes up in a
 // separate call after Apply and only when the box was ticked; every failure comes back as a plain reason, never a throw. The pure parts (what is sent, how a
@@ -15,9 +16,10 @@ export const MAX_NOTE = 200;
 
 const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
 
-/** The fields the server keeps with the photo: the month on screen and the values the person reviewed. A date or total the scan could not read is left blank. */
+/** The fields the server keeps with the photo: the month on screen and the values the person reviewed. A date or total the scan could not read is left blank. The saved total (and the CSV export) is the amount charged, `paidCents`, falling back to the printed total. */
 export function keepMeta(receipt: Receipt, mk: string): KeepMeta {
-  return { month: mk, store: (receipt.store ?? '').slice(0, 60), receiptDate: isDay(receipt.date) ? receipt.date : null, totalCents: Number.isInteger(receipt.totalCents) && receipt.totalCents! >= 0 ? receipt.totalCents! : null };
+  const total = paidAfterRewards(receipt) ?? receipt.paidCents ?? receipt.totalCents; // You paid: the total less the rewards on the sheet; else the amount charged when the receipt shows it, else the printed total
+  return { month: mk, store: (receipt.store ?? '').slice(0, 60), receiptDate: isDay(receipt.date) ? receipt.date : null, totalCents: Number.isInteger(total) && total! >= 0 ? total! : null };
 }
 
 /** The notice under Scan receipt when Apply worked and the photo did not save. `Try again` is offered for every reason except a full account. */

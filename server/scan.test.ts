@@ -17,12 +17,12 @@ const good = '{"name":"Gnocchi","serving":"1 cup","servingG":140,"servingsPerPac
 
 async function start(deps: ScanDeps, path = 'label') {
   const app = express();
-  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
+  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; res.locals.account = { isAdmin: req.get('x-admin') === '1' }; next(); }); // the sign-in gate sets this in the real app
   app.use('/api/scan', scanRoutes(deps));
   server = app.listen(0);
   await new Promise(done => server!.once('listening', done));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/${path}`;
-  return (body: unknown, raw = false, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: raw ? String(body) : JSON.stringify(body) });
+  return (body: unknown, raw = false, user = 'u1', admin = false) => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user, ...(admin ? { 'x-admin': '1' } : {}) }, body: raw ? String(body) : JSON.stringify(body) });
 }
 
 describe('POST /api/scan/label', () => {
@@ -152,12 +152,12 @@ describe('POST /api/scan/receipt', () => {
   const reply = JSON.stringify({ store: "BJ'S", date: '2026-11-03', tax: 204, total: 4000, lines: [{ text: 'EGGS LRG 5 DZ', qty: 2, total: 2698, match: 'eggs' }, { text: 'GONE', qty: 1, total: 100, match: 'not-sent' }] });
   async function startReceipt(deps: ScanDeps) {
     const app = express();
-  app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; next(); }); // the sign-in gate sets this in the real app
-  app.use('/api/scan', scanRoutes(deps));
+    app.use((req, res, next) => { res.locals.userId = req.get('x-user') ?? 'u1'; res.locals.account = { isAdmin: req.get('x-admin') === '1' }; next(); }); // the sign-in gate sets this in the real app
+    app.use('/api/scan', scanRoutes(deps));
     server = app.listen(0);
     await new Promise(done => server!.once('listening', done));
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/scan/receipt`;
-    return (body: unknown, user = 'u1') => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user }, body: JSON.stringify(body) });
+    return (body: unknown, user = 'u1', admin = false) => fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', 'x-user': user, ...(admin ? { 'x-admin': '1' } : {}) }, body: JSON.stringify(body) });
   }
 
   it('sends the photo, the item names and the key to the larger model, and answers with the checked receipt', async () => {
@@ -176,6 +176,15 @@ describe('POST /api/scan/receipt', () => {
     const userText = sent.messages[0]!.content.find(c => c.type === 'text')!.text!;
     expect(userText).toContain('Kirkland olive oil');
     expect(userText).not.toContain('price');
+  });
+
+  it('answers with the subtotal and the charged amount of a BJ\'s-style reply, keeps a coupon row with no item as a negative line, and reads the rewards field (briefs receipt-scan-accuracy, receipt-rewards-credit)', async () => {
+    const bjs = JSON.stringify({ store: "BJ'S", subtotal: 56615, tax: 679, total: 57294, rewards: 1727, paid: 55567, lines: [{ text: 'EGGS LRG 5 DZ', qty: 1, total: 56615, match: 'eggs' }, { text: 'CCPN-1620CT', qty: 1, total: -300, match: 'eggs' }, { text: 'PRICE ONLY', qty: 1, total: 100, match: null }] });
+    const post = await startReceipt({ key: 'k', fetch: (async () => model(bjs)) as unknown as typeof fetch });
+    const body = await (await post({ image: jpeg, items })).json() as { result: { receipt: Record<string, unknown> & { lines: { grossCents: number; matchId: string | null }[] } } };
+    expect(body.result.receipt).toMatchObject({ subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567 });
+    expect(body.result.receipt).toMatchObject({ rewardsCents: 1727 }); // the rewards credit is read (brief receipt-rewards-credit)
+    expect(body.result.receipt.lines.map(l => [l.grossCents, l.matchId])).toEqual([[56615, 'eggs'], [-300, null], [100, null]]);
   });
 
   it('uses the receipt model it is given', async () => {
@@ -221,9 +230,53 @@ describe('POST /api/scan/receipt', () => {
     expect((await post({ image: jpeg, items })).status).toBe(200);
     const over = await post({ image: jpeg, items });
     expect(over.status).toBe(503);
-    expect(await over.json()).toMatchObject({ why: 'cap' });
+    expect(await over.json()).toMatchObject({ why: 'cap', scope: 'server' });
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg, items })).status).toBe(200);
+  });
+
+  it('names the person\'s own allowance apart from the server-wide one in the 503 (PR 1027 review)', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 5, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items })).status).toBe(200);
+    expect(await (await post({ image: jpeg, items })).json()).toMatchObject({ why: 'cap', scope: 'person' });
+  });
+
+  it('answers 503 upstream when both the first reply and the retry have no text (PR 1027 review)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = async () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 5 }, content: [{ type: 'thinking', thinking: 'x' }] }), { status: 200 });
+    const ask = vi.fn(thinkingOnly);
+    const post = await startReceipt({ key: 'k', fetch: ask as unknown as typeof fetch });
+    const res = await post({ image: jpeg, items });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ why: 'upstream' });
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('a scan the server-wide ceiling refuses does not use up the person\'s own allowance, and an admin still passes the person cap', async () => {
+    let t = 1_000_000;
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 1, now: () => t, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'other')).status).toBe(200); // uses the server's one, its day starts now
+    t += 12 * 60 * 60_000;
+    expect(await (await post({ image: jpeg, items }, 'me')).json()).toMatchObject({ scope: 'server' }); // refused by the server: must not start or spend 'me' allowance
+    t += 12 * 60 * 60_000 + 1000; // the server's day is over; 'me' was never served, so their one is still free (it would be spent if the refusal had counted)
+    expect((await post({ image: jpeg, items }, 'me')).status).toBe(200);
+  });
+
+  it('does not stop an admin account at the per-person receipt allowance, but the server-wide ceiling still holds', async () => {
+    const ask = vi.fn(async () => model(reply));
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 3, fetch: ask as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'owner', true)).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'owner', true)).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'plain')).status).toBe(200);
+    expect((await post({ image: jpeg, items }, 'plain')).status).toBe(503); // the server ceiling of 3 is used up
+  });
+
+  it('still stops a normal account at the per-person allowance', async () => {
+    const post = await startReceipt({ key: 'k', receiptUserDailyMax: 1, receiptDailyMax: 50, fetch: (async () => model(reply)) as unknown as typeof fetch });
+    expect((await post({ image: jpeg, items }, 'plain')).status).toBe(200);
+    expect(await (await post({ image: jpeg, items }, 'plain')).json()).toMatchObject({ why: 'cap' });
   });
 
   it('stops one person at their own receipt allowance and leaves the others theirs', async () => {
@@ -376,6 +429,38 @@ describe('scan output limits', () => {
     expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 900, outputTokens: 4850 });
     const none = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{}' }] }), { status: 200 });
     await expect(askModel(none as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).rejects.toThrow('stopped: unknown');
+  });
+
+  it('asks once more when a reply ends its turn with no text block, and logs the block types only', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 100, output_tokens: 50 }, content: [{ type: 'thinking', thinking: 'SECRET-THOUGHT' }] }), { status: 200 });
+    const ask = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockResolvedValueOnce(model('{"ok":1}'));
+    const efforts = () => ask.mock.calls.map(c => (JSON.parse((c[1] as { body: string }).body).output_config ?? {}).effort);
+    expect(await askModel(ask as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 })).toBe('{"ok":1}');
+    expect(ask).toHaveBeenCalledTimes(2);
+    expect(efforts()).toEqual([undefined, undefined]); // model 'm' takes no effort field
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain('thinking');
+    expect(logged).not.toContain('SECRET-THOUGHT');
+    const empty = vi.fn(async () => thinkingOnly());
+    const err = await askModel(empty as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e);
+    expect((err as Error).message).toBe('no text in reply');
+    expect(empty).toHaveBeenCalledTimes(2);
+    expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 200, outputTokens: 100 });
+  });
+
+  it('retries a thinking-only reply at lower effort, and an error on the retry keeps the first call\'s spend', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const thinkingOnly = () => new Response(JSON.stringify({ stop_reason: 'end_turn', usage: { input_tokens: 100, output_tokens: 50 }, content: [{ type: 'thinking', thinking: 'x' }] }), { status: 200 });
+    const ask = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockResolvedValueOnce(model('{"ok":1}'));
+    await askModel(ask as unknown as typeof fetch, 'k', 'claude-sonnet-5-5', jpeg, { system: 's', text: 't', maxTokens: 10 });
+    expect(ask.mock.calls.map(c => JSON.parse((c[1] as { body: string }).body).output_config.effort)).toEqual([SCAN_EFFORT, 'low']);
+    const aborted = vi.fn().mockResolvedValueOnce(thinkingOnly()).mockRejectedValueOnce(Object.assign(new Error('timed out'), { name: 'TimeoutError' }));
+    const err = await askModel(aborted as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e);
+    expect((err as Error).name).toBe('TimeoutError');
+    expect((err as { spent?: unknown }).spent).toEqual({ inputTokens: 100, outputTokens: 50 });
+    const first = vi.fn().mockRejectedValueOnce(new Error('boom'));
+    expect(((await askModel(first as unknown as typeof fetch, 'k', 'm', jpeg, { system: 's', text: 't', maxTokens: 10 }).catch((e: unknown) => e)) as { spent?: unknown }).spent).toBeUndefined();
   });
 
   const cutReply = async () => new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"kcal":1' }] }), { status: 200 });
