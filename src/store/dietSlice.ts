@@ -1,7 +1,7 @@
 import { skipSnack } from '../lib/dailySnacks.js';
 import { dropRepeatSkips, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, unskipRepeat } from '../lib/repeats.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { addItem, inWindow, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
+import { addItem, inWindow, markPlanned, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
 import { monthKey } from '../lib/grocery.js';
 import { moveMeals, remapPlan } from '../lib/quickMeals.js';
@@ -249,6 +249,14 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   setPlanPortion(day, index, portion) {
     const plan = planOf(get), next = setPortion(plan, day, index, portion);
     if (next !== plan) putPlan(get, next);
+  },
+
+  // Marks or unmarks a stored item planned (brief nutrition-board-available-list): an error text when the day already holds 8 planned things, else null. Never changes what the day holds.
+  setPlanned(day, index, on) {
+    const plan = planOf(get), r = markPlanned(plan, day, index, on, get().cfg.diet?.snacks, drinksOf(get));
+    if (r.error !== null) return r.error;
+    if (r.plan !== plan) putPlan(get, r.plan);
+    return null;
   },
 
   removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index), skipsAfterLeaving(get, day, planOf(get)[day]?.[index]), repeatSkipsAfter(get, day, planOf(get)[day]?.[index])); },

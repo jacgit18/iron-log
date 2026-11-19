@@ -514,20 +514,30 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet!.plan).toEqual({ [today]: [{ k: 'r', id: 'bar', x: 2, s: 'snack' }] });
   });
   it('ticks a shown snack on a day already holding 8 planned things: it is stored, survives the clean, and the ninth planned thing is still refused (brief snacks-day-cap)', () => {
-    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}`, p: true as const }));
     st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [tomorrow]: eight } }; });
     expect(st().realizeDailySnack(tomorrow, 'yog')).toBe(8);
     expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
     st().saveDailySnacks([{ id: 'yog' }]); // any later write cleans the plan again
     expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
-    expect(st().addPlanItem(tomorrow, 'r', 'bar')).toMatch(/hold 8/);
-    expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
+    expect(st().addPlanItem(tomorrow, 'r', 'bar')).toBeNull(); // available: the 8 only holds planned things
+    expect(st().setPlanned(tomorrow, 9, true)).toMatch(/8 planned/); // the ninth planned thing is still refused
+    expect(st().cfg.diet!.plan![tomorrow]![9]!.p).toBeUndefined();
   });
-  it('moves a ticked snack to another full day in Snack, and refuses it into another meal there', () => {
+  it('setPlanned marks and unmarks a stored item, keeps the marker through a save, and says why a ninth is refused', () => {
+    st().mutateCfg(c => { c.diet = { plan: { [tomorrow]: [{ k: 'r', id: 'a' }, { k: 'r', id: 'b', s: 'lunch' }] } }; });
+    expect(st().setPlanned(tomorrow, 1, true)).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]![1]).toEqual({ k: 'r', id: 'b', s: 'lunch', p: true });
+    st().saveDailySnacks([{ id: 'yog' }]); // a later write cleans the plan again
+    expect(st().cfg.diet!.plan![tomorrow]![1]!.p).toBe(true);
+    expect(st().setPlanned(tomorrow, 1, false)).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]![1]).toEqual({ k: 'r', id: 'b', s: 'lunch' });
+    expect(st().setPlanned(tomorrow, 5, true)).toMatch(/gone/);
+  });
+  it('moves a ticked snack to another day holding 8 planned things, in Snack or another meal', () => {
     const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
-    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [today]: [{ k: 'r', id: 'yog', s: 'snack' }], [tomorrow]: eight } }; });
-    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toMatch(/hold 8/);
-    expect(st().movePlanItem(today, 0, tomorrow, 'snack')).toBeNull();
+    st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [today]: [{ k: 'r', id: 'yog', s: 'snack' }], [tomorrow]: eight.map(x => ({ ...x, p: true as const })) } }; });
+    expect(st().movePlanItem(today, 0, tomorrow, 'lunch')).toBeNull(); // not marked planned: it is available wherever it goes
     expect(st().cfg.diet!.plan![tomorrow]).toHaveLength(9);
   });
   it('skips a snack on one day without touching the list or other days', () => {
@@ -770,15 +780,15 @@ describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
 describe('a shown repeat on a full day, and a deleted recipe', () => {
   const today = ymd(new Date()), d = shiftDay(today, 7);
   const recipes = (n: number) => useAppStore.setState({ recipes: Array.from({ length: n }, (_, i) => ({ id: `f${i}`, n: `F${i}`, cat: 'protein' as const, ing: [{ n: 'x' }], steps: [], kcal: 100, p: 5 })) });
-  it('at the 8-item cap is refused with a message and nothing is skipped or stored', () => {
-    recipes(10);
-    for (let i = 0; i < 8; i++) expect(st().addPlanItem(d, 'r', `f${i}`)).toBeNull();
-    st().saveRepeat(today, { k: 'r', id: 'f8' }, [0, 1, 2, 3, 4, 5, 6]);
+  it('at the 40-item limit is refused with a message and nothing is skipped or stored', () => {
+    recipes(42);
+    for (let i = 0; i < 40; i++) expect(st().addPlanItem(d, 'r', `f${i}`)).toBeNull();
+    st().saveRepeat(today, { k: 'r', id: 'f40' }, [0, 1, 2, 3, 4, 5, 6]);
     const rid = st().cfg.diet!.repeats![0]!.rid;
-    expect(st().realizeRepeat(d, rid)).toMatch(/8 things/);
-    expect(st().cfg.diet!.plan![d]).toHaveLength(8);
+    expect(st().realizeRepeat(d, rid)).toMatch(/40 things/);
+    expect(st().cfg.diet!.plan![d]).toHaveLength(40);
     expect(st().cfg.diet!.repeatSkips).toBeUndefined();
-    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toHaveLength(9); // still shown, so a person can skip it
+    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toHaveLength(41); // still shown, so a person can skip it
   });
   it('a snack repeat is stored even on a full day (like a daily snack the cleaner keeps it) and what is stored is what the cleaner keeps', () => {
     recipes(10);

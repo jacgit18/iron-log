@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { mealKcalText, type EatenPlacement } from '../../lib/nutritionBoard.js';
+import { mealKcalText, mealOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
 import { isEaten } from '../../lib/dietPlan.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
 import { planItemKey } from '../../shared/diet.js';
@@ -13,7 +13,7 @@ import type { Resolved } from '../../lib/dietPlan.js';
 const ORDER = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 const SLOT_KEY = ['', ...ORDER];
 
-// A day's meals (brief nutrition-board): Breakfast, Lunch, Snack and Dinner always (brief daily-snacks), with "Nothing planned" and no button when empty. Snack also lists the saved daily snacks (shown, not stored) and has the Daily snacks control; with no list it says "No daily snacks yet" and offers to set one up. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to and Remove (today it also has a check box that logs it as eaten);
+// A day's meals (brief nutrition-board; header wording A, brief nutrition-board-available-list: "4 on the menu · 2 planned", then "245 kcal eaten" with a muted warning past the meal's share of a set target): Breakfast, Lunch, Snack and Dinner always (brief daily-snacks), with "Nothing planned" and no button when empty. Snack also lists the saved daily snacks (shown, not stored) and has the Daily snacks control; with no list it says "No daily snacks yet" and offers to set one up. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to and Remove (today it also has a check box that logs it as eaten);
 // drag moves it to another meal or day. Today's food that nobody planned sits in the meal for the hour it was logged, with an eaten mark; tapping it opens the row sheet (brief nutrition-items-row-sheet-and-more). An empty meal on a day ahead has an Add control (today logs eaten food, which has no meal) that opens the Add sheet on that day with that meal picked (brief nutrition-header-sheet-wording). Meals are the plan, so last week has none.
 export default function MealSections({ view, placed, today, editable, onLog, onMsg, onAdd }: { view: BoardDay; placed: EatenPlacement['meals']; today: string; editable: boolean; onLog: (r: Resolved, index: number) => void; onMsg: Say; onAdd: (meal: PlanSlot) => void }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -35,9 +35,11 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
       {slots.map(s => {
         const extra = (s.slot && placed[s.slot]) || [];
         const eatenPlanKcal = s.items.reduce((a, x) => a + (isEaten(x.r.item, diet) ? x.r.kcal ?? 0 : 0), 0);
+        const eatenKcal = eatenPlanKcal + extra.reduce((a, e) => a + e.kcal, 0); // only eaten food: unticked menu items add nothing (brief nutrition-board-available-list)
+        const over = s.slot ? mealOverText(s.share, eatenKcal, SLOT_LABEL[s.slot]) : null;
         return (
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
-          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ kcal: s.kcal, share: s.share, items: s.items.length }, eatenPlanKcal, extra)}</span></div>
+          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned: s.items.filter(x => x.r.item.p === true).length }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
           {s.items.length === 0 && extra.length === 0 && <span className="nb-empty">{s.slot === 'snack' && !hasSnacks ? 'No daily snacks yet' : 'Nothing planned'}</span>}
           {s.items.length === 0 && s.slot && view.day > today && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot]}`} onClick={() => onAdd(s.slot!)}>Add</button>}
           {s.slot === 'snack' && editable && (hasSnacks
