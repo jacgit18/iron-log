@@ -10,7 +10,7 @@ const scenario: Scenario = {
     'Open Daily snacks, press Remove beside the snack and press Tap again to remove.',
   ],
   expected: [
-    'Before setup Snack sits between Lunch and Dinner and says "No daily snacks yet". The sheet says "No daily snacks yet. Add the ones you always buy and eat." and, once saved, lists the snack with its calories and "× 1.5".',
+    'Before setup Snack sits after Dinner and says "No daily snacks yet". The sheet says "No daily snacks yet. Add the ones you always buy and eat." and, once saved, lists the snack with its calories and "× 1.5".',
     'The snack shows in Snack on every day from today to two weeks ahead with nothing copied into each day, and it is still there after the reload.',
     'Today\'s snack is ticked and the day\'s Calories meter moves; tomorrow\'s copy is unticked.',
     'The snack is gone from that one day only; the day after still shows it and the list is unchanged.',

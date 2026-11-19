@@ -70,7 +70,7 @@ export function normMealsMoved(v: unknown): Record<string, string> {
 }
 
 /** The meals of a day, in order (brief week-board). */
-export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'snack', 'dinner'];
+export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 /** The plan window: today and this many days after it (52 weeks, brief nutrition-meal-labels-year-repeat; it was 13). Stored plan days are only the days with stored items, so size follows use, not the window. */
 export const MAX_PLAN_AHEAD = 364, MAX_PLAN_ITEMS = 8, MAX_DAILY_SNACKS = 6, MAX_DAY_DRINKS = 6;
