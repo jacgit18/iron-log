@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { monthLabel } from '../../lib/grocery.js';
+import { loggedRows, toLogRows } from '../../lib/receiptToLog.js';
 import { fetchPhoto, groupByMonth, listReceipts, receiptTitle, usageText, type SavedList, type SavedReceipt } from '../../lib/receiptsClient.js';
 import { receiptsZip } from '../../lib/receiptsExport.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -61,15 +62,16 @@ export default function Receipts() {
       {state.kind === 'ok' && (
         <>
           <p className="note" id="rcs-usage">{usageText(state.data)}</p>
+          {toLogRows(state.data.receipts).length > 0 && <p className="note" id="rcs-tolog">{`${toLogRows(state.data.receipts).length} snapped, waiting under To log on Shopping. They count toward the ${state.data.maxReceipts} and the ${Math.round(state.data.maxBytes / 1024 / 1024)} MB.`}</p>}
           {state.data.receipts.length > 0 && (
             <div className="rcsall">
               <button type="button" className="btn sm" id="rcs-all" disabled={all.busy} onClick={() => void downloadAll(state.data.receipts)}>Download all</button>
               {all.text && <span className="note" id="rcs-all-note" role="status">{all.text}</span>}
             </div>
           )}
-          {state.data.receipts.length === 0 ? (
+          {loggedRows(state.data.receipts).length === 0 ? (
             <EmptyState id="rcs-empty">No saved receipts yet. When you scan a receipt, tick Keep a copy of this photo and it shows up here.</EmptyState>
-          ) : groupByMonth(state.data.receipts).map(g => (
+          ) : groupByMonth(loggedRows(state.data.receipts)).map(g => (
             <section key={g.month} className="rcsgroup" aria-labelledby={`rcs-m-${g.month}`}>
               <h3 id={`rcs-m-${g.month}`}>{monthLabel(g.month)}</h3>
               <ul className="rcslist">

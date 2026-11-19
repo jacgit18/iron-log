@@ -1,0 +1,96 @@
+@layer base, components;
+@layer components {
+/* Snap now, log later (brief receipt-snap-now-log-later): the To log card on Shopping (option I: rows with a small photo), the unread-receipt sheet, and the photo reference in the review sheet. */
+.rctolog {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.rctologhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-4) var(--sp-8);
+  margin: 0 0 var(--sp-8);
+}
+.rctologhead span:last-child {
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.rctologlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rctologrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+.rctologthumb {
+  display: block;
+  flex: none;
+  width: 44px;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+.rctologthumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rctologwhat {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.rctologwhat b,
+.rctologwhat small {
+  display: block;
+}
+.rctologwhat small {
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.rctologbtns {
+  display: flex;
+  gap: var(--sp-8);
+}
+.rctologbtns .btn {
+  min-height: 44px;
+}
+.rclater .rcmeta {
+  margin-bottom: var(--sp-8);
+}
+.rcphotoref {
+  margin: var(--sp-8) 0;
+}
+.rcphotoref summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.rcphotoref img {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.rcsnaphint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+}

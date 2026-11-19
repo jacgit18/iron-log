@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { downloadName, groupByMonth, keepFailText, keepMeta, receiptTitle, retryWaitMs, usageText, type SavedReceipt } from './receiptsClient.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { downloadName, groupByMonth, keepFailText, keepMeta, receiptTitle, retryWaitMs, saveReceipt, updateReceipt, usageText, type SavedReceipt } from './receiptsClient.js';
 
-const r = (over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id: '1', savedAt: '2026-11-03T12:00:00.000Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 300_000, ...over });
+const r = (over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id: '1', savedAt: '2026-11-03T12:00:00.000Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 300_000, status: 'logged', ...over });
 
 describe('keepMeta', () => {
   it('saves the amount charged (after a rewards credit) as the total, falling back to the printed total', () => {
@@ -67,5 +67,29 @@ describe('retryWaitMs', () => {
     expect(retryWaitMs('900')).toBe(60_000);
     expect(retryWaitMs(null)).toBe(5000);
     expect(retryWaitMs('soon')).toBe(5000);
+  });
+});
+
+describe('saveReceipt and updateReceipt (calls)', () => {
+  const stub = (res: Response | null) => vi.stubGlobal('fetch', vi.fn(async () => { if (!res) throw new Error('offline'); return res; }));
+  const json = (status: number, body: unknown = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  afterEach(() => vi.unstubAllGlobals());
+  it('sends the status with a snapped photo', async () => {
+    stub(json(201, { receipt: r({ status: 'to_log' }) }));
+    const out = await saveReceipt('/9j/AAAA', { month: '2026-11', store: '', receiptDate: null, totalCents: null }, 'to_log');
+    expect(out.ok).toBe(true);
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]!.body))).toMatchObject({ status: 'to_log', month: '2026-11' });
+  });
+  it('reports an offline or refused save as a reason so the photo can be kept for Try again', async () => {
+    stub(null); expect(await saveReceipt('x', { month: '2026-11', store: '', receiptDate: null, totalCents: null }, 'to_log')).toEqual({ ok: false, reason: 'offline' });
+    stub(json(409)); expect(await saveReceipt('x', { month: '2026-11', store: '', receiptDate: null, totalCents: null }, 'to_log')).toEqual({ ok: false, reason: 'cap' });
+    stub(json(500)); expect(await saveReceipt('x', { month: '2026-11', store: '', receiptDate: null, totalCents: null }, 'to_log')).toEqual({ ok: false, reason: 'unavailable' });
+  });
+  it('maps an update answer: taken (409), gone (404), offline, unavailable', async () => {
+    stub(json(409)); expect(await updateReceipt('1', { status: 'logged', ifStatus: 'to_log' })).toEqual({ ok: false, reason: 'taken' });
+    stub(json(404)); expect(await updateReceipt('1', { status: 'logged' })).toEqual({ ok: false, reason: 'gone' });
+    stub(null); expect(await updateReceipt('1', { status: 'logged' })).toEqual({ ok: false, reason: 'offline' });
+    stub(json(500)); expect(await updateReceipt('1', { status: 'logged' })).toEqual({ ok: false, reason: 'unavailable' });
+    stub(json(200, { receipt: r() })); expect((await updateReceipt('1', { status: 'logged' })).ok).toBe(true);
   });
 });

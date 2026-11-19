@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SavedReceipt } from './receiptsClient.js';
 import { csvCell, exportNames, receiptsCsv, receiptsZip } from './receiptsExport.js';
 
-const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-02T10:00:00Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 3, ...over });
+const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-02T10:00:00Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 3, status: 'logged', ...over });
 
 describe('csvCell', () => {
   it('quotes commas, quotes and newlines', () => { expect(csvCell('a,b')).toBe('"a,b"'); expect(csvCell('say "hi"')).toBe('"say ""hi"""'); expect(csvCell('a\nb')).toBe('"a\nb"'); });
