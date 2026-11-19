@@ -18,7 +18,7 @@ export const MARK_LABEL: Record<PlateMark, string> = { protein: 'Protein', carb:
 export interface BoardItem { index: number; r: Resolved; fat: number | undefined; virtual?: true }
 /** One meal of a day. `slot` null is the group of items with no meal set. `fixes` are the one-tap additions for what the meal lacks. */
 export interface BoardSlot { slot: PlanSlot | null; items: BoardItem[]; kcal: number; share: number | null; need: readonly PlateMark[]; have: PlateMark[]; fixes: { mark: PlateMark; recipe: Recipe; why: string | null }[] }
-export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[]; /** The day's drinks (brief nutrition-meal-labels-year-repeat): outside every meal, the plate check and the 8-item cap; their calories still count in the day's totals. */ drinks: BoardItem[] }
+export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[]; /** The day's drinks (brief nutrition-meal-labels-year-repeat): outside every meal, the plate check and the planned cap; their calories still count in the day's totals. */ drinks: BoardItem[] }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -58,8 +58,9 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
   for (const slot of order) {
     const here = meal.filter(x => (mealOfItem(x.r.item, recipes) ?? null) === slot).sort(byName);
     if (slot === null && here.length === 0) continue;
-    const foodsHere = here.flatMap(x => (x.r.recipe ? [x.r.recipe] : []));
-    const chk = slot && !here.some(x => x.r.meal) ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };
+    const planned = here.filter(x => x.r.item.p === true); // the plate check reads the planned items only, so a menu of available food does not nag (brief nutrition-board-available-list)
+    const foodsHere = planned.flatMap(x => (x.r.recipe ? [x.r.recipe] : []));
+    const chk = slot && !planned.some(x => x.r.meal) ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };
     const fixes = chk.missing.flatMap(mark => { const f = fixFor(mark, foodsHere, recipes); return f ? [{ mark, ...f }] : []; });
     slots.push({ slot, items: here, kcal: Math.round(here.reduce((a, x) => a + (x.r.gone ? 0 : x.r.kcal ?? 0), 0)), share: slot && kcalTarget ? Math.round(kcalTarget * SLOT_SHARE[slot]) : null, need: chk.need, have: chk.have, fixes });
   }
@@ -81,7 +82,7 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
   if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
-  const counted = (x: PlanItem) => !isDailySnackItem(x, snacks) && !isDrinkItem(x, drinks); // a listed daily snack in Snack and a drink never count toward MAX_PLAN_ITEMS (briefs snacks-day-cap, nutrition-meal-labels-year-repeat); moving one into another meal makes it a planned thing
+  const counted = (x: PlanItem) => x.p === true && !isDailySnackItem(x, snacks) && !isDrinkItem(x, drinks); // only an item marked planned counts toward MAX_PLAN_ITEMS, never a listed daily snack or a drink (brief nutrition-board-available-list); a moved item keeps its marker
   const rejoin = toDay !== fromDay || (counted(moved) && !counted(it));
   const full = rejoin ? fullReason(target, moved, snacks, drinks) : null;
   if (full) return { plan: null, error: full };

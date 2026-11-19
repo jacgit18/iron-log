@@ -22,15 +22,32 @@ export const inWindow = (day: string, today: string): boolean => day >= today &&
 /** The plan without days before `today` (earlier days are dropped when it is written). */
 export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries(Object.entries(plan).filter(([d]) => d >= today));
 
-/** Why `list` (a day's stored items) can take no more of `item`, or null: a planned thing is held to MAX_PLAN_ITEMS (a listed daily snack and a drink never count toward it), a drink to MAX_DAY_DRINKS, all together to MAX_DAY_ITEMS. */
+/** Why `list` (a day's stored items) can take no more of `item`, or null: all together the available list is held to MAX_DAY_ITEMS, a drink to MAX_DAY_DRINKS, and an item marked planned (`p`) to MAX_PLAN_ITEMS planned things (a listed daily snack and a drink never count toward those; an item not marked planned is never held to them). */
 export function fullReason(list: readonly PlanItem[], item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): string | null {
   if (list.length >= MAX_DAY_ITEMS) return `A day can hold ${MAX_DAY_ITEMS} things in all, drinks and daily snacks included. Remove one to add another.`;
   if (isDrinkItem(item, drinks)) return list.filter(i => isDrinkItem(i, drinks)).length >= MAX_DAY_DRINKS ? `A day can hold ${MAX_DAY_DRINKS} drinks. Remove one to add another.` : null;
   if (isDailySnackItem(item, snacks)) return null;
-  return plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS ? `A day can hold ${MAX_PLAN_ITEMS} things. Remove one to add another.` : null;
+  return item.p === true && plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS ? PLANNED_FULL : null;
 }
 
-/** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. A day holds MAX_PLAN_ITEMS planned things; a listed daily snack (`snacks` is the list) never counts toward that, and is held to MAX_DAY_ITEMS in all. */
+/** The refusal when a day already holds MAX_PLAN_ITEMS planned things (brief nutrition-board-available-list). */
+export const PLANNED_FULL = `A day can hold ${MAX_PLAN_ITEMS} planned things. Unmark one to mark another.`;
+
+/** `plan` with the item at `index` of `day` marked planned (`on`) or unmarked. Marking never changes what the day holds, only the planned count: an error text when the day already holds MAX_PLAN_ITEMS planned things, or for a listed daily snack or a drink (they never count as planned). Unchanged when the item is gone or already in that state. */
+export function markPlanned(plan: Plan, day: string, index: number, on: boolean, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Made {
+  const list = plan[day] ?? [], it = list[index];
+  if (!it) return fail('That is gone.');
+  if ((it.p === true) === on) return { plan, error: null };
+  if (on) {
+    if (isDailySnackItem(it, snacks) || isDrinkItem(it, drinks)) return fail('Daily snacks and drinks are not counted as planned things.');
+    if (plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS) return fail(PLANNED_FULL);
+  }
+  const { p: _old, ...rest } = it;
+  const next: PlanItem = on ? { ...rest, p: true } : rest;
+  return { plan: { ...plan, [day]: list.map((x, i) => (i === index ? next : x)) }, error: null };
+}
+
+/** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. The available list holds MAX_DAY_ITEMS; only an item marked planned counts toward MAX_PLAN_ITEMS (a listed daily snack, `snacks` is the list, never does). */
 export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next 52 weeks.');
   const list = plan[day] ?? [];
@@ -51,7 +68,7 @@ export function removeItem(plan: Plan, day: string, index: number): Plan {
 export function setPortion(plan: Plan, day: string, index: number, portion: number): Plan {
   const it = plan[day]?.[index];
   if (!it || it.k !== 'r' || !(portion >= 0.5 && portion <= 10) || portion * 2 !== Math.round(portion * 2)) return plan;
-  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}), ...(it.e ? { e: it.e } : {}) };
+  const next: PlanItem = { k: 'r', id: it.id, ...(portion === 1 ? {} : { x: portion }), ...(it.s ? { s: it.s } : {}), ...(it.e ? { e: it.e } : {}), ...(it.p ? { p: true as const } : {}) };
   return { ...plan, [day]: plan[day]!.map((x, i) => (i === index ? next : x)) };
 }
 
