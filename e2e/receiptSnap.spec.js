@@ -172,3 +172,21 @@ test('a receipt another device already logged says so and opens nothing', async 
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(toLog(page)).toHaveCount(0);
 });
+
+test('Apply stops before writing any price when another device logged the receipt after it was opened', async ({ page }) => {
+  const acct = account(); await serve(page, acct);
+  await scanAnswer(page);
+  await setup(page);
+  await snap(page);
+  await toLog(page).getByRole('button', { name: 'Open' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Read this receipt' }).click();
+  await expect(sheet.getByRole('heading', { name: 'Receipt', exact: true })).toBeVisible();
+  acct.rows[0].status = 'logged'; // the other device applied it first
+  await sheet.getByLabel('Add this store to your stores').uncheck();
+  await sheet.getByRole('button', { name: /^Apply/ }).click();
+  await expect(sheet.getByText('Another device already logged this receipt, so nothing was applied here.')).toBeVisible();
+  await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 2');
+  expect(acct.patches.at(-1)).toMatchObject({ status: 'logged', ifStatus: 'to_log' });
+  expect(acct.rows[0].store).toBe(''); // the loser changed nothing
+});

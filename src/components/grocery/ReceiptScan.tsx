@@ -3,7 +3,7 @@ import { fetchPhoto, keepFailText, listReceipts, saveReceipt, updateReceipt, typ
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
 import { dropDraft, readDrafts, relinkDraft, type Draft } from '../../lib/receiptDraft.js';
-import { applyChange, changeFailText, openCheck, openText, snapFailText, snapMeta, toLogRows, undoChange, withSnapped, withoutReceipt } from '../../lib/receiptToLog.js';
+import { applyChange, changeFailText, claimText, openCheck, openText, snapFailText, snapMeta, toLogRows, undoChange, withSnapped, withoutReceipt } from '../../lib/receiptToLog.js';
 import { MAX_RECEIPT_SIDE, RECEIPT_TEXT, scanReceipt, shrinkToJpegBase64 } from '../../lib/scanPhoto.js';
 import { takeReadyResume } from '../../lib/sharingIntent.js';
 import type { ItemRef, Receipt } from '../../shared/receipt.js';
@@ -118,9 +118,16 @@ export function useReceiptScan(g: Grocery, mk: string) {
     if (!r.ok) return RECEIPT_TEXT[r.reason];
     if (r.result.kind !== 'ok') return RECEIPT_TEXT.unreadable;
     const { receipt, remembered } = applySavedNames(r.result.receipt, catalogue.items);
-    const logged = async (done: Receipt) => { const u = await updateReceipt(row.id, applyChange(done, row.month)); if (!u.ok) setMsg(changeFailText(u.reason, 'apply')); void refresh(); };
+    // Apply claims the saved row first (only if it still waits), so a second device that applied earlier stops this one before any price is written; any other failure lets Apply go on and says so.
+    const claim = async (done: Receipt): Promise<string | null> => {
+      const u = await updateReceipt(row.id, applyChange(done, row.month));
+      if (u.ok) { void refresh(); return null; }
+      if (u.reason === 'taken' || u.reason === 'gone') { void refresh(); return claimText[u.reason]; }
+      setMsg(changeFailText(u.reason, 'apply'));
+      return null;
+    };
     const unlog = async () => { const u = await updateReceipt(row.id, undoChange); if (!u.ok) setMsg(changeFailText(u.reason, 'undo')); void refresh(); };
-    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk: row.month, toLogId: row.id, photo: blob, onLogged: (done: Receipt) => void logged(done), onApplied: (a: Applied) => setApplied({ ...a, undo: () => { a.undo(); void unlog(); }, mk, t: Date.now() }) }); // the notice belongs to the month on screen, so a receipt snapped in another month still shows its Undo
+    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk: row.month, toLogId: row.id, photo: blob, onClaim: claim, onApplied: (a: Applied) => setApplied({ ...a, undo: () => { a.undo(); void unlog(); }, mk, t: Date.now() }) }); // the notice belongs to the month on screen, so a receipt snapped in another month still shows its Undo
     return null;
   };
 

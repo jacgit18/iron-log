@@ -43,7 +43,7 @@ export default function ReceiptSheet() {
   const onApplied = modal?.onApplied as ((a: Applied) => void) | undefined;
   const toLogId = typeof modal?.toLogId === 'string' ? modal.toLogId : ''; // a receipt opened from To log (brief receipt-snap-now-log-later): Apply updates that saved row, and no local draft is kept (To log is the account-wide one)
   const photoBlob = modal?.photo as Blob | undefined;
-  const onLogged = modal?.onLogged as ((r: Receipt) => void) | undefined;
+  const onClaim = modal?.onClaim as ((r: Receipt) => Promise<string | null>) | undefined; // To log: claims the saved row before Apply writes anything; a text means another device got there first
   const canKeep = !!modal?.image; // the photo is held by Scan receipt only for an account that has Receipts (brief receipt-save-photo)
   const onKeep = modal?.onKeep as ((meta: KeepMeta) => void) | undefined;
   const remembered = (modal?.remembered ?? {}) as Record<number, string>; // line index to the item a saved receipt name matched it to (brief receipt-rename-memory)
@@ -117,6 +117,7 @@ export default function ReceiptSheet() {
     return () => window.clearTimeout(t);
   }, [scanned, mk, choices, renames, touched, noRemember, separate, pickedStore, stagedRaw, unticked, shareChoices, usual, typedName, addOn, rewardsText]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot() reads exactly these
   useEffect(() => () => { if (pending.current && !finished.current) keepDraft(pending.current); }, []);
+  const [claim, setClaim] = useState<{ busy: boolean; error: string }>({ busy: false, error: '' });
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!photoBlob) return;
@@ -180,7 +181,7 @@ export default function ReceiptSheet() {
     setStaged(xs => xs.filter(x => x.id !== id));
     setChoices(cs => cs.map(c => (c.itemId === id ? { itemId: null, include: false } : c)));
   };
-  const apply = () => {
+  const doApply = () => {
     if (newStore) { const err = useAppStore.getState().addGroceryStore(newStore); if (err) { setStoreError(err); return; } } // before the items, so a new item bought there finds the store; a store that cannot be made stops Apply with nothing written
     const made = createStaged(plan, staged, { addGroceryItem: useAppStore.getState().addGroceryItem, items: () => useAppStore.getState().grocery.items });
     const mapped = remapPlan(plan, made.ids);
@@ -203,8 +204,13 @@ export default function ReceiptSheet() {
     finished.current = true; dropDraft(draftId.current); // applied: nothing left to resume
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (toLogId) onLogged?.(receipt); // the saved row moves from To log to Receipts; no second upload
     if (done > 0 || out.unticked || real.taxStore || real.creditStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+  };
+  // A receipt from To log claims its saved row first (one PATCH, only if it still waits): if another device logged or deleted it, nothing is applied here and the sheet says so.
+  const apply = () => {
+    if (!toLogId || !onClaim) { doApply(); return; }
+    setClaim({ busy: true, error: '' });
+    void onClaim(receipt).then(blocked => { setClaim({ busy: false, error: blocked ?? '' }); if (!blocked) doApply(); });
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;
@@ -359,7 +365,7 @@ export default function ReceiptSheet() {
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>
       {asking
         ? <ReceiptLeave onKeep={() => setAsking(false)} onDiscard={discard} />
-        : <ReceiptApplyBar plan={toWrite} newCount={newCount} disabled={nothing || !!nameError} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} onSave={toLogId ? undefined : saveLater} saveError={saveError} />}
+        : <ReceiptApplyBar plan={toWrite} newCount={newCount} disabled={nothing || !!nameError || claim.busy} onApply={apply} keep={canKeep ? { checked: keep, onChange: setKeep } : undefined} onSave={toLogId ? undefined : saveLater} saveError={saveError || claim.error} />}
     </Sheet>
   );
 }

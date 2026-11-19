@@ -57,6 +57,9 @@ export function snapFailText(reason: SaveFailure['reason'], limits?: { maxReceip
   return 'The photo was not saved. Try again.';
 }
 
+/** Why Apply stopped before writing anything: another device already moved or deleted the saved receipt. */
+export const claimText = { taken: 'Another device already logged this receipt, so nothing was applied here. Close this sheet.', gone: 'This receipt was deleted on another device, so nothing was applied here. Close this sheet.' } as const;
+
 /** Words when moving a receipt on or back did not go through (after the prices were already applied or undone on this device). */
 export function changeFailText(reason: ChangeFailure['reason'], what: 'apply' | 'undo'): string {
   if (reason === 'taken') return what === 'apply' ? 'Applied here, but another device had already logged this receipt.' : 'Undone here, but this receipt was already moved on another device.';
