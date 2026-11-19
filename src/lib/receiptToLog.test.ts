@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_THUMBS, applyChange, changeFailText, loggedRows, openCheck, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped } from './receiptToLog.js';
+import { MAX_THUMBS, applyChange, changeFailText, loggedRows, openCheck, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
 import type { SavedList, SavedReceipt } from './receiptsClient.js';
 
 const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-18T15:00:00.000Z', month: '2026-11', receiptDate: null, store: '', totalCents: null, note: '', sizeBytes: 100, status: 'to_log', ...over });
@@ -31,6 +31,18 @@ describe('To log list', () => {
   });
 });
 
+describe('withoutReceipt', () => {
+  it('drops one receipt and its count and bytes; an unknown id or no list changes nothing', () => {
+    const l = list([r('1', { sizeBytes: 50 }), r('2', { sizeBytes: 70 })]);
+    const next = withoutReceipt(l, '1')!;
+    expect(next.receipts.map(x => x.id)).toEqual(['2']);
+    expect(next.count).toBe(1);
+    expect(next.bytes).toBe(200 - 50);
+    expect(withoutReceipt(l, '9')).toBe(l);
+    expect(withoutReceipt(null, '1')).toBeNull();
+  });
+});
+
 describe('Open, Apply and Undo', () => {
   it('opens only a receipt that still waits; changes nothing by looking', () => {
     const all = [r('1'), r('2', { status: 'logged' })];
@@ -41,6 +53,10 @@ describe('Open, Apply and Undo', () => {
   });
   it('applies the reviewed receipt to the same row, only if it still waits', () => {
     expect(applyChange({ store: "BJ's", date: '2026-11-02', totalCents: 14231, lines: [] }, '2026-11')).toEqual({ status: 'logged', ifStatus: 'to_log', month: '2026-11', store: "BJ's", receiptDate: '2026-11-02', totalCents: 14231 });
+  });
+  it('cleans control characters out of a scanned store name so the server accepts it', () => {
+    expect(applyChange({ store: "BJ's\n", lines: [] }, '2026-11').store).toBe("BJ's");
+    expect(applyChange({ store: 'A\tB\n', lines: [] }, '2026-11').store).toBe('A B');
   });
   it('undoes back to To log, only if it is still logged', () => {
     expect(undoChange).toEqual({ status: 'to_log', ifStatus: 'logged' });

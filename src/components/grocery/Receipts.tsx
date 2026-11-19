@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { monthLabel } from '../../lib/grocery.js';
-import { loggedRows } from '../../lib/receiptToLog.js';
+import { loggedRows, toLogRows } from '../../lib/receiptToLog.js';
 import { fetchPhoto, groupByMonth, listReceipts, receiptTitle, usageText, type SavedList, type SavedReceipt } from '../../lib/receiptsClient.js';
 import { receiptsZip } from '../../lib/receiptsExport.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -62,6 +62,7 @@ export default function Receipts() {
       {state.kind === 'ok' && (
         <>
           <p className="note" id="rcs-usage">{usageText(state.data)}</p>
+          {toLogRows(state.data.receipts).length > 0 && <p className="note" id="rcs-tolog">{`${toLogRows(state.data.receipts).length} snapped, waiting under To log on Shopping. They count toward the ${state.data.maxReceipts} and the ${Math.round(state.data.maxBytes / 1024 / 1024)} MB.`}</p>}
           {state.data.receipts.length > 0 && (
             <div className="rcsall">
               <button type="button" className="btn sm" id="rcs-all" disabled={all.busy} onClick={() => void downloadAll(state.data.receipts)}>Download all</button>

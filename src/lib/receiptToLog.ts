@@ -26,10 +26,18 @@ export function withSnapped(list: SavedList | null, row: SavedReceipt): SavedLis
   return { ...list, receipts: [row, ...list.receipts.filter(r => r.id !== row.id)], count: list.count + 1, bytes: list.bytes + row.sizeBytes };
 }
 
+/** The list without one receipt (deleted here, or opened and found gone): counts and bytes follow. */
+export function withoutReceipt(list: SavedList | null, id: string): SavedList | null {
+  const gone = list?.receipts.find(r => r.id === id);
+  return list && gone ? { ...list, receipts: list.receipts.filter(r => r.id !== id), count: list.count - 1, bytes: list.bytes - gone.sizeBytes } : list;
+}
+
 /** What Apply sends for a receipt that was waiting: what the person reviewed, moved to logged, only if it still waits (the first device to apply wins). */
+// oxlint-disable-next-line no-control-regex
+const CONTROL = /[\x00-\x1f\x7f]+/g;
 export const applyChange = (receipt: Receipt, mk: string): ReceiptChange => {
   const m = keepMeta(receipt, mk);
-  return { status: 'logged', ifStatus: 'to_log', month: m.month, store: m.store, receiptDate: m.receiptDate, totalCents: m.totalCents };
+  return { status: 'logged', ifStatus: 'to_log', month: m.month, store: m.store.replace(CONTROL, ' ').trim(), receiptDate: m.receiptDate, totalCents: m.totalCents };
 };
 /** Undo puts it back under To log, only if it is still logged. */
 export const undoChange: ReceiptChange = { status: 'to_log', ifStatus: 'logged' };

@@ -3,7 +3,7 @@ import { fetchPhoto, keepFailText, listReceipts, saveReceipt, updateReceipt, typ
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
 import { dropDraft, readDrafts, relinkDraft, type Draft } from '../../lib/receiptDraft.js';
-import { applyChange, changeFailText, openCheck, openText, snapFailText, snapMeta, toLogRows, undoChange, withSnapped } from '../../lib/receiptToLog.js';
+import { applyChange, changeFailText, openCheck, openText, snapFailText, snapMeta, toLogRows, undoChange, withSnapped, withoutReceipt } from '../../lib/receiptToLog.js';
 import { MAX_RECEIPT_SIDE, RECEIPT_TEXT, scanReceipt, shrinkToJpegBase64 } from '../../lib/scanPhoto.js';
 import { takeReadyResume } from '../../lib/sharingIntent.js';
 import type { ItemRef, Receipt } from '../../shared/receipt.js';
@@ -109,7 +109,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
       if (state !== 'ready') { setMsg(openText[state]); return; }
     } else if (l.reason === 'offline') { setMsg(openText.offline); return; }
     if (!blob) { setMsg(openText.photo); return; }
-    useAppStore.getState().openModal({ type: 'receiptlater', receipt: row, blob, onChanged: (x: SavedReceipt | null) => { if (!x) setSaved(s => (s ? { ...s, receipts: s.receipts.filter(r => r.id !== row.id), count: s.count - 1, bytes: s.bytes - row.sizeBytes } : s)); }, onRead: () => readSaved(row, blob) });
+    useAppStore.getState().openModal({ type: 'receiptlater', receipt: row, blob, onChanged: (x: SavedReceipt | null) => { if (!x) setSaved(l => withoutReceipt(l, row.id)); }, onRead: () => readSaved(row, blob) });
   };
   // Read this receipt: the same scan as Scan receipt, on the saved photo, then the review sheet. Apply updates the saved row (no second upload); Undo puts it back under To log.
   const readSaved = async (row: SavedReceipt, blob: Blob): Promise<string | null> => {
@@ -120,7 +120,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
     const { receipt, remembered } = applySavedNames(r.result.receipt, catalogue.items);
     const logged = async (done: Receipt) => { const u = await updateReceipt(row.id, applyChange(done, row.month)); if (!u.ok) setMsg(changeFailText(u.reason, 'apply')); void refresh(); };
     const unlog = async () => { const u = await updateReceipt(row.id, undoChange); if (!u.ok) setMsg(changeFailText(u.reason, 'undo')); void refresh(); };
-    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk: row.month, toLogId: row.id, photo: blob, onLogged: (done: Receipt) => void logged(done), onApplied: (a: Applied) => setApplied({ ...a, undo: () => { a.undo(); void unlog(); }, mk: row.month, t: Date.now() }) });
+    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk: row.month, toLogId: row.id, photo: blob, onLogged: (done: Receipt) => void logged(done), onApplied: (a: Applied) => setApplied({ ...a, undo: () => { a.undo(); void unlog(); }, mk, t: Date.now() }) }); // the notice belongs to the month on screen, so a receipt snapped in another month still shows its Undo
     return null;
   };
 
@@ -139,7 +139,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const notes = (
     <>
       {drafts.length > 0 && !sheetOpen && <ReceiptResume drafts={drafts} now={left.at} onResume={resume} onDiscard={id => { dropDraft(id); setLeft(readNow()); }} />}
-      <ReceiptToLog rows={toLogRows(saved?.receipts ?? [])} opening={opening} onOpen={row => void openRow(row)} onDeleted={id => setSaved(s => { const gone = s?.receipts.find(x => x.id === id); return s && gone ? { ...s, receipts: s.receipts.filter(x => x.id !== id), count: s.count - 1, bytes: s.bytes - gone.sizeBytes } : s; })} />
+      <ReceiptToLog rows={toLogRows(saved?.receipts ?? [])} opening={opening} onOpen={row => void openRow(row)} onDeleted={id => setSaved(l => withoutReceipt(l, id))} />
       {msg && <p className="note" role="status">{msg}</p>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'
