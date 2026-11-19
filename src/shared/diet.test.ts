@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_PLAN_AHEAD, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { PLAN_SLOTS, MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_PLAN_AHEAD, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -277,5 +277,11 @@ describe('drinks outside the planned count', () => {
   it('keeps up to the storage bound a day and drops the next', () => {
     const day = Array.from({ length: MAX_DAY_STORED + 1 }, (_, i) => ({ k: 'r', id: `r${i}`, ...(i < 9 ? { p: true } : {}) }));
     expect(normDietCfg({ plan: { '2026-10-30': day } })!.plan!['2026-10-30']).toHaveLength(MAX_DAY_STORED);
+  });
+});
+
+describe('PLAN_SLOTS', () => {
+  it('is the meal order everywhere (board sections and the Add food, Move to and log pickers): Dinner above Snack', () => {
+    expect(PLAN_SLOTS).toEqual(['breakfast', 'lunch', 'dinner', 'snack']);
   });
 });

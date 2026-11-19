@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-207', feature: 'Nutrition board', title: 'A day ahead plans recipes and saved meals; it never logs', persona: 'meal-planner', brief: 'nutrition-board',
   steps: [
-    'Press Next week and pick a day whose Breakfast, Lunch and Dinner all say "Nothing planned" (the seed plans seven days from today, so days later than that are empty). Note that Snack is listed between Lunch and Dinner.',
+    'Press Next week and pick a day whose Breakfast, Lunch and Dinner all say "Nothing planned" (the seed plans seven days from today, so days later than that are empty). Note that Snack is listed after Dinner.',
     'Tap that day\'s name, press Add food, pick Snack, press Recipes. Read the buttons beside each recipe.',
     'Press Plan on Overnight oats. Press Done.',
     'Press This week and tap today\'s name; press Add food and Recipes.',
