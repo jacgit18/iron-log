@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { main } from './db-sm.mjs';
-import { ENVS, check, childEnv, parseArgs, redact } from './lib/db-sm.mjs';
+import { main, markOf } from './db-sm.mjs';
+import { notLocalProblem } from './lib/db-script.mjs';
+import { ENVS, REFUSED, check, childEnv, parseArgs, redact } from './lib/db-sm.mjs';
 import { inventoryNames } from './secret-inventory.mjs';
 
 // scripts/db-sm.mjs reads an environment's owner URL from Secret Manager and runs a command with it. Every outside call is injected here, so no gcloud, secret or database is touched.
@@ -19,6 +20,7 @@ function fakes(env: Env, over: { url?: string; mark?: string | null; prod?: stri
   const marks: Record<Env, string | null> = { qa: 'iron-log qa', staging: 'iron-log staging', production: null };
   const deps = {
     host: hostOf,
+    notLocal: notLocalProblem,
     prodUrl: () => (over.prod === undefined ? urlFor(HOSTS.production) : over.prod),
     same,
     mark: async () => (over.mark === undefined ? marks[env] : over.mark),
@@ -64,12 +66,17 @@ describe('the registry', () => {
 describe('guards (each refuses before the command runs)', () => {
   const refused = async (env: Env, a: string[], over = {}) => {
     const f = fakes(env, over);
-    expect(await f.run(a)).toBe(2);
+    expect(await f.run(a)).toBe(REFUSED);
     expect(f.spawned).toHaveLength(0);
     return f.logs.join('\n');
   };
   it('--host that differs from the secret\'s host', async () => { expect(await refused('staging', argv('staging', 'other.example.invalid'))).toContain('does not match'); });
   it('a localhost URL', async () => { expect(await refused('qa', argv('qa', 'localhost'), { url: urlFor('localhost') })).toContain('on this machine'); });
+  it('a host= parameter that sends the connection elsewhere', async () => {
+    const u = `postgres://owner:${PASSWORD}@${HOSTS.qa}/db?host=/var/run/postgresql`;
+    expect(await refused('qa', argv('qa', HOSTS.qa), { url: u })).toContain('host= or hostaddr= parameter');
+  });
+  it('the wrapper\'s refusal code is not 2, so a child\'s exit 2 is told apart', () => { expect(REFUSED).toBe(64); });
   it('production\'s host for qa and for staging', async () => {
     for (const env of ['qa', 'staging'] as const) expect(await refused(env, argv(env, HOSTS.production), { url: urlFor(HOSTS.production) })).toContain('is production\'s database');
   });
@@ -94,7 +101,7 @@ describe('guards (each refuses before the command runs)', () => {
   it('a secret that is not a database URL', async () => { expect(await refused('qa', argv('qa', HOSTS.qa), { url: 'https://example.invalid/x' })).toContain('is not a database URL'); });
   it('a bad command line, before the secret is even read', async () => {
     const f = fakes('qa');
-    expect(await f.run(['qa', '--host', HOSTS.qa])).toBe(2);
+    expect(await f.run(['qa', '--host', HOSTS.qa])).toBe(REFUSED);
     expect(f.reads).toHaveLength(0);
   });
 });
@@ -111,7 +118,7 @@ describe('warnings and the happy path', () => {
   });
   it('returns the child\'s exit status', async () => {
     const f = fakes('qa');
-    const r = await main(argv('qa', HOSTS.qa), { read: () => f.url, deps: { host: hostOf, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => 'iron-log qa' }, spawn: () => ({ status: 7 }), log: () => {}, base: {} });
+    const r = await main(argv('qa', HOSTS.qa), { read: () => f.url, deps: { host: hostOf, notLocal: notLocalProblem, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => 'iron-log qa' }, spawn: () => ({ status: 7 }), log: () => {}, base: {} });
     expect(r).toBe(7);
   });
 });
@@ -119,7 +126,7 @@ describe('warnings and the happy path', () => {
 describe('the child\'s environment', () => {
   it('has DATABASE_URL and none of the other database variables, and keeps the rest', async () => {
     const f = fakes('staging');
-    const stale = Object.fromEntries(['DATABASE_URL_UNPOOLED', 'PROD_DATABASE_URL', 'STAGING_DATABASE_URL', 'QA_DATABASE_URL', 'PGPASSWORD', 'PGHOST'].map(k => [k, 'stale']));
+    const stale = Object.fromEntries(['DATABASE_URL_UNPOOLED', 'BACKUP_DATABASE_URL', 'READER_DATABASE_URL', 'PGSSLMODE', 'PGSSLROOTCERT', 'PROD_DATABASE_URL', 'STAGING_DATABASE_URL', 'QA_DATABASE_URL', 'PGPASSWORD', 'PGHOST'].map(k => [k, 'stale']));
     await f.run(argv('staging', HOSTS.staging), { ...stale, DATABASE_URL: 'stale', PATH: '/bin', HOME: '/h' });
     const env = f.spawned[0].env;
     expect(env.DATABASE_URL).toBe(f.url);
@@ -153,15 +160,33 @@ describe('the URL never appears in anything printed or thrown', () => {
   it('not in a failure of the injected reader or checker, and not in a thrown check error', async () => {
     const url = urlFor(HOSTS.qa);
     const logs: string[] = [];
-    const r = await main(argv('qa', HOSTS.qa), { read: () => url, deps: { host: hostOf, prodUrl: () => null, same, mark: async () => { throw new Error(`could not connect to ${url}`); } }, spawn: () => ({ status: 0 }), log: m => logs.push(m), base: {} });
-    expect(r).toBe(2);
-    const r2 = await main(argv('qa', HOSTS.qa), { read: () => url, deps: { host: hostOf, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => { throw new Error(`could not connect to ${url}`); } }, spawn: () => ({ status: 0 }), log: m => logs.push(m), base: {} });
-    expect(r2).toBe(2);
+    const r = await main(argv('qa', HOSTS.qa), { read: () => url, deps: { host: hostOf, notLocal: notLocalProblem, prodUrl: () => null, same, mark: async () => { throw new Error(`could not connect to ${url}`); } }, spawn: () => ({ status: 0 }), log: m => logs.push(m), base: {} });
+    expect(r).toBe(REFUSED);
+    const r2 = await main(argv('qa', HOSTS.qa), { read: () => url, deps: { host: hostOf, notLocal: notLocalProblem, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => { throw new Error(`could not connect to ${url}`); } }, spawn: () => ({ status: 0 }), log: m => logs.push(m), base: {} });
+    expect(r2).toBe(REFUSED);
     expect(logs.join('\n')).not.toContain(PASSWORD);
     expect(logs.join('\n')).toContain('[hidden]');
-    await expect(check({ env: 'qa', host: 'wrong.example.invalid', url }, { host: hostOf, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => 'iron-log qa' }).catch(e => { throw new Error(e.message); })).rejects.toThrow(/does not match/);
-    await check({ env: 'qa', host: 'wrong.example.invalid', url }, { host: hostOf, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => 'iron-log qa' }).catch(e => expect(e.message).not.toContain(PASSWORD));
+    const thrown = await check({ env: 'qa', host: 'wrong.example.invalid', url }, { host: hostOf, notLocal: notLocalProblem, prodUrl: () => urlFor(HOSTS.production), same, mark: async () => 'iron-log qa' }).then(() => null, e => e as Error);
+    expect(thrown).not.toBeNull(); // fails if check stops refusing
+    expect(thrown!.message).toMatch(/does not match/);
+    expect(thrown!.message).not.toContain(PASSWORD);
   });
+  it('redaction is what hides the URL: an error carrying it is hidden by main, and is not by the raw message', async () => {
+    const url = urlFor(HOSTS.qa);
+    const raw = new Error(`boom ${url}`).message;
+    expect(raw).toContain(PASSWORD);
+    expect(redact(raw, url)).not.toContain(PASSWORD);
+  });
+  it('a real connect() failure (it exits with its own text) never shows the URL', async () => {
+    const url = `postgres://owner:${PASSWORD}@no-such-host.invalid/db`;
+    const said: string[] = [];
+    const err = console.error; const exit = process.exit;
+    console.error = (m: unknown) => { said.push(String(m)); };
+    process.exit = ((c?: number) => { throw new Error(`exit ${c}`); }) as typeof process.exit;
+    try { await markOf(url, 'qa'); } catch (e) { said.push((e as Error).message); } finally { console.error = err; process.exit = exit; }
+    expect(said.join('\n')).toContain('Cannot connect');
+    expect(said.join('\n')).not.toContain(PASSWORD);
+  }, 30_000);
   it('redact removes the URL, the password (also percent-encoded) and the user', () => {
     const u = 'postgres://own%40er:p%40ss-w0rd-9@h.example.invalid/db';
     const out = redact(`bad ${u} and p@ss-w0rd-9 and p%40ss-w0rd-9 and own@er`, u);

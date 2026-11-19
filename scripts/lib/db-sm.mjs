@@ -9,7 +9,8 @@ export const ENVS = {
 const OTHER_MARKS = ['iron-log qa', 'iron-log staging']; // production must carry neither
 
 // Database settings that must not reach the child: the one it is given is the only one it may use, so a stale one in the shell cannot win.
-export const STRIPPED = ['DATABASE_URL', 'DATABASE_URL_UNPOOLED', 'PROD_DATABASE_URL', 'STAGING_DATABASE_URL', 'QA_DATABASE_URL', 'QA_OWNER_DATABASE_URL', 'APP_DATABASE_URL', 'MIGRATIONS_CHECK_URL',
+export const REFUSED = 64; // the wrapper's own refusal (nothing ran); a child's own exit status is passed through unchanged
+export const STRIPPED = ['DATABASE_URL', 'BACKUP_DATABASE_URL', 'READER_DATABASE_URL', 'PGSSLMODE', 'PGSSLROOTCERT', 'DATABASE_URL_UNPOOLED', 'PROD_DATABASE_URL', 'STAGING_DATABASE_URL', 'QA_DATABASE_URL', 'QA_OWNER_DATABASE_URL', 'APP_DATABASE_URL', 'MIGRATIONS_CHECK_URL',
   'PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE', 'PGSERVICE', 'PGPASSFILE', 'PGSERVICEFILE', 'PGOPTIONS'];
 
 export const USAGE = 'Usage: npm run db:sm -- <qa|staging|production> --host <host> -- <command...>\n'
@@ -52,8 +53,6 @@ export function urlProblem(url, name) {
   return null;
 }
 
-const LOCAL = new Set(['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0']);
-export const isLocal = host => LOCAL.has(host) || host.endsWith('.localhost');
 export const isPooled = host => /-pooler(?=\.)/.test(host);
 
 /** The child's environment: the base, without any database setting, plus DATABASE_URL. */
@@ -66,16 +65,18 @@ export function childEnv(url, base = process.env) {
 
 /**
  * Every check before the command runs. Throws an Error whose message never contains the URL. Returns { host, warnings }.
- * Injected: `host(url)` (the host the pg driver will use), `prodUrl()` (production's owner URL or null), `same(a, b)` (same server by name, alias or address),
+ * Injected: `notLocal(url)` (db-script's notLocalProblem: null for a local URL, text for a problem such as a host= parameter, else why it is not local), `host(url)` (the host the pg driver will use), `prodUrl()` (production's owner URL or null), `same(a, b)` (same server by name, alias or address),
  * `mark(url, env)` (the database's mark, opened and closed by the caller's function). A check that cannot run refuses.
  */
-export async function check({ env, host: typed, url }, { host, prodUrl, same, mark }) {
+export async function check({ env, host: typed, url }, { host, prodUrl, same, mark, notLocal }) {
   const { secret, mark: want } = ENVS[env];
   const bad = urlProblem(url, secret);
   if (bad) throw new Error(bad);
   const actual = host(url);
   if (!actual) throw new Error(`The host in the secret ${secret} cannot be read. Nothing was run.`);
-  if (isLocal(actual)) throw new Error(`The secret ${secret} points at a database on this machine (${actual}), not ${env}. Nothing was run.`);
+  const local = notLocal(url); // null when the URL is on this machine (reads host/hostaddr parameters too)
+  if (local === null || local === undefined) throw new Error(`The secret ${secret} points at a database on this machine, not ${env}. Nothing was run.`);
+  if (local && /parameter/.test(local)) throw new Error(`The secret ${secret} has a host= or hostaddr= parameter, which can send the connection to another machine. Nothing was run.`);
   if (actual !== typed.toLowerCase().replace(/\.+$/, '')) throw new Error(`--host ${typed} does not match the host in the secret ${secret} (${actual}). Nothing was run.`);
   const prod = prodUrl();
   if (!prod) throw new Error('Cannot tell which database is production: set PROD_DATABASE_URL, or sign in so iron-log-prod-owner-url can be read. Refusing, because this check cannot run. Nothing was run.');
