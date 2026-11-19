@@ -20,6 +20,11 @@ export function cleanQuery(v: unknown): string | null {
   return q.length >= MIN_QUERY && q.length <= MAX_QUERY ? q : null;
 }
 
+/** A search term made safe to send to USDA FoodData Central, whose search answers HTTP 400 for a query with any of / " ^ { } [ ] + or an unbalanced parenthesis ("80/20 ground beef"; probed against the QA key 2026-11-19). Each becomes a space, parentheses always (a balanced pair is accepted, but dropping both loses nothing for a search). Other punctuation (% & : ; ' , ? # ! | ~ = - * $ @ < >) was accepted and is kept. Only the text sent changes; callers keep the original term for ranking, matching and cache keys. */
+export function usdaQuery(term: string): string {
+  return term.replace(/[/"^{}[\]()+]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null);
 
