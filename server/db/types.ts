@@ -211,6 +211,7 @@ export interface Receipts {
   receipt_date: string | null;
   saved_at: Generated<Timestamp>;
   size_bytes: number;
+  status: Generated<string>;
   store: Generated<string>;
   total_cents: number | null;
   user_id: Int8;

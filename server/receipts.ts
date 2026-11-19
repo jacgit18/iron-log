@@ -23,6 +23,11 @@ const MAX_TOTAL_CENTS = 10_000_000;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ID = /^\d{1,15}$/;
 
+/** `to_log`: snapped and saved unread, to be read and applied later (brief receipt-snap-now-log-later). `logged`: every other receipt, and the default. */
+export const STATUSES = ['to_log', 'logged'] as const;
+export type ReceiptStatus = (typeof STATUSES)[number];
+const isStatus = (v: unknown): v is ReceiptStatus => typeof v === 'string' && (STATUSES as readonly string[]).includes(v);
+
 export interface NewReceipt {
   photo: Buffer;
   month: string;
@@ -30,6 +35,7 @@ export interface NewReceipt {
   store: string;
   totalCents: number | null;
   note: string;
+  status: ReceiptStatus;
 }
 
 /** A trimmed string of at most `max` printable characters, or null when it is not one. */
@@ -60,16 +66,42 @@ export function cleanReceipt(body: unknown): { ok: true; value: NewReceipt } | {
   }
   const note = cleanNote(b.note);
   if (note === null) return { ok: false, error: `"note" must be text of at most ${MAX_NOTE} characters` };
-  return { ok: true, value: { photo, month: b.month, receiptDate, store, totalCents, note } };
+  if (b.status !== undefined && !isStatus(b.status)) return { ok: false, error: '"status" must be "to_log" or "logged"' };
+  return { ok: true, value: { photo, month: b.month, receiptDate, store, totalCents, note, status: b.status ?? 'logged' } };
+}
+
+/** What a PATCH may change. The note on its own is the original use; Apply on a To log receipt sends status, store, date, total and month together; Undo sends status alone. */
+export interface ReceiptPatch { note?: string; status?: ReceiptStatus; store?: string; receiptDate?: string | null; totalCents?: number | null; month?: string; ifStatus?: ReceiptStatus }
+
+/** Check a PATCH body: only the fields sent are changed, and at least one must be sent. `ifStatus` makes the change only when the receipt is still in that status (the second of two devices applying the same receipt gets 409). */
+export function cleanPatch(body: unknown): { ok: true; value: ReceiptPatch } | { ok: false; error: string } {
+  const b = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const out: ReceiptPatch = {};
+  if (b.note !== undefined) { const n = typeof b.note === 'string' ? cleanNote(b.note) : null; if (n === null) return { ok: false, error: `"note" must be text of at most ${MAX_NOTE} characters` }; out.note = n; }
+  if (b.status !== undefined) { if (!isStatus(b.status)) return { ok: false, error: '"status" must be "to_log" or "logged"' }; out.status = b.status; }
+  if (b.store !== undefined) { const st = typeof b.store === 'string' ? text(b.store, MAX_STORE) : null; if (st === null) return { ok: false, error: `"store" must be text of at most ${MAX_STORE} characters` }; out.store = st; }
+  if (b.receiptDate !== undefined) {
+    if (b.receiptDate === null) out.receiptDate = null;
+    else { const d = parseDay(b.receiptDate); if (!d || d < '1970-01-01' || d > '2200-01-01') return { ok: false, error: '"receiptDate" must be YYYY-MM-DD or null' }; out.receiptDate = d; }
+  }
+  if (b.totalCents !== undefined) {
+    if (b.totalCents === null) out.totalCents = null;
+    else if (typeof b.totalCents !== 'number' || !Number.isInteger(b.totalCents) || b.totalCents < 0 || b.totalCents > MAX_TOTAL_CENTS) return { ok: false, error: '"totalCents" must be a whole number of cents or null' };
+    else out.totalCents = b.totalCents;
+  }
+  if (b.month !== undefined) { if (typeof b.month !== 'string' || !MONTH.test(b.month)) return { ok: false, error: '"month" must be YYYY-MM' }; out.month = b.month; }
+  if (b.ifStatus !== undefined) { if (!isStatus(b.ifStatus)) return { ok: false, error: '"ifStatus" must be "to_log" or "logged"' }; out.ifStatus = b.ifStatus; }
+  if (Object.keys(out).filter(k => k !== 'ifStatus').length === 0) return { ok: false, error: `send "note" (text of at most ${MAX_NOTE} characters) or another field to change` };
+  return { ok: true, value: out };
 }
 
 export interface ReceiptsDeps {
   db: Kysely<DB>;
 }
 
-interface Row { id: string; saved_at: string; month: string; receipt_date: string | null; store: string; total_cents: number | null; note: string; size_bytes: number }
-const shape = (r: Row) => ({ id: r.id, savedAt: new Date(r.saved_at).toISOString(), month: r.month, receiptDate: r.receipt_date, store: r.store, totalCents: r.total_cents, note: r.note, sizeBytes: r.size_bytes });
-const COLUMNS = sql`id, saved_at, month, to_char(receipt_date, 'YYYY-MM-DD') as receipt_date, store, total_cents, note, size_bytes`;
+interface Row { id: string; saved_at: string; month: string; receipt_date: string | null; store: string; total_cents: number | null; note: string; size_bytes: number; status: ReceiptStatus }
+const shape = (r: Row) => ({ id: r.id, savedAt: new Date(r.saved_at).toISOString(), month: r.month, receiptDate: r.receipt_date, store: r.store, totalCents: r.total_cents, note: r.note, sizeBytes: r.size_bytes, status: r.status });
+const COLUMNS = sql`id, saved_at, month, to_char(receipt_date, 'YYYY-MM-DD') as receipt_date, store, total_cents, note, size_bytes, status`;
 
 export function receiptsRoutes({ db }: ReceiptsDeps): Router {
   const router = Router();
@@ -98,8 +130,8 @@ export function receiptsRoutes({ db }: ReceiptsDeps): Router {
       const { rows: [sum] } = await sql<{ n: string; bytes: string }>`select count(*) as n, coalesce(sum(size_bytes), 0) as bytes from receipts`.execute(trx);
       if (Number(sum!.n) >= MAX_RECEIPTS || Number(sum!.bytes) + v.photo.byteLength > MAX_TOTAL_BYTES) return null;
       const { rows } = await sql<Row>`
-        insert into receipts (user_id, month, receipt_date, store, total_cents, note, size_bytes, data)
-        values (${userId}::bigint, ${v.month}, ${v.receiptDate}::date, ${v.store}, ${v.totalCents}, ${v.note}, ${v.photo.byteLength}, ${v.photo})
+        insert into receipts (user_id, month, receipt_date, store, total_cents, note, size_bytes, data, status)
+        values (${userId}::bigint, ${v.month}, ${v.receiptDate}::date, ${v.store}, ${v.totalCents}, ${v.note}, ${v.photo.byteLength}, ${v.photo}, ${v.status})
         returning ${COLUMNS}`.execute(trx);
       return rows[0]!;
     });
@@ -117,16 +149,28 @@ export function receiptsRoutes({ db }: ReceiptsDeps): Router {
     res.set({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' }).type('image/jpeg').send(data);
   });
 
-  // The note is the only thing that changes after saving.
+  // The note, and for a To log receipt what Apply reads from it: status, store, date, total, month (brief receipt-snap-now-log-later). Only the fields sent change.
   router.patch('/:id', async (req, res) => {
     const id = String(req.params.id);
     if (!ID.test(id)) return gone(res);
-    const note = cleanNote((req.body as { note?: unknown } | undefined)?.note);
-    if (note === null || typeof (req.body as { note?: unknown } | undefined)?.note !== 'string') return void res.status(422).json({ ok: false, error: `"note" must be text of at most ${MAX_NOTE} characters` });
+    const clean = cleanPatch(req.body);
+    if (!clean.ok) return void res.status(422).json({ ok: false, error: clean.error });
+    const p = clean.value;
     const userId = String(res.locals.userId);
-    const row = await inUserTransaction(db, userId, async trx => (await sql<Row>`update receipts set note = ${note} where id = ${id}::bigint returning ${COLUMNS}`.execute(trx)).rows[0] ?? null);
-    if (!row) return gone(res);
-    res.json({ ok: true, receipt: shape(row) });
+    const out = await inUserTransaction(db, userId, async trx => {
+      const sets = [
+        ...(p.note !== undefined ? [sql`note = ${p.note}`] : []), ...(p.status !== undefined ? [sql`status = ${p.status}`] : []), ...(p.store !== undefined ? [sql`store = ${p.store}`] : []),
+        ...(p.receiptDate !== undefined ? [sql`receipt_date = ${p.receiptDate}::date`] : []), ...(p.totalCents !== undefined ? [sql`total_cents = ${p.totalCents}`] : []), ...(p.month !== undefined ? [sql`month = ${p.month}`] : []),
+      ];
+      const when = p.ifStatus ? sql` and status = ${p.ifStatus}` : sql``;
+      const row = (await sql<Row>`update receipts set ${sql.join(sets)} where id = ${id}::bigint${when} returning ${COLUMNS}`.execute(trx)).rows[0];
+      if (row) return { row };
+      // Not updated: it is gone, or it is no longer in the status the caller expected (another device got there first).
+      const there = (await sql<{ status: ReceiptStatus }>`select status from receipts where id = ${id}::bigint`.execute(trx)).rows[0];
+      return { row: null, status: there?.status ?? null };
+    });
+    if (!out.row) return out.status ? void res.status(409).json({ ok: false, why: 'status', status: out.status, error: `this receipt is already ${out.status === 'logged' ? 'logged' : 'waiting to be logged'}` }) : gone(res);
+    res.json({ ok: true, receipt: shape(out.row) });
   });
 
   router.delete('/:id', async (req, res) => {

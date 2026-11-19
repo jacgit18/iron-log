@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { createApp } from './app.ts';
 import { createDb } from './db/connection.ts';
 import type { DB } from './db/types.ts';
-import { MAX_NOTE, MAX_PHOTO_BASE64, MAX_RECEIPTS, MAX_TOTAL_BYTES, cleanNote, cleanReceipt } from './receipts.ts';
+import { MAX_NOTE, MAX_PHOTO_BASE64, MAX_RECEIPTS, MAX_TOTAL_BYTES, cleanNote, cleanPatch, cleanReceipt } from './receipts.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
 // Saved receipt photos (brief receipt-save-photo): validation, the cap, whose rows, the headers, and erase.
@@ -66,6 +66,20 @@ describe('cleanReceipt', () => {
   });
 });
 
+describe('status and cleanPatch (brief receipt-snap-now-log-later)', () => {
+  it('defaults a new receipt to logged and takes to_log', () => {
+    const a = cleanReceipt(good()); expect(a.ok && a.value.status).toBe('logged');
+    const b = cleanReceipt(good({ status: 'to_log' })); expect(b.ok && b.value.status).toBe('to_log');
+    expect(cleanReceipt(good({ status: 'read' })).ok).toBe(false);
+  });
+  it('takes only the fields sent and needs at least one', () => {
+    expect(cleanPatch({ note: 'x' })).toEqual({ ok: true, value: { note: 'x' } });
+    expect(cleanPatch({ status: 'logged', store: "BJ's", receiptDate: '2026-11-02', totalCents: 100, month: '2026-11', ifStatus: 'to_log' })).toEqual({ ok: true, value: { status: 'logged', store: "BJ's", receiptDate: '2026-11-02', totalCents: 100, month: '2026-11', ifStatus: 'to_log' } });
+    expect(cleanPatch({ receiptDate: null, totalCents: null })).toEqual({ ok: true, value: { receiptDate: null, totalCents: null } });
+    for (const b of [{}, null, { ifStatus: 'to_log' }, { note: 5 }, { status: 'x' }, { store: 'x'.repeat(61) }, { receiptDate: '2026-02-30' }, { totalCents: 1.5 }, { totalCents: -1 }, { month: '2026-13' }, { ifStatus: 'x', note: 'a' }]) expect(cleanPatch(b).ok, JSON.stringify(b)).toBe(false);
+  });
+});
+
 describe('/api/receipts', () => {
   it('saves, lists newest first, serves the photo with private headers, edits the note and deletes', async () => {
     const { call } = await start();
@@ -104,6 +118,30 @@ describe('/api/receipts', () => {
     const res = await call('boss', 'POST', '', { image: jpeg(), month: '2026-11' });
     expect(res.status).toBe(201);
     expect((await body(res)).receipt).toMatchObject({ receiptDate: null, totalCents: null, store: '' });
+  });
+
+  it('keeps a snapped receipt to log, applies it on the same row, undoes it, and the second device gets 409', async () => {
+    const { call } = await start();
+    const snap = await call('boss', 'POST', '', { image: jpeg(), month: '2026-11', status: 'to_log' });
+    expect(snap.status).toBe(201);
+    const row = (await body(snap)).receipt as { id: string; status: string };
+    expect(row.status).toBe('to_log');
+    expect((await body(await call('boss', 'GET', ''))).receipts[0]).toMatchObject({ id: row.id, status: 'to_log' });
+    const applied = await call('boss', 'PATCH', `/${row.id}`, { status: 'logged', ifStatus: 'to_log', store: "BJ's", receiptDate: '2026-11-02', totalCents: 14231, month: '2026-11' });
+    expect(applied.status).toBe(200);
+    expect((await body(applied)).receipt).toMatchObject({ status: 'logged', store: "BJ's", receiptDate: '2026-11-02', totalCents: 14231 });
+    expect(await count('boss')).toBe(1); // no second upload
+    const second = await call('boss', 'PATCH', `/${row.id}`, { status: 'logged', ifStatus: 'to_log', store: 'Other' });
+    expect(second.status).toBe(409);
+    expect(await body(second)).toMatchObject({ ok: false, why: 'status', status: 'logged' });
+    expect((await body(await call('boss', 'GET', ''))).receipts[0].store).toBe("BJ's"); // the loser changed nothing
+    const undone = await call('boss', 'PATCH', `/${row.id}`, { status: 'to_log', ifStatus: 'logged' });
+    expect((await body(undone)).receipt.status).toBe('to_log');
+    expect((await call('boss', 'PATCH', '/999999999', { status: 'logged', ifStatus: 'to_log' })).status).toBe(404);
+    expect((await call('other', 'PATCH', `/${row.id}`, { status: 'logged' })).status).toBe(404);
+    expect((await call('boss', 'POST', '', { image: jpeg(), month: '2026-11', status: 'nope' })).status).toBe(422);
+    expect((await call('boss', 'DELETE', `/${row.id}`)).status).toBe(200); // delete removes the row and its photo
+    expect((await call('boss', 'GET', `/${row.id}/photo`)).status).toBe(404);
   });
 
   it('answers 401 with no session, lets any signed-in account in (released to everyone 2026-11-10), 422 for a bad body, 404 for an odd id', async () => {

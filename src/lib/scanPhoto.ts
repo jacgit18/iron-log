@@ -30,7 +30,7 @@ export const SCAN_TEXT = {
   per100g: 'That label only shows numbers per 100 g, so nothing was filled in. Type the numbers for one serving.',
 } as const;
 
-async function shrinkToJpegBase64(file: Blob, maxSide = MAX_SIDE): Promise<string> {
+export async function shrinkToJpegBase64(file: Blob, maxSide = MAX_SIDE): Promise<string> {
   const bitmap = await createImageBitmap(file);
   const { w, h } = fitSize(bitmap.width, bitmap.height, maxSide);
   const canvas = document.createElement('canvas');
