@@ -29,6 +29,7 @@ const UNAVAILABLE = 'food search is not available right now';
 
 /** One USDA FoodData Central search for `q` in one data type list, as diet foods. Throws on a non-200 answer (the URL carries the key: never log it). */
 export async function askUsda(ask: typeof fetch, key: string, q: string, dataType: string, pageSize: number = ASK_FOR, max?: number): Promise<FoodHit[]> {
+  // The characters `usdaQuery` strips were probed (status codes only) against the QA key for Foundation + SR Legacy only, 2026-11-19; the Branded type used by Find food was not probed. If USDA starts answering 400 for another character, the aggregated 'food searches failed' log (server/ingredients.ts) names the status.
   // A term that is only characters USDA rejects ("/", "()") has nothing left to ask: a failed search with a reason, never a request with an empty query (and never the term in the message).
   const query = usdaQuery(q);
   if (!query) throw new Error('empty query');
