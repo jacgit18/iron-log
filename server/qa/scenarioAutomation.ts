@@ -212,7 +212,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-186': { auto: 'e2e', specs: ['e2e/recipesCountsAs.spec.js'], partial: 'the seeded hand-set Lentil soup (dashed chip) is not opened' },
   'S-188': { auto: 'e2e', specs: ['e2e/weekBoard.spec.js', 'src/lib/weekBoard.test.ts', 'src/lib/nutritionBoard.test.ts'], partial: 'More on a card, the over-target fill with the g over wording and the Not set group are unit tested only' },
   'S-189': { auto: 'e2e', specs: ['e2e/weekBoard.spec.js', 'src/lib/weekBoard.test.ts', 'src/lib/plate.test.ts'], partial: 'the Veg button is not walked; the spec plans on today by moving a card, not on a day ahead' },
-  'S-190': { auto: 'e2e', specs: ['e2e/weekBoard.spec.js', 'src/lib/weekBoard.test.ts'], partial: 'dragging is not walked; the already-in-that-meal and A day can hold 8 things refusals are unit tested only' },
+  'S-190': { auto: 'e2e', specs: ['e2e/weekBoard.spec.js', 'src/lib/weekBoard.test.ts'], partial: 'dragging is not walked; the already-in-that-meal and A day can hold 8 planned things refusals are unit tested only' },
   'S-191': { auto: 'unit', specs: ['src/lib/weekBoard.test.ts', 'src/lib/plate.test.ts'], partial: 'no spec walks the hatched meter, the Fat n of m foods line or the Add fat to your foods prompt in the browser' },
   'S-192': { auto: 'unit', specs: ['src/lib/weekBoard.test.ts', 'src/lib/quickMeals.test.ts'], partial: 'no spec walks the Not set group or Move to out of it in the browser' },
   'S-193': { auto: 'e2e', specs: ['e2e/nutritionBoard.spec.js'], partial: 'the Manage button and the five meters per column are not asserted in this walk' },
