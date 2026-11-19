@@ -1,0 +1,30 @@
+@layer base, components;
+@layer components {
+/* The leave prompt of the receipt sheet (brief receipt-back-guard). It takes the sticky footer's place (.rcfoot, ReceiptScan.css), so only the spacing below is its own. */
+.rcleave {
+  display: grid;
+  gap: var(--sp-10);
+}
+.rcleaveq {
+  margin: 0;
+}
+.rcleaveq b {
+  display: block;
+  font-size: var(--fs-lg);
+}
+.rcleaveq span {
+  display: block;
+  margin-top: var(--sp-2);
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.rcleavebtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.rcleavebtns .btn {
+  flex: 1 1 8rem;
+  min-height: 48px;
+}
+}

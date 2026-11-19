@@ -1,5 +1,5 @@
-import type { FoodType, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeEst, RecipeIngredient, RecipeUse } from '../types.ts';
-import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
+import type { FoodType, PlanSlot, PlateMark, Recipe, RecipeCategory, RecipeChips, RecipeEst, RecipeIngredient, RecipeUse } from '../types.ts';
+import { PLAN_SLOTS, cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { cleanMicro } from './foodMicro.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';
@@ -49,6 +49,9 @@ export function cleanUses(v: unknown): RecipeUse[] | null {
   const kept = RECIPE_USES.filter(u => v.includes(u));
   return kept.length === 0 ? null : kept.includes('drink') ? ['drink'] : kept;
 }
+
+/** A usual meal as stored: one of the four meals, or null. */
+export const cleanMeal = (v: unknown): PlanSlot | null => PLAN_SLOTS.find(s => s === v) ?? null;
 
 export const PLATE_MARKS: readonly PlateMark[] = ['protein', 'carb', 'veg'];
 /** The plate marks in `v`: known ones only, once each, in the fixed order. None when nothing usable is left. */
@@ -117,6 +120,7 @@ export function normRecipe(x: unknown): Recipe | null {
   const library = from.startsWith('c:');
   const ready = cleanCategory(o.cat) === 'ready'; // a unit name belongs to a ready-made food only; a usual amount may sit on any recipe
   const uses = cleanUses(o.uses); // any recipe may carry them; unknown labels are dropped
+  const meal = cleanMeal(o.meal); // the usual meal (brief nutrition-meal-labels-year-repeat); an unknown value is dropped
   const counts = cleanCounts(o.counts); // what it covers on a plate, set by the person
   const pairs = cleanPairs(o.pairs, id); // recipes it goes with; ids of recipes that no longer exist are dropped by the app, not here (the server sees one list at a time)
   const type = ready ? cleanType(o.type) : null; // a type belongs to a ready-made food only; an unknown value is dropped (the food stays untyped)
@@ -126,7 +130,7 @@ export function normRecipe(x: unknown): Recipe | null {
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
   const micro = cleanMicro(o.micro); // vitamins and minerals per serving, filled by a scan, the ingredient calculator or a meal's roll-up, or the eaten-row sheet's save-to-recipe tick (only when it had none)
   const est = cleanEst(o.est); // the numbers were estimated from ingredient lines; a Fill may find no vitamins and still estimate the macros, so this does not need `micro` (an entry's mark does)
-  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(est ? { est } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(fromMeal ? { fromMeal } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(type ? { type } : {}), ...(uses ? { uses } : {}), ...(meal ? { meal } : {}), ...(pairs ? { pairs } : {}), ...(counts ? { counts } : {}), ...(o.fav === true ? { fav: true as const } : {}), ...(o.own === true ? { own: true as const } : {}), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(micro ? { micro } : {}), ...(est ? { est } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(fromMeal ? { fromMeal } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */

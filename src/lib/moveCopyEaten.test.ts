@@ -139,14 +139,14 @@ describe('copyEatenMany', () => {
     expect(r.skipped).toEqual([{ day: '2020-01-01', reason: 'too far back' }, { day: '2026-02-30', reason: 'not a day' }]);
     expect(r.copied).toHaveLength(1);
   });
-  it('a one-off food or a day beyond today + 13 is skipped, not planned', () => {
+  it('a one-off food or a day beyond today + 364 is skipped, not planned', () => {
     const oneOff: DietEntry = { id: 'o', d: today, n: 'Bar', kcal: 100, p: 3 };
     const a = copyEatenMany([oneOff], 'o', [day(13)], today, ids(), false);
     expect(a.skipped).toEqual([{ day: day(13), reason: 'one-off food' }]);
     expect(a.error).toBe('Nothing copied. Skipped Fri 13: one-off food.');
-    const b = copyEatenMany([rice], 'a', ['2026-11-25', '2026-11-26'], today, ids(), false, recipes);
-    expect(b.skipped).toEqual([{ day: '2026-11-26', reason: 'out of reach' }]);
-    expect(b.planAdds.map(p => p.day)).toEqual(['2026-11-25']);
+    const b = copyEatenMany([rice], 'a', ['2027-11-11', '2027-11-12'], today, ids(), false, recipes);
+    expect(b.skipped).toEqual([{ day: '2027-11-12', reason: 'out of reach' }]);
+    expect(b.planAdds.map(p => p.day)).toEqual(['2027-11-11']);
   });
   it('a fully refused batch returns the list unchanged with an error', () => {
     const list = [rice, eggs];

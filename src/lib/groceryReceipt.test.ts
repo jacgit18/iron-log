@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { NEW_STORE, addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
+import { NEW_STORE, addedText, applyPlan, paidAfterRewards, parseRewards, receiptTotal, withRewards, withoutReceiptMoney, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, stagedAt, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];
@@ -41,7 +41,7 @@ describe('matchStore', () => {
 describe('checkTotals and checkText', () => {
   it('explains the whole total when lines and tax add up', () => {
     const c = checkTotals(receipt);
-    expect(c).toEqual({ linesCents: 9577, taxCents: 204, totalCents: 9781, diffCents: 0 });
+    expect(c).toEqual({ linesCents: 9577, taxCents: 204, totalCents: 9781, diffCents: 0, subtotalCents: null, subtotalDiffCents: null });
     expect(checkText(c)).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
   });
   it('says what is missing, or extra, and when there is no total', () => {
@@ -50,6 +50,39 @@ describe('checkTotals and checkText', () => {
     expect(checkText(checkTotals({ ...receipt, totalCents: 9700 })).text).toContain('$0.81 in the lines is more than the receipt total');
     const { totalCents: _t, ...noTotal } = receipt;
     expect(checkText(checkTotals(noTotal)).ok).toBe(true);
+  });
+});
+
+describe('subtotal reconcile (brief receipt-scan-accuracy)', () => {
+  it('is quiet when the lines add up to the subtotal, and the old total check still speaks', () => {
+    const r = { ...receipt, subtotalCents: 9577 };
+    expect(checkTotals(r).subtotalDiffCents).toBe(0);
+    expect(checkText(checkTotals(r))).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
+  });
+  it('says how much the lines miss when a row was dropped, before tax or rewards blur it', () => {
+    const c = checkTotals({ ...receipt, subtotalCents: 9577 + 1234, totalCents: 9781 + 1234 + 100 });
+    expect(c.subtotalDiffCents).toBe(1234);
+    const t = checkText(c);
+    expect(t.ok).toBe(false);
+    expect(t.text).toContain('Lines do not add up: $12.34 of the receipt subtotal ($108.11) is not in the lines');
+  });
+  it('says when the lines are more than the subtotal (a row read twice)', () => {
+    expect(checkText(checkTotals({ ...receipt, subtotalCents: 9000 })).text).toContain('$5.77 more than the receipt subtotal ($90.00)');
+  });
+  it('a rewards credit does not move the check: the total is read before rewards, the charge is kept apart', () => {
+    const r = { ...receipt, subtotalCents: 9577, paidCents: 9781 - 1727 };
+    expect(checkText(checkTotals(r)).ok).toBe(true);
+  });
+  it('accepts a subtotal printed before discounts (the sum of the printed line prices), so a correct scan is not called short', () => {
+    const c = checkTotals({ ...receipt, subtotalCents: 9577 + 650 }); // 650 = the discounts on the lines above
+    expect(c.subtotalDiffCents).toBe(0);
+    expect(checkText(c).text).not.toContain('Lines do not add up');
+  });
+  it('the owner\'s BJ\'s receipt: lines, subtotal 566.15, tax 6.79, total 572.94, paid 555.67; a dropped row is named, the rewards credit is not a gap', () => {
+    const whole: Receipt = { store: "BJ'S", subtotalCents: 56615, taxCents: 679, totalCents: 57294, paidCents: 55567, lines: [{ text: 'A', qty: 1, grossCents: 50615, discountCents: 0, matchId: null }, { text: 'B', qty: 1, grossCents: 8000, discountCents: 2000, matchId: null }] };
+    expect(checkText(checkTotals(whole))).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
+    const short = { ...whole, lines: [whole.lines[0]!] }; // the second row was dropped (hidden by the ink)
+    expect(checkText(checkTotals(short)).text).toContain('Lines do not add up: $60.00 of the receipt subtotal ($566.15) is not in the lines');
   });
 });
 
@@ -158,10 +191,11 @@ describe('applyPlan and restoreSnapshot', () => {
     const priced = [item('eggs', 'Eggs', { qty: 1, cents: 1100 }), item('oil', 'Kirkland olive oil', { qty: 2, cents: null })];
     const p = planReceipt({ lines: [{ text: 'EGGS', qty: 2, grossCents: 2698, discountCents: 0, matchId: 'eggs' }, { text: 'OIL', qty: 1, grossCents: 1499, discountCents: 0, matchId: 'oil' }], taxCents: 204 }, [{ itemId: 'eggs', include: true }, { itemId: 'oil', include: true }], priced, "BJ's");
     const snap = takeSnapshot(p, '2026-11', lines, priced, { "BJ's": 150 });
-    expect(snap).toEqual({ month: '2026-11', lines: { eggs: { got: true, qty: 1, cents: 1100 }, oil: null }, usual: { eggs: { qty: 1, cents: 1100 }, oil: { qty: 2, cents: null } }, tax: { store: "BJ's", cents: 150 } });
+    expect(snap).toEqual({ month: '2026-11', lines: { eggs: { got: true, qty: 1, cents: 1100 }, oil: null }, usual: { eggs: { qty: 1, cents: 1100 }, oil: { qty: 2, cents: null } }, tax: null, receipt: "BJ's|?|?|204" }); // the money is filed in the month's ledger, so Undo takes that receipt's part back instead of restoring a number
     const { api, calls } = makeApi();
+    api.undoGroceryReceiptMoney = (m, key) => { calls.push(`undo money ${m} ${key}`); };
     restoreSnapshot(snap, api);
-    expect(calls).toEqual(['restore eggs {"got":true,"qty":1,"cents":1100}', 'restore oil null', 'usual eggs {"qty":1,"cents":1100}', 'usual oil {"qty":2,"cents":null}', "tax BJ's 150"]);
+    expect(calls).toEqual(['restore eggs {"got":true,"qty":1,"cents":1100}', 'restore oil null', 'usual eggs {"qty":1,"cents":1100}', 'usual oil {"qty":2,"cents":null}', "undo money 2026-11 BJ's|?|?|204"]);
   });
 });
 
@@ -278,5 +312,91 @@ describe('an item added to the store the receipt is adding', () => {
   });
   it('uses a Store choice no store name can equal', () => {
     expect(NEW_STORE).toMatch(/^\u0001/);
+  });
+});
+
+describe('rewards credit (brief receipt-rewards-credit)', () => {
+  // The owner's BJ's receipt: subtotal 566.15, tax 6.79, total 572.94, rewards 17.27, paid 555.67.
+  const bjs: Receipt = { store: "BJ'S", subtotalCents: 56615, taxCents: 679, totalCents: 57294, rewardsCents: 1727, paidCents: 55567, lines: [{ text: 'A', qty: 1, grossCents: 56615, discountCents: 0, matchId: 'eggs' }] };
+  it('You paid is the receipt total less the rewards, and absent when there are none', () => {
+    expect(paidAfterRewards(bjs)).toBe(55567);
+    expect(paidAfterRewards(withRewards(bjs, null))).toBeNull();
+    expect(receiptTotal({ ...bjs, totalCents: undefined })).toBe(57294); // no printed total: lines + tax
+    expect(paidAfterRewards({ ...bjs, rewardsCents: 99999 })).toBe(0);
+  });
+  it('the total check keeps comparing lines + tax with the printed total, before rewards', () => {
+    expect(checkText(checkTotals(bjs))).toEqual({ ok: true, text: 'Total check: lines plus tax match the receipt.' });
+  });
+  it('parses the Rewards box: empty is none, a bad amount is an error, above the total is refused', () => {
+    expect(parseRewards('', 57294)).toEqual({ ok: true, cents: null });
+    expect(parseRewards('20.00', 57294)).toEqual({ ok: true, cents: 2000 });
+    expect(parseRewards('$17.27', 57294)).toEqual({ ok: true, cents: 1727 });
+    for (const bad of ['abc', '-3', '0', '1.234']) expect(parseRewards(bad, 57294)).toMatchObject({ ok: false });
+    expect(parseRewards('600.00', 57294)).toMatchObject({ ok: false });
+    expect(parseRewards('572.94', 57294)).toEqual({ ok: true, cents: 57294 });
+  });
+  it('the plan carries the credit only for a store that is set, and Apply writes it beside the tax; Undo puts it back as it was', () => {
+    const choice: Choice[] = [{ itemId: 'eggs', include: true }];
+    const plan = planReceipt(bjs, choice, items, "BJ's");
+    expect(plan.credit).toBe(1727);
+    expect(planReceipt(bjs, choice, items, null).credit).toBe(0);
+    expect(planReceipt(withRewards(bjs, null), choice, items, "BJ's").credit).toBe(0);
+    const noTax = planReceipt({ ...bjs, taxCents: 0 }, choice, items, "BJ's"); // a zero-tax receipt still carries its credit
+    expect(noTax).toMatchObject({ taxStore: null, credit: 1727, creditStore: "BJ's" });
+    expect(planReceipt(bjs, choice, items, null)).toMatchObject({ credit: 0, creditStore: null });
+    const calls: string[] = [];
+    const api = { setGroceryGot: () => true, setGroceryQty() {}, setGroceryCents() {}, setGroceryPrices() {}, setGroceryTax: (_m: string, s: string, c: number | null) => { calls.push(`tax ${s} ${c}`); },
+      setGroceryCredit: (_m: string, s: string, c: number | null) => { calls.push(`credit ${s} ${c}`); }, restoreGroceryLine() {}, updateGroceryItem: () => null, removeGroceryItem() {}, setGroceryLineStore: () => null, makeGroceryStoreUsual: () => null } as unknown as GroceryApi;
+    applyPlan(noTax, '2026-11', api);
+    expect(calls).toEqual(["credit BJ's 1727"]);
+    calls.length = 0;
+    applyPlan(plan, '2026-11', api);
+    expect(calls).toEqual(["tax BJ's 679", "credit BJ's 1727"]);
+    // With the month's ledger the money is filed once and Undo takes only that receipt's part back.
+    const filed: unknown[][] = [];
+    const ledgerApi = { ...api, applyGroceryReceiptMoney: (...a: unknown[]) => { filed.push(a); return true; }, undoGroceryReceiptMoney: (...a: unknown[]) => { filed.push(['undo', ...a]); } } as unknown as GroceryApi;
+    applyPlan(plan, '2026-11', ledgerApi);
+    expect(filed).toEqual([['2026-11', plan.receiptKey, "BJ's", 679, 1727]]);
+    const snap = takeSnapshot(plan, '2026-11', {}, items, undefined, [], { "BJ's": 500 });
+    expect(snap).toMatchObject({ receipt: plan.receiptKey, tax: null });
+    expect(snap.credit).toBeUndefined();
+    filed.length = 0; restoreSnapshot(snap, ledgerApi);
+    expect(filed).toEqual([['undo', '2026-11', plan.receiptKey]]);
+    expect(takeSnapshot(planReceipt(withRewards(bjs, null), choice, items, "BJ's"), '2026-11', {}, items, undefined).credit).toBeUndefined();
+    // Apply reports whether it filed the money, so the sheet can drop the Undo key when the add was refused (the key was already there).
+    const refused = { ...ledgerApi, applyGroceryReceiptMoney: () => false } as unknown as GroceryApi;
+    const out: { refused: string[]; moneyFiled?: boolean } = { refused: [] };
+    applyPlan(plan, '2026-11', refused, out);
+    expect(out.moneyFiled).toBe(false);
+    applyPlan(plan, '2026-11', ledgerApi, out);
+    expect(out.moneyFiled).toBe(true);
+  });
+});
+
+describe('receipt money in the month ledger (brief receipt-tax-adds-up)', () => {
+  const choice: Choice[] = [{ itemId: 'eggs', include: true }];
+  const one = (date: string, tax: number, rewards?: number): Receipt => ({ store: "BJ's", date, taxCents: tax, totalCents: 5000 + tax, ...(rewards ? { rewardsCents: rewards } : {}), lines: [{ text: 'EGGS', qty: 1, grossCents: 5000, discountCents: 0, matchId: 'eggs' }] });
+  const eggs = [item('eggs', 'Eggs')];
+  it('keys a receipt by store, date, total and tax, and sets it only when there is a store and an amount', () => {
+    expect(planReceipt(one('2026-11-03', 352), choice, eggs, "BJ's").receiptKey).toBe("BJ's|2026-11-03|5352|352");
+    expect(planReceipt(one('2026-11-03', 352), choice, eggs, null).receiptKey).toBeUndefined();
+    expect(planReceipt(one('2026-11-03', 0), choice, eggs, "BJ's").receiptKey).toBeUndefined();
+  });
+  it('drops the tax and rewards of a receipt already applied, leaving the items', () => {
+    const p = planReceipt(one('2026-11-03', 352, 100), choice, eggs, "BJ's");
+    const w = withoutReceiptMoney(p);
+    expect(w).toMatchObject({ taxStore: null, credit: 0, creditStore: null, items: 1 });
+    expect(w.receiptKey).toBeUndefined();
+    expect(w.steps.map(s => s.kind)).toEqual(['single']);
+  });
+});
+
+describe('Undo only takes back money Apply filed (review of PR 1036)', () => {
+  it('reports whether the receipt money was filed, so a refused add is not undone', () => {
+    const p = planReceipt({ store: "BJ's", date: '2026-11-03', taxCents: 100, totalCents: 1100, lines: [{ text: 'E', qty: 1, grossCents: 1000, discountCents: 0, matchId: 'eggs' }] }, [{ itemId: 'eggs', include: true }], [item('eggs', 'Eggs')], "BJ's");
+    const api = { setGroceryGot: () => true, setGroceryQty() {}, setGroceryCents() {}, setGroceryPrices() {}, restoreGroceryLine() {}, markGroceryFromReceipt() {}, applyGroceryReceiptMoney: () => false } as unknown as GroceryApi;
+    const out: { refused: string[]; moneyFiled?: boolean } = { refused: [] };
+    applyPlan(p, '2026-11', api, out);
+    expect(out.moneyFiled).toBe(false);
   });
 });

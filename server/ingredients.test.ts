@@ -161,6 +161,75 @@ describe('resolveLines', () => {
     expect(c2.map.size).toBe(0);
   });
 
+  it('a term with a slash is searched without it, and its line still resolves under the model\'s own term (USDA answers 400 for "/")', async () => {
+    const urls: string[] = [];
+    const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (new URL(url).hostname === 'api.anthropic.com') return String(init?.body).includes('search terms') ? reply({ lines: [{ term: '80/20 ground beef', grams: 100, gramsFrom: 'text', skip: false }] }) : reply({ picks: [{ i: 0, id: 41, approximate: false }] });
+      urls.push(url);
+      const q = new URL(url).searchParams.get('query')!;
+      if (q.includes('/')) return new Response('bad', { status: 400 });
+      return new Response(JSON.stringify({ foods: [usdaFood(41, 'Beef, ground, 80% lean meat / 20% fat, raw', 254)] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const cache = memCache();
+    const out = await resolveLines(['100 g 80/20 ground beef'], deps(fn, cache));
+    expect(out.ok && out.lines[0]).toMatchObject({ status: 'matched', fdcId: 41 });
+    expect(urls.map(u => new URL(u).searchParams.get('query'))).toEqual(['80 20 ground beef']);
+    expect(cache.map.has(cacheKey('100 g 80/20 ground beef'))).toBe(true);
+  });
+
+  it('a term with nothing left to search for is a failed search, asks USDA nothing and is not cached; the others still resolve', async () => {
+    const f = fakeFetch({ plan: { lines: [PLAN.lines[1], { term: '/', grams: 10, gramsFrom: 'guess', skip: false }] }, picks: { picks: [{ i: 0, id: 21, approximate: false }] } });
+    const cache = memCache();
+    const out = await resolveLines(['2 eggs', '/ salt'], deps(f.fn, cache));
+    expect(out.ok && out.lines[0]).toMatchObject({ status: 'matched', fdcId: 21 });
+    expect(out.ok && out.lines[1]).toMatchObject({ status: 'none', retry: true });
+    expect(f.calls.urls).toHaveLength(1);
+    expect(cache.map.has(cacheKey('/ salt'))).toBe(false);
+  });
+  it('several terms keep their own results under the model\'s terms, even when two sanitise to the same query, and the cache keys stay the lines\'', async () => {
+    const urls: string[] = [];
+    const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (new URL(url).hostname === 'api.anthropic.com') {
+        return String(init?.body).includes('search terms')
+          ? reply({ lines: [{ term: '80/20 beef', grams: 100, gramsFrom: 'text', skip: false }, { term: '80 20 beef', grams: 100, gramsFrom: 'text', skip: false }, { term: 'eggs', grams: 100, gramsFrom: 'text', skip: false }] })
+          : reply({ picks: [{ i: 0, id: 51, approximate: false }, { i: 1, id: 51, approximate: false }, { i: 2, id: 21, approximate: false }] });
+      }
+      urls.push(url);
+      const q = new URL(url).searchParams.get('query')!;
+      if (q.includes('/')) return new Response('bad', { status: 400 });
+      return new Response(JSON.stringify({ foods: q === 'eggs' ? FOODS.eggs : [usdaFood(51, 'Beef, ground, 80% lean meat / 20% fat, raw', 254)] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const lines = ['100 g 80/20 beef', '100 g 80 20 beef', '100 g eggs'];
+    const cache = memCache();
+    const out = await resolveLines(lines, deps(fn, cache));
+    expect(out.ok && out.lines.map(l => (l as { fdcId?: number }).fdcId)).toEqual([51, 51, 21]);
+    expect(urls.map(u => new URL(u).searchParams.get('query')).sort()).toEqual(['80 20 beef', '80 20 beef', 'eggs']);
+    for (const l of lines) expect(cache.map.has(cacheKey(l))).toBe(true);
+  });
+  it('logs why searches failed (a status or an error name), never the term, the line or the key', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const f = fakeFetch({ plan: PLAN, picks: PICKS, usdaFail: ['butter'] });
+      await resolveLines(LINES, deps(f.fn, memCache()));
+      const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
+      expect(logged).toContain('upstream 400');
+      expect(logged.toLowerCase()).not.toContain('butter');
+      expect(logged).not.toContain('api_key');
+    } finally { warn.mockRestore(); }
+  });
+
+  it('logs the failure reasons before it throws when every search fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const f = fakeFetch({ plan: { lines: [PLAN.lines[0]] }, usdaFail: ['flour'] });
+      await expect(resolveLines(['flour'], deps(f.fn, memCache()))).rejects.toThrow('every food search failed');
+      const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
+      expect(logged).toContain('upstream 400');
+      expect(logged.toLowerCase()).not.toContain('flour');
+    } finally { warn.mockRestore(); }
+  });
   it('a row whose term has nothing to do with its own line is answered but never cached (a crafted line steering another row)', async () => {
     const plan = { lines: [{ term: 'lard', grams: 100, gramsFrom: 'converted', skip: false }, { term: 'eggs', grams: 100, gramsFrom: 'converted', skip: false }] };
     const { fn } = fakeFetch({ plan, picks: { picks: [{ i: 0, id: 31, approximate: false }, { i: 1, id: 21, approximate: false }] } });

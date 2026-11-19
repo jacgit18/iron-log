@@ -83,7 +83,7 @@ export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): s
 export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): Settlement {
   const covered = new Set((g.groups ?? []).flatMap(x => x.people.filter(p => p.covered).map(p => p.id)));
   const mine = purchases.filter(p => p.store === store);
-  return settle(mine, payerOf(g, m, store), covered, mine.length ? own(m.tax, store) ?? 0 : 0); // the receipt's tax, typed in; only for a store with something bought
+  return settle(mine, payerOf(g, m, store), covered, mine.length ? own(m.tax, store) ?? 0 : 0, mine.length ? own(m.credit, store) ?? 0 : 0); // the receipt's tax and rewards credit; only for a store with something bought
 }
 
 /** One owed amount of a store's card with whether it has been settled outside the app: `usual` is the default (someone marked Share already paid starts as paid, and "you owe"

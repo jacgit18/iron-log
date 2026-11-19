@@ -80,22 +80,23 @@ test('on a phone Shopping has a full-width Scan receipt, a full-width search and
   for (const b of [sort, select, more]) expect(Math.round(b.height)).toBe(48);
   expect(new Set([sort, select, more].map(b => Math.round(b.y))).size).toBe(1); // one row
   expect(Math.abs(sort.width - select.width)).toBeLessThan(2); expect(Math.abs(select.width - more.width)).toBeLessThan(2); // equal widths
-  await expect(page.locator('#groc-scan-pick')).toBeHidden(); // Pick from photos is in More
+  await expect(page.locator('#groc-scan-pick')).toBeHidden(); // Photos is in the Scan receipt chooser (brief receipt-pick-photo), shut until Scan receipt is pressed
   await page.click('#groc-toolmore');
-  for (const id of ['#groc-scan-pick', '#groc-details-all', '#groc-skipall']) await expect(page.locator(id)).toBeVisible();
+  for (const id of ['#groc-receipts', '#groc-details-all', '#groc-skipall']) await expect(page.locator(id)).toBeVisible();
   await expect(page.locator('#groc-skipall')).toContainText('Skip the 1 left');
   await expect(page.locator('#groc-sub')).toBeVisible();
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(wide).toBe(false);
 });
 
-test('a phone sees search and Sort, Select items, More, Scan receipt, Pick from photos and Saved receipts (open to everyone since 2026-11-10)', async ({ page }) => {
+test('a phone sees search and Sort, Select items, More, Scan receipt (with Camera and Photos) and Saved receipts (open to everyone since 2026-11-10)', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
   await page.click('#groc-view-shopping');
   await expect(page.locator('#groc-scan')).toHaveCount(1);
-  await page.click('#groc-toolmore');
+  await page.click('#groc-scan');
   await expect(page.locator('#groc-scan-pick')).toHaveCount(1);
+  await page.click('#groc-toolmore');
   await expect(page.locator('#groc-receipts')).toHaveCount(1);
   await expect(page.locator('#groc-details-all')).toBeVisible();
 });
@@ -107,6 +108,7 @@ test('from 701 px the toolbar and receipt buttons stay where they were', async (
   await page.click('#groc-view-shopping');
   await expect(page.locator('.gphone')).toHaveCount(0);
   await expect(page.locator('#groc-scan')).toBeVisible();
+  await page.click('#groc-scan');
   await expect(page.locator('#groc-scan-pick')).toBeVisible();
   await expect(page.locator('.gbar .sortctl')).toBeVisible();
   await expect(page.locator('.gtools #groc-toolmore')).toBeVisible();

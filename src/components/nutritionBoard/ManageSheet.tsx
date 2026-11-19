@@ -4,7 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { leaveSheet } from '../../lib/backNav.js';
 import { recommend } from '../../lib/dietTarget.js';
 import { goalLine, recommendInputs } from '../../lib/manageTargets.js';
-import { weekDays, weekOf } from '../../lib/nutritionBoard.js';
+import { oldestLogged, weekDays, weekOf } from '../../lib/nutritionBoard.js';
 import { dayToShow, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { requestProgressJump } from '../../lib/progressJump.js';
 import { requestSettingsJump } from '../../lib/settingsJump.js';
@@ -33,7 +33,7 @@ export default function ManageSheet() {
   const [note, setNote] = useState('');
   const waterRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (modal?.section === 'water') waterRef.current?.scrollIntoView({ block: 'start' }); }, [modal?.section]); // the drink sheet's Change base goal lands on Water, not at the top
-  const shownDay = dayToShow(kept, today), week = useMemo(() => weekDays(today, weekOf(today, shownDay)), [today, shownDay]); // one array per day shown, so the button's memos hold
+  const oldest = oldestLogged(useAppStore(x => x.diet)), shownDay = dayToShow(kept, today, oldest), week = useMemo(() => weekDays(today, weekOf(today, shownDay)), [today, shownDay]); // one array per day shown, so the button's memos hold
   const [editing, setEditing] = useState(modal?.view === 'editor'); // reopened here after a library item was saved from its own sheet
   const leave = (go: () => void) => leaveSheet(window.history, window, go, closeModal); // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
   if (editing) {
