@@ -1,8 +1,9 @@
-import { isEaten } from '../../../lib/dietPlan.js';
+import { canBePlanned, isEaten } from '../../../lib/dietPlan.js';
 import { eatenMax, loggedEntry, plannedEntryStep, plannedStep } from '../../../lib/eatenStep.js';
 import { amountText } from '../../../lib/foodUnit.js';
 import { macroLine } from '../../../lib/macroLine.js';
 import { cardVitamins } from '../../../lib/microLine.js';
+import { drinkIdsOf } from '../../../lib/recipeUses.js';
 import type { BoardItem } from '../../../lib/weekBoard.js';
 import { useAppStore } from '../../../store/useAppStore.js';
 import ArmedButton from '../../ArmedButton.jsx';
@@ -44,6 +45,10 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
   // Repeat opens the Repeat sheet for this food on this day; a daily snack has its own list (Daily snacks), so it has no Repeat button.
   const repeatable = day >= today && !r.gone && (!item.virtual || !!r.item.rp);
   const repeat = () => { st().openModal({ type: 'nbrepeat', day, name: r.name, item: { k: r.item.k, id: r.item.id, ...(r.item.x ? { x: r.item.x } : {}), ...(r.item.s ? { s: r.item.s } : {}) }, ...(r.item.rp ? { rp: r.item.rp } : {}), onMsg }); onOpen(); };
+  // Mark planned / Unmark planned (brief nutrition-board-available-list): only a planned item counts toward the day's 8; a shown repeat is stored first, a listed daily snack and a drink are never planned things.
+  const plannable = useAppStore(s => canBePlanned(r.item, s.cfg.diet?.snacks, drinkIdsOf(s.recipes))); // a stored daily snack or a drink is never a planned thing: no button, no pill
+  const planned = r.item.p === true && plannable, markable = plannable && !r.gone && !(item.virtual && !r.item.rp);
+  const mark = () => { const at = real(); if (at < 0) return; const err = st().setPlanned(day, at, !planned); if (err) onMsg(err); };
   const portion = (to: number) => { const at = real(); if (at >= 0) st().setPlanPortion(day, at, to); };
   const tickedStep = (step: { count: number; plan: number | null } | null) => {
     if (!entry || !step) return;
@@ -66,7 +71,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
       {checkable && <button type="button" role="checkbox" aria-checked={eaten} className="nb-eatck" aria-label={`${eaten ? 'Uncheck' : 'Check'} ${r.name} as eaten`} onClick={tick}><i aria-hidden="true">✓</i></button>}
       <button type="button" className={`wb-card${open ? ' open' : ''}`} draggable={!item.virtual} aria-expanded={open} data-from={`${day}:${index}`} onClick={onOpen}
         onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ day, index })); e.dataTransfer.effectAllowed = 'move'; }}>
-        <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}</span>
+        <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}{planned && <span className="wb-planned">Planned</span>}</span>
         <span className="wb-cm">{r.gone ? 'Removed' : macroLine({ ...(r.kcal !== undefined ? { kcal: r.kcal } : {}), ...(r.p !== undefined ? { p: r.p } : {}) }) || 'Needs numbers'}</span>
         {vit && !r.gone && <MicroLine micro={vit.micro} factor={vit.factor} est={vit.est} />}
       </button>
@@ -79,6 +84,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
         <div className="wb-acts">
           {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`Less ${r.name}`} disabled={less === null} onClick={() => less !== null && portion(less)}>Less</button>}
           {r.item.k === 'r' && !r.gone && !entry && <button type="button" className="btn sm" aria-label={`More ${r.name}`} disabled={more === null} onClick={() => more !== null && portion(more)}>More</button>}
+          {(markable || planned) && <button type="button" className="btn sm" aria-label={`${planned ? 'Unmark planned' : 'Mark planned'} ${r.name}`} aria-pressed={planned} onClick={mark}>{planned ? 'Unmark planned' : 'Mark planned'}</button>}
           <button type="button" className="btn sm" aria-label={`Copy ${r.name}`} aria-haspopup="dialog" onClick={() => pick('copy')}>Copy to…</button>
           <button type="button" className="btn sm" aria-label={`Move ${r.name}`} aria-haspopup="dialog" onClick={() => pick('move')}>Move to…</button>
           {r.gone && r.item.rp && <ArmedButton className="btn sm" aria-label={`Stop repeating ${r.name}`} label="Stop repeating" armedLabel="Tap again to stop" onConfirm={() => { st().stopRepeat(r.item.rp!); onOpen(); }} />}

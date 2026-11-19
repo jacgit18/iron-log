@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
-import { MAX_DAILY_SNACKS, MAX_DAY_DRINKS, MAX_DAY_ITEMS, MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
-import { normPlan } from '../shared/diet.js';
+import { MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
+import { normPlan, plannedCount } from '../shared/diet.js';
 import { moveItem } from './weekBoard.js';
-import { addItem, dayTotals, daysFrom, findMatches, inWindow, isEaten, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
+import { addItem, canBePlanned, markPlanned, dayTotals, daysFrom, findMatches, inWindow, isEaten, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
 
 const today = '2026-10-30';
 const recipes: Recipe[] = [
@@ -14,6 +14,7 @@ const recipes: Recipe[] = [
 const meals: SavedMeal[] = [{ id: 'm1', n: 'Breakfast', items: [{ n: 'Oats', kcal: 350, p: 12 }, { n: 'Banana', kcal: 100, p: 1 }] }];
 const r = (id: string, x?: number): PlanItem => ({ k: 'r', id, ...(x ? { x } : {}) });
 const m = (id: string): PlanItem => ({ k: 'm', id });
+const pl = (id: string): PlanItem => ({ k: 'r', id, p: true });
 
 describe('a saved-meal item resolves through mealsMoved to its recipe (brief saved-meals-removal)', () => {
   it('shows the recipe it became: same numbers as the recipe, portion 1', () => {
@@ -46,23 +47,60 @@ describe('window', () => {
 });
 
 describe('addItem, setPortion, removeItem', () => {
-  it('adds in order, refuses a repeat, a day outside the window and a ninth item', () => {
+  it('adds in order, refuses a repeat, a day outside the window and a 41st item', () => {
     let p = addItem({}, today, r('r1'), today).plan!;
     p = addItem(p, today, m('m1'), today).plan!;
     expect(p[today]).toEqual([r('r1'), m('m1')]);
     expect(addItem(p, today, r('r1'), today).error).toMatch(/already/);
     expect(addItem(p, '2026-10-29', r('r3'), today).error).toMatch(/52 weeks/);
-    const full: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`)) };
-    expect(addItem(full, today, r('r1'), today).error).toContain(String(MAX_PLAN_ITEMS));
+    const full: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_DAY_ITEMS }, (_, i) => r(`x${i}`)) };
+    expect(addItem(full, today, r('r1'), today).error).toContain(String(MAX_DAY_ITEMS));
+    const open: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_DAY_ITEMS - 1 }, (_, i) => r(`x${i}`)) };
+    expect(addItem(open, today, r('r1'), today).error).toBeNull(); // 40 available items, none planned: no 8 limit
   });
-  it('a listed daily snack never counts toward the 8 planned things, and a day holds at most 8 plus one snack per listed recipe (brief snacks-day-cap)', () => {
-    const list = [{ id: 's1' }, { id: 's2' }], snack = (id: string): PlanItem => ({ k: 'r', id, s: 'snack' });
-    const eight: PlanItem[] = Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => r(`x${i}`));
+  it('a ticked listed daily snack and a drink are still stored on a day holding 40 available items, and the cleaner keeps them', () => {
+    const full: Record<string, PlanItem[]> = { [today]: Array.from({ length: MAX_DAY_ITEMS }, (_, i) => r(`x${i}`)) };
+    const snack: PlanItem = { k: 'r', id: 's1', s: 'snack' };
+    const withSnack = addItem(full, today, snack, today, [{ id: 's1' }]);
+    expect(withSnack.error).toBeNull();
+    expect(addItem(full, today, r('tea'), today, undefined, new Set(['tea'])).error).toBeNull();
+    expect(normPlan(withSnack.plan!, today)[today]).toHaveLength(MAX_DAY_ITEMS + 1);
+    expect(addItem(full, today, r('plain'), today).error).toContain(String(MAX_DAY_ITEMS)); // a plain 41st is still refused
+  });
+  it('a stray planned marker on a drink or listed snack is never counted, and cannot be marked', () => {
+    const day: PlanItem[] = [{ k: 'r', id: 'tea', p: true }, pl('r1')];
+    expect(plannedCount(day, undefined, new Set(['tea']))).toBe(1);
+    expect(canBePlanned(day[0]!, undefined, new Set(['tea']))).toBe(false);
+    expect(canBePlanned(day[1]!, undefined, new Set(['tea']))).toBe(true);
+  });
+  it('only an item marked planned counts toward the 8; the ninth planned item is refused', () => {
+    const eight: PlanItem[] = Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => pl(`x${i}`));
+    expect(addItem({ [today]: eight }, today, r('y'), today).error).toBeNull(); // available: allowed
+    expect(addItem({ [today]: eight }, today, pl('y'), today).error).toBe('A day can hold 8 planned things. Unmark one to mark another.');
+  });
+  it('markPlanned marks and unmarks, refuses a ninth planned item, and never changes what the day holds', () => {
+    const day: PlanItem[] = [...Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => pl(`x${i}`)), r('a'), r('b')];
+    const p = { [today]: day };
+    expect(markPlanned(p, today, 8, true).error).toBe('A day can hold 8 planned things. Unmark one to mark another.');
+    const freed = markPlanned(p, today, 0, false).plan!;
+    expect(freed[today]![0]).toEqual(r('x0'));
+    const again = markPlanned(freed, today, 8, true);
+    expect(again.error).toBeNull(); expect(again.plan![today]![8]).toEqual(pl('a')); expect(again.plan![today]).toHaveLength(10);
+    expect(markPlanned(p, today, 1, true).plan).toBe(p); // already planned: unchanged
+    expect(markPlanned(p, today, 99, true).error).toMatch(/gone/);
+  });
+  it('markPlanned refuses a listed daily snack and a drink, and a portion change keeps the marker', () => {
+    const snack: PlanItem = { k: 'r', id: 's1', s: 'snack' }, p = { [today]: [snack, r('tea'), pl('r1')] };
+    expect(markPlanned(p, today, 0, true, [{ id: 's1' }]).error).toMatch(/not counted/);
+    expect(markPlanned(p, today, 1, true, undefined, new Set(['tea'])).error).toMatch(/not counted/);
+    expect(setPortion(p, today, 2, 2)[today]![2]).toEqual({ k: 'r', id: 'r1', x: 2, p: true });
+  });
+  it('a listed daily snack never counts toward the planned things, and a day holds up to 40 in all', () => {
+    const list = [{ id: 's1' }], snack = (id: string): PlanItem => ({ k: 'r', id, s: 'snack' });
+    const eight: PlanItem[] = Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => pl(`x${i}`));
     const withSnack = addItem({ [today]: eight }, today, snack('s1'), today, list);
     expect(withSnack.error).toBeNull(); expect(withSnack.plan![today]).toHaveLength(9);
-    expect(addItem(withSnack.plan!, today, r('y'), today, list).error).toContain(String(MAX_PLAN_ITEMS)); // the ninth planned thing is still refused
-    expect(addItem(withSnack.plan!, today, snack('s2'), today, list).plan![today]).toHaveLength(10);
-    expect(addItem({ [today]: eight }, today, snack('s1'), today).error).toContain(String(MAX_PLAN_ITEMS)); // not on the list: counts as planned, so a full day refuses it
+    expect(addItem(withSnack.plan!, today, pl('y'), today, list).error).toContain(String(MAX_PLAN_ITEMS)); // a ninth planned thing is still refused
   });
   it('sets a portion in half steps, stores 1 as no x, and leaves a meal or a bad portion alone', () => {
     const p = { [today]: [r('r1'), m('m1')] };
@@ -150,9 +188,8 @@ describe('a planned item checked as eaten', () => {
     expect(moveItem(on, today, 0, '2026-10-31', 'dinner', today).plan!['2026-10-31']![0]!.e).toBeUndefined();
   });
   it('is kept when the plan is cleaned, with junk ids dropped', () => {
-    const snacks = Array.from({ length: MAX_DAY_ITEMS + 2 }, (_, i) => ({ k: 'r', id: `q${i}`, s: i < MAX_PLAN_ITEMS ? undefined : 'snack' }));
-    expect(normPlan({ [today]: snacks }, today)[today]).toHaveLength(MAX_DAY_ITEMS);
-    expect(normPlan({ [today]: snacks.map(x => ({ ...x, s: undefined })) }, today)[today]).toHaveLength(MAX_PLAN_ITEMS + MAX_DAY_DRINKS); // the cleaner keeps a ticked snack beside 8 planned things, and still bounds the day (it cannot tell drinks, so it leaves room for them)
+    const many = Array.from({ length: MAX_DAY_STORED + 2 }, (_, i) => ({ k: 'r', id: `q${i}` }));
+    expect(normPlan({ [today]: many }, today)[today]).toHaveLength(MAX_DAY_STORED);
     const clean = normPlan({ [today]: [{ k: 'r', id: 'r1', e: ['e1', 'e1', 5, ''] }] }, today);
     expect(clean[today]![0]!.e).toEqual(['e1']);
   });

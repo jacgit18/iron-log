@@ -49,14 +49,18 @@ test('planning Dinner shows the card, the plate check and a fix that goes with t
   await expect(dinner(today(page)).getByText('Chili', { exact: true })).toBeVisible();
   await expect(dinner(today(page)).getByText('400 kcal · P 30 g')).toBeVisible();
   const check = dinner(today(page)).getByRole('group', { name: 'Dinner plate check' });
+  await expect(check).toHaveCount(0); // available food is a menu: the plate check reads planned items only (brief nutrition-board-available-list)
+  const markPlanned = async name => { await dinner(today(page)).getByRole('button', { name: new RegExp(`^${name}`) }).first().click(); await dinner(today(page)).getByRole('button', { name: `Mark planned ${name}` }).click(); };
+  await markPlanned('Chili');
   await expect(check).toContainText('✓ Protein');
   await expect(check).toContainText('Carb');
   await expect(check).not.toContainText('✓ Carb');
   await dinner(today(page)).getByRole('button', { name: '+ Add a carb: Rice (goes with Chili)' }).click(); // Rice goes with Chili
+  // the fix adds Rice already marked planned, so the check ticks at once
   await expect(check).toContainText('✓ Carb');
-  await expect(dinner(today(page)).getByText('Rice', { exact: true })).toBeVisible();
-  // today's meters count what was eaten, so nothing planned moves them; the totals of the plan show in the meal header
-  await expect(dinner(today(page)).locator('.wb-slothd')).toContainText('600');
+  await expect(dinner(today(page)).locator('.wb-ct', { hasText: 'Rice' })).toBeVisible();
+  // today's meters count what was eaten, so nothing planned moves them; the meal header tells the menu in words, never calories nobody ate (brief nutrition-board-available-list)
+  await expect(dinner(today(page)).locator('.wb-slothd')).toContainText('2 on the menu');
   // a day ahead's bars wait for eaten food (ADR 126) and the plan is a muted line; both foods have a fat figure, so the line carries it whole
   await plan(page, 'Chili', { day: TOMORROW });
   await plan(page, 'Rice', { day: TOMORROW });

@@ -116,6 +116,20 @@
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.wb-slothd .wb-over {
+  font-style: normal;
+  color: var(--warn-ink);
+}
+.wb-planned {
+  margin-left: var(--sp-6);
+  padding: 0 var(--sp-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
 .wb-plate {
   display: flex;
   flex-wrap: wrap;

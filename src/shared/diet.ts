@@ -74,8 +74,10 @@ export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'snack', '
 
 /** The plan window: today and this many days after it (52 weeks, brief nutrition-meal-labels-year-repeat; it was 13). Stored plan days are only the days with stored items, so size follows use, not the window. */
 export const MAX_PLAN_AHEAD = 364, MAX_PLAN_ITEMS = 8, MAX_DAILY_SNACKS = 6, MAX_DAY_DRINKS = 6;
-/** The most a day can store: MAX_PLAN_ITEMS planned things plus a listed daily snack each (brief snacks-day-cap) plus up to MAX_DAY_DRINKS drinks (brief nutrition-meal-labels-year-repeat: drinks sit outside the 8, but stay bounded so a stored day stays small). The cleaner keeps up to this, so a snack ticked on a full day is never dropped, even after it leaves the list. */
-export const MAX_DAY_ITEMS = MAX_PLAN_ITEMS + MAX_DAILY_SNACKS + MAX_DAY_DRINKS;
+/** The most a day can store: the available list (brief nutrition-board-available-list; owner 2026-11-19), a storage bound, not a product limit. Only items marked planned (`p`) count toward MAX_PLAN_ITEMS; drinks keep MAX_DAY_DRINKS. The limit for the rest of the list; the cleaner keeps up to MAX_DAY_STORED. */
+export const MAX_DAY_ITEMS = 40;
+/** What a day can store: the available list plus a ticked listed daily snack each and up to MAX_DAY_DRINKS drinks, which sit outside the 40 so a snack, drink or repeat ticked on a full day is never refused or dropped by the cleaner. */
+export const MAX_DAY_STORED = MAX_DAY_ITEMS + MAX_DAILY_SNACKS + MAX_DAY_DRINKS;
 
 /** A portion in half steps from 0.5 to 10, or null when it is 1 (stored as no `x`) or unusable. */
 const portionOf = (x: unknown): number | null => (fin(x) && x >= 0.5 && x <= 10 && x * 2 === Math.round(x * 2) && x !== 1 ? x : null);
@@ -145,7 +147,7 @@ export function normRepeatSkips(v: unknown, today?: string): Record<string, stri
   return out;
 }
 
-/** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1). */
+/** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1); `p: true` (marked planned) is kept only when it is exactly true. */
 export function normPlanItem(x: unknown): PlanItem | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
   const o = x as Record<string, unknown>;
@@ -155,7 +157,7 @@ export function normPlanItem(x: unknown): PlanItem | null {
   const ok = o.k === 'r' && fin(x2) && x2 >= 0.5 && x2 <= 10 && x2 * 2 === Math.round(x2 * 2) && x2 !== 1;
   const slot = PLAN_SLOTS.find(t => t === o.s);
   const eaten = Array.isArray(o.e) ? [...new Set(o.e.map(v => str(v, MAX_DIET_ID)).filter((v): v is string => !!v))].slice(0, MAX_DIET_PER_DAY) : [];
-  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}), ...(eaten.length ? { e: eaten } : {}) };
+  return { k: o.k, id, ...(ok ? { x: x2 as number } : {}), ...(slot ? { s: slot } : {}), ...(eaten.length ? { e: eaten } : {}), ...(o.p === true ? { p: true as const } : {}) };
 }
 
 /** Whether two planned items are the same food in the same meal; "no meal" is a meal of its own, so the same food may sit untagged and in a meal. */
@@ -163,14 +165,14 @@ export const samePlanItem = (a: PlanItem, b: PlanItem): boolean => a.k === b.k &
 /** A key for one planned item among its day's items (a day never holds two that `samePlanItem` matches). */
 export const planItemKey = (i: PlanItem): string => JSON.stringify([i.k, i.id, i.s ?? '']);
 
-/** Whether a stored item is a listed daily snack: a recipe in Snack whose id is on the daily list. Such an item never counts toward MAX_PLAN_ITEMS; one left on a day after its snack leaves the list counts as planned again. */
+/** Whether a stored item is a listed daily snack: a recipe in Snack whose id is on the daily list. Such an item never counts toward MAX_PLAN_ITEMS. */
 export const isDailySnackItem = (i: PlanItem, snacks: readonly { id: string }[] | undefined): boolean => i.k === 'r' && i.s === 'snack' && !!snacks?.some(s => s.id === i.id);
 /** Whether a stored item is a drink: a recipe whose id is in `drinks` (`drinkIdsOf` in `src/lib/recipeUses.ts` works the set out). A drink never counts toward MAX_PLAN_ITEMS or the plate check (brief nutrition-meal-labels-year-repeat). */
 export const isDrinkItem = (i: PlanItem, drinks: ReadonlySet<string> | undefined): boolean => i.k === 'r' && !!drinks?.has(i.id);
-/** How many of a day's stored items count toward MAX_PLAN_ITEMS: all but its listed daily snacks and, when `drinks` is given, its drinks. */
-export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>): number => items.filter(i => !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length;
+/** How many of a day's stored items count toward MAX_PLAN_ITEMS: those marked planned (`p`), never a listed daily snack or, when `drinks` is given, a drink. An item stored before the marker existed is available, not planned. */
+export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>): number => items.filter(i => i.p === true && !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length;
 
-/** The plan of a stored value, cleaned: real dates only, at most MAX_PLAN_ITEMS + MAX_DAY_DRINKS a day outside Snack and MAX_DAY_ITEMS in all (the exact planned count needs the daily list, so `addItem` and `moveItem` hold it; a ticked daily snack survives here), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
+/** The plan of a stored value, cleaned: real dates only, at most MAX_DAY_STORED a day (the planned count needs the daily list, so `addItem`, `moveItem` and `markPlanned` hold it), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {
   const out: Record<string, PlanItem[]> = {};
   if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
@@ -181,7 +183,7 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
     const items: PlanItem[] = [];
     for (const raw of Array.isArray((v as Record<string, unknown>)[d]) ? (v as Record<string, unknown[]>)[d]! : []) {
       const it = normPlanItem(raw);
-      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_DAY_ITEMS || (it.s !== 'snack' && items.filter(x => x.s !== 'snack').length >= MAX_PLAN_ITEMS + MAX_DAY_DRINKS)) continue; // the cleaner does not know the daily list, so it keeps what the app can have stored: at most 8 planned things plus MAX_DAY_DRINKS drinks outside Snack and MAX_DAY_ITEMS in all (a ticked snack is never dropped). The same food may be in two different meals of a day
+      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_DAY_STORED) continue; // the cleaner does not know the daily list or the drinks, so it holds only the storage bound; the planned and drink limits are held when an item is added, moved or marked. The same food may be in two different meals of a day
       items.push(it);
     }
     if (items.length) out[d] = items;
