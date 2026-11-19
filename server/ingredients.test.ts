@@ -161,6 +161,23 @@ describe('resolveLines', () => {
     expect(c2.map.size).toBe(0);
   });
 
+  it('a term with a slash is searched without it, and its line still resolves under the model\'s own term (USDA answers 400 for "/")', async () => {
+    const urls: string[] = [];
+    const fn = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (new URL(url).hostname === 'api.anthropic.com') return String(init?.body).includes('search terms') ? reply({ lines: [{ term: '80/20 ground beef', grams: 100, gramsFrom: 'text', skip: false }] }) : reply({ picks: [{ i: 0, id: 41, approximate: false }] });
+      urls.push(url);
+      const q = new URL(url).searchParams.get('query')!;
+      if (q.includes('/')) return new Response('bad', { status: 400 });
+      return new Response(JSON.stringify({ foods: [usdaFood(41, 'Beef, ground, 80% lean meat / 20% fat, raw', 254)] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const cache = memCache();
+    const out = await resolveLines(['100 g 80/20 ground beef'], deps(fn, cache));
+    expect(out.ok && out.lines[0]).toMatchObject({ status: 'matched', fdcId: 41 });
+    expect(urls.map(u => new URL(u).searchParams.get('query'))).toEqual(['80 20 ground beef']);
+    expect(cache.map.has(cacheKey('100 g 80/20 ground beef'))).toBe(true);
+  });
+
   it('a row whose term has nothing to do with its own line is answered but never cached (a crafted line steering another row)', async () => {
     const plan = { lines: [{ term: 'lard', grams: 100, gramsFrom: 'converted', skip: false }, { term: 'eggs', grams: 100, gramsFrom: 'converted', skip: false }] };
     const { fn } = fakeFetch({ plan, picks: { picks: [{ i: 0, id: 31, approximate: false }, { i: 1, id: 21, approximate: false }] } });

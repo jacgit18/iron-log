@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { dayCap } from './dayCap.ts';
-import { cleanQuery, mergeFoods, parseFoods, type FoodHit } from '../src/shared/foods.ts';
+import { cleanQuery, mergeFoods, parseFoods, usdaQuery, type FoodHit } from '../src/shared/foods.ts';
 
 // Food search (brief diet-food-lookup), mounted at /api/foods behind sign-in and a per-user limit. The server asks USDA FoodData Central so the
 // API key never reaches a phone, and answers with the few numbers a diet entry needs (src/shared/foods.ts). Nothing is stored: the answers are
@@ -30,7 +30,7 @@ const UNAVAILABLE = 'food search is not available right now';
 /** One USDA FoodData Central search for `q` in one data type list, as diet foods. Throws on a non-200 answer (the URL carries the key: never log it). */
 export async function askUsda(ask: typeof fetch, key: string, q: string, dataType: string, pageSize: number = ASK_FOR, max?: number): Promise<FoodHit[]> {
   const url = new URL(USDA_URL);
-  url.search = new URLSearchParams({ query: q, dataType, pageSize: String(pageSize), api_key: key }).toString();
+  url.search = new URLSearchParams({ query: usdaQuery(q), dataType, pageSize: String(pageSize), api_key: key }).toString();
   const r = await ask(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
   if (!r.ok) throw new Error(`upstream ${r.status}`);
   return parseFoods(await r.json(), max);
