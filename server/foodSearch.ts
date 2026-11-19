@@ -29,8 +29,11 @@ const UNAVAILABLE = 'food search is not available right now';
 
 /** One USDA FoodData Central search for `q` in one data type list, as diet foods. Throws on a non-200 answer (the URL carries the key: never log it). */
 export async function askUsda(ask: typeof fetch, key: string, q: string, dataType: string, pageSize: number = ASK_FOR, max?: number): Promise<FoodHit[]> {
+  // A term that is only characters USDA rejects ("/", "()") has nothing left to ask: a failed search with a reason, never a request with an empty query (and never the term in the message).
+  const query = usdaQuery(q);
+  if (!query) throw new Error('empty query');
   const url = new URL(USDA_URL);
-  url.search = new URLSearchParams({ query: usdaQuery(q), dataType, pageSize: String(pageSize), api_key: key }).toString();
+  url.search = new URLSearchParams({ query, dataType, pageSize: String(pageSize), api_key: key }).toString();
   const r = await ask(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
   if (!r.ok) throw new Error(`upstream ${r.status}`);
   return parseFoods(await r.json(), max);
@@ -55,6 +58,8 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
       if (!saidNoKey) { saidNoKey = true; console.warn(JSON.stringify({ msg: 'food search is off: USDA_API_KEY is not set' })); }
       return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
     }
+    // Nothing left to search for once USDA's rejected characters are gone ("//"): no results, and no ask or allowance spent.
+    if (!usdaQuery(q)) return void res.json({ ok: true, hits: [] });
     const t = now();
     // A daily allowance per person, so one account cannot use up the shared key. Counted on every valid search, held answer or not.
     const allowed = daily.take(String(res.locals.userId), DAILY_MAX);
