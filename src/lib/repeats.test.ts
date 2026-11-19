@@ -176,10 +176,14 @@ describe('review fixes', () => {
 });
 
 describe('retargetRepeats', () => {
-  it('moves every repeat of the food that names a meal, and leaves other foods and repeats with no meal', () => {
-    const list = [rep('a', every, { s: 'snack' }), rep('b', weekdays, { s: 'dinner' }), rep('c', every, { id: 'rice', s: 'snack' }), rep('d', every)];
+  it('moves the repeats of the food that name a meal, and leaves other foods and repeats with no meal', () => {
+    const list = [rep('a', [1, 2], { s: 'snack' }), rep('b', [4, 5], { s: 'dinner' }), rep('c', every, { id: 'rice', s: 'snack' }), rep('d', every)];
     const out = retargetRepeats(list, 'oats', 'breakfast');
     expect(out.map(r => [r.rid, r.s])).toEqual([['a', 'breakfast'], ['b', 'breakfast'], ['c', 'snack'], ['d', undefined]]);
+  });
+  it('moves only one of two repeats that would overlap once both sit in the meal', () => {
+    const list = [rep('a', every, { s: 'snack' }), rep('b', weekdays, { s: 'dinner' })];
+    expect(retargetRepeats(list, 'oats', 'breakfast').map(r => r.s)).toEqual(['breakfast', 'dinner']);
   });
   it('leaves a repeat alone when the move would clash with another repeat of the same food and meal on a shared weekday', () => {
     const list = [rep('a', weekdays, { s: 'snack' }), rep('b', [1, 2], { s: 'breakfast' })];
