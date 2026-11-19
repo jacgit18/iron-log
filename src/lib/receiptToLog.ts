@@ -58,8 +58,22 @@ export function openCheck(list: readonly SavedReceipt[], id: string): 'ready' | 
 export function openGate(l: { ok: true; receipts: readonly SavedReceipt[] } | { ok: false; reason: 'offline' | 'unavailable' }, id: string): 'ready' | 'logged' | 'gone' | 'offline' | 'unchecked' {
   return l.ok ? openCheck(l.receipts, id) : l.reason === 'offline' ? 'offline' : 'unchecked';
 }
-/** Read needs the grocery items to match the receipt against; a fresh device whose list has not synced has none. */
-export const readBlockedText = (itemCount: number): string | null => (itemCount > 0 ? null : 'Your shopping list has not loaded on this device yet, so the receipt cannot be matched to it. Wait a moment, then try Read again.');
+/** Read needs the account's data loaded to match the receipt against the list. Only a load still in progress blocks it: an empty list (every one-time item used, or none yet) reads, and the sheet creates items from unmatched lines. */
+export const readBlockedText = (loading: boolean): string | null => (loading ? 'Your data is still loading on this device, so the receipt cannot be matched to your list yet. Wait a moment, then try Read again.' : null);
+
+/** Which photos a load run should fetch: not already held and not already being fetched by another run (a changed list starts a second run while the first still awaits). Marks them in flight. */
+export function claimLoads(ids: readonly string[], have: { has(id: string): boolean }, inFlight: Set<string>): string[] {
+  const take = ids.filter(id => !have.has(id) && !inFlight.has(id));
+  for (const id of take) inFlight.add(id);
+  return take;
+}
+
+/** Photos that did not load, by when another try may go. A refused load (429) marks the failed one and the rest of the run as waiting (nothing is requested meanwhile); any other failure marks only the photo that failed, so rows still loading do not flash Retry. */
+export function markMissed(ids: readonly string[], failedAt: number, reason: 'limit' | 'failed', now: number, waitMs = 0): Record<string, number> {
+  const at = reason === 'limit' ? now + waitMs : 0;
+  return Object.fromEntries((reason === 'limit' ? ids.slice(failedAt) : [ids[failedAt]!]).map(id => [id, at]));
+}
+
 export const openText = { unchecked: 'Could not check that receipt just now, so it was not opened.', logged: 'That receipt was already logged on another device. It is under Saved receipts.', gone: 'That receipt is gone. It was deleted on another device.', photo: 'Could not load the photo. Try again.', offline: 'You are offline. Opening a saved receipt needs a connection.' } as const;
 
 /** The notice when a snap did not save. The photo stays in memory for Try again, except when the account is full. */
@@ -77,7 +91,9 @@ export const claimText = { taken: 'Another device already logged this receipt, s
 export async function claimThenApply(claim: () => Promise<string | null>, write: () => boolean, release: () => Promise<void>): Promise<string | null> {
   const blocked = await claim();
   if (blocked) return blocked;
-  if (!write()) await release();
+  let wrote = false;
+  try { wrote = write(); } catch (e) { await release(); throw e; } // a write that threw after the claim must not leave the row logged with no prices
+  if (!wrote) await release();
   return null;
 }
 

@@ -114,7 +114,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   // Read this receipt: the same scan as Scan receipt, on the saved photo, then the review sheet. Apply updates the saved row (no second upload); Undo puts it back under To log.
   const readSaved = async (row: SavedReceipt, blob: Blob): Promise<string | null> => {
     const { catalogue, items } = scanItems(row.month);
-    const blocked = readBlockedText(items.length); // a fresh device whose list has not synced would send no items and match nothing
+    const blocked = readBlockedText(useAppStore.getState().blocked()); // data still loading would send no items and match nothing; an empty loaded list is fine
     if (blocked) return blocked;
     const r = await scanReceipt(blob, items, undefined, { asIs: true }); // the saved JPEG goes as it is: no second re-encode per Read
     if (!r.ok) return RECEIPT_TEXT[r.reason];

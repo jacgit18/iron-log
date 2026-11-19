@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_THUMBS, applyChange, changeFailText, claimThenApply, loggedRows, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
+import { MAX_THUMBS, applyChange, changeFailText, claimLoads, claimThenApply, loggedRows, markMissed, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
 import type { SavedList, SavedReceipt } from './receiptsClient.js';
 
 const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-18T15:00:00.000Z', month: '2026-11', receiptDate: null, store: '', totalCents: null, note: '', sizeBytes: 100, status: 'to_log', ...over });
@@ -104,9 +104,9 @@ describe('thumbState', () => {
 });
 
 describe('readBlockedText', () => {
-  it('says so when the list has no items on this device, and stays out of the way otherwise', () => {
-    expect(readBlockedText(0)).toMatch(/not loaded on this device/);
-    expect(readBlockedText(3)).toBeNull();
+  it('blocks only while data is loading; an empty loaded list (every one-time item used) reads', () => {
+    expect(readBlockedText(true)).toMatch(/still loading/);
+    expect(readBlockedText(false)).toBeNull(); // the list can be empty and loaded: the sheet creates items from unmatched lines
   });
 });
 
@@ -125,5 +125,31 @@ describe('claimThenApply', () => {
     const calls: string[] = [];
     expect(await claimThenApply(async () => null, () => { calls.push('write'); return false; }, async () => { calls.push('release'); })).toBeNull();
     expect(calls).toEqual(['write', 'release']);
+  });
+});
+
+describe('claimThenApply when the write throws', () => {
+  it('releases the claim and rethrows, so the row is not left logged with no prices', async () => {
+    const calls: string[] = [];
+    await expect(claimThenApply(async () => null, () => { calls.push('write'); throw new Error('boom'); }, async () => { calls.push('release'); })).rejects.toThrow('boom');
+    expect(calls).toEqual(['write', 'release']);
+  });
+});
+
+describe('claimLoads', () => {
+  it('skips a photo already held or already being fetched by another run, and marks the rest in flight', () => {
+    const inFlight = new Set<string>(['2']);
+    expect(claimLoads(['1', '2', '3'], new Set(['3']), inFlight)).toEqual(['1']);
+    expect(inFlight).toEqual(new Set(['2', '1']));
+    expect(claimLoads(['1', '2'], new Set(), inFlight)).toEqual([]); // a second run for the same ids fetches nothing
+  });
+});
+
+describe('markMissed', () => {
+  it('after a refusal (429) marks the failed photo and the rest of the run as waiting', () => {
+    expect(markMissed(['a', 'b', 'c'], 1, 'limit', 1000, 5000)).toEqual({ b: 6000, c: 6000 });
+  });
+  it('after any other failure marks only the photo that failed, so rows still loading do not show Retry', () => {
+    expect(markMissed(['a', 'b', 'c'], 1, 'failed', 1000)).toEqual({ b: 0 });
   });
 });

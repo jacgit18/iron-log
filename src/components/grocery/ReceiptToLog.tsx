@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchPhotoOnce, removeReceipt, type SavedReceipt } from '../../lib/receiptsClient.js';
-import { thumbIds, thumbState, toLogTitle } from '../../lib/receiptToLog.js';
+import { claimLoads, markMissed, thumbIds, thumbState, toLogTitle } from '../../lib/receiptToLog.js';
 import './ReceiptToLog.css';
 
 // The To log card on Shopping (brief receipt-snap-now-log-later, owner picked option I from a preview): the receipts snapped and saved unread, one row each with a small photo,
@@ -18,17 +18,25 @@ export default function ReceiptToLog({ rows, opening, onOpen, onDeleted }: { row
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   // One photo at a time. A refused load (429) stops the run: the rest are marked as waiting for the same time, so nothing hammers the 30 a minute limit.
-  const load = async (ids: string[]) => {
+  const inFlight = useRef(new Set<string>()); // a changed list starts a second run while the first awaits: one fetch per id
+  const load = async (all: string[]) => {
+    const ids = claimLoads(all, cache.current, inFlight.current);
     for (const [i, id] of ids.entries()) {
       if (!live.current) return;
-      if (cache.current.has(id)) continue;
       const out = await fetchPhotoOnce(id);
+      inFlight.current.delete(id);
       if (!live.current) return;
-      if (out.ok) { cache.current.set(id, URL.createObjectURL(out.blob)); setMissed(m => { const { [id]: _gone, ...rest } = m; return rest; }); continue; }
-      const at = out.reason === 'limit' ? Date.now() + out.waitMs : 0;
+      if (out.ok) {
+        const old = cache.current.get(id);
+        if (old) URL.revokeObjectURL(old);
+        cache.current.set(id, URL.createObjectURL(out.blob));
+        setMissed(m => { const { [id]: _gone, ...rest } = m; return rest; });
+        continue;
+      }
       setNow(Date.now());
-      setMissed(m => ({ ...m, ...Object.fromEntries(ids.slice(i).filter(x => !cache.current.has(x)).map(x => [x, at])) }));
-      if (out.reason === 'limit') break;
+      const wait = out.reason === 'limit' ? out.waitMs : 0;
+      setMissed(m => ({ ...m, ...markMissed(ids, i, out.reason, Date.now(), wait) }));
+      if (out.reason === 'limit') { for (const rest of ids.slice(i + 1)) inFlight.current.delete(rest); break; }
     }
     if (live.current) setThumbs(Object.fromEntries(cache.current));
   };
