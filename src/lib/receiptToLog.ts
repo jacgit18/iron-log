@@ -4,6 +4,13 @@ import type { Receipt } from '../shared/receipt.js';
 // Snap now, log later (brief receipt-snap-now-log-later): the pure parts. A photo saved unread has status `to_log`; Apply moves the same row to `logged`, Undo moves it back.
 // The calls are in receiptsClient.ts and covered by e2e/receiptSnap.spec.js; what each list shows, what is sent and the words are here and unit-tested.
 
+/** What a To log row's photo box does: show the photo, wait out a refused load (429) before another try, or offer the try now. */
+export function thumbState(url: string | undefined, retryAt: number | undefined, now: number): 'photo' | 'wait' | 'retry' | 'loading' {
+  if (url) return 'photo';
+  if (retryAt === undefined) return 'loading';
+  return retryAt > now ? 'wait' : 'retry';
+}
+
 /** The most To log rows that load a small photo; the rest show a plain box, so opening Shopping never asks for a long run of pictures (30 calls a minute). */
 export const MAX_THUMBS = 6;
 
@@ -47,7 +54,13 @@ export function openCheck(list: readonly SavedReceipt[], id: string): 'ready' | 
   const r = list.find(x => x.id === id);
   return !r ? 'gone' : r.status === 'to_log' ? 'ready' : 'logged';
 }
-export const openText = { logged: 'That receipt was already logged on another device. It is under Saved receipts.', gone: 'That receipt is gone. It was deleted on another device.', photo: 'Could not load the photo. Try again.', offline: 'You are offline. Opening a saved receipt needs a connection.' } as const;
+/** Open needs a checked status: a list call that failed is not "ready" (an already-logged or deleted receipt would open). */
+export function openGate(l: { ok: true; receipts: readonly SavedReceipt[] } | { ok: false; reason: 'offline' | 'unavailable' }, id: string): 'ready' | 'logged' | 'gone' | 'offline' | 'unchecked' {
+  return l.ok ? openCheck(l.receipts, id) : l.reason === 'offline' ? 'offline' : 'unchecked';
+}
+/** Read needs the grocery items to match the receipt against; a fresh device whose list has not synced has none. */
+export const readBlockedText = (itemCount: number): string | null => (itemCount > 0 ? null : 'Your shopping list has not loaded on this device yet, so the receipt cannot be matched to it. Wait a moment, then try Read again.');
+export const openText = { unchecked: 'Could not check that receipt just now, so it was not opened.', logged: 'That receipt was already logged on another device. It is under Saved receipts.', gone: 'That receipt is gone. It was deleted on another device.', photo: 'Could not load the photo. Try again.', offline: 'You are offline. Opening a saved receipt needs a connection.' } as const;
 
 /** The notice when a snap did not save. The photo stays in memory for Try again, except when the account is full. */
 export function snapFailText(reason: SaveFailure['reason'], limits?: { maxReceipts: number; maxBytes: number }): string {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { downloadName, groupByMonth, keepFailText, keepMeta, receiptTitle, retryWaitMs, saveReceipt, updateReceipt, usageText, type SavedReceipt } from './receiptsClient.js';
+import { downloadName, fetchPhotoOnce, groupByMonth, keepFailText, keepMeta, receiptTitle, retryWaitMs, saveReceipt, updateReceipt, usageText, type SavedReceipt } from './receiptsClient.js';
 
 const r = (over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id: '1', savedAt: '2026-11-03T12:00:00.000Z', month: '2026-11', receiptDate: '2026-11-02', store: "BJ's", totalCents: 14231, note: '', sizeBytes: 300_000, status: 'logged', ...over });
 
@@ -91,5 +91,24 @@ describe('saveReceipt and updateReceipt (calls)', () => {
     stub(null); expect(await updateReceipt('1', { status: 'logged' })).toEqual({ ok: false, reason: 'offline' });
     stub(json(500)); expect(await updateReceipt('1', { status: 'logged' })).toEqual({ ok: false, reason: 'unavailable' });
     stub(json(200, { receipt: r() })); expect((await updateReceipt('1', { status: 'logged' })).ok).toBe(true);
+  });
+});
+
+describe('fetchPhotoOnce', () => {
+  const g = globalThis as Record<string, unknown>;
+  const saved = { fetch: g.fetch, v: g.__APP_VERSION__ };
+  afterEach(() => { g.fetch = saved.fetch; g.__APP_VERSION__ = saved.v; });
+  it('makes one call; a 429 carries the wait from Retry-After and is not retried', async () => {
+    g.__APP_VERSION__ = 'test';
+    const f = vi.fn(async () => new Response('{}', { status: 429, headers: { 'Retry-After': '12' } }));
+    g.fetch = f;
+    expect(await fetchPhotoOnce('1')).toEqual({ ok: false, reason: 'limit', waitMs: 12_000 });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+  it('tells a missing photo or offline from a refusal, and returns the blob when it loads', async () => {
+    g.__APP_VERSION__ = 'test';
+    g.fetch = async () => new Response('x', { status: 404 }); expect(await fetchPhotoOnce('1')).toEqual({ ok: false, reason: 'failed' });
+    g.fetch = async () => { throw new Error('offline'); }; expect(await fetchPhotoOnce('1')).toEqual({ ok: false, reason: 'failed' });
+    g.fetch = async () => new Response('abc', { status: 200 }); const out = await fetchPhotoOnce('1'); expect(out.ok).toBe(true);
   });
 });

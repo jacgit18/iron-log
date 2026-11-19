@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
-import { fetchPhoto, keepFailText, listReceipts, saveReceipt, updateReceipt, type KeepMeta, type SavedList, type SavedReceipt, type SaveFailure } from '../../lib/receiptsClient.js';
+import { fetchPhotoOnce, keepFailText, listReceipts, saveReceipt, updateReceipt, type KeepMeta, type SavedList, type SavedReceipt, type SaveFailure } from '../../lib/receiptsClient.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { applySavedNames } from '../../lib/groceryReceipt.js';
 import { dropDraft, readDrafts, relinkDraft, type Draft } from '../../lib/receiptDraft.js';
-import { applyChange, changeFailText, claimText, openCheck, openText, snapFailText, snapMeta, toLogRows, undoChange, withSnapped, withoutReceipt } from '../../lib/receiptToLog.js';
+import { applyChange, changeFailText, claimText, openGate, openText, readBlockedText, snapFailText, snapMeta, toLogRows, undoChange, withSnapped, withoutReceipt } from '../../lib/receiptToLog.js';
 import { MAX_RECEIPT_SIDE, RECEIPT_TEXT, scanReceipt, shrinkToJpegBase64 } from '../../lib/scanPhoto.js';
 import { takeReadyResume } from '../../lib/sharingIntent.js';
 import type { ItemRef, Receipt } from '../../shared/receipt.js';
@@ -34,6 +34,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
   const [kept, setKept] = useState<{ image: string; meta: KeepMeta; busy: boolean; fail: SaveFailure['reason'] | null; snap?: boolean } | null>(null); // `snap`: a photo saved unread to To log (brief receipt-snap-now-log-later), not a copy kept after Apply
   const [saved, setSaved] = useState<SavedList | null>(null); // the account's saved receipts, text only; To log is the ones still waiting
   const [opening, setOpening] = useState<string | null>(null);
+  const [openFail, setOpenFail] = useState<{ row: SavedReceipt; text: string } | null>(null); // Open could not check the receipt's status: a notice with Try again
   const refresh = async () => { const r = await listReceipts(); if (mounted.current && r.ok) setSaved(r); }; // a list that cannot load just leaves the card out
   const months = useAppStore(s => s.groceryMonths);
   const canScan = withoutUsed(g, months).items.length > 0;
@@ -85,7 +86,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
     setKept({ image, meta, busy: true, fail: null, snap: true });
     const r = await saveReceipt(image, meta, 'to_log');
     if (!mounted.current) return;
-    if (r.ok) { setKept(null); setMsg('Photo saved under To log. Open it later, on any device.'); setSaved(s => withSnapped(s, r.receipt)); void refresh(); return; }
+    if (r.ok) { setKept(null); setMsg('Photo saved under To log. Open it later, on any device.'); setSaved(s => withSnapped(s, r.receipt)); return; }
     setKept({ image, meta, busy: false, fail: r.reason, snap: true });
   };
   const snap = async (file: File | undefined) => {
@@ -99,22 +100,23 @@ export function useReceiptScan(g: Grocery, mk: string) {
   // Open on a To log row: check it still waits (a second device may have applied or deleted it), load its photo, and show the unread sheet. Nothing is read or changed yet.
   const openRow = async (row: SavedReceipt) => {
     if (opening) return;
-    setOpening(row.id); setMsg(''); setApplied(null);
-    const [l, blob] = await Promise.all([listReceipts(), fetchPhoto(row.id)]);
+    setOpening(row.id); setMsg(''); setApplied(null); setOpenFail(null);
+    const [l, blob] = await Promise.all([listReceipts(), fetchPhotoOnce(row.id).then(o => (o.ok ? o.blob : null))]);
     if (!mounted.current) return;
     setOpening(null);
-    if (l.ok) {
-      setSaved(l);
-      const state = openCheck(l.receipts, row.id);
-      if (state !== 'ready') { setMsg(openText[state]); return; }
-    } else if (l.reason === 'offline') { setMsg(openText.offline); return; }
+    if (l.ok) setSaved(l);
+    const state = openGate(l, row.id); // a status that could not be checked never opens: an already-logged or deleted receipt would open
+    if (state === 'unchecked' || state === 'offline') { setOpenFail({ row, text: openText[state] }); return; }
+    if (state !== 'ready') { setMsg(openText[state]); return; }
     if (!blob) { setMsg(openText.photo); return; }
     useAppStore.getState().openModal({ type: 'receiptlater', receipt: row, blob, onChanged: (x: SavedReceipt | null) => { if (!x) setSaved(l => withoutReceipt(l, row.id)); }, onRead: () => readSaved(row, blob) });
   };
   // Read this receipt: the same scan as Scan receipt, on the saved photo, then the review sheet. Apply updates the saved row (no second upload); Undo puts it back under To log.
   const readSaved = async (row: SavedReceipt, blob: Blob): Promise<string | null> => {
     const { catalogue, items } = scanItems(row.month);
-    const r = await scanReceipt(blob, items);
+    const blocked = readBlockedText(items.length); // a fresh device whose list has not synced would send no items and match nothing
+    if (blocked) return blocked;
+    const r = await scanReceipt(blob, items, undefined, { asIs: true }); // the saved JPEG goes as it is: no second re-encode per Read
     if (!r.ok) return RECEIPT_TEXT[r.reason];
     if (r.result.kind !== 'ok') return RECEIPT_TEXT.unreadable;
     const { receipt, remembered } = applySavedNames(r.result.receipt, catalogue.items);
@@ -148,6 +150,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
       {drafts.length > 0 && !sheetOpen && <ReceiptResume drafts={drafts} now={left.at} onResume={resume} onDiscard={id => { dropDraft(id); setLeft(readNow()); }} />}
       <ReceiptToLog rows={toLogRows(saved?.receipts ?? [])} opening={opening} onOpen={row => void openRow(row)} onDeleted={id => setSaved(l => withoutReceipt(l, id))} />
       {msg && <p className="note" role="status">{msg}</p>}
+      {openFail && <Notice kind="warning" actions={[{ label: 'Try again', onClick: () => void openRow(openFail.row) }, { label: 'Dismiss', ghost: true, onClick: () => setOpenFail(null) }]}>{openFail.text}</Notice>}
       {kept && (kept.busy ? <p className="note" role="status">Saving the photo...</p> : (
         <Notice kind="warning" actions={[kept.fail === 'cap'
           ? { label: 'Open Receipts', onClick: () => { setKept(null); navigate('daily/grocery/receipts', 'push'); } }
@@ -167,7 +170,7 @@ export function useReceiptScan(g: Grocery, mk: string) {
       {canScan && <input ref={snapInput} type="file" accept="image/*" capture="environment" hidden aria-label="Snap and save camera" onChange={e => { void snap(e.target.files?.[0]); e.target.value = ''; }} />}
     </>
   );
-  const hasNotes = drafts.length > 0 || toLogRows(saved?.receipts ?? []).length > 0 || !!msg || !!kept || (!!applied && applied.mk === mk);
+  const hasNotes = !!openFail || drafts.length > 0 || toLogRows(saved?.receipts ?? []).length > 0 || !!msg || !!kept || (!!applied && applied.mk === mk);
   return { canScan, busy, inputs, notes, hasNotes, openCamera: () => camera.current?.click(), openLibrary: () => library.current?.click(), openSnap: () => snapInput.current?.click() };
 }
 export type ReceiptScanState = ReturnType<typeof useReceiptScan>;

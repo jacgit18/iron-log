@@ -112,6 +112,14 @@ export async function removeReceipt(id: string): Promise<{ ok: true } | { ok: fa
 /** How long to wait before a refused call may be tried again: the server's Retry-After seconds, at least 1 and at most 60, 5 when it sent none. */
 export const retryWaitMs = (header: string | null): number => { const n = Number(header); return (Number.isFinite(n) && n > 0 ? Math.min(60, Math.max(1, Math.ceil(n))) : 5) * 1000; };
 
+/** One try at the saved JPEG, with why it failed: `limit` (429) carries how long to wait, so a caller can show a placeholder and retry once, not again and again. */
+export async function fetchPhotoOnce(id: string): Promise<{ ok: true; blob: Blob } | { ok: false; reason: 'limit'; waitMs: number } | { ok: false; reason: 'failed' }> {
+  const res = await call(`/${id}/photo`);
+  if (res?.status === 429) return { ok: false, reason: 'limit', waitMs: retryWaitMs(res.headers.get('Retry-After')) };
+  if (!res || !res.ok) return { ok: false, reason: 'failed' };
+  try { return { ok: true, blob: await res.blob() }; } catch { return { ok: false, reason: 'failed' }; }
+}
+
 /** The saved JPEG, or null when it could not be loaded. `patient` (Download all, which asks for every photo in a row) waits out the per-minute limit and tries again, up to 5 times, instead of giving up on that photo. */
 export async function fetchPhoto(id: string, patient = false): Promise<Blob | null> {
   for (let tries = 0; ; tries++) {
