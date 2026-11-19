@@ -47,9 +47,9 @@ describe('the plan as the board shows it', () => {
     expect(effectivePlan(plain, [today], today)).toBe(plain.plan);
     expect(effectivePlan(undefined, [today], today)).toEqual({});
   });
-  it('counts the snacks in the day and keeps them in Snack, between Lunch and Dinner', () => {
+  it('counts the snacks in the day and keeps them in Snack, after Dinner', () => {
     const d = boardDay(effectivePlan({ snacks: [{ id: 'yog' }, { id: 'bar' }] }, [tomorrow], today), tomorrow, recipes, [], 2000);
-    expect(d.slots.map(s => s.slot)).toEqual(['breakfast', 'lunch', 'snack', 'dinner']); // no "not set" group: every item has a meal
+    expect(d.slots.map(s => s.slot)).toEqual(['breakfast', 'lunch', 'dinner', 'snack']); // no "not set" group: every item has a meal
     const snack = d.slots.find(s => s.slot === 'snack')!;
     expect(snack.items.map(i => i.r.name)).toEqual(['Bar', 'Yogurt']);
     expect(snack.items.every(i => i.virtual)).toBe(true);
