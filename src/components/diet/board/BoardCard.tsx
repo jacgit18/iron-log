@@ -4,6 +4,7 @@ import { amountText } from '../../../lib/foodUnit.js';
 import { macroLine } from '../../../lib/macroLine.js';
 import { cardVitamins } from '../../../lib/microLine.js';
 import { drinkIdsOf } from '../../../lib/recipeUses.js';
+import type { CardStock } from '../../../lib/boardStock.js';
 import type { BoardItem } from '../../../lib/weekBoard.js';
 import { useAppStore } from '../../../store/useAppStore.js';
 import ArmedButton from '../../ArmedButton.jsx';
@@ -12,8 +13,8 @@ import { MicroLine, MicroList } from '../../nutritionBoard/MicroLine.js';
 
 // One planned item on the board: its name, calories and protein; today it has a check box that logs it as eaten (and unchecking removes what it logged); tapping the card opens Less, More, Copy to, Move to and Remove. Copy to and Move to open a sheet with the day picker (PlanMoveSheet, brief nutrition-multi-day-picker).
 // A listed daily snack or a repeat that is only shown on this day (`item.virtual`, briefs daily-snacks and nutrition-meal-labels-year-repeat) is stored as a real item of the day first when it is ticked, changed or moved; its Remove skips it for this day only; it is not dragged.
-export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg }: {
-  item: BoardItem; day: string; today: string; open: boolean;
+export default function BoardCard({ item, day, today, open, stock, onOpen, onLog, onMsg }: {
+  item: BoardItem; day: string; today: string; open: boolean; stock?: CardStock | undefined; // the at-home mark from Groceries (lib/boardStock.ts, brief grocery-stock-flag): text and a colour, no action
   onOpen: () => void; onLog: (r: BoardItem['r'], index: number) => void; onMsg: (t: string) => void;
 }) {
   const { r, index } = item;
@@ -71,7 +72,7 @@ export default function BoardCard({ item, day, today, open, onOpen, onLog, onMsg
       {checkable && <button type="button" role="checkbox" aria-checked={eaten} className="nb-eatck" aria-label={`${eaten ? 'Uncheck' : 'Check'} ${r.name} as eaten`} onClick={tick}><i aria-hidden="true">✓</i></button>}
       <button type="button" className={`wb-card${open ? ' open' : ''}`} draggable={!item.virtual} aria-expanded={open} data-from={`${day}:${index}`} onClick={onOpen}
         onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ day, index })); e.dataTransfer.effectAllowed = 'move'; }}>
-        <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}{planned && <span className="wb-planned">Planned</span>}</span>
+        <span className="wb-ct">{name}{r.portion !== 1 ? ` × ${r.portion}` : ''}{planned && <span className="wb-planned">Planned</span>}{stock && <span className={`wb-stock ${stock.kind}`}>{stock.text}</span>}</span>
         <span className="wb-cm">{r.gone ? 'Removed' : macroLine({ ...(r.kcal !== undefined ? { kcal: r.kcal } : {}), ...(r.p !== undefined ? { p: r.p } : {}) }) || 'Needs numbers'}</span>
         {vit && !r.gone && <MicroLine micro={vit.micro} factor={vit.factor} est={vit.est} />}
       </button>

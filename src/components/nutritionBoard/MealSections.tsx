@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { dayStock } from '../../lib/boardStock.js';
 import { mealFigures, mealKcalText, mealOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
 import { drinkIdsOf } from '../../lib/recipeUses.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
@@ -21,6 +22,11 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   const diet = useAppStore(x => x.diet);
   const snackList = useAppStore(x => x.cfg.diet?.snacks);
   const recipes = useAppStore(x => x.recipes);
+  const grocery = useAppStore(x => x.grocery), groceryMonths = useAppStore(x => x.groceryMonths);
+  const cards = view.slots.flatMap(s => s.items);
+  const cardsKey = cards.map(c => `${c.index}|${c.r.item.k}|${c.r.item.id}|${c.r.item.e?.join(',') ?? ''}|${c.r.gone ? 1 : 0}`).join(';'); // what the marks depend on; `view` itself is rebuilt on every board change, which would match again on every tap
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `cards` is read through `cardsKey`
+  const stock = useMemo(() => dayStock(view.day, today, cards, diet, grocery, groceryMonths, recipes), [view.day, today, cardsKey, diet, grocery, groceryMonths, recipes]); // the day's at-home marks (lib/boardStock.ts)
   const hasSnacks = useAppStore(x => !!x.cfg.diet?.snacks?.length); // the saved daily snack list
   const slots: BoardSlot[] = [...view.slots];
   for (const s of ORDER) if (!slots.some(x => x.slot === s)) slots.push({ slot: s, items: [], kcal: 0, share: null, need: [], have: [], fixes: [] });
@@ -59,7 +65,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
           )}
           {s.items.map(x => {
             const ck = `${view.day}:${planItemKey(x.r.item)}`;
-            return <BoardCard key={ck} item={x} day={view.day} today={today} open={open === ck} onOpen={() => setOpen(open === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
+            return <BoardCard key={ck} item={x} day={view.day} today={today} open={open === ck} stock={stock.get(x.index)} onOpen={() => setOpen(open === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
           })}
           <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} onMsg={onMsg} />
           {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => addFix(f.recipe.id, s.slot!)}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}
