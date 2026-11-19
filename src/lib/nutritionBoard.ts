@@ -185,14 +185,16 @@ export function placeEaten(day: string, today: string, eaten: readonly DietEntry
   return out;
 }
 
-/** A meal's calories line on today: planned and eaten food counted together. Nothing eaten: the plan's own line ("620 / 700 kcal"). Something eaten: "n of m kcal eaten" (m is the plan plus the food nobody planned), or just "n kcal" for a meal with no plan. */
-export function mealKcalText(plan: { kcal: number; share: number | null; items: number }, eatenPlanKcal: number, extra: readonly DietEntry[]): string {
-  const extraKcal = extra.reduce((a, e) => a + e.kcal, 0);
-  const fmt = (n: number) => n.toLocaleString('en-US');
-  if (plan.items === 0) return extra.length ? `${fmt(extraKcal)} kcal` : '';
-  if (extra.length === 0 && eatenPlanKcal === 0) return `${fmt(plan.kcal)}${plan.share ? ` / ${fmt(plan.share)}` : ''} kcal`;
-  return `${fmt(eatenPlanKcal + extraKcal)} of ${fmt(plan.kcal + extraKcal)} kcal eaten`;
+/** A meal's header line (wording A, owner 2026-11-19; brief nutrition-board-available-list). Food that is not ticked as eaten never counts toward calories, so the menu is told in words: "4 on the menu", and "· 2 planned" once something is marked planned. Once food is eaten the line leads with its calories: "245 kcal eaten". `eatenKcal` is the ticked plan food plus the eaten food nobody planned; nothing else is ever added to it. A meal with no items and nothing eaten has no line. */
+export function mealKcalText(meal: { items: number; planned: number }, eatenKcal: number): string {
+  const planned = meal.planned > 0 ? ` · ${meal.planned} planned` : '';
+  if (eatenKcal > 0) return `${eatenKcal.toLocaleString('en-US')} kcal eaten${planned}`;
+  return meal.items > 0 ? `${meal.items} on the menu${planned}` : '';
 }
+
+/** The muted warning beside a meal's header: "25 over snack share", only when a target gives the meal a share and eaten food passes it. Never a block; null otherwise (and always null with no target). `label` is the meal's name. */
+export const mealOverText = (share: number | null, eatenKcal: number, label: string): string | null =>
+  share !== null && eatenKcal > share ? `${(eatenKcal - share).toLocaleString('en-US')} over ${label.toLowerCase()} share` : null;
 
 /** What a day's targets are. */
 export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null; carbs?: number | null }
