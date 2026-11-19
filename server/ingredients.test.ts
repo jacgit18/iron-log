@@ -178,6 +178,18 @@ describe('resolveLines', () => {
     expect(cache.map.has(cacheKey('100 g 80/20 ground beef'))).toBe(true);
   });
 
+  it('logs why searches failed (a status or an error name), never the term, the line or the key', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const f = fakeFetch({ plan: PLAN, picks: PICKS, usdaFail: ['butter'] });
+      await resolveLines(LINES, deps(f.fn, memCache()));
+      const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
+      expect(logged).toContain('upstream 400');
+      expect(logged.toLowerCase()).not.toContain('butter');
+      expect(logged).not.toContain('api_key');
+    } finally { warn.mockRestore(); }
+  });
+
   it('a row whose term has nothing to do with its own line is answered but never cached (a crafted line steering another row)', async () => {
     const plan = { lines: [{ term: 'lard', grams: 100, gramsFrom: 'converted', skip: false }, { term: 'eggs', grams: 100, gramsFrom: 'converted', skip: false }] };
     const { fn } = fakeFetch({ plan, picks: { picks: [{ i: 0, id: 31, approximate: false }, { i: 1, id: 21, approximate: false }] } });
