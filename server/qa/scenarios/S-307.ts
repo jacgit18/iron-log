@@ -7,10 +7,10 @@ const scenario: Scenario = {
     'Press Scan receipt a second time.',
     'Press Scan receipt again, then press the Escape key.',
     'Press Scan receipt again, then tap somewhere else on the page (on a phone, tap More).',
-    'Press Scan receipt, then press Camera or Photos and cancel the phone or file picker.',
+    'Press Scan receipt, then press Camera, Photos or Snap & save and cancel the phone or file picker.',
   ],
   expected: [
-    'The second press closes the chooser: Camera and Photos are gone.',
+    'The second press closes the chooser: Camera, Photos and Snap & save are gone.',
     'Escape closes the chooser and the cursor is back on Scan receipt (it shows its focus ring).',
     'A tap elsewhere closes the chooser (the More menu still opens on a phone).',
     'After a pick the chooser is closed and the cursor is back on Scan receipt.',
