@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_THUMBS, applyChange, changeFailText, claimLoads, claimThenApply, loggedRows, markMissed, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
+import { MAX_THUMBS, applyChange, changeFailText, applyFailText, claimLoads, claimResult, claimThenApply, holdLeft, stillWanted, loggedRows, markMissed, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
 import type { SavedList, SavedReceipt } from './receiptsClient.js';
 
 const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-18T15:00:00.000Z', month: '2026-11', receiptDate: null, store: '', totalCents: null, note: '', sizeBytes: 100, status: 'to_log', ...over });
@@ -151,5 +151,26 @@ describe('markMissed', () => {
   });
   it('after any other failure marks only the photo that failed, so rows still loading do not show Retry', () => {
     expect(markMissed(['a', 'b', 'c'], 1, 'failed', 1000)).toEqual({ b: 0 });
+  });
+});
+
+describe('claimResult', () => {
+  it('turns a blocked text into the sheet error and a rejected apply into a visible error, never a stuck spinner', async () => {
+    expect(await claimResult(Promise.resolve(null))).toEqual({ busy: false, error: '' });
+    expect(await claimResult(Promise.resolve('taken text'))).toEqual({ busy: false, error: 'taken text' });
+    expect(await claimResult(Promise.reject(new Error('boom')))).toEqual({ busy: false, error: applyFailText });
+  });
+});
+
+describe('holdLeft and stillWanted', () => {
+  it('a refused load holds every run until its wait is over', () => {
+    expect(holdLeft(1000, 6000)).toBe(5000);
+    expect(holdLeft(6000, 6000)).toBe(0);
+    expect(holdLeft(9000, 6000)).toBe(0);
+  });
+  it('a photo whose row left the card is not kept', () => {
+    expect(stillWanted('1,2,3', '2')).toBe(true);
+    expect(stillWanted('1,3', '2')).toBe(false);
+    expect(stillWanted('', '2')).toBe(false);
   });
 });

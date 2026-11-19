@@ -97,6 +97,16 @@ export async function claimThenApply(claim: () => Promise<string | null>, write:
   return null;
 }
 
+/** Words when Apply threw after the claim: the row was put back under To log, but some of the write may have happened, so the list is worth a look. */
+export const applyFailText = 'Something went wrong while applying this receipt. It was put back under To log. Check your list, then try again.';
+/** The sheet's state once Apply settles: a rejected apply is shown, never left on the busy spinner. */
+export const claimResult = (p: Promise<string | null>): Promise<{ busy: false; error: string }> => p.then(blocked => ({ busy: false as const, error: blocked ?? '' }), () => ({ busy: false as const, error: applyFailText }));
+
+/** How long a refused thumbnail load (429) still holds every run: the milliseconds left, or 0. A second run started by a changed list checks it too, so it never ignores Retry-After. */
+export const holdLeft = (now: number, until: number): number => Math.max(0, until - now);
+/** Whether a photo is still one the card shows (a row deleted while its fetch was in flight is not, so its blob URL is not kept). */
+export const stillWanted = (want: string, id: string): boolean => want.split(',').includes(id);
+
 /** Words when moving a receipt on or back did not go through (after the prices were already applied or undone on this device). */
 export function changeFailText(reason: ChangeFailure['reason'], what: 'apply' | 'undo'): string {
   if (reason === 'taken') return what === 'apply' ? 'Applied here, but another device had already logged this receipt.' : 'Undone here, but this receipt was already moved on another device.';

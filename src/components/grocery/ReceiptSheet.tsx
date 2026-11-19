@@ -10,7 +10,7 @@ import { NO_CHOICES, applyShares, isOwnRow, owedRows, owedText, rowParties, setR
 import { earlierText, missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
-import { claimThenApply } from '../../lib/receiptToLog.js';
+import { claimResult, claimThenApply } from '../../lib/receiptToLog.js';
 import { leaveSheet, setLeaveGuard } from '../../lib/backNav.js';
 import { dropDraft, isEdited, keepDraft, newDraftId, shouldAskOnBack, type Draft } from '../../lib/receiptDraft.js';
 import { askSharing } from '../../lib/sharingIntent.js';
@@ -213,7 +213,7 @@ export default function ReceiptSheet() {
   const apply = () => {
     if (!toLogId || !onClaim) { doApply(); return; }
     setClaim({ busy: true, error: '' });
-    void claimThenApply(() => onClaim(receipt), doApply, async () => { await onRelease?.(); }).then(blocked => setClaim({ busy: false, error: blocked ?? '' }));
+    void claimResult(claimThenApply(() => onClaim(receipt), doApply, async () => { await onRelease?.(); })).then(r => setClaim(r));
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchPhotoOnce, removeReceipt, type SavedReceipt } from '../../lib/receiptsClient.js';
-import { claimLoads, markMissed, thumbIds, thumbState, toLogTitle } from '../../lib/receiptToLog.js';
+import { claimLoads, holdLeft, markMissed, stillWanted, thumbIds, thumbState, toLogTitle } from '../../lib/receiptToLog.js';
 import './ReceiptToLog.css';
 
 // The To log card on Shopping (brief receipt-snap-now-log-later, owner picked option I from a preview): the receipts snapped and saved unread, one row each with a small photo,
@@ -18,15 +18,20 @@ export default function ReceiptToLog({ rows, opening, onOpen, onDeleted }: { row
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   // One photo at a time. A refused load (429) stops the run: the rest are marked as waiting for the same time, so nothing hammers the 30 a minute limit.
+  const blockedUntil = useRef(0); // set by a refused load (429): every run, including one started later by a changed list, waits it out
+  const wantNow = useRef('');
   const inFlight = useRef(new Set<string>()); // a changed list starts a second run while the first awaits: one fetch per id
   const load = async (all: string[]) => {
     const ids = claimLoads(all, cache.current, inFlight.current);
     for (const [i, id] of ids.entries()) {
       if (!live.current) return;
+      const held = holdLeft(Date.now(), blockedUntil.current);
+      if (held > 0) { setNow(Date.now()); setMissed(m => ({ ...m, ...markMissed(ids, i, 'limit', Date.now(), held) })); for (const rest of ids.slice(i)) inFlight.current.delete(rest); break; }
       const out = await fetchPhotoOnce(id);
       inFlight.current.delete(id);
       if (!live.current) return;
       if (out.ok) {
+        if (!stillWanted(wantNow.current, id)) continue; // the row left while its photo was loading: nothing to keep
         const old = cache.current.get(id);
         if (old) URL.revokeObjectURL(old);
         cache.current.set(id, URL.createObjectURL(out.blob));
@@ -36,11 +41,12 @@ export default function ReceiptToLog({ rows, opening, onOpen, onDeleted }: { row
       setNow(Date.now());
       const wait = out.reason === 'limit' ? out.waitMs : 0;
       setMissed(m => ({ ...m, ...markMissed(ids, i, out.reason, Date.now(), wait) }));
-      if (out.reason === 'limit') { for (const rest of ids.slice(i + 1)) inFlight.current.delete(rest); break; }
+      if (out.reason === 'limit') { blockedUntil.current = Date.now() + out.waitMs; for (const rest of ids.slice(i + 1)) inFlight.current.delete(rest); break; }
     }
     if (live.current) setThumbs(Object.fromEntries(cache.current));
   };
   useEffect(() => {
+    wantNow.current = want;
     const ids = want ? want.split(',') : [];
     for (const [id, url] of cache.current) if (!ids.includes(id)) { URL.revokeObjectURL(url); cache.current.delete(id); }
     void load(ids);
