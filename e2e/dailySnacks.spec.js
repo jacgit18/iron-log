@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 import { closeSheet, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // Daily snacks (brief daily-snacks). The rules (which snacks show on a day, skips, the list's limit and cleaning) are node tests in dailySnacks.test.ts and dietSlice.test.ts;
-// this covers the wiring a node test cannot: Snack between Lunch and Dinner, the setup sheet, the same snacks on today and a day ahead, ticking one today only, skipping one for a day, and a reload. The fixed clock is Thursday 2026-09-24.
+// this covers the wiring a node test cannot: Snack after Dinner, the setup sheet, the same snacks on today and a day ahead, ticking one today only, skipping one for a day, and a reload. The fixed clock is Thursday 2026-09-24.
 const TOMORROW = '2026-09-25';
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const snack = c => c.locator('.wb-slot', { has: c.page().locator('.wb-slothd b', { hasText: /^Snack$/ }) });
@@ -20,10 +20,10 @@ const setUp = async page => {
   await closeSheet(page);
 };
 
-test('Snack sits between Lunch and Dinner, says so when empty, and a saved list shows on today and a day ahead', async ({ page }) => {
+test('Snack sits after Dinner, says so when empty, and a saved list shows on today and a day ahead', async ({ page }) => {
   await seedRecipes(page);
   await openNutrition(page);
-  await expect(todayCol(page).locator('.wb-slothd b')).toHaveText(['Breakfast', 'Lunch', 'Snack', 'Dinner', 'Supplements', 'Hydration']); // the four meals in order, then the day's other sections
+  await expect(todayCol(page).locator('.wb-slothd b')).toHaveText(['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Supplements', 'Hydration']); // the four meals in order, then the day's other sections
   await expect(snack(todayCol(page))).toContainText('No daily snacks yet');
   await expect(snack(col(page, TOMORROW)).getByRole('button', { name: 'Set up daily snacks' })).toBeVisible(); // any editable day can start it, not only today
   await setUp(page);
