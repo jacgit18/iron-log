@@ -30,13 +30,21 @@ test('a card shows Have or On Shopping from the Inventory tick, and a tick on Gr
   await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('Have');
 });
 
-test('the mark changes no calories and no count, and is not on a card ticked as eaten', async ({ page }) => {
+const figures = page => todayCol(page).evaluate(c => ({ meters: c.querySelector('.nb-meters, .wb-meters')?.textContent ?? '', heads: [...c.querySelectorAll('.wb-slothd')].map(h => h.textContent) }));
+
+test('the mark changes no calories and no count: the figures equal those with no Groceries data; and no mark on a card ticked as eaten', async ({ page }) => {
   await seed(page);
   await openNutrition(page);
-  const head = todayCol(page).locator('.wb-slothd').filter({ hasText: /on the menu/ });
-  const before = await head.innerText();
-  await card(page, 'Oats').scrollIntoViewIfNeeded();
-  expect(before).toContain('3 on the menu');
+  await expect(card(page, 'Oats').locator('.wb-stock')).toHaveText('Have');
+  const withMarks = await figures(page);
+  expect(withMarks.heads.join(' ')).toContain('3 on the menu');
+  await page.evaluate(() => { localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: ['Anywhere'], items: [] })); });
+  await page.reload();
+  await openNutrition(page);
+  await expect(todayCol(page).locator('.wb-stock')).toHaveCount(0); // no Groceries items: no marks
+  expect(await figures(page)).toEqual(withMarks); // the same header words, counts and meters with and without the marks
+  await seed(page);
+  await openNutrition(page);
   await todayCol(page).getByRole('checkbox', { name: /Oats as eaten/ }).click();
   await expect(card(page, 'Oats').locator('.wb-stock')).toHaveCount(0);
   await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('On Shopping');
