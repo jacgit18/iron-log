@@ -138,6 +138,12 @@ async function resolveInner(lines: string[], deps: ResolveDeps, usage: Usage): P
     const failed = new Set<string>();
     const settled = await Promise.allSettled(terms.map(t => askPlainFoods(deps.ask, deps.usdaKey, t)));
     settled.forEach((s, i) => { if (s.status === 'fulfilled') found.set(terms[i]!, rankForTerm(terms[i]!, s.value).slice(0, MAX_HITS_SHOWN)); else failed.add(terms[i]!); });
+    // Why searches failed, never the term, the line or the URL (it carries the key): a status like `upstream 400`, or the error name for a timeout, counted per reason.
+    if (failed.size > 0) {
+      const reasons: Record<string, number> = {};
+      settled.forEach(s => { if (s.status === 'rejected') { const r = s.reason instanceof Error ? (s.reason.name === 'Error' ? s.reason.message : s.reason.name) : 'unknown'; reasons[r] = (reasons[r] ?? 0) + 1; } });
+      console.warn(JSON.stringify({ msg: 'food searches failed', failed: failed.size, of: terms.length, reasons }));
+    }
     if (terms.length > 0 && failed.size === terms.length) throw new Error('every food search failed');
     const shown = new Map<number, Map<number, FoodHit>>();
     plan.forEach((p, i) => { const h = p.skip || !p.term ? undefined : found.get(p.term.toLowerCase()); if (h && h.length > 0) shown.set(i, new Map(h.map(f => [f.id, f]))); });
