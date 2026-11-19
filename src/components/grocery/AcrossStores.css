@@ -39,4 +39,41 @@
   font-size: var(--fs-xs);
   color: var(--muted);
 }
+/* Everyone's month: Paid and Share per person, under the netted rows. */
+.gacrosstable {
+  width: 100%;
+  margin: var(--sp-8) 0 0;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.gacrosstable caption {
+  padding: var(--sp-8) 0 var(--sp-4);
+  text-align: left;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.gacrosstable th,
+.gacrosstable td {
+  padding: var(--sp-4) 0 var(--sp-4) var(--sp-8);
+  text-align: right;
+  font-weight: 400;
+}
+.gacrosstable thead th {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.gacrosstable th:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+.gacrosstotal th,
+.gacrosstotal td {
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+.gacrossnote {
+  margin: var(--sp-8) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
 }

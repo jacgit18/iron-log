@@ -2,11 +2,11 @@ import { applyLabel, applySummary, needsConfirm } from '../../lib/receiptApplyLa
 import type { Plan } from '../../lib/groceryReceipt.js';
 import ArmedButton from '../ArmedButton.js';
 
-type Props = { plan: Plan; newCount: number; disabled: boolean; onApply: () => void; keep?: { checked: boolean; onChange: (v: boolean) => void } };
+type Props = { plan: Plan; newCount: number; disabled: boolean; onApply: () => void; keep?: { checked: boolean; onChange: (v: boolean) => void }; onSave?: () => void; saveError?: string };
 
 // The sticky bottom bar of the receipt sheet (brief receipt-apply-footer): the optional photo checkbox, a summary line and one wide Apply. Cancel is Close in the sheet's header,
-// so nothing else sits beside Apply. When the lines and tax do not match the receipt total Apply is armed: the first tap asks, the second applies (like Skip all).
-export default function ReceiptApplyBar({ plan, newCount, disabled, onApply, keep }: Props) {
+// so only Save for later (brief receipt-drafts-list, owner picked A from a preview) sits beside Apply. When the lines and tax do not match the receipt total Apply is armed: the first tap asks, the second applies (like Skip all).
+export default function ReceiptApplyBar({ plan, newCount, disabled, onApply, keep, onSave, saveError }: Props) {
   const mismatch = needsConfirm(plan.check);
   return (
     <div className="rcfoot">
@@ -17,9 +17,13 @@ export default function ReceiptApplyBar({ plan, newCount, disabled, onApply, kee
         </label>
       )}
       <p className={`note rcsum${mismatch ? ' rcsumbad' : ''}`}>{applySummary(plan, newCount, mismatch)}</p>
-      {mismatch
-        ? <ArmedButton className="btn primary rcapply" id="rc-apply" disabled={disabled} label="Apply anyway" armedLabel="Tap again to apply anyway" onConfirm={onApply} />
-        : <button type="button" className="btn primary rcapply" id="rc-apply" disabled={disabled} onClick={onApply}>{applyLabel(plan)}</button>}
+      <div className="rcbtns">
+        {mismatch
+          ? <ArmedButton className="btn primary rcapply" id="rc-apply" disabled={disabled} label="Apply anyway" armedLabel="Tap again to apply anyway" onConfirm={onApply} />
+          : <button type="button" className="btn primary rcapply" id="rc-apply" disabled={disabled} onClick={onApply}>{applyLabel(plan)}</button>}
+        {onSave && <button type="button" className="btn rcsave" id="rc-save-later" onClick={onSave}>Save for later</button>}
+      </div>
+      {saveError && <p className="note rcwarn rcsaveerr" id="rc-save-error" role="alert">{saveError}</p>}
     </div>
   );
 }

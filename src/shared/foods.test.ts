@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanGrams, cleanHits, cleanQuery, defaultGrams, hitLabel, MAX_RESULTS, mergeFoods, parseFoods, scaleFood, type FoodHit } from './foods.js';
+import { cleanGrams, cleanHits, cleanQuery, defaultGrams, hitLabel, MAX_RESULTS, mergeFoods, parseFoods, scaleFood, usdaQuery, type FoodHit } from './foods.js';
 
 const nut = (n: string, v: number) => ({ nutrientNumber: n, value: v });
 const food = (over: Record<string, unknown> = {}) => ({ fdcId: 1, description: 'Chicken breast, raw', dataType: 'SR Legacy', foodNutrients: [nut('208', 120), nut('203', 22.5), nut('205', 0), nut('204', 2.6)], ...over });
@@ -10,6 +10,27 @@ describe('cleanQuery', () => {
     expect(cleanQuery('a')).toBeNull(); expect(cleanQuery(' b ')).toBeNull(); expect(cleanQuery('x'.repeat(61))).toBeNull(); expect(cleanQuery(5)).toBeNull(); expect(cleanQuery(undefined)).toBeNull();
     expect(cleanQuery('ab')).toBe('ab');
   });
+});
+
+describe('usdaQuery', () => {
+  it('turns a slash into a space (USDA answers 400 for a "/" in the query)', () => {
+    expect(usdaQuery('80/20 ground beef')).toBe('80 20 ground beef');
+    expect(usdaQuery('beef, ground, 80% lean meat / 20% fat, raw')).toBe('beef, ground, 80% lean meat 20% fat, raw');
+  });
+  it('squeezes the spaces a slash leaves and trims the ends', () => {
+    expect(usdaQuery('  salt /  pepper  ')).toBe('salt pepper');
+    expect(usdaQuery('/butter/')).toBe('butter');
+    expect(usdaQuery('a // b')).toBe('a b');
+  });
+  it('also drops the other characters USDA answers 400 for: quotes, ^, braces, brackets, +, parentheses', () => {
+    expect(usdaQuery('chicken, "breast"')).toBe('chicken, breast');
+    expect(usdaQuery('tomato [diced]')).toBe('tomato diced');
+    expect(usdaQuery('tomato)')).toBe('tomato');
+    expect(usdaQuery('chicken (boneless) + skin')).toBe('chicken boneless skin');
+    expect(usdaQuery('3" cube {a} ^2')).toBe('3 cube a 2');
+  });
+  it('keeps the characters USDA accepts', () => { expect(usdaQuery("half-and-half, 2% & chef's: salt; pepper?")).toBe("half-and-half, 2% & chef's: salt; pepper?"); });
+  it('leaves a term with nothing to change as it is', () => { expect(usdaQuery('butter, salted')).toBe('butter, salted'); });
 });
 
 describe('parseFoods', () => {

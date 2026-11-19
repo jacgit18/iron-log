@@ -29,6 +29,8 @@ import DrinkSheet from '../nutritionBoard/DrinkSheet.js';
 import EatenRowSheet from '../nutritionBoard/EatenRowSheet.js';
 import PlanMoveSheet from '../nutritionBoard/PlanMoveSheet.js';
 import ManageSheet from '../nutritionBoard/ManageSheet.js';
+import RepeatSheet from '../nutritionBoard/RepeatSheet.js';
+import WeekSheet from '../nutritionBoard/WeekSheet.js';
 import SupplementPickSheet from '../nutritionBoard/SupplementPickSheet.js';
 import SupplementTotalsSheet from '../nutritionBoard/SupplementTotalsSheet.js';
 import BoardFilterSheet from '../board/BoardFilterSheet.js';
@@ -73,6 +75,8 @@ export default function Modal() {
     case 'nbplanmove': return <PlanMoveSheet />;
     case 'nbeaten': return <EatenRowSheet key={String(modal.id ?? '')} id={String(modal.id ?? '')} />;
     case 'nbmanage': return <ManageSheet />;
+    case 'nbrepeat': return <RepeatSheet key={`${String(modal.day ?? '')}:${String((modal.item as { id?: string } | undefined)?.id ?? '')}`} />;
+    case 'nbweeks': return <WeekSheet />;
     case 'nbsnacks': return <DailySnacksSheet />;
     case 'nbsuppick': return <SupplementPickSheet key={String(modal.day ?? '')} day={String(modal.day ?? '')} />;
     case 'ingredientlimit': return <IngredientLimitSheet key={String(modal.name ?? '')} name={String(modal.name ?? '')} label={modal.label ? String(modal.label) : undefined} day={String(modal.day ?? '')} unit={(modal.unit as NutrientUnit | undefined) ?? 'mg'} />;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, MAX_DAY_DRINKS, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -180,16 +180,16 @@ describe('the plan in cfg.diet', () => {
     expect(r!.plan!['2026-10-30']).toEqual([{ k: 'r', id: 'a' }, { k: 'r', id: 'b' }, { k: 'r', id: 'c' }, { k: 'r', id: 'd', x: 2.5 }, { k: 'm', id: 'e' }]);
   });
   it('drops bad dates, empty days, repeats and items past the cap', () => {
-    const many = Array.from({ length: MAX_PLAN_ITEMS + 3 }, (_, i) => ({ k: 'r', id: `r${i}` }));
+    const many = Array.from({ length: MAX_PLAN_ITEMS + MAX_DAY_DRINKS + 3 }, (_, i) => ({ k: 'r', id: `r${i}` }));
     const r = normDietCfg({ plan: { 'nope': [{ k: 'r', id: 'a' }], '2026-13-45': [{ k: 'r', id: 'a' }], '2026-10-30': many, '2026-10-31': [], '2026-11-01': [{ k: 'r', id: 'a' }, { k: 'r', id: 'a' }] } });
     expect(Object.keys(r!.plan!)).toEqual(['2026-10-30', '2026-11-01']);
-    expect(r!.plan!['2026-10-30']).toHaveLength(MAX_PLAN_ITEMS);
+    expect(r!.plan!['2026-10-30']).toHaveLength(MAX_PLAN_ITEMS + MAX_DAY_DRINKS); // the cleaner cannot tell drinks, so it leaves room for them
     expect(r!.plan!['2026-11-01']).toEqual([{ k: 'r', id: 'a' }]);
   });
   it('applies the window only when given today', () => {
-    const plan = { '2026-10-29': [{ k: 'r', id: 'a' }], '2026-10-30': [{ k: 'r', id: 'a' }], '2026-11-12': [{ k: 'r', id: 'a' }], '2026-11-13': [{ k: 'r', id: 'a' }] };
+    const plan = { '2026-10-29': [{ k: 'r', id: 'a' }], '2026-10-30': [{ k: 'r', id: 'a' }], '2027-10-29': [{ k: 'r', id: 'a' }], '2027-10-30': [{ k: 'r', id: 'a' }] };
     expect(Object.keys(normDietCfg({ plan })!.plan!)).toHaveLength(4);
-    expect(Object.keys(normDietCfg({ plan }, today)!.plan!)).toEqual(['2026-10-30', '2026-11-12']);
+    expect(Object.keys(normDietCfg({ plan }, today)!.plan!)).toEqual(['2026-10-30', '2027-10-29']);
   });
   it('is undefined when nothing usable is left, and survives normConfig', () => {
     expect(normDietCfg({ plan: { '2026-10-30': [{ k: 'q' }] } })).toBeUndefined();
@@ -206,5 +206,66 @@ describe('est on an entry (brief recipe-auto-nutrition)', () => {
   it('drops it without vitamins, or when it is not exactly true', () => {
     expect(normDietEntry({ ...ok, est: true })).toEqual(ok);
     expect(normDietEntry({ ...withMicro, est: 'yes' })).toEqual(withMicro);
+  });
+});
+
+describe('repeats and repeatSkips in cfg.diet (brief nutrition-meal-labels-year-repeat)', () => {
+  const rep = { rid: 'a', k: 'r', id: 'oats', days: [1, 3], from: '2026-10-30' };
+  it('keeps a clean repeat and round-trips it through normDietCfg', () => {
+    expect(normRepeats([rep])).toEqual([rep]);
+    const cfg = { repeats: [{ ...rep, x: 2, s: 'breakfast' }], repeatSkips: { '2026-11-02': ['a'] } };
+    expect(normDietCfg(cfg, '2026-10-30')).toEqual(cfg);
+    expect(normDietCfg(normDietCfg(cfg, '2026-10-30'), '2026-10-30')).toEqual(cfg);
+    expect(normDietCfg({ repeats: [], repeatSkips: {} })).toBeUndefined();
+  });
+  it('drops unknown keys, an unknown meal, a portion of 1 or one out of range, and a saved meal\'s portion', () => {
+    expect(normRepeats([{ ...rep, junk: 1, s: 'brunch', x: 1 }])).toEqual([rep]);
+    expect(normRepeats([{ ...rep, x: 11 }, { ...rep, rid: 'b', x: 2.5 }, { ...rep, rid: 'c', k: 'm', x: 2 }])).toEqual([rep, { ...rep, rid: 'b', x: 2.5 }, { ...rep, rid: 'c', k: 'm' }]);
+  });
+  it('refuses a repeat with no usable weekday, id, name, kind or start day, and a repeated name', () => {
+    const bad = [{ ...rep, days: [] }, { ...rep, days: [7, -1, 'x'] }, { ...rep, days: 'all' }, { ...rep, id: '' }, { ...rep, rid: '' }, { ...rep, k: 'x' }, { ...rep, from: 'nope' }, { ...rep, from: '2026-13-40' }, 5, null, 'a'];
+    expect(normRepeats(bad)).toEqual([]);
+    expect(normRepeats([rep, { ...rep, id: 'other' }])).toEqual([rep]);
+  });
+  it('sorts the weekdays, keeps each once and drops other values', () => {
+    expect(normRepeats([{ ...rep, days: [5, 1, 1, 9, 0, 'x', 2.5] }])[0]!.days).toEqual([0, 1, 5]);
+  });
+  it('keeps at most MAX_REPEATS (12)', () => {
+    expect(MAX_REPEATS).toBe(12);
+    const many = Array.from({ length: 20 }, (_, i) => ({ ...rep, rid: `r${i}` }));
+    expect(normRepeats(many)).toHaveLength(12);
+  });
+  it('cleans skips: real dates, text ids once each, no empty day; with today the window applies', () => {
+    const raw = { '2026-11-02': ['a', 'a', 'b', '', 5], nope: ['a'], '2026-11-03': [], '2026-10-01': ['a'], '2028-01-01': ['a'] };
+    expect(normRepeatSkips(raw)).toEqual({ '2026-10-01': ['a'], '2026-11-02': ['a', 'b'], '2028-01-01': ['a'] });
+    expect(normRepeatSkips(raw, '2026-10-30')).toEqual({ '2026-11-02': ['a', 'b'] });
+    expect(normRepeatSkips('x')).toEqual({});
+    expect(normRepeatSkips([['a']])).toEqual({});
+  });
+  it('keeps keys the build does not know beside them (ADR 122)', () => {
+    expect(normDietCfg({ repeats: [rep], later: { a: 1 } })).toEqual({ repeats: [rep], later: { a: 1 } });
+  });
+});
+
+describe('the 52-week window', () => {
+  it('is 364 days, and the plan cleaner keeps a day that far ahead and drops the next', () => {
+    expect(MAX_PLAN_AHEAD).toBe(364);
+    const last = '2027-10-29', past = '2027-10-30'; // today is 2026-10-30
+    const plan = { [last]: [{ k: 'r', id: 'a' }], [past]: [{ k: 'r', id: 'a' }] };
+    expect(Object.keys(normDietCfg({ plan }, '2026-10-30')!.plan!)).toEqual([last]);
+  });
+});
+
+describe('drinks outside the planned count', () => {
+  const items = [{ k: 'r' as const, id: 'tea' }, { k: 'r' as const, id: 'rice' }, { k: 'm' as const, id: 'tea' }];
+  const drinks: ReadonlySet<string> = new Set(['tea']);
+  it('a drink item is a recipe whose id is in the set', () => {
+    expect(isDrinkItem(items[0]!, drinks)).toBe(true);
+    expect(isDrinkItem(items[2]!, drinks)).toBe(false); // a saved meal is never a drink
+    expect(isDrinkItem(items[0]!, undefined)).toBe(false);
+  });
+  it('leaves drinks out of plannedCount when given, and counts them as before when not', () => {
+    expect(plannedCount(items, undefined, drinks)).toBe(2);
+    expect(plannedCount(items, undefined)).toBe(3);
   });
 });

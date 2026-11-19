@@ -1,6 +1,6 @@
 import { exInfo } from '../lib/data.js';
 import { fmtShort, parseDate } from '../shared/dates.js';
-import { defaultLogDate, describe, lastSession, newEntryId, phaseOf, setItemDone } from '../lib/logic.js';
+import { defaultLogDate, defaultPhase, describe, lastSession, newEntryId, phaseOf, setItemDone } from '../lib/logic.js';
 import { setExerciseDefault, setOverride } from './librarySlice.js';
 import { entryId, findEntry } from '../lib/entryMerge.js';
 import { bwSorted } from '../lib/body.js';
@@ -49,8 +49,9 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
       if (!get().addEntry(slotId, idx, entry)) return false; // refused (invalid date): nothing else from the sheet is applied
       get().applyExerciseUrl(it.ex, url);
       const { cfg, week } = get();
-      // Every card of this exercise in the shown week, on any day (added cards included).
-      const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter((k): k is string => !!k));
+      // Every card of this exercise in the shown week, on any day (added cards included) that has no phase of its own: the exercise
+      // default only reaches those, so a card's own phase, and the week pick on it, are left alone.
+      const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && !x.ph && `${sl.id}:${i}`).filter((k): k is string => !!k));
       const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
       const stepChange = step !== undefined && (validStep(step) ? step : undefined) !== exInfo(cfg, it.ex).step;
       const cfgChange = eqChange || stepChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : ((rm ?? 0) > 0 && rm !== cfg.rm[it.ex]));
@@ -64,7 +65,9 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
       get().mutateChecks(w => {
         if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
         if (makeExDefault && ph) sameEx.forEach(k => { delete w.ph[k]; });
-        if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
+        if (makeDefault && ph) delete w.ph[key]; // the slot default carries it now
+        // An exercise default that is the shown phase makes the pick redundant; on a card with its own phase it is not, so the pick stays.
+        else if (makeExDefault && ph && defaultPhase(get().cfg, s, idx) === ph) delete w.ph[key];
         if (done) setItemDone(w, s, idx, true);
       });
       const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });

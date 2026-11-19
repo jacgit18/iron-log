@@ -128,3 +128,34 @@ export function buildReport(scenarios, automationOf, results, ctx = {}) {
     notRun: notRunGroups,
   };
 }
+
+const RESULT_OF = { success: 'passed', failure: 'failed', timed_out: 'failed', startup_failure: 'failed', cancelled: 'cancelled', skipped: 'cancelled' };
+/** passed, failed, cancelled or running (a run that has not completed has no conclusion yet). Anything unknown counts as cancelled: in neither number. */
+const smokeResult = r => (r.status && r.status !== 'completed' ? 'running' : (RESULT_OF[r.conclusion] ?? 'cancelled'));
+
+/**
+ * The nightly smoke (`.github/workflows/qa-smoke.yml`) as a small block: CI evidence, never mixed into the scenario results above.
+ * @param rows `gh run list --json conclusion,status,createdAt,headSha,url` rows, or null when `gh` could not be read
+ * @param now the moment the window ends (a Date); the window is the 7 days before it
+ * @returns `{ available: false }`, or `{ available: true, runs, windowDays, passed, failed, last }` where `last` is the newest run
+ * (`{ at, result, url }`) or null when there is no run at all.
+ */
+export function buildSmokeBlock(rows, now) {
+  if (!Array.isArray(rows)) return { available: false };
+  const valid = rows
+    .filter(r => r && typeof r.createdAt === 'string' && Number.isFinite(Date.parse(r.createdAt)))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const windowDays = 7;
+  const from = now.getTime() - windowDays * DAY_MS;
+  const inWindow = valid.filter(r => Date.parse(r.createdAt) >= from && Date.parse(r.createdAt) <= now.getTime());
+  const results = inWindow.map(smokeResult);
+  const newest = valid[0];
+  return {
+    available: true,
+    runs: inWindow.length,
+    windowDays,
+    passed: results.filter(x => x === 'passed').length,
+    failed: results.filter(x => x === 'failed').length,
+    last: newest ? { at: newest.createdAt, result: smokeResult(newest), url: typeof newest.url === 'string' ? newest.url : null } : null,
+  };
+}

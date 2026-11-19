@@ -10,16 +10,17 @@ const pinnable = page => page.locator('.wdc').first().evaluate(e => {
 const noSideScroll = page => page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
 
 for (const w of [320, 375, 430]) {
-  test(`phone ${w}: the Board card holds the week row and D1 to D7 under the filter row, Body weight is under it, and it stays pinned`, async ({ page }) => {
+  test(`phone ${w}: the Board card holds the filter row, the week row, D1 to D7 and Body weight, and it stays pinned`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 812 });
     await page.reload();
     await expect(page.locator('.col.sel article.card').first()).toBeVisible();
     await expect(page.locator('.boardroot > .weekbar')).toHaveCount(0); // no separate week bar above
     await expect(page.locator('.wdc .weeknav')).toBeVisible();
     await expect(page.locator('.wdc-tabs [role="tab"]')).toHaveCount(7);
-    const filter = await box(page, '.filterbar'), card = await box(page, '.wdc'), bw = await box(page, '.bwrow');
-    expect(card.y).toBeGreaterThanOrEqual(filter.b - 1);
-    expect(bw.y).toBeGreaterThanOrEqual(card.b - 1);
+    const card = await box(page, '.wdc'), head = await box(page, '.wdc-head'), bw = await box(page, '.wdc .bwrow'); // brief board-card-filters-weight: both sit inside the card
+    expect(head.y).toBeGreaterThanOrEqual(card.y - 1);
+    expect(bw.b).toBeLessThanOrEqual(card.b + 1);
+    await expect(page.locator('.boardroot > .bwrow')).toHaveCount(0);
     expect(await noSideScroll(page)).toBeLessThanOrEqual(0);
     await page.evaluate(() => window.scrollTo(0, 900)); // past the card, whatever notices sit above it
     const pinned = await box(page, '.wdc');
@@ -94,7 +95,7 @@ test('above 700 px the Board and Stretches keep their own desktop week cards; Nu
 const showTip = page => page.addInitScript(() => localStorage.removeItem('ironlog:hidelocal'));
 const TIP = '.boardroot > .notice.tip';
 for (const [name, width, height, order] of [
-  ['phone: the tip sits under Body weight, after the filter row and the card', 375, 812, ['.filterbar', '.wdc', '.boardroot .bwrow', TIP]],
+  ['phone: the tip sits under the card (filter row and Body weight are inside it)', 375, 812, ['.wdc', TIP]],
   ['desktop: the tip sits under the week card (its filter row is inside it), above the day columns', 1280, 900, ['.wsec', TIP, '.board']],
 ]) {
   test(name, async ({ page }) => {

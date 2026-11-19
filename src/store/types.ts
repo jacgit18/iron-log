@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, RepeatItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementIngredient, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { SkippedDay } from '../lib/dayPicker.ts';
@@ -326,12 +326,21 @@ export interface DietSlice {
   addPlanItemToDays(kind: 'r' | 'm', id: string, days: string[], slot?: PlanSlot): BatchResult; // one recipe or saved meal on several days in one plan write; days that can't take it are skipped and named (`message` is empty on success: the caller words it)
   addPlanItem(day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): string | null; // puts a recipe or saved meal on a day of the plan, in a meal when given; an error text, or null
   movePlanItem(day: string, index: number, toDay: string, slot?: PlanSlot): string | null; // moves a planned item to a meal of a day (the same day changes only its meal); an error text, or null
+  setFoodMeal(id: string, meal: PlanSlot | undefined): string | null; // sets a food's usual meal (a recipe's `meal`) and makes every planned copy of it follow it; an error text, or null
+  followFoodMeal(id: string, meal: PlanSlot): void; // moves every hand-placed planned copy of the recipe to `meal`
   setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
   removePlanItem(day: string, index: number): void; // a listed daily snack removed from a day is skipped on that day only
   saveDailySnacks(list: DailySnack[]): void; // the daily snack list (cfg.diet.snacks, at most 6; brief daily-snacks); an empty list clears it
   skipDailySnack(day: string, id: string): void; // a listed snack is not shown on that day (it returns on the others)
   realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (outside the plan window; a day already holding 8 planned things still takes it, snacks never count toward the 8)
   unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
+  saveRepeat(day: string, item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }, days: number[], rid?: string): string | null; // repeats the item on those weekdays (0 Sunday to 6 Saturday) of every week from `day`, stored once in cfg.diet.repeats (at most 12); with `rid`, changes that repeat's days; an error text, or null
+  stopRepeat(rid: string): void; // removes the repeat and its skips; items already stored on a day stay
+  dropRepeatsFor(id: string): RepeatItem[]; // a deleted recipe or meal takes its repeats and their skips with it; the removed repeats come back for Undo
+  restoreRepeats(list: RepeatItem[]): void; // puts repeats back (Undo of a recipe delete)
+  skipRepeatDay(day: string, rid: string): void; // the repeat is not shown on that day only
+  realizeRepeat(day: string, rid: string): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
+  unstoreRepeat(day: string, index: number, rid: string): void; // takes back an item realizeRepeat just stored when its log failed
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
   planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo
   uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark
@@ -403,6 +412,9 @@ export interface GrocerySlice {
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
   setGroceryReceiptShare(month: string, id: string, share: GroceryShare | null): void; // a receipt's split for one line, this month's line only (the item's usual split is not touched)
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
+  setGroceryCredit(month: string, store: string, cents: number | null): void; // the receipt's rewards credit for that store this month, in cents, taken off what was spent there; null clears it
+  applyGroceryReceiptMoney(month: string, key: string, store: string, tax: number, credit: number): boolean; // adds a receipt's tax and rewards to the store's totals and records it in the month's ledger (brief receipt-tax-adds-up); false when the key is already there, or sync is loading
+  undoGroceryReceiptMoney(month: string, key: string): void; // takes that receipt's recorded part back out of the totals and drops its entry; nothing when the entry is gone
   setGroceryTax(month: string, store: string, cents: number | null): void; // the receipt's sales tax for that store this month, in cents; null clears it
   setGroceryPayer(month: string, store: string, personId: string | null): void; // who paid for that store this month; null is you
   setGroceryPaid(month: string, store: string, person: string, paid: boolean): void; // an owed amount of that store this month has (or has not) been settled outside the app; amounts never change

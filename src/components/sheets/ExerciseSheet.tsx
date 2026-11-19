@@ -76,7 +76,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
       {!isNew && <StepField value={stepTxt} onChange={setStepTxt} placeholder={`Default: ${defaultStep(0)} lb under 50 lb, else ${defaultStep(50)}`}>
         <span className="note">How much the suggested weight goes up by, on every card, day and week.</span>
       </StepField>}
-        <label className="field">Phase for this exercise on every card (replaces saved card phases)
+        <label className="field">Phase for this exercise on cards with no phase of their own
           <select value={d.ph ?? ''} onChange={e => up({ ph: e.target.value as PhaseChoice })}>
             <option value="">Use each card's own</option>
             {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}

@@ -22,14 +22,14 @@ export function setOverride(c: Cfg, exId: string, vals: Record<string, unknown>)
   if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
 }
 
-// An exercise's default phase for every card. Slot defaults saved for that exercise would outrank it, so they go;
-// a slot default saved afterwards wins again.
+// An exercise's default phase for every card with no phase of its own. Slot defaults saved for those cards would outrank it, so they go;
+// a card's own program phase and its slot default stay (the own phase outranks this default), and a slot default saved afterwards wins again.
 export function setExerciseDefault(c: Cfg, exId: string, ph: PhaseKey | null | '', programs: Record<string, Program>, library: LibraryItem[]) {
   c.exPh = c.exPh || {};
   if (ph) c.exPh[exId] = ph; else delete c.exPh[exId];
   if (!ph) return;
   const progs = [...Object.values(programs), ...library.map(it => ({ ...it.prog, key: 'N' }))];
-  progs.forEach(p => { try { slotsFor(p as Program).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
+  progs.forEach(p => { try { slotsFor(p as Program).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId && !x.ph) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
 }
 
 const sameTags = (a: Record<string, any>, b: Record<string, any>) => JSON.stringify([[...(a.p || [])].sort(), [...(a.s || [])].sort(), !!a.mob]) === JSON.stringify([[...(b.p || [])].sort(), [...(b.s || [])].sort(), !!b.mob]);
