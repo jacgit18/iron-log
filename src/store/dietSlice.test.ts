@@ -553,6 +553,26 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet!.plan![today]![i]).toEqual({ k: 'r', id: 'yog', s: 'breakfast' });
     expect(st().realizeDailySnack(today, 'yog')).toBe(i); // a second tap finds the stored one
   });
+  it('moving a listed snack to Dinner shows it in Dinner on every other day too, not in Snack', () => {
+    st().saveDailySnacks([{ id: 'yog' }]);
+    const i = st().realizeDailySnack(today, 'yog') as number;
+    expect(st().movePlanItem(today, i, today, 'dinner')).toBeNull();
+    expect(st().recipes.find(r => r.id === 'yog')!.meal).toBe('dinner');
+    const plan = effectivePlan(st().cfg.diet, [today, tomorrow], today, st().recipes);
+    expect(plan[today]!.map(x => x.s)).toEqual(['dinner']);
+    expect(plan[tomorrow]!.map(x => [x.id, x.s])).toEqual([['yog', 'dinner']]);
+  });
+  it('a listed snack stored in its food\'s usual meal is skipped on its day when removed or sent to another day, so it does not come back', () => {
+    st().setFoodMeal('yog', 'breakfast');
+    st().saveDailySnacks([{ id: 'yog' }]);
+    const i = st().realizeDailySnack(today, 'yog') as number;
+    st().removePlanItem(today, i);
+    expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'] });
+    expect(effectivePlan(st().cfg.diet, [today], today, st().recipes)[today]).toBeUndefined();
+    const j = st().realizeDailySnack(tomorrow, 'yog') as number;
+    expect(st().movePlanItem(tomorrow, j, today, 'breakfast')).toBeNull();
+    expect(st().cfg.diet!.snackSkips).toEqual({ [today]: ['yog'], [tomorrow]: ['yog'] });
+  });
   it('a shown snack changed in portion or moved is stored first, at the index realizeDailySnack returns, and the other listed snack is untouched', () => {
     st().saveDailySnacks([{ id: 'yog' }, { id: 'bar' }]);
     const i = st().realizeDailySnack(today, 'bar') as number;
