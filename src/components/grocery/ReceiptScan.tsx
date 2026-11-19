@@ -128,8 +128,9 @@ export function useReceiptScan(g: Grocery, mk: string) {
       setMsg(changeFailText(u.reason, 'apply'));
       return null;
     };
+    const release = async () => { const u = await updateReceipt(row.id, undoChange); void refresh(); if (!u.ok && u.reason !== 'taken') setMsg('Nothing was applied, but the saved receipt could not be put back under To log. It may show as logged until you restore it from Saved receipts.'); }; // Apply stopped after the claim (the store could not be made): the row goes back to waiting
     const unlog = async () => { const u = await updateReceipt(row.id, undoChange); if (!u.ok) setMsg(changeFailText(u.reason, 'undo')); void refresh(); };
-    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk: row.month, toLogId: row.id, photo: blob, onClaim: claim, onApplied: (a: Applied) => setApplied({ ...a, undo: () => { a.undo(); void unlog(); }, mk, t: Date.now() }) }); // the notice belongs to the month on screen, so a receipt snapped in another month still shows its Undo
+    useAppStore.getState().openModal({ type: 'receipt', receipt, remembered, mk: row.month, toLogId: row.id, photo: blob, onClaim: claim, onRelease: release, onApplied: (a: Applied) => setApplied({ ...a, undo: () => { a.undo(); void unlog(); }, mk, t: Date.now() }) }); // the notice belongs to the month on screen, so a receipt snapped in another month still shows its Undo
     return null;
   };
 

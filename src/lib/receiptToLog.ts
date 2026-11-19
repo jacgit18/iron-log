@@ -73,6 +73,14 @@ export function snapFailText(reason: SaveFailure['reason'], limits?: { maxReceip
 /** Why Apply stopped before writing anything: another device already moved or deleted the saved receipt. */
 export const claimText = { taken: 'Another device already logged this receipt, so nothing was applied here. Close this sheet.', gone: 'This receipt was deleted on another device, so nothing was applied here. Close this sheet.' } as const;
 
+/** Apply for a To log receipt: claim the saved row first, then write on this device. When the write stops after the claim (a store that cannot be made), the claim is released, or the row would stay "logged" with no prices and every retry would be refused as taken. Returns the text when another device got there first. */
+export async function claimThenApply(claim: () => Promise<string | null>, write: () => boolean, release: () => Promise<void>): Promise<string | null> {
+  const blocked = await claim();
+  if (blocked) return blocked;
+  if (!write()) await release();
+  return null;
+}
+
 /** Words when moving a receipt on or back did not go through (after the prices were already applied or undone on this device). */
 export function changeFailText(reason: ChangeFailure['reason'], what: 'apply' | 'undo'): string {
   if (reason === 'taken') return what === 'apply' ? 'Applied here, but another device had already logged this receipt.' : 'Undone here, but this receipt was already moved on another device.';

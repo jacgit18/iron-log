@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_THUMBS, applyChange, changeFailText, loggedRows, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
+import { MAX_THUMBS, applyChange, changeFailText, claimThenApply, loggedRows, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
 import type { SavedList, SavedReceipt } from './receiptsClient.js';
 
 const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-18T15:00:00.000Z', month: '2026-11', receiptDate: null, store: '', totalCents: null, note: '', sizeBytes: 100, status: 'to_log', ...over });
@@ -107,5 +107,23 @@ describe('readBlockedText', () => {
   it('says so when the list has no items on this device, and stays out of the way otherwise', () => {
     expect(readBlockedText(0)).toMatch(/not loaded on this device/);
     expect(readBlockedText(3)).toBeNull();
+  });
+});
+
+describe('claimThenApply', () => {
+  it('writes after a successful claim and does not release', async () => {
+    const calls: string[] = [];
+    expect(await claimThenApply(async () => null, () => { calls.push('write'); return true; }, async () => { calls.push('release'); })).toBeNull();
+    expect(calls).toEqual(['write']);
+  });
+  it('writes nothing and releases nothing when another device claimed first', async () => {
+    const calls: string[] = [];
+    expect(await claimThenApply(async () => 'taken text', () => { calls.push('write'); return true; }, async () => { calls.push('release'); })).toBe('taken text');
+    expect(calls).toEqual([]);
+  });
+  it('releases the claim when the write stopped after it (a store that could not be made), so a retry is not refused as taken', async () => {
+    const calls: string[] = [];
+    expect(await claimThenApply(async () => null, () => { calls.push('write'); return false; }, async () => { calls.push('release'); })).toBeNull();
+    expect(calls).toEqual(['write', 'release']);
   });
 });
