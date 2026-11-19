@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { mealKcalText, mealOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
-import { isEaten } from '../../lib/dietPlan.js';
+import { mealFigures, mealKcalText, mealOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
+import { drinkIdsOf } from '../../lib/recipeUses.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
 import { planItemKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -19,10 +19,18 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   const [open, setOpen] = useState<string | null>(null);
   const st = () => useAppStore.getState();
   const diet = useAppStore(x => x.diet);
+  const snackList = useAppStore(x => x.cfg.diet?.snacks);
+  const recipes = useAppStore(x => x.recipes);
   const hasSnacks = useAppStore(x => !!x.cfg.diet?.snacks?.length); // the saved daily snack list
   const slots: BoardSlot[] = [...view.slots];
   for (const s of ORDER) if (!slots.some(x => x.slot === s)) slots.push({ slot: s, items: [], kcal: 0, share: null, need: [], have: [], fixes: [] });
   slots.sort((a, b) => SLOT_KEY.indexOf(a.slot ?? '') - SLOT_KEY.indexOf(b.slot ?? ''));
+  // A one-tap plate fix adds the food and marks it planned, as the check reads planned food only (brief nutrition-board-available-list).
+  const addFix = (id: string, slot: PlanSlot) => {
+    const err = st().addPlanItem(view.day, 'r', id, slot);
+    if (err) { onMsg(err); return; }
+    onMsg(st().setPlanned(view.day, (st().cfg.diet?.plan?.[view.day]?.length ?? 1) - 1, true) ?? '');
+  };
   const drop = (e: React.DragEvent, slot: PlanSlot) => {
     e.preventDefault();
     try {
@@ -34,12 +42,11 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
     <>
       {slots.map(s => {
         const extra = (s.slot && placed[s.slot]) || [];
-        const eatenPlanKcal = s.items.reduce((a, x) => a + (isEaten(x.r.item, diet) ? x.r.kcal ?? 0 : 0), 0);
-        const eatenKcal = eatenPlanKcal + extra.reduce((a, e) => a + e.kcal, 0); // only eaten food: unticked menu items add nothing (brief nutrition-board-available-list)
+        const { planned, eatenKcal } = mealFigures(s.items, extra, diet, snackList, drinkIdsOf(recipes)); // lib/nutritionBoard.ts
         const over = s.slot ? mealOverText(s.share, eatenKcal, SLOT_LABEL[s.slot]) : null;
         return (
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
-          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned: s.items.filter(x => x.r.item.p === true).length }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
+          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
           {s.items.length === 0 && extra.length === 0 && <span className="nb-empty">{s.slot === 'snack' && !hasSnacks ? 'No daily snacks yet' : 'Nothing planned'}</span>}
           {s.items.length === 0 && s.slot && view.day > today && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot]}`} onClick={() => onAdd(s.slot!)}>Add</button>}
           {s.slot === 'snack' && editable && (hasSnacks
@@ -55,7 +62,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
             return <BoardCard key={ck} item={x} day={view.day} today={today} open={open === ck} onOpen={() => setOpen(open === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
           })}
           <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} onMsg={onMsg} />
-          {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => onMsg(st().addPlanItem(view.day, 'r', f.recipe.id, s.slot!) ?? '')}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}
+          {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => addFix(f.recipe.id, s.slot!)}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}
         </div>
         );
       })}

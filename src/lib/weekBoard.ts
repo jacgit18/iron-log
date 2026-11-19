@@ -1,4 +1,4 @@
-import { PLAN_SLOTS, isDailySnackItem, isDrinkItem, samePlanItem } from '../shared/diet.js';
+import { PLAN_SLOTS, isDrinkItem, samePlanItem } from '../shared/diet.js';
 import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { resultText, type SkippedDay } from './dayPicker.js';
 import { fullReason, inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
@@ -82,8 +82,7 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
   if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
-  const counted = (x: PlanItem) => x.p === true && !isDailySnackItem(x, snacks) && !isDrinkItem(x, drinks); // only an item marked planned counts toward MAX_PLAN_ITEMS, never a listed daily snack or a drink (brief nutrition-board-available-list); a moved item keeps its marker
-  const rejoin = toDay !== fromDay || (counted(moved) && !counted(it));
+  const rejoin = toDay !== fromDay; // a move never changes the marker, so a same-day move changes no count; a moved item keeps its marker (brief nutrition-board-available-list)
   const full = rejoin ? fullReason(target, moved, snacks, drinks) : null;
   if (full) return { plan: null, error: full };
   const from = (plan[fromDay] ?? []).filter((_, i) => i !== index);

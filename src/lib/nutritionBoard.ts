@@ -3,11 +3,11 @@ import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
 import { shortDay, sundayOf } from './dayNames.js';
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';
-import type { Plan } from './dietPlan.js';
+import { canBePlanned, isEaten, type Plan } from './dietPlan.js';
 import { portionTag } from './supplementPortion.js';
 import { usualMealOf } from './usualMeal.js';
 import { SLOTS, scheduleOf, slotTally } from './supplements.js';
-import { boardDay, type BoardDay } from './weekBoard.js';
+import { boardDay, type BoardDay, type BoardItem } from './weekBoard.js';
 import { HOT_OZ, TRAIN_OZ_PER_30, fmtOz, goalFor, sumOz } from './water.js';
 
 /* ---------- Nutrition as one week board (brief nutrition-board): which days a week holds, what a day's four meters show, which meal the add sheet starts on, what the Hydration and Supplements sections say. Pure; the board draws it. ---------- */
@@ -190,6 +190,13 @@ export function mealKcalText(meal: { items: number; planned: number }, eatenKcal
   const planned = meal.planned > 0 ? ` · ${meal.planned} planned` : '';
   if (eatenKcal > 0) return `${eatenKcal.toLocaleString('en-US')} kcal eaten${planned}`;
   return meal.items > 0 ? `${meal.items} on the menu${planned}` : '';
+}
+
+/** The two figures a meal header needs: its planned count (items marked planned that can be planned: never a listed daily snack or a drink) and its eaten calories (ticked plan food plus the eaten food nobody planned; unticked food adds nothing). */
+export function mealFigures(items: readonly Pick<BoardItem, 'r'>[], extra: readonly DietEntry[], diet: readonly DietEntry[], snacks?: readonly { id: string }[], drinks?: ReadonlySet<string>): { planned: number; eatenKcal: number } {
+  const planned = items.filter(x => x.r.item.p === true && canBePlanned(x.r.item, snacks, drinks)).length;
+  const eatenKcal = items.reduce((a, x) => a + (isEaten(x.r.item, diet) ? x.r.kcal ?? 0 : 0), 0) + extra.reduce((a, e) => a + e.kcal, 0);
+  return { planned, eatenKcal };
 }
 
 /** The muted warning beside a meal's header: "25 over snack share", only when a target gives the meal a share and eaten food passes it. Never a block; null otherwise (and always null with no target). `label` is the meal's name. */

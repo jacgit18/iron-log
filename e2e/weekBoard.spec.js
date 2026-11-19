@@ -56,8 +56,7 @@ test('planning Dinner shows the card, the plate check and a fix that goes with t
   await expect(check).toContainText('Carb');
   await expect(check).not.toContainText('✓ Carb');
   await dinner(today(page)).getByRole('button', { name: '+ Add a carb: Rice (goes with Chili)' }).click(); // Rice goes with Chili
-  await expect(check).not.toContainText('✓ Carb'); // the fix adds Rice as available
-  await markPlanned('Rice');
+  // the fix adds Rice already marked planned, so the check ticks at once
   await expect(check).toContainText('✓ Carb');
   await expect(dinner(today(page)).locator('.wb-ct', { hasText: 'Rice' })).toBeVisible();
   // today's meters count what was eaten, so nothing planned moves them; the meal header tells the menu in words, never calories nobody ate (brief nutrition-board-available-list)

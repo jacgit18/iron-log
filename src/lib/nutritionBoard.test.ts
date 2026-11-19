@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealKcalText, mealOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -387,6 +387,14 @@ describe('eaten food in meals (brief nutrition-items-row-sheet-and-more)', () =>
     expect(mealKcalText({ items: 0, planned: 0 }, 150)).toBe('150 kcal eaten');
     expect(mealKcalText({ items: 0, planned: 0 }, 0)).toBe('');
     expect(mealKcalText({ items: 3, planned: 0 }, 1234)).toBe('1,234 kcal eaten');
+  });
+  it('mealFigures counts only eaten calories and only items that can be planned', () => {
+    const it = (id: string, p?: true, s?: 'snack') => ({ r: { item: { k: 'r' as const, id, ...(p ? { p } : {}), ...(s ? { s } : {}) }, kcal: 100 } }) as never;
+    const items = [it('a', true), it('b'), it('tea', true), it('yog', true, 'snack')];
+    const ate: DietEntry[] = [];
+    const f = mealFigures(items, [{ id: 'x', kcal: 50 } as DietEntry], ate, [{ id: 'yog' }], new Set(['tea']));
+    expect(f.planned).toBe(1); // a drink and a listed snack with a stray marker are not planned things
+    expect(f.eatenKcal).toBe(50); // nothing ticked: only the unplanned eaten food
   });
   it('the over-share warning needs a share and eaten food past it, never unticked food', () => {
     expect(mealOverText(220, 245, 'Snack')).toBe('25 over snack share');

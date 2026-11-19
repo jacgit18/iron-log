@@ -74,8 +74,10 @@ export const PLAN_SLOTS: readonly PlanSlot[] = ['breakfast', 'lunch', 'snack', '
 
 /** The plan window: today and this many days after it (52 weeks, brief nutrition-meal-labels-year-repeat; it was 13). Stored plan days are only the days with stored items, so size follows use, not the window. */
 export const MAX_PLAN_AHEAD = 364, MAX_PLAN_ITEMS = 8, MAX_DAILY_SNACKS = 6, MAX_DAY_DRINKS = 6;
-/** The most a day can store: the available list (brief nutrition-board-available-list; owner 2026-11-19), a storage bound, not a product limit. Only items marked planned (`p`) count toward MAX_PLAN_ITEMS; drinks keep MAX_DAY_DRINKS. The cleaner keeps up to this, so a snack ticked on a full day is never dropped. */
+/** The most a day can store: the available list (brief nutrition-board-available-list; owner 2026-11-19), a storage bound, not a product limit. Only items marked planned (`p`) count toward MAX_PLAN_ITEMS; drinks keep MAX_DAY_DRINKS. The limit for the rest of the list; the cleaner keeps up to MAX_DAY_STORED. */
 export const MAX_DAY_ITEMS = 40;
+/** What a day can store: the available list plus a ticked listed daily snack each and up to MAX_DAY_DRINKS drinks, which sit outside the 40 so a snack, drink or repeat ticked on a full day is never refused or dropped by the cleaner. */
+export const MAX_DAY_STORED = MAX_DAY_ITEMS + MAX_DAILY_SNACKS + MAX_DAY_DRINKS;
 
 /** A portion in half steps from 0.5 to 10, or null when it is 1 (stored as no `x`) or unusable. */
 const portionOf = (x: unknown): number | null => (fin(x) && x >= 0.5 && x <= 10 && x * 2 === Math.round(x * 2) && x !== 1 ? x : null);
@@ -170,7 +172,7 @@ export const isDrinkItem = (i: PlanItem, drinks: ReadonlySet<string> | undefined
 /** How many of a day's stored items count toward MAX_PLAN_ITEMS: those marked planned (`p`), never a listed daily snack or, when `drinks` is given, a drink. An item stored before the marker existed is available, not planned. */
 export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>): number => items.filter(i => i.p === true && !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length;
 
-/** The plan of a stored value, cleaned: real dates only, at most MAX_DAY_ITEMS a day (the planned count needs the daily list, so `addItem`, `moveItem` and `markPlanned` hold it), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
+/** The plan of a stored value, cleaned: real dates only, at most MAX_DAY_STORED a day (the planned count needs the daily list, so `addItem`, `moveItem` and `markPlanned` hold it), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {
   const out: Record<string, PlanItem[]> = {};
   if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
@@ -181,7 +183,7 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
     const items: PlanItem[] = [];
     for (const raw of Array.isArray((v as Record<string, unknown>)[d]) ? (v as Record<string, unknown[]>)[d]! : []) {
       const it = normPlanItem(raw);
-      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_DAY_ITEMS) continue; // the cleaner does not know the daily list or the drinks, so it holds only the storage bound; the planned and drink limits are held when an item is added, moved or marked. The same food may be in two different meals of a day
+      if (!it || items.some(x => samePlanItem(x, it)) || items.length >= MAX_DAY_STORED) continue; // the cleaner does not know the daily list or the drinks, so it holds only the storage bound; the planned and drink limits are held when an item is added, moved or marked. The same food may be in two different meals of a day
       items.push(it);
     }
     if (items.length) out[d] = items;

@@ -10,7 +10,7 @@ const scenario: Scenario = {
   expected: [
     'The card moves to the meal or the day you picked and the bars of both days follow. A food already in that meal is refused with "That is already in that meal."; the same food in another meal of that day is allowed, as adding it is.',
     'Dragging does the same.',
-    'A day with 8 planned things refuses a planned card with "A day can hold 8 planned things. Unmark one to mark another."; a card not marked planned moves there, up to 40 things a day ("A day can hold 40 things in all, drinks and daily snacks included. Remove one to add another.").',
+    'A day with 8 planned things refuses a planned card with "A day can hold 8 planned things. Unmark one to mark another."; a card not marked planned moves there, up to 40 things a day, not counting drinks and daily snacks ("A day can hold 40 things, not counting drinks and daily snacks. Remove one to add another.").',
   ],
 };
 
