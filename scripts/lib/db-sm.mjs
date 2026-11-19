@@ -65,7 +65,7 @@ export function childEnv(url, base = process.env) {
 
 /**
  * Every check before the command runs. Throws an Error whose message never contains the URL. Returns { host, warnings }.
- * Injected: `notLocal(url)` (db-script's notLocalProblem: null for a local URL, text for a problem such as a host= parameter, else why it is not local), `host(url)` (the host the pg driver will use), `prodUrl()` (production's owner URL or null), `same(a, b)` (same server by name, alias or address),
+ * Injected: `notLocal(url)` (db-script's notLocalProblem: null for a local URL, text for a problem such as a host= parameter, else why it is not local), `host(url)` (the host the pg driver will use), `prodUrl(env)` (an independent copy of production's owner URL, or null; for env production it must not be the secret just read, or the comparison is circular), `same(a, b)` (same server by name, alias or address),
  * `mark(url, env)` (the database's mark, opened and closed by the caller's function). A check that cannot run refuses.
  */
 export async function check({ env, host: typed, url }, { host, prodUrl, same, mark, notLocal }) {
@@ -78,14 +78,17 @@ export async function check({ env, host: typed, url }, { host, prodUrl, same, ma
   if (local === null || local === undefined) throw new Error(`The secret ${secret} points at a database on this machine, not ${env}. Nothing was run.`);
   if (local && /parameter/.test(local)) throw new Error(`The secret ${secret} has a host= or hostaddr= parameter, which can send the connection to another machine. Nothing was run.`);
   if (actual !== typed.toLowerCase().replace(/\.+$/, '')) throw new Error(`--host ${typed} does not match the host in the secret ${secret} (${actual}). Nothing was run.`);
-  const prod = prodUrl();
-  if (!prod) throw new Error('Cannot tell which database is production: set PROD_DATABASE_URL, or sign in so iron-log-prod-owner-url can be read. Refusing, because this check cannot run. Nothing was run.');
-  const prodHost = host(prod);
-  if (!prodHost) throw new Error('The host of production\'s URL cannot be read. Refusing, because this check cannot run. Nothing was run.');
-  const isProd = await same(prodHost, actual);
-  if (env === 'production' && !isProd) throw new Error(`${actual} is not production's database (${prodHost}), so ${secret} cannot be used for production. Nothing was run.`);
-  if (env !== 'production' && isProd) throw new Error(`${actual} is production's database (same host, or an alias or address of it), not ${env}. Nothing was run.`);
   const warnings = [];
+  const prod = prodUrl(env);
+  if (!prod && env === 'production') warnings.push('production\'s host is the one in the secret itself (no independent copy: set PROD_DATABASE_URL to compare); the typed host and the mark are the checks that count.');
+  else if (!prod) throw new Error('Cannot tell which database is production: set PROD_DATABASE_URL, or sign in so iron-log-prod-owner-url can be read. Refusing, because this check cannot run. Nothing was run.');
+  if (prod) {
+    const prodHost = host(prod);
+    if (!prodHost) throw new Error('The host of production\'s URL cannot be read. Refusing, because this check cannot run. Nothing was run.');
+    const isProd = await same(prodHost, actual);
+    if (env === 'production' && !isProd) throw new Error(`${actual} is not production's database (${prodHost}), so ${secret} cannot be used for production. Nothing was run.`);
+    if (env !== 'production' && isProd) throw new Error(`${actual} is production's database (same host, or an alias or address of it), not ${env}. Nothing was run.`);
+  }
   if (isPooled(actual)) {
     if (env === 'production') throw new Error(`${actual} is a pooled address. Migrations and owner work use the direct URL (no -pooler in the host). Nothing was run.`);
     warnings.push(`${actual} is a pooled address (-pooler); a tool that needs a real session (dbmate, pg_dump) wants the direct one.`);

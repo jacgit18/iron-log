@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { main, markOf } from './db-sm.mjs';
+import { contained, main, markOf } from './db-sm.mjs';
 import { notLocalProblem } from './lib/db-script.mjs';
 import { ENVS, REFUSED, check, childEnv, parseArgs, redact } from './lib/db-sm.mjs';
 import { inventoryNames } from './secret-inventory.mjs';
@@ -191,5 +191,40 @@ describe('the URL never appears in anything printed or thrown', () => {
     const u = 'postgres://own%40er:p%40ss-w0rd-9@h.example.invalid/db';
     const out = redact(`bad ${u} and p@ss-w0rd-9 and p%40ss-w0rd-9 and own@er`, u);
     expect(out).not.toMatch(/p@ss-w0rd-9|p%40ss-w0rd-9|own@er|own%40er|postgres:\/\//);
+  });
+});
+
+describe('production without an independent copy of production\'s URL', () => {
+  it('runs with a warning that the typed host and the mark are the checks (it never compares the secret with itself)', async () => {
+    const f = fakes('production', { prod: null });
+    expect(await f.run(argv('production', HOSTS.production))).toBe(0);
+    expect(f.logs.join('\n')).toContain('no independent copy');
+    expect(f.spawned).toHaveLength(1);
+  });
+  it('still refuses a marked database, and a host that differs from the independent copy', async () => {
+    const m = fakes('production', { prod: null, mark: 'iron-log qa' });
+    expect(await m.run(argv('production', HOSTS.production))).toBe(REFUSED);
+    const d = fakes('production', { prod: urlFor('ep-other.c-6.example.invalid') });
+    expect(await d.run(argv('production', HOSTS.production))).toBe(REFUSED);
+    expect(d.spawned).toHaveLength(0);
+  });
+  it('qa and staging still refuse when production\'s host cannot be read', async () => {
+    const f = fakes('staging', { prod: null });
+    expect(await f.run(argv('staging', HOSTS.staging))).toBe(REFUSED);
+  });
+});
+
+describe('connect() failures are redacted and become a throw', () => {
+  it('replaces console.error and process.exit for the call, restores both, and hides the URL', async () => {
+    const url = urlFor(HOSTS.qa);
+    const exitBefore = process.exit, errBefore = console.error;
+    const said: string[] = [];
+    const open = async () => { console.error(`Cannot connect: could not parse ${url}`); process.exit(2); };
+    await expect(markOf(url, 'qa', open as never)).rejects.toThrow(/Could not connect/);
+    expect(process.exit).toBe(exitBefore);
+    expect(console.error).toBe(errBefore);
+    await contained(async () => { console.error(`retry ${url}`); }, url, { say: m => said.push(m) });
+    expect(said.join('\n')).not.toContain(PASSWORD);
+    expect(said.join('\n')).toContain('[hidden]');
   });
 });

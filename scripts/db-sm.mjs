@@ -15,13 +15,25 @@ import { connect, connectHost, notLocalProblem, productionUrl, readMark, sameSer
 import { PROJECT, secret } from './lib/gcloud-secret.mjs';
 import { ENVS, REFUSED, check, childEnv, parseArgs, redact } from './lib/db-sm.mjs';
 
-export async function markOf(url, env) {
-  const client = await connect(url, ENVS[env].prefix);
+// db-script's connect() reports a failure with console.error and process.exit, which would bypass redact(): for the duration of the call both are replaced, so
+// what it says is redacted against the URL and an exit becomes a throw.
+export async function contained(fn, url, { say } = {}) {
+  const exit = process.exit, err = console.error;
+  console.error = (...a) => (say ?? err)(redact(a.join(' '), url));
+  process.exit = () => { throw new Error('Could not connect to the database (see above). Nothing was run.'); };
+  try { return await fn(); } finally { process.exit = exit; console.error = err; }
+}
+
+export async function markOf(url, env, open = connect) {
+  const client = await contained(() => open(url, ENVS[env].prefix), url);
   try { return await readMark(client); } finally { await client.end(); }
 }
 
+// Production's own copy for the host comparison: only PROD_DATABASE_URL (the secret itself would compare with itself). Qa and staging use the usual lookup.
+const prodUrlFor = env => (env === 'production' ? process.env.PROD_DATABASE_URL || null : productionUrl());
+
 /** The whole command; returns the exit status. Everything that reaches outside is injectable. A message shown or thrown is redacted against the URL. */
-export async function main(argv, { read = secret, deps = { host: connectHost, notLocal: notLocalProblem, prodUrl: productionUrl, same: sameServer, mark: markOf }, spawn = spawnSync, log = m => console.error(m), base = process.env } = {}) {
+export async function main(argv, { read = secret, deps = { host: connectHost, notLocal: notLocalProblem, prodUrl: prodUrlFor, same: sameServer, mark: markOf }, spawn = spawnSync, log = m => console.error(m), base = process.env } = {}) {
   let url = '';
   try {
     const args = parseArgs(argv);
