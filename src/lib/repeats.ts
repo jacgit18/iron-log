@@ -145,7 +145,7 @@ export function skipsAfterRemovingHandy(repeats: readonly RepeatItem[] | undefin
 export function skipsAfterLeaving(repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, day: string, item: { k: string; id: string; s?: PlanSlot } | undefined): Record<string, string[]> | undefined {
   if (!item || !repeats?.length) return undefined;
   const weekday = parseDate(day).getDay();
-  const r = repeats.find(x => samePlanItem(item as PlanItem, { k: x.k, id: x.id, ...(x.s ? { s: x.s } : {}) }) && day === x.from && x.days.includes(weekday) && !(skips?.[day] ?? []).includes(x.rid));
+  const r = repeats.find(x => !isHandy(x) && samePlanItem(item as PlanItem, { k: x.k, id: x.id, ...(x.s ? { s: x.s } : {}) }) && day === x.from && x.days.includes(weekday) && !(skips?.[day] ?? []).includes(x.rid));
   return r ? skipRepeat(skips, day, r.rid) : undefined;
 }
 

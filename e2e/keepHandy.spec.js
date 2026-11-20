@@ -58,3 +58,22 @@ test('the tray has no accessibility violations, open or collapsed', async ({ pag
   const r = await new AxeBuilder({ page }).include('.nb-col[data-day="2026-09-28"]').analyze();
   expect(r.violations).toEqual([]);
 });
+
+test('Change turns a handy food into an every-day repeat on the card, and Stop repeating removes it', async ({ page }) => {
+  await seed(page);
+  await openNutrition(page);
+  await keepHandy(page);
+  await tray(page, '2026-09-28').click();
+  await snack(col(page, '2026-09-28')).getByRole('button', { name: 'Change Almonds' }).click();
+  const rep = page.getByRole('dialog', { name: 'Repeat Almonds' });
+  await expect(rep.getByRole('button', { name: 'Keep handy', exact: true }).first()).toHaveAttribute('aria-pressed', 'true');
+  await rep.getByRole('button', { name: 'Every day' }).click();
+  await rep.getByRole('button', { name: 'Save' }).click();
+  await expect(snack(col(page, '2026-09-28')).locator('.wb-card', { hasText: 'Almonds' })).toHaveCount(1);
+  await expect(tray(page, '2026-09-28')).toHaveCount(0);
+  await snack(col(page, '2026-09-28')).locator('.wb-card').click();
+  await col(page, '2026-09-28').getByRole('button', { name: 'Repeat Almonds' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Stop repeating Almonds' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Stop repeating Almonds' }).click();
+  await expect(snack(col(page, '2026-09-29')).locator('.wb-card')).toHaveCount(0);
+});

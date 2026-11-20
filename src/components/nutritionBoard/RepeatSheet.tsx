@@ -27,7 +27,7 @@ export default function RepeatSheet() {
   const st = () => useAppStore.getState();
   if (!item) return null;
   const meal = item.s ? SLOT_LABEL[item.s] : 'no meal';
-  const handyMeal = existing?.s ?? handyMealFor(item, recipes), canHandy = !isDrinkItem(item, drinkIdsOf(recipes)); // a handy food waits in a meal's tray; a drink has no meal
+  const handyMeal = existing?.s ?? handyMealFor(item, recipes), canHandy = item.k === 'r' && !isDrinkItem(item, drinkIdsOf(recipes)); // a handy food waits in a meal's tray; a drink has no meal and saved meals are gone
   const pick = (next: number[]) => { setHandy(false); setDays(next); setMsg(''); };
   const save = () => {
     const err = st().saveRepeat(existing?.from ?? day, handy ? { ...item, s: handyMeal } : item, handy ? [...EVERY_DAY] : days, existing?.rid, handy);

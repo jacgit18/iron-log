@@ -261,6 +261,9 @@ describe('Keep handy (brief nutrition-keep-handy)', () => {
     expect(back).toMatchObject({ h: true, days: every, s: 'dinner' });
     expect(saveRepeat([rep('n', every, { id: 'beef' })], { rid: 'n', item: { k: 'r', id: 'beef', s: 'lunch' }, days: [], from: '2026-11-10', handy: true }).list![0]).toMatchObject({ s: 'lunch', from: '2026-11-10' });
   });
+  it('a skip-on-leave never targets a handy item, so Remove on its start day returns it to the tray', () => {
+    expect(skipsAfterLeaving([h('a', { id: 'beef', s: 'dinner' })], undefined, today, { k: 'r', id: 'beef', s: 'dinner' })).toBeUndefined();
+  });
   it('removing an item added from the tray clears its skip; other items change nothing', () => {
     const l = [h('a', { id: 'beef', s: 'dinner' })], skips = { [day]: ['a', 'z'] };
     expect(skipsAfterRemovingHandy(l, skips, day, { k: 'r', id: 'beef', s: 'dinner' })).toEqual({ [day]: ['z'] });
