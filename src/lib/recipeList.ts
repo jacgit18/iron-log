@@ -47,6 +47,12 @@ export const emptyTabNote = (tab: RecipeTab, searching: boolean): string =>
     : searching ? 'Nothing in this tab matches. Clear the search, the filters or pick another tab.'
       : tab === 'foods' ? 'No foods yet. Use + New, then Scan to fill a food form.' : tab === 'ingredients' ? 'No ingredients yet. Write a Sauces or Seasonings recipe, or mark a recipe or food as an Ingredient.' : tab === 'drinks' ? 'No drinks yet. Use + New, then Recipe or meal in the Drinks category, or Scan to fill a food form for a drink.' : 'No meals yet. Use + New, then Recipe or meal.';
 
+/** How many list filters are on, for the count on the Filters button: the category, "Can make", each tag and each nutrition filter. The search, the sort, the source and the tab are not
+ *  filters here. In the Library source only the category applies (the others are hidden and skipped), so only it counts. */
+export function activeFilterCount(f: { cat?: string | null; canMake?: boolean; tags?: readonly string[]; nutrition?: readonly string[] }, yours: boolean): number {
+  return (f.cat ? 1 : 0) + (yours ? (f.canMake ? 1 : 0) + (f.tags?.length ?? 0) + (f.nutrition?.length ?? 0) : 0);
+}
+
 /** Your recipes matching the typed words (every word in the name or an ingredient, as a word start), the category AND every selected tag AND every nutrition filter, and "can make"
  *  (`makeable`: ids of recipes with every ingredient at home), by name. */
 export function filterRecipes(list: Recipe[], f: RecipeFilter, makeable: ReadonlySet<string>): Recipe[] {

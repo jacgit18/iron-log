@@ -93,6 +93,27 @@ test('hiding the category that is the active filter clears the filter', async ({
   await expect(rows(page)).toHaveText(['Chili', 'Rice']);
 });
 
+test('the Filters button counts what is on, and Clear filters (in the bar or under "No recipe matches") turns it all off', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight']);
+  await make(page, 'Rice', 'Carbs');
+  const toggle = page.locator('#recipes-filters');
+  await expect(toggle).toHaveText('Filters'); // nothing on: no count, no Clear button
+  await expect(page.locator('#recipes-clear-filters')).toHaveCount(0);
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
+  await page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' }).click();
+  await expect(toggle).toHaveText('Filters (2)');
+  await page.locator('#recipes-clear-filters').click(); // the bar's button
+  await expect(toggle).toHaveText('Filters');
+  await expect(rows(page)).toHaveText(['Chili', 'Rice']);
+  await page.getByRole('button', { name: 'Can make' }).click(); // nothing in the fixture is makeable: the empty note, with its own Clear button
+  await expect(toggle).toHaveText('Filters (1)');
+  await expect(page.locator('#recipes-empty')).toBeVisible();
+  await page.locator('#recipes-clear-empty').click();
+  await expect(toggle).toHaveText('Filters');
+  await expect(rows(page)).toHaveText(['Chili', 'Rice']);
+});
+
 test('rename a tag (and merge into one that exists), then delete one after a confirm that says how many', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein', ['weeknight', 'meal prep']);
