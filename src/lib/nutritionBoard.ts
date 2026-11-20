@@ -3,6 +3,7 @@ import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
 import { shortDay, sundayOf } from './dayNames.js';
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';
+import { hiddenHints } from './plate.js';
 import { canBePlanned, isEaten, type Plan } from './dietPlan.js';
 import { portionTag } from './supplementPortion.js';
 import { usualMealOf } from './usualMeal.js';
@@ -222,8 +223,8 @@ export function planLine(plan: BoardDay, ahead: boolean): string | null {
 }
 
 /** A day as the board draws it: four meters (calories, protein, fat from the diet log on every day, so food only counts once it is eaten or checked off; a day ahead reads 0 and shows its plan in `planLine`; water from the water log against that day's goal), the plan's meals, and the eaten food. */
-export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; moved?: Readonly<Record<string, string>>; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets }): DayView {
-  const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal, a.moved);
+export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; moved?: Readonly<Record<string, string>>; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets; hintsOff?: readonly PlanSlot[]; hintSkips?: Readonly<Record<string, readonly PlanSlot[]>> }): DayView {
+  const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal, a.moved, hiddenHints(a.hintsOff, a.hintSkips, day));
   const eaten = a.diet.filter(e => e.d === day);
   const tot = totalsFor(a.diet, day);
   const water = goalFor(a.supp, a.body, day);

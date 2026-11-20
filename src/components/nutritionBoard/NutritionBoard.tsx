@@ -60,7 +60,7 @@ export default function NutritionBoard() {
     const t = targetsFor(cfg.diet, recommend(goalLb, latest, weeksLeft, cfg.diet));
     return { kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs };
   }, [cfg.bwGoal, cfg.diet, body, now]);
-  const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets })), [days, today, plan, recipes, legacy, diet, supp, body, targets]);
+  const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets, hintsOff: cfg.diet?.hintsOff, hintSkips: cfg.diet?.hintSkips })), [days, today, plan, recipes, legacy, diet, supp, body, targets, cfg.diet?.hintsOff, cfg.diet?.hintSkips]);
   const st = () => useAppStore.getState();
   const goWeek = (o: WeekOffset) => { setPicked(dayOnArrival(today, o)); setMsg(''); };
   const prevWeek = stepWeek(offset, -1, range), nextWeek = stepWeek(offset, 1, range); // null at an end: the arrow stops

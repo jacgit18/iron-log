@@ -8,6 +8,7 @@ import { oldestLogged, weekDays, weekOf } from '../../lib/nutritionBoard.js';
 import { dayToShow, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { requestProgressJump } from '../../lib/progressJump.js';
 import { requestSettingsJump } from '../../lib/settingsJump.js';
+import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { ymd } from '../../shared/dates.js';
 import { navigate } from '../useRoute.js';
 import DietTargets from '../diet/DietTargets.js';
@@ -16,8 +17,11 @@ import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
 import ShoppingButton from './ShoppingButton.js';
 import { usePhoneHeader } from './useWideBoard.js';
 import WaterGoal from './WaterGoal.js';
+import './PlateHints.css';
 import '../diet/Diet.css';
 import '../supplements/Supplements.css';
+
+const HINT_MEALS = ['breakfast', 'lunch', 'dinner'] as const; // a snack needs nothing, so it has no hint to switch
 
 // The Manage sheet (brief nutrition-board, PR 2; brief targets-into-manage): daily targets with the weight goal under them (read-only: the goal is edited in Progress, the link opens the Body weight chart), the base water goal with its reminder link, and the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
 // Meals and foods (opens Recipes) opens the existing Recipes screen (the sheet closes first).
@@ -59,6 +63,12 @@ export default function ManageSheet() {
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => { requestSettingsJump('alerts'); useAppStore.getState().setTab('settings'); })}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
       </ul>
+      <div className="sect" id="nb-manage-hints-h">Plate hints</div>
+      <p className="note">Show what a meal is missing (protein, carb, veg). Turn a meal off if you don't eat that way.</p>
+      <div className="nb-hints" role="group" aria-labelledby="nb-manage-hints-h">
+        {HINT_MEALS.map(m => <label key={m}><input type="checkbox" checked={!cfg.diet?.hintsOff?.includes(m)} onChange={e => useAppStore.getState().setPlateHint(m, e.target.checked)} />{SLOT_LABEL[m]}</label>)}
+      </div>
+      {HINT_MEALS.every(m => cfg.diet?.hintsOff?.includes(m)) && <p className="note">Hints are off for every meal.</p>}
       <div className="sect">Library</div>
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>

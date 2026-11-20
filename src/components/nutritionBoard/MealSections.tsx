@@ -8,7 +8,9 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { PlanSlot } from '../../types.ts';
 import BoardCard from '../diet/board/BoardCard.js';
 import type { Say } from '../../lib/eatenStep.js';
+import Icon from '../Icon.js';
 import { EatenRows } from './EatenRows.js';
+import './PlateHints.css';
 import type { Resolved } from '../../lib/dietPlan.js';
 
 const ORDER = PLAN_SLOTS;
@@ -57,6 +59,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
           {s.need.length > 0 && s.items.length > 0 && (
             <div className="wb-plate" role="group" aria-label={`${s.slot ? SLOT_LABEL[s.slot] : ''} plate check`}>
               {s.need.map(m => <span key={m} className={`wb-mk${s.have.includes(m) ? ' on' : ''}`}>{s.have.includes(m) ? '✓ ' : ''}{MARK_LABEL[m]}</span>)}
+              {s.slot && editable && <button type="button" className="wb-hide" aria-label={`Hide plate hint for ${SLOT_LABEL[s.slot]} today`} onClick={() => st().dismissPlateHint(view.day, s.slot!)}><Icon name="close" /></button>}
             </div>
           )}
           {s.items.map(x => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
+import { hiddenHints, withHintSwitch } from './plate.js';
 import { addItemsToDays, boardDay, copyItemToDays, fixFor, moveItem } from './weekBoard.js';
 
 const rec = (id: string, cat: Recipe['cat'], kcal: number, p: number, extra: Partial<Recipe> = {}): Recipe => ({ id, n: id[0]!.toUpperCase() + id.slice(1), cat, ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p, ...extra });
@@ -57,6 +58,48 @@ describe('fixFor', () => {
     expect(fixFor('veg', [chili], [chili, salad, fav])?.recipe.id).toBe('greens');
     expect(fixFor('carb', [chili, rice], recipes)?.recipe.id).toBe('toast');
     expect(fixFor('veg', [salad], [salad])).toBeNull();
+  });
+});
+
+describe('fixFor prefers a food of that meal (brief nutrition-plate-hints-per-meal)', () => {
+  const beef = rec('beef', 'protein', 500, 40, { meal: 'dinner' }), eggs = rec('eggs', 'protein', 150, 12, { meal: 'breakfast' }), jerky = rec('jerky', 'protein', 100, 15);
+  it('never offers a food of another meal while one of this meal or with none exists', () => {
+    expect(fixFor('protein', [toast], [toast, beef, eggs], 'breakfast')?.recipe.id).toBe('eggs');
+    expect(fixFor('protein', [toast], [toast, beef, jerky], 'breakfast')?.recipe.id).toBe('jerky'); // a food with no usual meal fits any meal
+    expect(fixFor('protein', [toast], [toast, beef, eggs], 'dinner')?.recipe.id).toBe('beef');
+  });
+  it('falls back to today\'s pick when no food fits, and without a slot changes nothing', () => {
+    expect(fixFor('protein', [toast], [toast, beef], 'breakfast')?.recipe.id).toBe('beef');
+    expect(fixFor('protein', [toast], [toast, beef, eggs])?.recipe.id).toBe('beef'); // A to Z, as before
+  });
+  it('prefers a partner of that meal over a partner of another', () => {
+    const t = { ...toast, pairs: ['beef', 'eggs'] };
+    expect(fixFor('protein', [t], [t, beef, eggs], 'breakfast')).toMatchObject({ recipe: { id: 'eggs' }, why: 'goes with Toast' });
+  });
+});
+
+describe('hidden plate hints', () => {
+  const plan = { [D]: [pp('toast', 'breakfast'), pp('chili', 'dinner')], [D2]: [pp('toast', 'breakfast')] };
+  const slotOf = (d: ReturnType<typeof boardDay>, s: string) => d.slots.find(x => x.slot === s)!;
+  it('a meal in the hidden list has no need and no fixes; the others keep theirs', () => {
+    const d = boardDay(plan, D, recipes, [], null, {}, ['breakfast']);
+    expect(slotOf(d, 'breakfast')).toMatchObject({ need: [], have: [], fixes: [] });
+    expect(slotOf(d, 'dinner').fixes.length).toBeGreaterThan(0);
+    expect(slotOf(boardDay(plan, D, recipes, [], null), 'breakfast').fixes.length).toBeGreaterThan(0);
+  });
+  it('hides calories and totals nowhere', () => {
+    expect(boardDay(plan, D, recipes, [], null, {}, ['breakfast', 'dinner'])).toMatchObject({ kcal: 560, protein: 35 });
+  });
+  it('hiddenHints joins the switch and the day dismissal; one day does not touch the next', () => {
+    expect(hiddenHints(['breakfast'], { [D]: ['breakfast', 'lunch'] }, D)).toEqual(['breakfast', 'lunch']);
+    expect(hiddenHints(undefined, { [D]: ['lunch'] }, D2)).toEqual([]);
+    const d2 = boardDay(plan, D2, recipes, [], null, {}, hiddenHints(undefined, { [D]: ['breakfast'] }, D2));
+    expect(slotOf(d2, 'breakfast').fixes.length).toBeGreaterThan(0);
+  });
+  it('withHintSwitch writes meal order, off adds and on removes', () => {
+    expect(withHintSwitch(['dinner'], 'breakfast', false)).toEqual(['breakfast', 'dinner']);
+    expect(withHintSwitch(['breakfast', 'dinner'], 'breakfast', true)).toEqual(['dinner']);
+    expect(withHintSwitch(undefined, 'lunch', true)).toEqual([]);
   });
 });
 
