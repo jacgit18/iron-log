@@ -66,6 +66,9 @@ test('Type a list reads amounts and "or" alternatives into rows, and the rows co
   await page.getByRole('button', { name: 'Use these ingredients' }).click();
   await expect(page.getByRole('button', { name: 'Ingredient 2: milk · 1 cup (or oat milk). Edit' })).toBeVisible(); // finished rows fold
   await expect(rowAmount(page, 2)).toHaveText(amountText('pinch'));
+  await reopenRow(page, 1); // the real fields, not only the folded label
+  await expect(page.getByLabel('Ingredient 2', { exact: true })).toHaveValue('milk');
+  await expect(page.getByLabel('Alternative for ingredient 2')).toHaveValue('oat milk');
   await page.getByRole('button', { name: 'Type a list' }).click();
   await expect(page.getByLabel(/^One ingredient per line/)).toHaveValue('1 cup rolled oats\n1 cup milk or oat milk\npinch salt');
   await page.getByRole('button', { name: 'Save recipe' }).click(); // saving from the list is the same as using it
@@ -89,6 +92,9 @@ test('Type a list keeps the rows of lines you did not change, and the pin and Sk
   await expect(rowAmount(page, 0)).toHaveText(amountText('1 (14 oz) can')); // not read as "1"
   await expect(page.getByRole('button', { name: 'Ingredient 2: salt or pepper · 1 tsp · skipped. Edit' })).toBeVisible(); // not split into an Alternative, and the stored skip stayed with its row
   await expect(rowAmount(page, 2)).toHaveText(amountText('3 cloves')); // the changed line was read again
+  await reopenRow(page, 1);
+  await expect(page.getByLabel('Ingredient 2', { exact: true })).toHaveValue('salt or pepper'); // not split into an Alternative
+  await expect(page.getByLabel('Alternative for ingredient 2')).toHaveValue('');
 });
 
 test('an empty list says so instead of clearing the rows', async ({ page }) => {
