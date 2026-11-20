@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addRecent, loadRecents, saveRecents } from '../../lib/amountPicker.js';
 import type { ScaleRow } from '../../lib/recipeScale.js';
 import type { Suggestion } from '../../lib/recipeSuggest.js';
 import { amountText } from '../../lib/foodUnit.js';
+import { focusAfterRemove, menuAfterRemove, scrollDelta } from '../../lib/recipeFormExtras.js';
 import { afterAmount, foldedSummary, isFolded, landsAt, shiftForInsert, shiftSetForInsert } from '../../lib/recipeSaferEditing.js';
 import { MAX_INGREDIENTS, MAX_Q, MAX_RECIPE_NAME } from '../../shared/recipes.js';
 import type { Recipe, RecipeIngredient } from '../../types.ts';
@@ -11,6 +12,7 @@ import AmountPicker from './AmountPicker.js';
 import FoodPicker from './FoodPicker.js';
 import SauceSeasoningPicker from './SauceSeasoningPicker.js';
 import './IngredientRows.css';
+import './RecipeFormExtras.css';
 
 const STEP = 0.5; // the amount of a linked food moves in halves
 
@@ -34,6 +36,7 @@ export default function IngredientRows({ rows, open, onOpen, restored, options, 
   const [browse, setBrowse] = useState(false); // the Sauce or seasoning picker under the rows is open
   const [food, setFood] = useState(false); // the Food or meal picker under the rows is open
   const [recents, setRecents] = useState(loadRecents);
+  const [menu, setMenu] = useState<number | null>(null); // the row whose ⋯ menu is open (brief recipe-form-extras)
   if (restored && restored.seq !== seenRestore) { // Undo put a row back: the rows below it moved down one, and so did our row numbers
     setSeenRestore(restored.seq);
     setEditing(e => shiftForInsert(e, restored.at));
@@ -52,7 +55,12 @@ export default function IngredientRows({ rows, open, onOpen, restored, options, 
     setEditing(go.i);
     focus(rows[go.i]!.n.trim() ? `rc-amt-${go.i}` : `rc-name-${go.i}`);
   };
-  const remove = (i: number) => { onOpen(null); setEditing(e => (e === null || e === i ? null : e > i ? e - 1 : e)); setAlt(new Set([...alt].filter(k => k !== i).map(k => (k > i ? k - 1 : k)))); onRemove(i); };
+  const remove = (i: number) => {
+    const to = focusAfterRemove(i, Math.max(1, rows.length - 1)); // the focus goes on to a row or Add ingredient, never the page top
+    setTimeout(() => (to.kind === 'add' ? document.getElementById('rc-add') : document.getElementById(`rc-fold-${to.i}`) ?? document.getElementById(`rc-name-${to.i}`))?.focus(), 0);
+    removeNow(i);
+  };
+  const removeNow = (i: number) => { setMenu(m => menuAfterRemove(m, i)); onOpen(null); setEditing(e => (e === null || e === i ? null : e > i ? e - 1 : e)); setAlt(new Set([...alt].filter(k => k !== i).map(k => (k > i ? k - 1 : k)))); onRemove(i); };
   return (
     <>
       <datalist id="rc-suggest">{options.map(o => <option key={o.n} value={o.n} label={o.tag ? `${o.n} · ${o.tag}` : undefined} />)}</datalist>
@@ -64,7 +72,7 @@ export default function IngredientRows({ rows, open, onOpen, restored, options, 
               <button type="button" id={`rc-fold-${i}`} className="rc-fold" aria-label={`Ingredient ${i + 1}: ${foldedSummary(x, x.q !== undefined && x.rid ? amountText(x.q, partOf(x.rid)) : x.amt)}. Edit`} onClick={() => { edit(i); focus(`rc-name-${i}`); }}>
                 <Icon name="check" /><span>{foldedSummary(x, x.q !== undefined && x.rid ? amountText(x.q, partOf(x.rid)) : x.amt)}</span><Icon name="chevron-down" />
               </button>
-              <button type="button" className="btn sm ghost rc-rm" aria-label={`Remove ingredient ${i + 1}`} onClick={() => remove(i)}><Icon name="close" /></button>
+              <RowMenu i={i} open={menu === i} onToggle={() => setMenu(menu === i ? null : i)} onClose={() => setMenu(null)} onRemove={() => remove(i)} />
             </div>
           </div>
         )
@@ -77,9 +85,9 @@ export default function IngredientRows({ rows, open, onOpen, restored, options, 
               <span>{x.amt || 'Amount'}</span><Icon name="chevron-down" />
             </button>
             }
-            <input id={`rc-name-${i}`} className="rc-name" aria-label={`Ingredient ${i + 1}`} placeholder="Ingredient" value={x.n} list="rc-suggest" onFocus={e => { setEditing(i); onActive(i, 'n'); e.currentTarget.select(); justFocused.current = true; }} onMouseUp={e => { if (justFocused.current) e.preventDefault(); justFocused.current = false; }} onKeyDown={e => { if (e.key !== 'Enter') return; e.preventDefault(); if (x.rid && x.q !== undefined) focus(`rc-more-${i}`); else if (x.q === undefined && x.n.trim()) { setEditing(i); onOpen(i); } }} onChange={e => { onActive(i, 'n'); onRename(i, e.target.value); }} autoComplete="off" />
+            <input id={`rc-name-${i}`} className="rc-name" aria-label={`Ingredient ${i + 1}`} placeholder="Ingredient" value={x.n} list="rc-suggest" onFocus={e => { setEditing(i); onActive(i, 'n'); e.currentTarget.select(); justFocused.current = true; }} onMouseUp={e => { if (justFocused.current) e.preventDefault(); justFocused.current = false; }} onKeyDown={e => { if (e.key !== 'Enter' || e.ctrlKey || e.metaKey) return; e.preventDefault(); if (x.rid && x.q !== undefined) focus(`rc-more-${i}`); else if (x.q === undefined && x.n.trim()) { setEditing(i); onOpen(i); } }} onChange={e => { onActive(i, 'n'); onRename(i, e.target.value); }} autoComplete="off" />
             <input id={`rc-alt-${i}`} className="rc-alt" aria-label={`Alternative for ingredient ${i + 1}`} placeholder="Alternative" value={x.sub ?? ''} maxLength={MAX_RECIPE_NAME} list="rc-suggest" onFocus={() => { onActive(i, 'sub'); if (!alt.has(i)) setAlt(new Set(alt).add(i)); }} onChange={e => { onActive(i, 'sub'); onSet(i, { sub: e.target.value, home: undefined }); }} autoComplete="off" />
-            <button type="button" className="btn sm ghost rc-rm" aria-label={`Remove ingredient ${i + 1}`} onClick={() => remove(i)}><Icon name="close" /></button>
+            <RowMenu i={i} open={menu === i} onToggle={() => setMenu(menu === i ? null : i)} onClose={() => setMenu(null)} onRemove={() => remove(i)} />
           </div>
           {x.rid && x.q !== undefined && (
             <div className="rc-qline" role="group" aria-label={`Amount of ${x.n}`}>
@@ -96,12 +104,36 @@ export default function IngredientRows({ rows, open, onOpen, restored, options, 
         </div>
         )))}
       <div className="rc-addbar">
-        <button type="button" className="btn sm" disabled={rows.length >= MAX_INGREDIENTS} onClick={() => { onAdd(); setEditing(rows.length); focus(`rc-name-${rows.length}`); }}>Add ingredient</button>
+        <button type="button" id="rc-add" className="btn sm" disabled={rows.length >= MAX_INGREDIENTS} onClick={() => { onAdd(); setEditing(rows.length); focus(`rc-name-${rows.length}`); }}>Add ingredient</button>
         <button type="button" id="rc-food-open" className="btn sm" aria-expanded={food} onClick={() => { setFood(!food); setBrowse(false); }}>+ Food or meal</button>
         <button type="button" id="rc-sauce-open" className="btn sm" aria-expanded={browse} onClick={() => { setBrowse(!browse); setFood(false); }}>+ Sauce or seasoning</button>
       </div>
       {food && <FoodPicker foods={foods} meals={meals} full={rows.length >= MAX_INGREDIENTS && !!rows[rows.length - 1]?.n.trim()} onPick={p => { const at = landsAt(rows), e = onAddFood(p); if (!e) { setEditing(at); setFood(false); setTimeout(() => [...document.querySelectorAll<HTMLElement>('[id^="rc-more-"]')].pop()?.focus(), 0); } return e; }} onClose={() => { setFood(false); focus('rc-food-open'); }} />}
       {browse && <SauceSeasoningPicker sauces={sauces} full={rows.length >= MAX_INGREDIENTS && !!rows[rows.length - 1]?.n.trim()} onPick={s => { const at = onAddSauce(s); if (at < 0) return; setEditing(at); setBrowse(false); focus(`rc-amt-${at}`); }} onClose={() => { setBrowse(false); focus('rc-sauce-open'); }} />}
     </>
+  );
+}
+
+// The ⋯ menu of an ingredient row (brief recipe-form-extras): Remove lives here so it is not next to the amount button. Esc or a tap elsewhere closes it.
+function RowMenu({ i, open, onToggle, onClose, onRemove }: { i: number; open: boolean; onToggle: () => void; onClose: () => void; onRemove: () => void }) {
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => { if (!wrap.current?.contains(e.target as Node)) onClose(); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open, onClose]);
+  useEffect(() => { // a menu near the bottom is scrolled clear of the sticky Save bar
+    if (!open || !wrap.current) return;
+    const menuEl = wrap.current.querySelector<HTMLElement>('.rc-rmmenu'), bar = document.querySelector<HTMLElement>('.rcf-foot');
+    if (!menuEl) return;
+    const d = scrollDelta(menuEl.getBoundingClientRect(), { top: 0, bottom: window.innerHeight }, bar?.offsetHeight ?? 0);
+    if (d > 0) window.scrollBy({ top: d });
+  }, [open]);
+  return (
+    <div className="rc-rmwrap" ref={wrap} onBlur={e => { if (open && !wrap.current?.contains(e.relatedTarget as Node | null)) onClose(); }} onKeyDown={e => { if (e.key === 'Escape' && open) { e.stopPropagation(); e.preventDefault(); onClose(); document.getElementById(`rc-more-menu-${i}`)?.focus(); } }}>
+      <button type="button" id={`rc-more-menu-${i}`} className="btn sm ghost rc-rm" aria-label={`More for ingredient ${i + 1}`} aria-expanded={open} onClick={onToggle}><Icon name="dots" /></button>
+      {open && <div className="rc-rmmenu" role="group" aria-label={`Ingredient ${i + 1} actions`}><button type="button" className="btn sm" autoFocus aria-label={`Remove ingredient ${i + 1}`} onClick={onRemove}><Icon name="close" /> Remove</button></div>}
+    </div>
   );
 }

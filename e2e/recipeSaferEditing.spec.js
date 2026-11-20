@@ -90,12 +90,14 @@ test('Remove shows Undo and Undo puts the row back where it was', async ({ page 
   await name(page, 1).fill('Beans');
   await page.getByRole('button', { name: 'Add ingredient' }).click();
   await name(page, 2).fill('Corn');
+  await page.getByRole('button', { name: 'More for ingredient 2' }).click();
   await page.getByRole('button', { name: 'Remove ingredient 2' }).click();
   await expect(page.getByText('Removed Beans.')).toBeVisible();
   await expect(name(page, 1)).toHaveValue('Corn');
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(name(page, 1)).toHaveValue('Beans');
   await expect(name(page, 2)).toHaveValue('Corn');
+  await page.getByRole('button', { name: 'More for ingredient 3' }).click();
   await page.getByRole('button', { name: 'Remove ingredient 3' }).click();
   await expect(page.getByText('Removed Corn.')).toBeVisible();
   await expect(page.getByText('Removed Corn.')).toHaveCount(0, { timeout: 8000 }); // the notice goes after 5 seconds
@@ -113,9 +115,12 @@ const fillRows = async (page, rows) => {
 test('Removing a blank row or a second row keeps the first row’s Undo', async ({ page }) => {
   await open(page);
   await fillRows(page, [['Rice', '1 cup'], ['Beans', '2 cups'], ['Corn', '3 cups']]);
+  await page.getByRole('button', { name: 'More for ingredient 1' }).click();
   await page.getByRole('button', { name: 'Remove ingredient 1' }).click();
   await page.getByRole('button', { name: 'Add ingredient' }).click();
+  await page.getByRole('button', { name: 'More for ingredient 3' }).click();
   await page.getByRole('button', { name: 'Remove ingredient 3' }).click(); // a blank row: no Undo of its own, and the Rice one stays
+  await page.getByRole('button', { name: 'More for ingredient 1' }).click();
   await page.getByRole('button', { name: 'Remove ingredient 1' }).click(); // Beans, a second real row
   await expect(page.getByRole('button', { name: 'Undo remove Rice' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo remove Beans' })).toBeVisible();
@@ -128,6 +133,7 @@ test('Undo keeps the right row open', async ({ page }) => {
   await open(page);
   await fillRows(page, [['Rice', '1 cup'], ['Beans', '2 cups'], ['Corn', '3 cups']]);
   await page.getByRole('button', { name: /^Ingredient 3: Corn/ }).click(); // Corn is the open row
+  await page.getByRole('button', { name: 'More for ingredient 1' }).click();
   await page.getByRole('button', { name: 'Remove ingredient 1' }).click();
   await page.getByRole('button', { name: 'Undo remove Rice' }).click();
   await expect(name(page, 2)).toHaveValue('Corn'); // still open, now at row 3

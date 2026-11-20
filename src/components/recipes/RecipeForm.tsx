@@ -14,6 +14,7 @@ import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../l
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { backAction, enterTarget, isEdited, pickerShowing, removeRow, restoreRow, UNDO_MS, withoutPending, withPending } from '../../lib/recipeSaferEditing.js';
 import type { Pending } from '../../lib/recipeSaferEditing.js';
+import { canSave, formKey, progressLine, scrollDelta } from '../../lib/recipeFormExtras.js';
 import type { LeaveGuard } from '../../lib/backNav.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -143,6 +144,28 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
     const to = enterTarget(Math.max(0, fields.indexOf(el)), fields.length);
     (to === 'save' ? document.getElementById('rc-save') : fields[to])?.focus();
   };
+  // Recipe form extras (brief recipe-form-extras): desktop keys, one save only, a focused field kept in view above the sticky bar.
+  const [saving, setSaving] = useState(false);
+  const savingNow = useRef(false);
+  const isDesktop = () => window.matchMedia('(min-width: 701px)').matches;
+  const extraKey = (e: KeyboardEvent<HTMLFormElement>) => {
+    const act = formKey(e, isDesktop(), live.current.pickerAt !== null || live.current.asking);
+    if (!act || e.defaultPrevented) return;
+    if (act === 'save') { e.preventDefault(); formRef.current?.requestSubmit(); return; }
+    e.preventDefault(); // Esc is Back: the same single step (close the amount picker, else ask or leave)
+    const a = state();
+    if (a === 'close-picker') setPickerAt(null); else if (a === 'ask') setAsking(true); else onDone(null);
+  };
+  const viewOff = useRef<(() => void) | null>(null); // one scroll-into-view listener at a time, removed when the form closes
+  const keepInView = (el: HTMLElement) => {
+    viewOff.current?.();
+    const vv = window.visualViewport, bar = document.querySelector<HTMLElement>('.rcf-foot');
+    const run = () => { if (!el.isConnected) return; const r = el.getBoundingClientRect(), d = scrollDelta(r, { top: 0, bottom: vv?.height ?? window.innerHeight }, bar?.offsetHeight ?? 0); if (d) window.scrollBy({ top: d }); };
+    const t = window.setTimeout(run, 50);
+    vv?.addEventListener('resize', run, { once: true }); // the keyboard finishes opening a moment later
+    viewOff.current = () => { clearTimeout(t); vv?.removeEventListener('resize', run); viewOff.current = null; };
+  };
+  useEffect(() => () => viewOff.current?.(), []);
   const cancel = () => { if (edited && !gone.current) setAsking(true); else onDone(null); };
   const discard = () => { gone.current = true; setAsking(false); onDone(null); };
   const removeIng = (i: number) => {
@@ -212,6 +235,7 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
   const autoMarks = marksOf({ id: recipe?.id ?? '', n, cat, ing: shownRows().filter(i => i.n.trim()), steps: [], ...(autoP !== undefined ? { p: autoP } : {}) }, recipes);
   const pendingTag = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t : ''; }; // a tag typed but not added yet is kept on Save
   const save = () => {
+    if (!canSave({ saving: savingNow.current, gone: gone.current })) return;
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { fail('servings', 'Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { fail('minutes', 'Minutes must be a whole number from 1 to 1440.'); return; }
     if (servingG.trim() && !(whole(servingG) && whole(servingG)! <= MAX_SERVING_G)) { fail('servingG', `Grams per serving must be a whole number from 1 to ${MAX_SERVING_G}.`); return; }
@@ -229,8 +253,9 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.rid && i.q !== undefined ? { q: i.q } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
     const microOut = recipeMicroToSave({ fromParts, rolled: rolled?.micro, rows, kcalText: kcal, kcalFrom: microKcal }); // from the parts, or the typed rows of a recipe on its own numbers
+    savingNow.current = true; setSaving(true);
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(meal ? { meal } : {}), ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}), ...(recipe?.usual !== undefined ? { usual: recipe.usual } : {}) }); // a usual amount has no field here (ReadyMadeForm edits it): it passes through unchanged
-    if (e) { fail(fieldForSaveError(e), e); return; }
+    if (e) { savingNow.current = false; setSaving(false); fail(fieldForSaveError(e), e); return; }
     gone.current = true;
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -310,7 +335,7 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
   };
 
   return (
-    <form ref={formRef} className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} onKeyDown={enterForward} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
+    <form ref={formRef} className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} onKeyDown={e => { extraKey(e); enterForward(e); }} onFocus={e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) keepInView(e.target); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit recipe' : 'New recipe'}</h3>
       <div className="rcf-cols">{/* from 1024 px two columns: basics, ingredients and steps beside nutrition and more (RecipeDesktop.css) */}
       <div className="rcf-col">
@@ -343,6 +368,7 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
             ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
             : <IngredientRows rows={ing} open={pickerAt} onOpen={setPickerAt} restored={restored} options={options} sauces={sauces} foods={foods} meals={meals} partOf={rid => recipes.find(r => r.id === rid)} onAddFood={addFood} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
                 onRemove={removeIng} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
+          {!listMode && <p className="note rc-progress" role="status">{progressLine(ing)}</p>}
           <div role="status">{pending.map(p => <p key={p.id} className="note rc-undo">Removed {p.name}. <button type="button" className="btn sm" aria-label={`Undo remove ${p.name}`} onClick={() => undoRemove(p)}>Undo</button></p>)}</div>
         </div>
       ))}
@@ -430,7 +456,7 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
         )}
         <div className="rc-actions rc-bar">
           <button type="button" className="btn ghost" onClick={cancel}>Cancel</button>
-          <button type="submit" id="rc-save" className="btn primary">Save recipe</button>
+          <button type="submit" id="rc-save" className="btn primary" disabled={saving} aria-busy={saving}>{saving ? 'Saving…' : 'Save recipe'}</button>
         </div>
       </div>
     </form>
