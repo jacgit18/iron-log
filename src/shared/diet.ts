@@ -147,6 +147,26 @@ export function normRepeatSkips(v: unknown, today?: string): Record<string, stri
   return out;
 }
 
+/** The meals with plate hints switched off, cleaned: known meals only, once each, in meal order (brief nutrition-plate-hints-per-meal). */
+export function normHintsOff(v: unknown): PlanSlot[] {
+  const list = Array.isArray(v) ? v : [];
+  return PLAN_SLOTS.filter(s => list.includes(s));
+}
+
+/** The hidden plate hints of a stored value, cleaned: real dates, known meals once each; with `today` the plan window is applied, as for the plan. */
+export function normHintSkips(v: unknown, today?: string): Record<string, PlanSlot[]> {
+  const out: Record<string, PlanSlot[]> = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const lo = today && validDate(today) ? today : null;
+  const hi = lo ? ymd(addDays(parseDate(lo), MAX_PLAN_AHEAD)) : null;
+  for (const d of Object.keys(v as object).sort()) {
+    if (!validDate(d) || (lo && d < lo) || (hi && d > hi)) continue;
+    const slots = normHintsOff((v as Record<string, unknown>)[d]);
+    if (slots.length) out[d] = slots;
+  }
+  return out;
+}
+
 /** One planned item, cleaned: a recipe or meal kind, an id, and for a recipe a portion in half steps from 0.5 to 10 (left out when 1); `p: true` (marked planned) is kept only when it is exactly true. */
 export function normPlanItem(x: unknown): PlanItem | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
@@ -246,7 +266,7 @@ export const MIN_RATE = 0.1, MAX_RATE = 3; // lb a week you may type for Custom 
 export const rateError = (v: number | null): string | null => (v !== null && Number.isFinite(v) && v >= MIN_RATE && v <= MAX_RATE ? null : `Pace must be ${MIN_RATE} to ${MAX_RATE} lb a week.`);
 
 /** Every key `normDietCfg` cleans itself; a key it adds must be listed here (a test fails otherwise), or a bad value of it would pass through as an unknown key. */
-export const DIET_KEYS = ['kcal', 'protein', 'carbs', 'fat', 'pace', 'rate', 'meals', 'mealsMoved', 'plan', 'snacks', 'snackSkips', 'repeats', 'repeatSkips'] as const;
+export const DIET_KEYS = ['kcal', 'protein', 'carbs', 'fat', 'pace', 'rate', 'meals', 'mealsMoved', 'plan', 'snacks', 'snackSkips', 'repeats', 'repeatSkips', 'hintsOff', 'hintSkips'] as const;
 
 /** The targets you typed and your pace pick (`cfg.diet`): only the keys that are in range survive; undefined when none do. Keys this build does not know are kept when they are safe bounded JSON (ADR 122), so an older build does not erase a newer one's. */
 export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
@@ -270,6 +290,10 @@ export function normDietCfg(v: unknown, today?: string): DietCfg | undefined {
   if (repeats.length) out.repeats = repeats;
   const repeatSkips = normRepeatSkips(o.repeatSkips, today);
   if (Object.keys(repeatSkips).length) out.repeatSkips = repeatSkips;
+  const hintsOff = normHintsOff(o.hintsOff);
+  if (hintsOff.length) out.hintsOff = hintsOff;
+  const hintSkips = normHintSkips(o.hintSkips, today);
+  if (Object.keys(hintSkips).length) out.hintSkips = hintSkips;
   Object.assign(out, keepUnknownKeys(o, DIET_KEYS));
   return Object.keys(out).length ? out : undefined;
 }
