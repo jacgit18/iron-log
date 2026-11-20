@@ -9,7 +9,8 @@
   position: absolute;
   top: 100%;
   right: 0;
-  z-index: var(--z-hint); /* above the sticky Save bar (--z-sticky) */
+  z-index: var(--z-hint);
+  /* above the sticky Save bar (--z-sticky) */
   padding: var(--sp-4);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
