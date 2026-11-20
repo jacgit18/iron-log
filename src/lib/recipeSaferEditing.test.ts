@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterAmount, backAction, enterTarget, pickerShowing, shiftForInsert, shiftSetForInsert, withoutPending, withPending, type Pending, foldedSummary, isEdited, isFolded, landsAt, nextUnfinished, offersUndo, removeRow, restoreRow, rowDone, type EditRow } from './recipeSaferEditing.js';
+import { afterAmount, backAction, enterTarget, pickerShowing, shiftForInsert, shiftSetForInsert, withoutPending, withPending, type Pending, foldedSummary, isEdited, isFolded, landsAt, nextUnfinished, offersUndo, removeRow, restoreRow, rowDone, sectionSwitch, type EditRow } from './recipeSaferEditing.js';
 
 const r = (n: string, amt = '', more: Partial<EditRow> = {}): EditRow => ({ n, amt, ...more });
 const blank = () => r('');
@@ -147,5 +147,12 @@ describe('indices after Undo', () => {
     expect(shiftForInsert(0, 1)).toBe(0);
     expect(shiftForInsert(null, 1)).toBeNull();
     expect([...shiftSetForInsert(new Set([0, 1, 4]), 1)].sort()).toEqual([0, 2, 5]);
+  });
+});
+
+describe('sectionSwitch', () => {
+  it('asks while the form holds edits, its picker or its question, and switches otherwise', () => {
+    expect(sectionSwitch(true)).toBe('ask');
+    expect(sectionSwitch(false)).toBe('switch');
   });
 });

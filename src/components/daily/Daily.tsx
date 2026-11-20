@@ -8,6 +8,8 @@ import Recipes from '../recipes/Recipes.js';
 import { dailyFix, dailySection } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import { pickView } from './pickView.js';
+import { activeFormGuard } from '../../lib/recipeFormGuard.js';
+import { sectionSwitch } from '../../lib/recipeSaferEditing.js';
 
 // The things you check off or log every day, under one tab. Add a section by adding a row here.
 // The Supplements section is called Nutrition ('supplements' stays its key, so a saved view and the button id keep working). Medical is admin-only for now; Recipes is for everyone (ADR 084).
@@ -29,7 +31,7 @@ export default function Daily() {
     <>
       <div className="edtop">
         <div className="seg" role="group" aria-label="Daily section">
-          {sections.map(([k, l]) => <button type="button" key={k} id={`daily-${k}`} className={cur === k ? 'on' : ''} aria-pressed={cur === k} onClick={() => { setDailyView(k); navigate(dailyFix('daily', k) ?? 'daily', 'replace'); }}>{l}</button>)}
+          {sections.map(([k, l]) => <button type="button" key={k} id={`daily-${k}`} className={cur === k ? 'on' : ''} aria-pressed={cur === k} onClick={() => { const g = activeFormGuard(); if (sectionSwitch(g?.holds() ?? false) === 'ask') { g?.ask(); return; } setDailyView(k); navigate(dailyFix('daily', k) ?? 'daily', 'replace'); }}>{l}</button>)}
         </div>
       </div>
       <View />

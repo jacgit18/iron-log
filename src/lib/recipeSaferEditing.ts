@@ -93,3 +93,6 @@ export const withoutPending = <T extends EditRow>(list: readonly Pending<T>[], i
 export const shiftForInsert = (i: number | null, at: number): number | null => (i !== null && i >= at ? i + 1 : i);
 /** The set of row indices (the Alternative boxes opened on a phone) after a row was put back at `at`. */
 export const shiftSetForInsert = (s: ReadonlySet<number>, at: number): Set<number> => new Set([...s].map(k => (k >= at ? k + 1 : k)));
+
+/** What a tap on a Daily section button does: switching away would drop a form that holds edits (or its picker or question), so it asks instead. */
+export const sectionSwitch = (formHolds: boolean): 'ask' | 'switch' => (formHolds ? 'ask' : 'switch');

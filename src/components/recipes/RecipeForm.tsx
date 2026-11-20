@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent, MutableRefObject, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { VIDEO_ERR, isVideoUrl } from '../../lib/data.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
@@ -14,7 +14,7 @@ import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../l
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { backAction, enterTarget, isEdited, pickerShowing, removeRow, restoreRow, UNDO_MS, withoutPending, withPending } from '../../lib/recipeSaferEditing.js';
 import type { Pending } from '../../lib/recipeSaferEditing.js';
-import type { LeaveGuard } from '../../lib/backNav.js';
+import { setFormGuard } from '../../lib/recipeFormGuard.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
@@ -49,8 +49,8 @@ const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?
 // 1 serving. Ingredients are compact rows with an amount picker, or typed as a list; each can have an Alternative, and names are offered from your
 // Groceries items as you type (choosing one pins it to that item). Steps are typed one per line. Nutrition per serving is folded away until opened.
 // `start`: a name and link to begin a new recipe with (a link shared in from another app, lib/shareTarget.ts).
-// `leave`: where the form registers what Back should do (Recipes.tsx asks it before leaving the form's address; brief recipe-safer-editing).
-export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; leave?: MutableRefObject<LeaveGuard | null>; onDone: (savedId: string | null) => void }) {
+// The form registers what Back and a Daily section switch should do in lib/recipeFormGuard.ts (Recipes.tsx and Daily.tsx ask it; brief recipe-safer-editing).
+export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
   const groceryAll = useAppStore(s => s.grocery);
   const groceryMonths = useAppStore(s => s.groceryMonths);
@@ -118,12 +118,7 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
   const live = useRef({ edited, pickerAt, asking });
   live.current = { edited, pickerAt: pickerShowing(pickerAt, listMode, ing.length) ? pickerAt : null, asking };
   const state = () => backAction({ edited: live.current.edited && !gone.current, pickerOpen: live.current.pickerAt !== null, asking: live.current.asking });
-  useEffect(() => {
-    if (!leave) return;
-    const g: LeaveGuard = { holds: () => state() !== 'leave', ask: () => { if (state() === 'close-picker') setPickerAt(null); else setAsking(true); } };
-    leave.current = g;
-    return () => { if (leave.current === g) leave.current = null; };
-  }, [leave]); // eslint-disable-line react-hooks/exhaustive-deps -- reads the latest state through `live`
+  useEffect(() => setFormGuard({ holds: () => state() !== 'leave', ask: () => { if (state() === 'close-picker') setPickerAt(null); else setAsking(true); } }), []); // eslint-disable-line react-hooks/exhaustive-deps -- reads the latest state through `live`
   useEffect(() => {
     if (!edited) return;
     const warn = (e: BeforeUnloadEvent) => { if (gone.current) return; e.preventDefault(); e.returnValue = ''; };
