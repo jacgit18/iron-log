@@ -9,6 +9,7 @@ import type { PlanSlot } from '../../types.ts';
 import BoardCard from '../diet/board/BoardCard.js';
 import type { Say } from '../../lib/eatenStep.js';
 import { EatenRows } from './EatenRows.js';
+import HandyTray from './HandyTray.js';
 import type { Resolved } from '../../lib/dietPlan.js';
 
 const ORDER = PLAN_SLOTS;
@@ -63,6 +64,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
             const ck = `${view.day}:${planItemKey(x.r.item)}`;
             return <BoardCard key={ck} item={x} day={view.day} today={today} open={open === ck} stock={stock.get(x.index)} onOpen={() => setOpen(open === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
           })}
+          {s.slot && editable && <HandyTray day={view.day} slot={s.slot} today={today} onMsg={onMsg} />}
           <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} onMsg={onMsg} />
           {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => addFix(f.recipe.id, s.slot!)}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}
         </div>

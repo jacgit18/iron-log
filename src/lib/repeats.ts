@@ -1,19 +1,47 @@
-import { MAX_REPEATS, samePlanItem } from '../shared/diet.js';
+import { MAX_HANDY, MAX_REPEATS, PLAN_SLOTS, isDrinkItem, samePlanItem } from '../shared/diet.js';
 import { parseDate } from '../shared/dates.js';
-import type { PlanItem, PlanSlot, RepeatItem } from '../types.ts';
-import { inWindow, type Plan } from './dietPlan.js';
+import type { PlanItem, PlanSlot, Recipe, RepeatItem, SavedMeal } from '../types.ts';
+import { inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
+import { drinkIdsOf } from './recipeUses.js';
+import { mealOfItem } from './usualMeal.js';
 
 /* ---------- Repeats (brief nutrition-meal-labels-year-repeat): an item stored once and shown on chosen weekdays of every week in the plan window. Pure; the store writes the list and the board draws what shows. ---------- */
 
 /** The item a repeat shows as on a day: marked `v` (never stored) and `rp` (which repeat), so a tap can skip it for that day. */
 export const repeatPlanItem = (r: RepeatItem): PlanItem => ({ k: r.k, id: r.id, ...(r.x ? { x: r.x } : {}), ...(r.s ? { s: r.s } : {}), v: true, rp: r.rid });
 
-/** The repeats that show on `day`: the day is in the plan window (today to the last plannable day, so never a past day or one beyond the window), on or after the repeat's start day, on one of its weekdays, not skipped that day, and not already there as a stored item (the same food in the same meal; the stored one wins). */
-export function repeatsShownOn(day: string, plan: Plan, repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, today: string): RepeatItem[] {
+/** Whether a repeat is kept handy (brief nutrition-keep-handy): shown in its meal's tray, never on the day's card. */
+export const isHandy = (r: RepeatItem): boolean => r.h === true;
+
+/** The repeats of one display mode that apply on `day`: the day is in the plan window (today to the last plannable day, so never a past day or one beyond the window), on or after the repeat's start day, on one of its weekdays, not skipped that day, and not already there as a stored item (the same food in the same meal; the stored one wins). */
+function activeOn(day: string, plan: Plan, repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, today: string, handy: boolean): RepeatItem[] {
   if (!repeats?.length || !inWindow(day, today)) return [];
   const weekday = parseDate(day).getDay(), real = plan[day] ?? [], skipped = skips?.[day] ?? [];
-  const shown = repeats.filter(r => day >= r.from && r.days.includes(weekday) && !skipped.includes(r.rid) && !real.some(i => samePlanItem(i, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) })));
+  const shown = repeats.filter(r => isHandy(r) === handy && day >= r.from && r.days.includes(weekday) && !skipped.includes(r.rid) && !real.some(i => samePlanItem(i, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) })));
   return shown.filter((r, n) => !shown.slice(0, n).some(e => samePlanItem({ k: e.k, id: e.id, s: e.s }, { k: r.k, id: r.id, s: r.s }))); // two repeats of the same food in the same meal show once
+}
+
+/** The repeats that show on `day`'s card. Handy ones are left out: they wait in the tray (`handyOn`). */
+export const repeatsShownOn = (day: string, plan: Plan, repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, today: string): RepeatItem[] => activeOn(day, plan, repeats, skips, today, false);
+
+/** The handy items waiting on `day` (same rules as `repeatsShownOn`): not on the card, not in the day's totals, until one is added. */
+export const handyOn = (day: string, plan: Plan, repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, today: string): RepeatItem[] => activeOn(day, plan, repeats, skips, today, true);
+
+/** The meal whose tray holds a handy item: its own meal, else the food's usual meal, else the first meal of the day. */
+export const trayMealOf = (r: RepeatItem, recipes: readonly Pick<Recipe, 'id' | 'meal'>[]): PlanSlot => mealOfItem(r, recipes) ?? PLAN_SLOTS[0]!;
+
+export interface HandyRow { r: RepeatItem; res: Resolved }
+
+/** Each meal's tray on `day`: the handy items waiting there, A to Z, with their numbers as they would be added. A drink or a food that is gone is left out; a meal with nothing waiting is not a key. */
+export function handyTrays(day: string, plan: Plan, repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, today: string, recipes: Recipe[], meals: SavedMeal[], moved: Readonly<Record<string, string>> = {}): Partial<Record<PlanSlot, HandyRow[]>> {
+  const out: Partial<Record<PlanSlot, HandyRow[]>> = {}, drinks = drinkIdsOf(recipes);
+  for (const r of handyOn(day, plan, repeats, skips, today)) {
+    const res = resolve(repeatPlanItem(r), recipes, meals, moved);
+    if (res.gone || isDrinkItem({ k: r.k, id: r.id }, drinks)) continue;
+    (out[trayMealOf(r, recipes)] ??= []).push({ r, res });
+  }
+  for (const rows of Object.values(out)) rows.sort((a, b) => a.res.name.localeCompare(b.res.name, undefined, { sensitivity: 'base' }) || a.r.rid.localeCompare(b.r.rid));
+  return out;
 }
 
 /** `plan` with each day's shown repeats added after its stored items. The same object when nothing is added, so memos hold. */
@@ -31,7 +59,7 @@ type Edit = { list: RepeatItem[]; error: null } | { list: null; error: string };
 
 /** `list` with `item` added. An error text when the list is full or that repeat (same `rid`, or the same food in the same meal on the same days) is already there. */
 export function addRepeat(list: readonly RepeatItem[], item: RepeatItem): Edit {
-  if (list.length >= MAX_REPEATS) return { list: null, error: `You can keep ${MAX_REPEATS} repeats.` };
+  if (isHandy(item) ? list.filter(isHandy).length >= MAX_HANDY : list.filter(r => !isHandy(r)).length >= MAX_REPEATS) return { list: null, error: isHandy(item) ? `You can keep ${MAX_HANDY} foods handy.` : `You can keep ${MAX_REPEATS} repeats.` };
   if (list.some(r => r.rid === item.rid || (samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: item.k, id: item.id, s: item.s }) && r.days.some(d => item.days.includes(d))))) return { list: null, error: 'That already repeats on some of those days.' };
   return { list: [...list, item], error: null };
 }
@@ -86,17 +114,30 @@ export function newRid(list: readonly RepeatItem[]): string {
   for (let n = list.length + 1; ; n++) if (!list.some(r => r.rid === `rp${n}`)) return `rp${n}`;
 }
 
-/** `list` with a repeat saved: a repeat that already has `rid` takes the new days; otherwise the item is added as a new repeat from `from` (the day it was set on). An error text for no days, a full list or a repeat that is already there. */
-export function saveRepeat(list: readonly RepeatItem[], spec: { rid?: string; item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }; days: readonly number[]; from: string }): Edit {
-  const days = [...new Set(spec.days)].sort((a, b) => a - b);
+/** `list` with a repeat saved: a repeat that already has `rid` takes the new days (and the handy choice: `handy` keeps it in its meal's tray on every day, from the earlier of its start and `from`; off, it is a plain repeat again); otherwise the item is added as a new repeat from `from` (the day it was set on). An error text for no days, a full list (12 repeats, 24 handy, counted apart) or a repeat that is already there. */
+export function saveRepeat(list: readonly RepeatItem[], spec: { rid?: string; item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }; days: readonly number[]; from: string; handy?: boolean }): Edit {
+  const handy = spec.handy === true, days = [...new Set(handy ? EVERY_DAY : spec.days)].sort((a, b) => a - b);
   if (!days.length) return { list: null, error: 'Pick at least one day.' };
   if (spec.rid && list.some(r => r.rid === spec.rid)) {
     const me = list.find(r => r.rid === spec.rid)!;
-    if (list.some(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: me.s }) && r.days.some(d => days.includes(d)))) return { list: null, error: 'That already repeats on some of those days.' };
-    return { list: list.map(r => (r.rid === spec.rid ? { ...r, days } : r)), error: null };
+    const meal = handy ? me.s ?? spec.item.s : me.s;
+    if (list.some(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: meal }) && r.days.some(d => days.includes(d)))) return { list: null, error: 'That already repeats on some of those days.' };
+    const { h: _was, ...rest } = me;
+    const next: RepeatItem = { ...rest, days, ...(meal ? { s: meal } : {}), ...(handy ? { h: true as const, from: spec.from < me.from ? spec.from : me.from } : {}) };
+    const out = list.map(r => (r.rid === spec.rid ? next : r));
+    if (handy !== isHandy(me) && (handy ? out.filter(isHandy).length > MAX_HANDY : out.filter(r => !isHandy(r)).length > MAX_REPEATS)) return { list: null, error: handy ? `You can keep ${MAX_HANDY} foods handy.` : `You can keep ${MAX_REPEATS} repeats.` };
+    return { list: out, error: null };
   }
   const { k, id, x, s } = spec.item;
-  return addRepeat(list, { rid: newRid(list), k, id, ...(x && x !== 1 ? { x } : {}), ...(s ? { s } : {}), days, from: spec.from });
+  return addRepeat(list, { rid: newRid(list), k, id, ...(x && x !== 1 ? { x } : {}), ...(s ? { s } : {}), days, from: spec.from, ...(handy ? { h: true as const } : {}) });
+}
+
+/** The skips with the handy item of `item`'s food and meal, if one stands for it on `day`, shown in the tray again: taking an item that was added from the tray off the plate (Remove) puts it back in that day's tray. undefined when no handy item is skipped there for it. */
+export function skipsAfterRemovingHandy(repeats: readonly RepeatItem[] | undefined, skips: Readonly<Record<string, string[]>> | undefined, day: string, item: { k: string; id: string; s?: PlanSlot } | undefined): Record<string, string[]> | undefined {
+  if (!item) return undefined;
+  const skipped = skips?.[day] ?? [];
+  const r = repeats?.find(x => isHandy(x) && skipped.includes(x.rid) && samePlanItem(item as PlanItem, { k: x.k, id: x.id, ...(x.s ? { s: x.s } : {}) }));
+  return r ? unskipRepeat(skips, day, r.rid) : undefined;
 }
 
 /** The skips with the repeat that a stored item on `day` stands for skipped there: only the item a repeat was made from (the repeat's start day), since an item the person added by hand on a later day is their own and the repeat shows again where it was (an item realized from a repeat already has its skip). Taking the item off its place (removing it, moving it to another meal or day) does not bring the repeat back in its spot. The skips unchanged (undefined) when the item stands for no repeat that shows on that day. */
@@ -121,6 +162,12 @@ export function repeatFor(list: readonly RepeatItem[] | undefined, item: { k: st
   const weekday = day ? parseDate(day).getDay() : undefined; // with the day, only a repeat that shows there stands for the item
   return list?.find(r => samePlanItem(item as PlanItem, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) }) && (!day || (day >= r.from && r.days.includes(weekday!))));
 }
+
+/** The sentence under the Keep handy choice. */
+export const handySummary = (meal: string): string => `Kept handy for ${meal}. Add it to a day with + Add.`;
+
+/** The meal a food is kept handy for from the sheet: the card's own meal, else its usual meal, else the first meal of the day. */
+export const handyMealFor = (item: { k: 'r' | 'm'; id: string; s?: PlanSlot }, recipes: readonly Pick<Recipe, 'id' | 'meal'>[]): PlanSlot => mealOfItem(item, recipes) ?? PLAN_SLOTS[0]!;
 
 /** The sentence under the day ticks: what the choice means. */
 export function repeatSummary(days: readonly number[], meal: string, fromName: string): string {

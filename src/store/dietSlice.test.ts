@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
 import { effectivePlan } from '../lib/dailySnacks.js';
 import { shiftDay } from '../lib/dietLog.js';
-import { MAX_DIET_PER_DAY } from '../shared/diet.js';
+import { MAX_DAY_ITEMS, MAX_DIET_PER_DAY } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 
 // Your food log and typed targets (ADR 086): added, fixed, removed with Undo, capped per day, and carried through the data file.
@@ -803,6 +803,42 @@ describe('repeats (brief nutrition-meal-labels-year-repeat)', () => {
     st().unstoreRepeat(d, at, rid);
     expect(st().cfg.diet!.plan).toBeUndefined();
     expect(effectivePlan(st().cfg.diet, [d], today)[d]).toHaveLength(1);
+  });
+  it('keep handy: nothing on the card, + Add stores it on that day only, Remove puts it back in the tray', () => {
+    expect(st().saveRepeat(today, { k: 'r', id: 'r1', s: 'breakfast' }, [], undefined, true)).toBeNull();
+    const rid = st().cfg.diet!.repeats![0]!.rid, d = week(1);
+    expect(st().cfg.diet!.repeats![0]).toMatchObject({ h: true, days: every });
+    expect(effectivePlan(st().cfg.diet, [d], today)[d]).toBeUndefined();
+    const at = st().realizeRepeat(d, rid) as number;
+    expect(st().cfg.diet!.plan![d]).toEqual([{ k: 'r', id: 'r1', s: 'breakfast' }]);
+    expect(st().cfg.diet!.repeatSkips![d]).toEqual([rid]); // gone from that day's tray only
+    expect(st().cfg.diet!.repeatSkips![week(2)]).toBeUndefined();
+    st().removePlanItem(d, at);
+    expect(st().cfg.diet!.plan).toBeUndefined();
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined(); // back in the tray
+  });
+  it('keep handy: change to Every day and back; Stop repeating removes it with its skips', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r1', s: 'breakfast' }, [], undefined, true);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().saveRepeat(today, { k: 'r', id: 'r1', s: 'breakfast' }, every, rid)).toBeNull();
+    expect(st().cfg.diet!.repeats![0]!.h).toBeUndefined();
+    expect(effectivePlan(st().cfg.diet, [week(1)], today)[week(1)]).toHaveLength(1);
+    expect(st().saveRepeat(today, { k: 'r', id: 'r1', s: 'breakfast' }, [], rid, true)).toBeNull();
+    expect(st().cfg.diet!.repeats![0]!.h).toBe(true);
+    st().realizeRepeat(week(1), rid);
+    st().stopRepeat(rid);
+    expect(st().cfg.diet!.repeats).toBeUndefined();
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
+  });
+  it('keep handy: a full day refuses + Add and keeps the item in the tray', () => {
+    st().saveRepeat(today, { k: 'r', id: 'r1', s: 'breakfast' }, [], undefined, true);
+    const rid = st().cfg.diet!.repeats![0]!.rid, d = week(1);
+    useAppStore.setState({ recipes: [...st().recipes, ...Array.from({ length: MAX_DAY_ITEMS }, (_, i) => recipe(`f${i}`, `F${i}`))] });
+    for (let i = 0; i < MAX_DAY_ITEMS; i++) st().addPlanItem(d, 'r', `f${i}`, 'lunch'); // the available list holds 40 things
+    const r = st().realizeRepeat(d, rid);
+    expect(typeof r).toBe('string');
+    expect(r).not.toMatch(/Skip the repeat/);
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
   });
   it('refuses no days and a thirteenth repeat, and edits the days of one that is there', () => {
     expect(st().saveRepeat(today, { k: 'r', id: 'r1' }, [])).toMatch(/at least one day/);
