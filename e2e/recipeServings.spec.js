@@ -1,17 +1,17 @@
 import { test, expect } from './fixtures.js';
-import { startRecipe, unfoldAll } from './recipesNav.js';
+import { amountText, reopenRow, rowAmount, startRecipe, unfoldAll } from './recipesNav.js';
 
 // Servings scale a recipe's amounts (brief recipe-servings-scaling). Every amount shape is a node test (recipeScale.test.ts); this covers
 // the wiring: the Servings field rewriting the amount fields, the note, what Save keeps, and the view-only "Scale for tonight" stepper.
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 // An amount is picked in a panel under its row; these tests type it in the panel's "type instead" line (the chips are a unit test).
-const amountBtn = (page, i) => page.getByRole('button', { name: new RegExp(`^Amount for ingredient ${i + 1}:`) });
 const setAmount = async (page, i, text) => {
-  await amountBtn(page, i).click();
+  await reopenRow(page, i);
+  await page.locator('.rc-ingblock').nth(i).locator('.rc-amt').click();
   await page.getByLabel('Type an amount instead').fill(text);
   await page.getByRole('button', { name: 'Done', exact: true }).click();
 };
-const expectAmount = (page, i, text) => expect(amountBtn(page, i)).toHaveText(text);
+const expectAmount = (page, i, text) => expect(rowAmount(page, i)).toHaveText(amountText(text));
 // A recipe saved with no servings, opened to change: the case where entering Servings only says what the amounts are for.
 const soupWithoutServings = async page => {
   await open(page);

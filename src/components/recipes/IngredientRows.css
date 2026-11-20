@@ -1,0 +1,54 @@
+@layer base, components;
+@layer components {
+/* Safer editing of the recipe form's ingredients (brief recipe-safer-editing): a finished row folds to one line, the leave prompt, the Undo notice. */
+.rc-form .rc-ingline.rc-foldline {
+  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-areas: 'fold rm';
+}
+.rc-fold {
+  display: flex;
+  grid-area: fold;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: 0 var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.rc-fold span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc-folded .rc-rm {
+  grid-area: rm;
+}
+.rc-leave {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: 0 0 var(--sp-8);
+}
+.rc-leave p {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+.rc-undo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: 0;
+}
+.rc-undo .btn,
+.rc-leave .btn {
+  min-height: 44px;
+}
+}
