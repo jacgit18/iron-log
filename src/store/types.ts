@@ -334,7 +334,7 @@ export interface DietSlice {
   skipDailySnack(day: string, id: string): void; // a listed snack is not shown on that day (it returns on the others)
   realizeDailySnack(day: string, id: string): number | string; // stores a shown listed snack as a real item of that day's Snack; its index, or an error text (outside the plan window; a day already holding 8 planned things still takes it, snacks never count toward the 8)
   unstoreDailySnack(day: string, index: number): void; // takes back a snack just stored when its log failed (does nothing for an item with an eaten mark)
-  saveRepeat(day: string, item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }, days: number[], rid?: string): string | null; // repeats the item on those weekdays (0 Sunday to 6 Saturday) of every week from `day`, stored once in cfg.diet.repeats (at most 12); with `rid`, changes that repeat's days; an error text, or null
+  saveRepeat(day: string, item: { k: 'r' | 'm'; id: string; x?: number; s?: PlanSlot }, days: number[], rid?: string, handy?: boolean): string | null; // repeats the item on those weekdays (0 Sunday to 6 Saturday) of every week from `day`, stored once in cfg.diet.repeats (at most 12); with `rid`, changes that repeat's days; `handy` keeps it in its meal's tray on every day from today instead (at most 24, brief nutrition-keep-handy); an error text, or null
   stopRepeat(rid: string): void; // removes the repeat and its skips; items already stored on a day stay
   dropRepeatsFor(id: string): RepeatItem[]; // a deleted recipe or meal takes its repeats and their skips with it; the removed repeats come back for Undo
   restoreRepeats(list: RepeatItem[]): void; // puts repeats back (Undo of a recipe delete)
