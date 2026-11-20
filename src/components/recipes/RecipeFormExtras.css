@@ -1,0 +1,35 @@
+@layer base, components;
+@layer components {
+/* Recipe form extras (brief recipe-form-extras): the ⋯ menu of an ingredient row, the progress line, Save kept in a sticky bar on a desktop too. */
+.rc-rmwrap {
+  position: relative;
+  grid-area: rm;
+}
+.rc-rmmenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: var(--z-sticky);
+  padding: var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.rc-rmmenu .btn {
+  min-height: 44px;
+  white-space: nowrap;
+}
+.rc-progress {
+  margin: 0;
+}
+@media (min-width: 701px) {
+  .rcf-foot {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    padding: var(--sp-8) 0;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+}
+}
