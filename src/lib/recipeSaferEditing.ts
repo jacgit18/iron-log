@@ -94,5 +94,6 @@ export const shiftForInsert = (i: number | null, at: number): number | null => (
 /** The set of row indices (the Alternative boxes opened on a phone) after a row was put back at `at`. */
 export const shiftSetForInsert = (s: ReadonlySet<number>, at: number): Set<number> => new Set([...s].map(k => (k >= at ? k + 1 : k)));
 
-/** What a tap on a Daily section button does: switching away would drop a form that holds edits (or its picker or question), so it asks instead. */
-export const sectionSwitch = (formHolds: boolean): 'ask' | 'switch' => (formHolds ? 'ask' : 'switch');
+/** What a tap on a Daily section button does once the form is asked: the amount picker closes first and does not count (a tap must not look ignored, unlike Back,
+ *  which has no target and so takes two steps), then edits (or the question already showing) ask, else the section opens. */
+export const sectionTap = (s: { edited: boolean; asking: boolean; pickerOpen: boolean }): 'ask' | 'switch' => (s.edited || s.asking ? 'ask' : 'switch');

@@ -43,6 +43,7 @@ test('the plural box appears with a unit, an odd plural is used, and the three b
   await page.getByLabel('One serving is called, optional').fill('loaf');
   await expect(page.getByLabel('Plural, only if adding s is wrong')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Discard' }).click(); // edited: Cancel asks first
   await make(page, 'Bread', { usual: '2', unit: 'loaf', plural: 'loaves' });
   await expect(page.locator('.rc-strip')).toContainText('Usual 2 loaves');
   await plan(page);

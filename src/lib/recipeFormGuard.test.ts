@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { activeFormGuard, setFormGuard } from './recipeFormGuard';
 
-const g = () => ({ holds: () => true, ask: () => {} });
+const g = () => ({ holds: () => true, ask: () => {}, tap: (go: () => void) => go() });
 
 describe('recipe form guard', () => {
   it('is empty until a form registers, and removes only its own entry', () => {
