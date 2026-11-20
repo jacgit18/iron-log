@@ -217,7 +217,8 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   addPlateFix(day, id, slot) {
     const r = addPlanItemAt(get, day, 'r', id, slot);
     if (r.error !== null) return r.error;
-    return get().setPlanned(day, r.index, true) ?? '';
+    const why = get().setPlanned(day, r.index, true);
+    return why ? `Added, not marked planned. ${why}` : '';
   },
 
   // One recipe or saved meal planned on several days in one plan write (the Add sheet's "This day on" and "Pick days"). Days that are full, outside the window or already hold it are skipped and named.

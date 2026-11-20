@@ -534,7 +534,7 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet!.plan![tomorrow]![1]).toEqual({ k: 'r', id: 'b', s: 'lunch' });
     expect(st().setPlanned(tomorrow, 5, true)).toMatch(/gone/);
   });
-  it('addPlateFix adds the food, marks that very item planned (not the last one) and says nothing', () => {
+  it('addPlateFix adds the food, marks the item it added as planned and leaves the rest alone, and says nothing', () => {
     st().mutateCfg(c => { c.diet = { plan: { [tomorrow]: [{ k: 'r', id: 'a' }] } }; });
     expect(st().addPlateFix(tomorrow, 'bar', 'lunch')).toBe('');
     const list = st().cfg.diet!.plan![tomorrow]!;
@@ -544,7 +544,7 @@ describe('daily snacks (brief daily-snacks)', () => {
   it('addPlateFix on a day holding 8 planned things still adds the food, leaves it unmarked and says why; a duplicate is refused', () => {
     const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}`, p: true as const }));
     st().mutateCfg(c => { c.diet = { plan: { [tomorrow]: eight } }; });
-    expect(st().addPlateFix(tomorrow, 'bar', 'dinner')).toMatch(/8 planned/);
+    expect(st().addPlateFix(tomorrow, 'bar', 'dinner')).toMatch(/^Added, not marked planned\. .*8 planned/);
     const list = st().cfg.diet!.plan![tomorrow]!;
     expect(list).toHaveLength(9);
     expect(list.find(i => i.id === 'bar')).toEqual({ k: 'r', id: 'bar', s: 'dinner' });

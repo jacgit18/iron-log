@@ -204,6 +204,10 @@ export function mealFigures(items: readonly Pick<BoardItem, 'r'>[], extra: reado
 export const mealOverText = (share: number | null, eatenKcal: number, label: string): string | null =>
   share !== null && eatenKcal > share ? `${(eatenKcal - share).toLocaleString('en-US')} over ${label.toLowerCase()} share` : null;
 
+/** The warning for one meal group of the board. The "Not set" group (`slot` null, items with no meal) has no meal share to compare with, so it never warns, by design (ADR 139 follow-up); a meal gets `mealOverText`. */
+export const slotOverText = (slot: PlanSlot | null, share: number | null, eatenKcal: number, label: string): string | null =>
+  slot === null ? null : mealOverText(share, eatenKcal, label);
+
 /** What a day's targets are. */
 export interface DayTargets { kcal: number | null; protein: number | null; fat: number | null; carbs?: number | null }
 

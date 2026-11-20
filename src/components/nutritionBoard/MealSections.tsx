@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { dayStock } from '../../lib/boardStock.js';
-import { mealFigures, mealKcalText, mealOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
+import { mealFigures, mealKcalText, slotOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
 import { drinkIdsOf } from '../../lib/recipeUses.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS, planItemKey } from '../../shared/diet.js';
@@ -45,7 +45,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
       {slots.map(s => {
         const extra = (s.slot && placed[s.slot]) || [];
         const { planned, eatenKcal, anyEaten } = mealFigures(s.items, extra, diet, snackList, drinkIdsOf(recipes)); // lib/nutritionBoard.ts
-        const over = s.slot ? mealOverText(s.share, eatenKcal, SLOT_LABEL[s.slot]) : null; // "Not set" has no meal and so no share to pass: it never warns, by design (pinned in nutritionBoard.test.ts)
+        const over = slotOverText(s.slot, s.share, eatenKcal, s.slot ? SLOT_LABEL[s.slot] : 'Not set'); // lib/nutritionBoard.ts: the "Not set" group never warns
         return (
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
           <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned, anyEaten }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
