@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_THUMBS, applyChange, changeFailText, loggedRows, openCheck, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
+import { MAX_THUMBS, applyChange, changeFailText, applyFailText, claimLoads, claimResult, claimThenApply, holdLeft, stillWanted, loggedRows, markMissed, openCheck, openGate, openText, readBlockedText, thumbState, snapFailText, snapMeta, thumbIds, toLogRows, toLogTitle, undoChange, withSnapped, withoutReceipt } from './receiptToLog.js';
 import type { SavedList, SavedReceipt } from './receiptsClient.js';
 
 const r = (id: string, over: Partial<SavedReceipt> = {}): SavedReceipt => ({ id, savedAt: '2026-11-18T15:00:00.000Z', month: '2026-11', receiptDate: null, store: '', totalCents: null, note: '', sizeBytes: 100, status: 'to_log', ...over });
@@ -76,5 +76,101 @@ describe('words', () => {
     expect(changeFailText('gone', 'apply')).toContain('deleted');
     expect(changeFailText('offline', 'undo')).toContain('offline');
     expect(changeFailText('unavailable', 'apply')).toContain('could not be updated');
+  });
+});
+
+describe('Open never proceeds on an unchecked status', () => {
+  it('a failed list call is offline or unchecked, never ready', () => {
+    expect(openGate({ ok: false, reason: 'offline' }, '1')).toBe('offline');
+    expect(openGate({ ok: false, reason: 'unavailable' }, '1')).toBe('unchecked');
+    expect(openText.unchecked).toMatch(/not opened/);
+  });
+  it('a checked list still opens only a waiting receipt', () => {
+    const rows = [r('1'), r('2', { status: 'logged' })];
+    expect(openGate({ ok: true, receipts: rows }, '1')).toBe('ready');
+    expect(openGate({ ok: true, receipts: rows }, '2')).toBe('logged');
+    expect(openGate({ ok: true, receipts: rows }, '9')).toBe('gone');
+  });
+});
+
+describe('thumbState', () => {
+  it('shows the photo, waits out a refused load, then offers the retry', () => {
+    expect(thumbState('blob:x', undefined, 0)).toBe('photo');
+    expect(thumbState(undefined, undefined, 0)).toBe('loading');
+    expect(thumbState(undefined, 10_000, 5_000)).toBe('wait');
+    expect(thumbState(undefined, 10_000, 10_000)).toBe('retry');
+    expect(thumbState(undefined, 0, 5_000)).toBe('retry'); // another failure: retry now
+  });
+});
+
+describe('readBlockedText', () => {
+  it('blocks only while data is loading; an empty loaded list (every one-time item used) reads', () => {
+    expect(readBlockedText(true)).toMatch(/still loading/);
+    expect(readBlockedText(false)).toBeNull(); // the list can be empty and loaded: the sheet creates items from unmatched lines
+  });
+});
+
+describe('claimThenApply', () => {
+  it('writes after a successful claim and does not release', async () => {
+    const calls: string[] = [];
+    expect(await claimThenApply(async () => null, () => { calls.push('write'); return true; }, async () => { calls.push('release'); })).toBeNull();
+    expect(calls).toEqual(['write']);
+  });
+  it('writes nothing and releases nothing when another device claimed first', async () => {
+    const calls: string[] = [];
+    expect(await claimThenApply(async () => 'taken text', () => { calls.push('write'); return true; }, async () => { calls.push('release'); })).toBe('taken text');
+    expect(calls).toEqual([]);
+  });
+  it('releases the claim when the write stopped after it (a store that could not be made), so a retry is not refused as taken', async () => {
+    const calls: string[] = [];
+    expect(await claimThenApply(async () => null, () => { calls.push('write'); return false; }, async () => { calls.push('release'); })).toBeNull();
+    expect(calls).toEqual(['write', 'release']);
+  });
+});
+
+describe('claimThenApply when the write throws', () => {
+  it('releases the claim and rethrows, so the row is not left logged with no prices', async () => {
+    const calls: string[] = [];
+    await expect(claimThenApply(async () => null, () => { calls.push('write'); throw new Error('boom'); }, async () => { calls.push('release'); })).rejects.toThrow('boom');
+    expect(calls).toEqual(['write', 'release']);
+  });
+});
+
+describe('claimLoads', () => {
+  it('skips a photo already held or already being fetched by another run, and marks the rest in flight', () => {
+    const inFlight = new Set<string>(['2']);
+    expect(claimLoads(['1', '2', '3'], new Set(['3']), inFlight)).toEqual(['1']);
+    expect(inFlight).toEqual(new Set(['2', '1']));
+    expect(claimLoads(['1', '2'], new Set(), inFlight)).toEqual([]); // a second run for the same ids fetches nothing
+  });
+});
+
+describe('markMissed', () => {
+  it('after a refusal (429) marks the failed photo and the rest of the run as waiting', () => {
+    expect(markMissed(['a', 'b', 'c'], 1, 'limit', 1000, 5000)).toEqual({ b: 6000, c: 6000 });
+  });
+  it('after any other failure marks only the photo that failed, so rows still loading do not show Retry', () => {
+    expect(markMissed(['a', 'b', 'c'], 1, 'failed', 1000)).toEqual({ b: 0 });
+  });
+});
+
+describe('claimResult', () => {
+  it('turns a blocked text into the sheet error and a rejected apply into a visible error, never a stuck spinner', async () => {
+    expect(await claimResult(Promise.resolve(null))).toEqual({ busy: false, error: '' });
+    expect(await claimResult(Promise.resolve('taken text'))).toEqual({ busy: false, error: 'taken text' });
+    expect(await claimResult(Promise.reject(new Error('boom')))).toEqual({ busy: false, error: applyFailText });
+  });
+});
+
+describe('holdLeft and stillWanted', () => {
+  it('a refused load holds every run until its wait is over', () => {
+    expect(holdLeft(1000, 6000)).toBe(5000);
+    expect(holdLeft(6000, 6000)).toBe(0);
+    expect(holdLeft(9000, 6000)).toBe(0);
+  });
+  it('a photo whose row left the card is not kept', () => {
+    expect(stillWanted('1,2,3', '2')).toBe(true);
+    expect(stillWanted('1,3', '2')).toBe(false);
+    expect(stillWanted('', '2')).toBe(false);
   });
 });

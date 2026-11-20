@@ -4,6 +4,13 @@ import type { Receipt } from '../shared/receipt.js';
 // Snap now, log later (brief receipt-snap-now-log-later): the pure parts. A photo saved unread has status `to_log`; Apply moves the same row to `logged`, Undo moves it back.
 // The calls are in receiptsClient.ts and covered by e2e/receiptSnap.spec.js; what each list shows, what is sent and the words are here and unit-tested.
 
+/** What a To log row's photo box does: show the photo, wait out a refused load (429) before another try, or offer the try now. */
+export function thumbState(url: string | undefined, retryAt: number | undefined, now: number): 'photo' | 'wait' | 'retry' | 'loading' {
+  if (url) return 'photo';
+  if (retryAt === undefined) return 'loading';
+  return retryAt > now ? 'wait' : 'retry';
+}
+
 /** The most To log rows that load a small photo; the rest show a plain box, so opening Shopping never asks for a long run of pictures (30 calls a minute). */
 export const MAX_THUMBS = 6;
 
@@ -47,7 +54,27 @@ export function openCheck(list: readonly SavedReceipt[], id: string): 'ready' | 
   const r = list.find(x => x.id === id);
   return !r ? 'gone' : r.status === 'to_log' ? 'ready' : 'logged';
 }
-export const openText = { logged: 'That receipt was already logged on another device. It is under Saved receipts.', gone: 'That receipt is gone. It was deleted on another device.', photo: 'Could not load the photo. Try again.', offline: 'You are offline. Opening a saved receipt needs a connection.' } as const;
+/** Open needs a checked status: a list call that failed is not "ready" (an already-logged or deleted receipt would open). */
+export function openGate(l: { ok: true; receipts: readonly SavedReceipt[] } | { ok: false; reason: 'offline' | 'unavailable' }, id: string): 'ready' | 'logged' | 'gone' | 'offline' | 'unchecked' {
+  return l.ok ? openCheck(l.receipts, id) : l.reason === 'offline' ? 'offline' : 'unchecked';
+}
+/** Read needs the account's data loaded to match the receipt against the list. Only a load still in progress blocks it: an empty list (every one-time item used, or none yet) reads, and the sheet creates items from unmatched lines. */
+export const readBlockedText = (loading: boolean): string | null => (loading ? 'Your data is still loading on this device, so the receipt cannot be matched to your list yet. Wait a moment, then try Read again.' : null);
+
+/** Which photos a load run should fetch: not already held and not already being fetched by another run (a changed list starts a second run while the first still awaits). Marks them in flight. */
+export function claimLoads(ids: readonly string[], have: { has(id: string): boolean }, inFlight: Set<string>): string[] {
+  const take = ids.filter(id => !have.has(id) && !inFlight.has(id));
+  for (const id of take) inFlight.add(id);
+  return take;
+}
+
+/** Photos that did not load, by when another try may go. A refused load (429) marks the failed one and the rest of the run as waiting (nothing is requested meanwhile); any other failure marks only the photo that failed, so rows still loading do not flash Retry. */
+export function markMissed(ids: readonly string[], failedAt: number, reason: 'limit' | 'failed', now: number, waitMs = 0): Record<string, number> {
+  const at = reason === 'limit' ? now + waitMs : 0;
+  return Object.fromEntries((reason === 'limit' ? ids.slice(failedAt) : [ids[failedAt]!]).map(id => [id, at]));
+}
+
+export const openText = { unchecked: 'Could not check that receipt just now, so it was not opened.', logged: 'That receipt was already logged on another device. It is under Saved receipts.', gone: 'That receipt is gone. It was deleted on another device.', photo: 'Could not load the photo. Try again.', offline: 'You are offline. Opening a saved receipt needs a connection.' } as const;
 
 /** The notice when a snap did not save. The photo stays in memory for Try again, except when the account is full. */
 export function snapFailText(reason: SaveFailure['reason'], limits?: { maxReceipts: number; maxBytes: number }): string {
@@ -59,6 +86,26 @@ export function snapFailText(reason: SaveFailure['reason'], limits?: { maxReceip
 
 /** Why Apply stopped before writing anything: another device already moved or deleted the saved receipt. */
 export const claimText = { taken: 'Another device already logged this receipt, so nothing was applied here. Close this sheet.', gone: 'This receipt was deleted on another device, so nothing was applied here. Close this sheet.' } as const;
+
+/** Apply for a To log receipt: claim the saved row first, then write on this device. When the write stops after the claim (a store that cannot be made), the claim is released, or the row would stay "logged" with no prices and every retry would be refused as taken. Returns the text when another device got there first. */
+export async function claimThenApply(claim: () => Promise<string | null>, write: () => boolean, release: () => Promise<void>): Promise<string | null> {
+  const blocked = await claim();
+  if (blocked) return blocked;
+  let wrote = false;
+  try { wrote = write(); } catch (e) { await release(); throw e; } // a write that threw after the claim must not leave the row logged with no prices
+  if (!wrote) await release();
+  return null;
+}
+
+/** Words when Apply threw after the claim: the row was put back under To log, but some of the write may have happened, so the list is worth a look. */
+export const applyFailText = 'Something went wrong while applying this receipt. It was put back under To log. Check your list, then try again.';
+/** The sheet's state once Apply settles: a rejected apply is shown, never left on the busy spinner. */
+export const claimResult = (p: Promise<string | null>): Promise<{ busy: false; error: string }> => p.then(blocked => ({ busy: false as const, error: blocked ?? '' }), () => ({ busy: false as const, error: applyFailText }));
+
+/** How long a refused thumbnail load (429) still holds every run: the milliseconds left, or 0. A second run started by a changed list checks it too, so it never ignores Retry-After. */
+export const holdLeft = (now: number, until: number): number => Math.max(0, until - now);
+/** Whether a photo is still one the card shows (a row deleted while its fetch was in flight is not, so its blob URL is not kept). */
+export const stillWanted = (want: string, id: string): boolean => want.split(',').includes(id);
 
 /** Words when moving a receipt on or back did not go through (after the prices were already applied or undone on this device). */
 export function changeFailText(reason: ChangeFailure['reason'], what: 'apply' | 'undo'): string {

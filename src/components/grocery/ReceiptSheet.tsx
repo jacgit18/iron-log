@@ -10,6 +10,7 @@ import { NO_CHOICES, applyShares, isOwnRow, owedRows, owedText, rowParties, setR
 import { earlierText, missingIntro, reconcile, untickedText } from '../../lib/receiptReconcile.js';
 import { cleanStoreName } from '../../lib/receiptStoreName.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
+import { claimResult, claimThenApply } from '../../lib/receiptToLog.js';
 import { leaveSheet, setLeaveGuard } from '../../lib/backNav.js';
 import { dropDraft, isEdited, keepDraft, newDraftId, shouldAskOnBack, type Draft } from '../../lib/receiptDraft.js';
 import { askSharing } from '../../lib/sharingIntent.js';
@@ -43,6 +44,7 @@ export default function ReceiptSheet() {
   const onApplied = modal?.onApplied as ((a: Applied) => void) | undefined;
   const toLogId = typeof modal?.toLogId === 'string' ? modal.toLogId : ''; // a receipt opened from To log (brief receipt-snap-now-log-later): Apply updates that saved row, and no local draft is kept (To log is the account-wide one)
   const photoBlob = modal?.photo as Blob | undefined;
+  const onRelease = modal?.onRelease as (() => Promise<void>) | undefined; // To log: puts the claimed row back when Apply then stopped before writing
   const onClaim = modal?.onClaim as ((r: Receipt) => Promise<string | null>) | undefined; // To log: claims the saved row before Apply writes anything; a text means another device got there first
   const canKeep = !!modal?.image; // the photo is held by Scan receipt only for an account that has Receipts (brief receipt-save-photo)
   const onKeep = modal?.onKeep as ((meta: KeepMeta) => void) | undefined;
@@ -181,8 +183,8 @@ export default function ReceiptSheet() {
     setStaged(xs => xs.filter(x => x.id !== id));
     setChoices(cs => cs.map(c => (c.itemId === id ? { itemId: null, include: false } : c)));
   };
-  const doApply = () => {
-    if (newStore) { const err = useAppStore.getState().addGroceryStore(newStore); if (err) { setStoreError(err); return; } } // before the items, so a new item bought there finds the store; a store that cannot be made stops Apply with nothing written
+  const doApply = (): boolean => {
+    if (newStore) { const err = useAppStore.getState().addGroceryStore(newStore); if (err) { setStoreError(err); return false; } } // before the items, so a new item bought there finds the store; a store that cannot be made stops Apply with nothing written
     const made = createStaged(plan, staged, { addGroceryItem: useAppStore.getState().addGroceryItem, items: () => useAppStore.getState().grocery.items });
     const mapped = remapPlan(plan, made.ids);
     const real = skipMoney ? withoutReceiptMoney(mapped) : mapped.receiptKey ? { ...mapped, receiptKey: freshKey(useAppStore.getState().groceryMonths[mk]?.rcpts, mapped.receiptKey) } : mapped; // a receipt filed again (the tick, or one too bare to tell from another) gets its own key
@@ -205,12 +207,13 @@ export default function ReceiptSheet() {
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
     if (done > 0 || out.unticked || real.taxStore || real.creditStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    return true;
   };
   // A receipt from To log claims its saved row first (one PATCH, only if it still waits): if another device logged or deleted it, nothing is applied here and the sheet says so.
   const apply = () => {
     if (!toLogId || !onClaim) { doApply(); return; }
     setClaim({ busy: true, error: '' });
-    void onClaim(receipt).then(blocked => { setClaim({ busy: false, error: blocked ?? '' }); if (!blocked) doApply(); });
+    void claimResult(claimThenApply(() => onClaim(receipt), doApply, async () => { await onRelease?.(); })).then(r => setClaim(r));
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;

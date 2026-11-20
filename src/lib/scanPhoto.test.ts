@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentAllowance, resetAllowance } from './labelAllowance.js';
-import { fitSize, MAX_SIDE, RECEIPT_TEXT, SCAN_TEXT, scanLabel, scanReceipt, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
+import { asIsJpegBase64, fitSize, MAX_SIDE, RECEIPT_TEXT, SCAN_TEXT, scanLabel, scanReceipt, scanSupplement, SUPPLEMENT_SCAN_TEXT } from './scanPhoto.js';
 import { currentSupplementAllowance, resetSupplementAllowance } from './supplementAllowance.js';
 
 describe('fitSize', () => {
@@ -135,5 +135,30 @@ describe('scanReceipt failures', () => {
     expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'unavailable' });
     g.fetch = async () => new Response('nope', { status: 503 });
     expect(await scanReceipt(new Blob(['x']), [])).toEqual({ ok: false, reason: 'unavailable' });
+  });
+});
+
+describe('asIsJpegBase64 (a saved photo is not re-encoded on Read)', () => {
+  it('returns the bytes of a JPEG that fits, unchanged', async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+    expect(await asIsJpegBase64(new Blob([bytes]))).toBe(btoa(String.fromCharCode(...bytes)));
+  });
+  it('returns null for something that is not a JPEG or is too big for the route, so it is shrunk as before', async () => {
+    expect(await asIsJpegBase64(new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])]))).toBeNull();
+    expect(await asIsJpegBase64({ size: 3_000_000 } as Blob)).toBeNull(); // about 4 MB of base64, over MAX_RECEIPT_BASE64
+  });
+  it('scanReceipt with asIs sends the saved bytes and skips the canvas', async () => {
+    const g = globalThis as Record<string, unknown>;
+    const saved = { fetch: g.fetch, v: g.__APP_VERSION__, c: g.createImageBitmap };
+    g.__APP_VERSION__ = 'test';
+    g.createImageBitmap = async () => { throw new Error('must not re-encode'); };
+    let sent = '';
+    g.fetch = async (_u: string, init: RequestInit) => { sent = JSON.parse(String(init.body)).image; return new Response('{}', { status: 500 }); };
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 9]);
+    await scanReceipt(new Blob([bytes]), [], undefined, { asIs: true });
+    expect(sent).toBe(btoa(String.fromCharCode(...bytes)));
+    Object.assign(g, { fetch: saved.fetch, __APP_VERSION__: saved.v, createImageBitmap: saved.c });
+    vi.restoreAllMocks();
   });
 });

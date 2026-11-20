@@ -1,6 +1,6 @@
 import { signIn } from '../sync/devUser.js';
 import { markUsedUp, rememberAllowance } from './labelAllowance.js';
-import { cleanReceiptAnswer, type ItemRef, type ReceiptResult } from '../shared/receipt.js';
+import { cleanReceiptAnswer, MAX_RECEIPT_BASE64, type ItemRef, type ReceiptResult } from '../shared/receipt.js';
 import { cleanScanAnswer, type LabelResult } from '../shared/scan.js';
 import { cleanSupplementScanAnswer, type SupplementScanResult } from '../shared/supplementScan.js';
 import { markSupplementUsedUp, rememberSupplementAllowance, SUPPLEMENT_USED_UP_TEXT } from './supplementAllowance.js';
@@ -47,6 +47,16 @@ export async function shrinkToJpegBase64(file: Blob, maxSide = MAX_SIDE): Promis
   return btoa(bin);
 }
 
+/** A saved photo is already our own shrunk JPEG: when its bytes are a JPEG that fits the receipt route, send them as they are (no second JPEG loss on every Read); anything else returns null and is shrunk as usual. */
+export async function asIsJpegBase64(file: Blob): Promise<string | null> {
+  if (Math.ceil(file.size / 3) * 4 > MAX_RECEIPT_BASE64) return null;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) return null;
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
 /** A label scan can also fail because today's label cap is used up (the route answers 503 with why "cap"). */
 export type LabelFailure = ScanFailure | { ok: false; reason: 'cap' };
 
@@ -79,9 +89,9 @@ export const RECEIPT_TEXT = {
 } as const;
 
 /** One receipt photo and the list's item ids and names to /api/scan/receipt. The answer is re-checked against the same ids; every failure is a plain reason. The shrunk photo comes back too, held in memory so the sheet can offer to keep it (receiptsClient.ts); it goes nowhere unless the person ticks that box. */
-export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal): Promise<{ ok: true; result: ReceiptResult; image: string } | LabelFailure | { ok: false; reason: 'capAll' }> {
-  let image: string;
-  try { image = await shrinkToJpegBase64(file, MAX_RECEIPT_SIDE); } catch { return { ok: false, reason: 'photo' }; }
+export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal, opts: { asIs?: boolean } = {}): Promise<{ ok: true; result: ReceiptResult; image: string } | LabelFailure | { ok: false; reason: 'capAll' }> {
+  let image: string | null = null;
+  try { image = (opts.asIs ? await asIsJpegBase64(file) : null) ?? await shrinkToJpegBase64(file, MAX_RECEIPT_SIDE); } catch { return { ok: false, reason: 'photo' }; }
   let res: Response;
   try {
     res = await fetch('/api/scan/receipt', { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': __APP_VERSION__, ...signIn() }, body: JSON.stringify({ image, items }), ...(signal ? { signal } : {}) });

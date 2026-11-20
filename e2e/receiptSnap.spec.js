@@ -25,7 +25,7 @@ const scanAnswer = async page => {
   return state;
 };
 // One account's receipts on a fake server; every browser that calls `serve` shares it.
-const account = () => ({ rows: [], posts: [], patches: [], deletes: [], next: 1, failSaves: 0 });
+const account = () => ({ rows: [], posts: [], patches: [], deletes: [], next: 1, failSaves: 0, failLists: 0, limitPhotos: 0, lists: 0, photos: 0 });
 const serve = async (page, state) => {
   const reply = (route, body, status = 200, type = 'application/json') => route.fulfill({ status, contentType: type, body: typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body) });
   await page.route('**/api/receipts**', async route => {
@@ -39,11 +39,19 @@ const serve = async (page, state) => {
       state.rows.unshift(row);
       return reply(route, { ok: true, receipt: row }, 201);
     }
+    if (req.method() === 'GET' && path === '') {
+      state.lists++;
+      if (state.failLists > 0) { state.failLists--; return reply(route, { ok: false }, 500); }
+    }
     if (req.method() === 'GET' && path === '') return reply(route, { ok: true, receipts: state.rows, count: state.rows.length, bytes: state.rows.length * 1000, maxReceipts: 200, maxBytes: 62914560 });
     const m = path.match(/^\/(\d+)(\/photo)?$/);
     const row = m && state.rows.find(r => r.id === m[1]);
     if (!row) return reply(route, { ok: false }, 404);
-    if (req.method() === 'GET' && m[2]) return reply(route, PNG, 200, 'image/jpeg');
+    if (req.method() === 'GET' && m[2]) {
+      state.photos++;
+      if (state.limitPhotos > 0) { state.limitPhotos--; return route.fulfill({ status: 429, headers: { 'Retry-After': '1' }, body: '{}' }); }
+      return reply(route, PNG, 200, 'image/jpeg');
+    }
     if (req.method() === 'PATCH') {
       const b = req.postDataJSON();
       state.patches.push(b);
@@ -189,4 +197,38 @@ test('Apply stops before writing any price when another device logged the receip
   await expect(page.locator('#groc-summary')).toContainText('Bought 0 of 2');
   expect(acct.patches.at(-1)).toMatchObject({ status: 'logged', ifStatus: 'to_log' });
   expect(acct.rows[0].store).toBe(''); // the loser changed nothing
+});
+
+test('Open does not proceed when the status check fails, offers Try again, and opens once the check works', async ({ page }) => {
+  const acct = account(); await serve(page, acct);
+  await setup(page);
+  await snap(page);
+  await expect(toLog(page).getByText('To log (1)')).toBeVisible();
+  acct.failLists = 1;
+  await toLog(page).getByRole('button', { name: 'Open' }).click();
+  await expect(page.getByText('Could not check that receipt just now, so it was not opened.')).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Receipt to log' })).toBeVisible();
+});
+
+test('a refused thumbnail (429) shows a Retry photo button that waits, then loads it with one call; a snap adds no extra list call', async ({ page }) => {
+  const acct = account(); await serve(page, acct);
+  await setup(page);
+  await snap(page);
+  await expect(toLog(page).getByText('To log (1)')).toBeVisible();
+  const listsAfterSnap = acct.lists;
+  await page.waitForTimeout(500);
+  expect(acct.lists).toBe(listsAfterSnap); // the optimistic row is not followed by a second refresh
+  acct.limitPhotos = 1;
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  const retry = toLog(page).getByRole('button', { name: /Photo busy|Retry photo/ });
+  await expect(retry).toBeVisible();
+  const photosBefore = acct.photos;
+  await expect(toLog(page).getByRole('button', { name: 'Retry photo' })).toBeEnabled({ timeout: 5000 });
+  expect(acct.photos).toBe(photosBefore); // nothing was requested while it waited
+  await toLog(page).getByRole('button', { name: 'Retry photo' }).click();
+  await expect(toLog(page).locator('.rctologthumb img')).toBeVisible();
+  expect(acct.photos).toBe(photosBefore + 1);
 });

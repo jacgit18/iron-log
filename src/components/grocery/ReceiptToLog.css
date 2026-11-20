@@ -62,6 +62,10 @@
   color: var(--muted);
   font-size: var(--fs-md);
 }
+.rctologretry {
+  margin-top: var(--sp-4);
+  min-height: 44px;
+}
 .rctologbtns {
   display: flex;
   gap: var(--sp-8);
