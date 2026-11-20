@@ -13,9 +13,9 @@ import { addItemsToDays, copyItemToDays, moveItem } from '../lib/weekBoard.js';
 import { idsAdded, plannedShoppingIds } from '../lib/weekShopping.js';
 import { drinkIdsOf } from '../lib/recipeUses.js';
 import { savedMealToRecipe } from '../lib/savedMealToRecipe.js';
-import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_MEAL_ITEMS, MAX_MEAL_NAME, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, samePlanItem, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
-import type { DailySnack, DietEntry, PlanItem, SavedMeal } from '../types.ts';
+import type { DailySnack, DietEntry, PlanItem, PlanSlot, SavedMeal } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
 
 // Your food log (ADR 086): one document, diet/main, saved like every other (synced when syncing is on, in this browser otherwise). Entries are
@@ -33,6 +33,18 @@ const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
 // The plan lives in cfg.diet.plan (brief diet-meal-planner), keyed by date; every write goes back through normDietCfg with today, which drops earlier days.
 const drinksOf = (get: StoreGet) => drinkIdsOf(get().recipes);
 const planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
+
+/** Puts a recipe or saved meal on a day and says where it landed: the stored index of the item just added (found by its own kind, id and meal in the saved plan, never "the last one"), or an error text. */
+function addPlanItemAt(get: StoreGet, day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): { error: string; index: -1 } | { error: null; index: number } {
+  const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
+  if (!there) return { error: kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.', index: -1 };
+  const item = { k: kind, id, ...(slot ? { s: slot } : {}) };
+  const r = addItem(planOf(get), day, item, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
+  if (r.plan === null) return { error: r.error, index: -1 };
+  putPlan(get, r.plan);
+  const index = (planOf(get)[day] ?? []).findIndex(i => samePlanItem(i, item));
+  return index < 0 ? { error: 'That could not be added.', index: -1 } : { error: null, index };
+}
 const putPlan = (get: StoreGet, plan: Plan, skips?: Record<string, string[]>, repeatSkips?: Record<string, string[]>) => get().mutateCfg(c => {
   const next = { ...(c.diet || {}) };
   if (Object.keys(plan).length) next.plan = plan; else delete next.plan;
@@ -199,13 +211,13 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     return r.added;
   },
 
-  addPlanItem(day, kind, id, slot) {
-    const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
-    if (!there) return kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
-    const r = addItem(planOf(get), day, { k: kind, id, ...(slot ? { s: slot } : {}) }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
-    if (r.plan === null) return r.error;
-    putPlan(get, r.plan);
-    return null;
+  addPlanItem(day, kind, id, slot) { return addPlanItemAt(get, day, kind, id, slot).error; },
+
+  // The plate check's one-tap fix: adds the recipe to the meal and marks it planned (the check reads planned food only). Finds the item it just added by looking for it, not by assuming it went last. Returns the message to show: '' when all went well; when the day already holds 8 planned things the food is still added and the text says why it is not marked planned.
+  addPlateFix(day, id, slot) {
+    const r = addPlanItemAt(get, day, 'r', id, slot);
+    if (r.error !== null) return r.error;
+    return get().setPlanned(day, r.index, true) ?? '';
   },
 
   // One recipe or saved meal planned on several days in one plan write (the Add sheet's "This day on" and "Pick days"). Days that are full, outside the window or already hold it are skipped and named.

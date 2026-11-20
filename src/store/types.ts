@@ -341,6 +341,7 @@ export interface DietSlice {
   skipRepeatDay(day: string, rid: string): void; // the repeat is not shown on that day only
   realizeRepeat(day: string, rid: string): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
   unstoreRepeat(day: string, index: number, rid: string): void; // takes back an item realizeRepeat just stored when its log failed
+  addPlateFix(day: string, id: string, slot: PlanSlot): string; // the plate check's one-tap fix: adds the recipe to the meal and marks it planned; '' on success, else the reason (an error, or the 8-planned cap: the food is still added, just not marked)
   setPlanned(day: string, index: number, on: boolean): string | null; // marks a stored item planned or unmarks it; an error text when the day already holds 8 planned things
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
   planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo

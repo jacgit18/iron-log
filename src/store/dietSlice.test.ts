@@ -534,6 +534,24 @@ describe('daily snacks (brief daily-snacks)', () => {
     expect(st().cfg.diet!.plan![tomorrow]![1]).toEqual({ k: 'r', id: 'b', s: 'lunch' });
     expect(st().setPlanned(tomorrow, 5, true)).toMatch(/gone/);
   });
+  it('addPlateFix adds the food, marks that very item planned (not the last one) and says nothing', () => {
+    st().mutateCfg(c => { c.diet = { plan: { [tomorrow]: [{ k: 'r', id: 'a' }] } }; });
+    expect(st().addPlateFix(tomorrow, 'bar', 'lunch')).toBe('');
+    const list = st().cfg.diet!.plan![tomorrow]!;
+    expect(list.find(i => i.id === 'bar')).toEqual({ k: 'r', id: 'bar', s: 'lunch', p: true });
+    expect(list.find(i => i.id === 'a')!.p).toBeUndefined();
+  });
+  it('addPlateFix on a day holding 8 planned things still adds the food, leaves it unmarked and says why; a duplicate is refused', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}`, p: true as const }));
+    st().mutateCfg(c => { c.diet = { plan: { [tomorrow]: eight } }; });
+    expect(st().addPlateFix(tomorrow, 'bar', 'dinner')).toMatch(/8 planned/);
+    const list = st().cfg.diet!.plan![tomorrow]!;
+    expect(list).toHaveLength(9);
+    expect(list.find(i => i.id === 'bar')).toEqual({ k: 'r', id: 'bar', s: 'dinner' });
+    expect(list.filter(i => i.p)).toHaveLength(8);
+    expect(st().addPlateFix(tomorrow, 'bar', 'dinner')).toMatch(/already/);
+    expect(st().addPlateFix(tomorrow, 'nope', 'dinner')).toMatch(/gone/);
+  });
   it('moves a ticked snack to another day holding 8 planned things, in Snack or another meal', () => {
     const eight = Array.from({ length: 8 }, (_, i) => ({ k: 'r' as const, id: `x${i}` }));
     st().mutateCfg(c => { c.diet = { snacks: [{ id: 'yog' }], plan: { [today]: [{ k: 'r', id: 'yog', s: 'snack' }], [tomorrow]: eight.map(x => ({ ...x, p: true as const })) } }; });

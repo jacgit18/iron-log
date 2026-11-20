@@ -32,11 +32,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   for (const s of ORDER) if (!slots.some(x => x.slot === s)) slots.push({ slot: s, items: [], kcal: 0, share: null, need: [], have: [], fixes: [] });
   slots.sort((a, b) => SLOT_KEY.indexOf(a.slot ?? '') - SLOT_KEY.indexOf(b.slot ?? ''));
   // A one-tap plate fix adds the food and marks it planned, as the check reads planned food only (brief nutrition-board-available-list).
-  const addFix = (id: string, slot: PlanSlot) => {
-    const err = st().addPlanItem(view.day, 'r', id, slot);
-    if (err) { onMsg(err); return; }
-    onMsg(st().setPlanned(view.day, (st().cfg.diet?.plan?.[view.day]?.length ?? 1) - 1, true) ?? '');
-  };
+  const addFix = (id: string, slot: PlanSlot) => onMsg(st().addPlateFix(view.day, id, slot)); // store action: finds the item it added, never assumes it is last
   const drop = (e: React.DragEvent, slot: PlanSlot) => {
     e.preventDefault();
     try {
@@ -48,11 +44,11 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
     <>
       {slots.map(s => {
         const extra = (s.slot && placed[s.slot]) || [];
-        const { planned, eatenKcal } = mealFigures(s.items, extra, diet, snackList, drinkIdsOf(recipes)); // lib/nutritionBoard.ts
-        const over = s.slot ? mealOverText(s.share, eatenKcal, SLOT_LABEL[s.slot]) : null;
+        const { planned, eatenKcal, anyEaten } = mealFigures(s.items, extra, diet, snackList, drinkIdsOf(recipes)); // lib/nutritionBoard.ts
+        const over = s.slot ? mealOverText(s.share, eatenKcal, SLOT_LABEL[s.slot]) : null; // "Not set" has no meal and so no share to pass: it never warns, by design (pinned in nutritionBoard.test.ts)
         return (
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
-          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
+          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned, anyEaten }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
           {s.items.length === 0 && extra.length === 0 && <span className="nb-empty">{s.slot === 'snack' && !hasSnacks ? 'No daily snacks yet' : 'Nothing planned'}</span>}
           {s.items.length === 0 && s.slot && view.day > today && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot]}`} onClick={() => onAdd(s.slot!)}>Add</button>}
           {s.slot === 'snack' && editable && (hasSnacks
