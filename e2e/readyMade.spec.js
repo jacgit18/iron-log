@@ -33,6 +33,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await page.getByRole('button', { name: 'Save food' }).click();
   await expect(page.getByRole('alert')).toContainText('Calories per serving');
   await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Discard' }).click(); // edited: Cancel asks first
   await make(page);
   await expect(page.getByRole('heading', { name: /Frozen lasagna/ })).toBeVisible();
   await expect(page.locator('.rc-strip').getByText('420 kcal', { exact: true })).toBeVisible();

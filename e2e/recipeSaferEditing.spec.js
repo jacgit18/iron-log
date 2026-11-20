@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startRecipe } from './recipesNav.js';
+import { startFood, startRecipe } from './recipesNav.js';
 
 // Recipe safer editing (brief recipe-safer-editing): finished ingredient rows fold, Back and Cancel ask before losing edits, Remove has Undo, Enter moves
 // forward and never saves. The rules are node tests (recipeSaferEditing.test.ts); this covers the wiring a node test cannot see.
@@ -168,4 +168,108 @@ test('Clearing an amount keeps focus on that row instead of jumping to Save', as
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(amountBtn(page, 0)).toBeFocused();
   await expect(page.getByRole('button', { name: 'Save recipe' })).not.toBeFocused();
+});
+
+// Leave-guard gaps (brief n/a: follow-up fix to recipe-safer-editing). The Daily section buttons are another way out of the form: with edits they ask too.
+const expectGrocery = async page => {
+  await expect(page.locator('#daily-grocery')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#daily-recipes')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page).toHaveURL(/#\/daily\/grocery/);
+  await expect(page.getByRole('heading', { name: 'New recipe' })).toHaveCount(0);
+};
+test('Switching Daily section with edits asks, Keep editing stays, Discard leaves the form', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  await page.click('#daily-grocery');
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Soup');
+  await page.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Soup');
+  await page.click('#daily-grocery'); // asks again
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Discard' }).click();
+  await expectGrocery(page); // Discard finishes the switch: the tapped section opens, no second tap
+});
+
+test('Switching Daily section from a clean form leaves at once', async ({ page }) => {
+  await open(page);
+  await page.click('#daily-grocery');
+  await expect(page.locator('#daily-grocery')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toHaveCount(0);
+});
+
+// The guarded Back puts its history entry back; these walk the stack so it stays one form entry above the list.
+const hist = page => page.evaluate(() => ({ hash: location.hash, len: history.length }));
+test('History: Keep editing then Back asks again, Discard then Back leaves the Recipes list', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  const before = await hist(page);
+  await page.goBack();
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Keep editing' }).click();
+  await page.goBack();
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  expect((await hist(page)).hash).toBe(before.hash);
+  expect((await hist(page)).len).toBe(before.len); // the entry was put back, not stacked
+  await page.getByRole('button', { name: 'Discard' }).click();
+  await expect(page.locator('#recipes-new')).toBeVisible();
+  await expect(page).toHaveURL(/#\/daily\/recipes$/);
+});
+
+test('History: a second Back after a held Back keeps the form and asks again', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  await page.goBack();
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await expect(page).toHaveURL(/#\/daily\/recipes\/form/); // the entry is back before the next Back
+  await page.goBack();
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Soup');
+  await expect(page).toHaveURL(/#\/daily\/recipes\/form/);
+});
+
+test('History: Forward after a held Back stays on the form', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  await page.goBack();
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.goForward(); // nothing ahead: the put-back entry is the top one
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Soup');
+  await expect(page).toHaveURL(/#\/daily\/recipes\/form/);
+});
+
+test('Switching Daily section from a food form with edits asks; Discard opens the section, a clean one leaves at once', async ({ page }) => {
+  await page.click('#tab-daily'); await page.click('#daily-recipes'); await startFood(page);
+  await page.getByLabel('Name', { exact: true }).fill('Granola');
+  await page.click('#daily-grocery');
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Granola');
+  await page.getByRole('button', { name: 'Cancel' }).click(); // Cancel asks the same
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Keep editing' }).click();
+  await page.click('#daily-grocery');
+  await page.getByRole('button', { name: 'Discard' }).click();
+  await expect(page.locator('#daily-grocery')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('#daily-recipes'); await startFood(page); // nothing typed: the tap opens the section at once
+  await page.click('#daily-grocery');
+  await expect(page.locator('#daily-grocery')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toHaveCount(0);
+});
+
+// A section tap with the amount picker open closes the picker and then goes on (a clean form switches, one with edits asks); it never looks ignored. Back differs: it takes two steps.
+test('A Daily section tap with the amount picker open closes it and goes on', async ({ page }) => {
+  await open(page);
+  await amountBtn(page, 0).click();
+  await expect(page.getByRole('group', { name: /^Amount for/ })).toBeVisible();
+  await page.click('#daily-grocery');
+  await expectGrocery(page); // nothing was typed: the section opens
+  await page.click('#daily-recipes'); await startRecipe(page);
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  await amountBtn(page, 0).click();
+  await page.click('#daily-grocery');
+  await expect(page.getByRole('group', { name: /^Amount for/ })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Discard' }).click();
+  await expectGrocery(page);
 });

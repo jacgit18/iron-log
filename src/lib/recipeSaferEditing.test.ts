@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterAmount, backAction, enterTarget, pickerShowing, shiftForInsert, shiftSetForInsert, withoutPending, withPending, type Pending, foldedSummary, isEdited, isFolded, landsAt, nextUnfinished, offersUndo, removeRow, restoreRow, rowDone, type EditRow } from './recipeSaferEditing.js';
+import { afterAmount, backAction, enterTarget, pickerShowing, shiftForInsert, shiftSetForInsert, withoutPending, withPending, type Pending, foldedSummary, isEdited, isFolded, landsAt, nextUnfinished, offersUndo, removeRow, restoreRow, rowDone, sectionTap, type EditRow } from './recipeSaferEditing.js';
 
 const r = (n: string, amt = '', more: Partial<EditRow> = {}): EditRow => ({ n, amt, ...more });
 const blank = () => r('');
@@ -147,5 +147,17 @@ describe('indices after Undo', () => {
     expect(shiftForInsert(0, 1)).toBe(0);
     expect(shiftForInsert(null, 1)).toBeNull();
     expect([...shiftSetForInsert(new Set([0, 1, 4]), 1)].sort()).toEqual([0, 2, 5]);
+  });
+});
+
+describe('sectionTap', () => {
+  it('asks when there are edits or the question is showing, and opens the section otherwise', () => {
+    expect(sectionTap({ edited: true, asking: false, pickerOpen: false })).toBe('ask');
+    expect(sectionTap({ edited: false, asking: true, pickerOpen: false })).toBe('ask');
+    expect(sectionTap({ edited: false, asking: false, pickerOpen: false })).toBe('switch');
+  });
+  it('does not count the open amount picker: it closes and the tap goes on', () => {
+    expect(sectionTap({ edited: false, asking: false, pickerOpen: true })).toBe('switch');
+    expect(sectionTap({ edited: true, asking: false, pickerOpen: true })).toBe('ask');
   });
 });

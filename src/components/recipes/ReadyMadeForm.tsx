@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { LeavePrompt, useFormLeave } from './useFormLeave.js';
+import { isEdited } from '../../lib/recipeSaferEditing.js';
 import './FoodTypeReview.css';
 import './ReadyMadeScan.css';
 import './RecipeDesktop.css';
@@ -49,6 +51,9 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const [unit, setUnit] = useState(recipe?.unit ?? '');
   const [plural, setPlural] = useState(recipe?.plural ?? '');
   const [err, setErr] = useState('');
+  const sig = JSON.stringify([n, kcal, rows, protein, carbs, fat, uses, meal, note, pack, usual, unit, plural]); // the fields now against the ones the form opened with (brief recipe-safer-editing): Back, Cancel, reload and a Daily section tap ask before they lose them
+  const [baseSig] = useState(sig);
+  const { asking, gone, keep, cancel, discard } = useFormLeave({ edited: isEdited(baseSig, sig), pickerOpen: false, closePicker: () => {}, leave: () => onDone(null) });
   const canScan = !recipe;
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState('');
@@ -83,6 +88,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', ...(meal ? { meal } : {}), type: formFoodType(uses[0]), ...(uses.length > 1 ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ing: [], steps: [], ...v, ...withMicro(microOfRows(live.rows).micro), note });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
+    gone.current = true;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null);
   };
   return (
@@ -144,8 +150,9 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
       </div>
       <div className="rcf-foot">
         {err && <p className="note gerr" role="alert">{err}</p>}
+        {asking && <LeavePrompt onKeep={keep} onDiscard={discard} />}
         <div className="rc-actions rc-bar">
-          <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
+          <button type="button" className="btn ghost" onClick={cancel}>Cancel</button>
           <button type="submit" className="btn primary">Save food</button>
         </div>
       </div>
