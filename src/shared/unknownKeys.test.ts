@@ -62,7 +62,7 @@ describe('keepUnknownKeys refuses what is hostile', () => {
 
 describe('DIET_KEYS', () => {
   it('lists every key normDietCfg produces on its own', () => {
-    const full = normDietCfg({ kcal: 3000, protein: 180, carbs: 300, fat: 80, pace: 'custom', rate: 1, meals: [{ id: 'a', n: 'A', items: [{ n: 'x', kcal: 1, p: 1 }] }], mealsMoved: { a: 'b' }, plan: { '2026-10-30': [{ k: 'm', id: 'm1' }] }, snacks: [{ id: 's' }], snackSkips: { '2026-10-30': ['s'] }, repeats: [{ rid: 'a', k: 'r', id: 'r1', days: [1], from: '2026-10-30' }], repeatSkips: { '2026-10-30': ['a'] } });
+    const full = normDietCfg({ kcal: 3000, protein: 180, carbs: 300, fat: 80, pace: 'custom', rate: 1, meals: [{ id: 'a', n: 'A', items: [{ n: 'x', kcal: 1, p: 1 }] }], mealsMoved: { a: 'b' }, plan: { '2026-10-30': [{ k: 'm', id: 'm1' }] }, snacks: [{ id: 's' }], snackSkips: { '2026-10-30': ['s'] }, repeats: [{ rid: 'a', k: 'r', id: 'r1', days: [1], from: '2026-10-30' }], repeatSkips: { '2026-10-30': ['a'] }, hintsOff: ['breakfast'], hintSkips: { '2026-10-30': ['lunch'] } });
     expect(Object.keys(full ?? {}).every(k => (DIET_KEYS as readonly string[]).includes(k))).toBe(true);
     expect(Object.keys(full ?? {}).length).toBe(DIET_KEYS.length);
   });

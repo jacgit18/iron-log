@@ -885,3 +885,22 @@ describe('a shown repeat on a full day, and a deleted recipe', () => {
     expect(st().cfg.diet!.repeats!.map(r => r.id).sort()).toEqual(['f0', 'f1']);
   });
 });
+
+describe('plate hints (brief nutrition-plate-hints-per-meal)', () => {
+  const today = ymd(new Date());
+  it('switches a meal off and on, keeps meal order, and leaves no diet key when all are on again', () => {
+    st().setPlateHint('dinner', false);
+    st().setPlateHint('breakfast', false);
+    expect(st().cfg.diet!.hintsOff).toEqual(['breakfast', 'dinner']);
+    st().setPlateHint('breakfast', true);
+    st().setPlateHint('dinner', true);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+  it('dismisses one meal for one day, once, and keeps other days and other settings', () => {
+    st().setDietTarget('kcal', 2200);
+    st().dismissPlateHint(shiftDay(today, 1), 'breakfast');
+    st().dismissPlateHint(shiftDay(today, 1), 'breakfast');
+    st().dismissPlateHint(shiftDay(today, 2), 'lunch');
+    expect(st().cfg.diet).toMatchObject({ kcal: 2200, hintSkips: { [shiftDay(today, 1)]: ['breakfast'], [shiftDay(today, 2)]: ['lunch'] } });
+  });
+});

@@ -47,6 +47,7 @@ test('tapping a name selects its text so typing replaces it', async ({ page }) =
   await open(page);
   await name(page, 0).fill('Rice');
   await page.getByRole('button', { name: 'Add ingredient' }).click();
+  await expect(name(page, 1)).toBeFocused(); // the form moves focus to the new row on a timer; refocusing row 0 before that lets it steal the typing on a slow runner
   await name(page, 0).focus();
   const selected = await name(page, 0).evaluate(el => el.selectionStart === 0 && el.selectionEnd === el.value.length);
   expect(selected).toBe(true);
