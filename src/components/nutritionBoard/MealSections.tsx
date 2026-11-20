@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { dayStock } from '../../lib/boardStock.js';
 import { mealFigures, mealKcalText, slotOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
 import { drinkIdsOf } from '../../lib/recipeUses.js';
+import { handyTrays } from '../../lib/repeats.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS, planItemKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -9,6 +10,7 @@ import type { PlanSlot } from '../../types.ts';
 import BoardCard from '../diet/board/BoardCard.js';
 import type { Say } from '../../lib/eatenStep.js';
 import { EatenRows } from './EatenRows.js';
+import HandyTray from './HandyTray.js';
 import type { Resolved } from '../../lib/dietPlan.js';
 
 const ORDER = PLAN_SLOTS;
@@ -27,6 +29,8 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   const cardsKey = cards.map(c => `${c.index}|${c.r.item.k}|${c.r.item.id}|${c.r.item.e?.join(',') ?? ''}|${c.r.gone ? 1 : 0}`).join(';'); // what the marks depend on; `view` itself is rebuilt on every board change, which would match again on every tap
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `cards` is read through `cardsKey`
   const stock = useMemo(() => dayStock(view.day, today, cards, diet, grocery, groceryMonths, recipes), [view.day, today, cardsKey, diet, grocery, groceryMonths, recipes]); // the day's at-home marks (lib/boardStock.ts)
+  const repeats = useAppStore(x => x.cfg.diet?.repeats), repeatSkips = useAppStore(x => x.cfg.diet?.repeatSkips), storedPlan = useAppStore(x => x.cfg.diet?.plan);
+  const trays = useMemo(() => (editable ? handyTrays(view.day, storedPlan ?? {}, repeats, repeatSkips, today, recipes, []) : {}), [editable, view.day, storedPlan, repeats, repeatSkips, today, recipes]); // the day's handy trays, once for all four meals
   const hasSnacks = useAppStore(x => !!x.cfg.diet?.snacks?.length); // the saved daily snack list
   const slots: BoardSlot[] = [...view.slots];
   for (const s of ORDER) if (!slots.some(x => x.slot === s)) slots.push({ slot: s, items: [], kcal: 0, share: null, need: [], have: [], fixes: [] });
@@ -63,6 +67,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
             const ck = `${view.day}:${planItemKey(x.r.item)}`;
             return <BoardCard key={ck} item={x} day={view.day} today={today} open={open === ck} stock={stock.get(x.index)} onOpen={() => setOpen(open === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
           })}
+          {s.slot && !!trays[s.slot]?.length && <HandyTray day={view.day} slot={s.slot} rows={trays[s.slot]!} onMsg={onMsg} />}
           <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} onMsg={onMsg} />
           {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => addFix(f.recipe.id, s.slot!)}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}
         </div>

@@ -1,5 +1,5 @@
 import { skipSnack } from '../lib/dailySnacks.js';
-import { dropRepeatSkips, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, unskipRepeat } from '../lib/repeats.js';
+import { dropRepeatSkips, pruneHandy, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, skipsAfterRemovingHandy, unskipRepeat } from '../lib/repeats.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, inWindow, markPlanned, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
@@ -272,7 +272,11 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     return null;
   },
 
-  removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index), skipsAfterLeaving(get, day, planOf(get)[day]?.[index]), repeatSkipsAfter(get, day, planOf(get)[day]?.[index])); },
+  // Removing an item that was added from a meal's tray (a handy item, brief nutrition-keep-handy) puts it back in that day's tray: its skip is cleared. Moving it does not.
+  removePlanItem(day, index) {
+    const it = planOf(get)[day]?.[index], d = get().cfg.diet;
+    putPlan(get, removeItem(planOf(get), day, index), skipsAfterLeaving(get, day, it), repeatSkipsAfter(get, day, it) ?? skipsAfterRemovingHandy(d?.repeats, d?.repeatSkips, day, it));
+  },
 
   // Daily snacks (brief daily-snacks): the saved list in cfg.diet.snacks, shown in Snack on every day of the plan window.
   saveDailySnacks(list: DailySnack[]) {
@@ -313,8 +317,8 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
 
   // Repeats (brief nutrition-meal-labels-year-repeat): cfg.diet.repeats, each stored once and shown on its weekdays of every week in the plan window.
   // Saving one from a planned item on `day` starts it that day (no back-fill); `rid` edits the days of a repeat already there.
-  saveRepeat(day, item, days, rid) {
-    const r = saveRepeat(get().cfg.diet?.repeats ?? [], { ...(rid ? { rid } : {}), item, days, from: day });
+  saveRepeat(day, item, days, rid, handy) {
+    const r = saveRepeat(pruneHandy(get().cfg.diet?.repeats ?? [], get().recipes), { ...(rid ? { rid } : {}), item, days, from: handy ? ymd(new Date()) : day, ...(handy ? { handy: true } : {}) });
     if (r.list === null) return r.error;
     get().mutateCfg(c => {
       const next = { ...(c.diet || {}), repeats: r.list };
@@ -370,7 +374,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (!rep) return 'That repeat is gone.';
     // The same cap rule as any add (`addItem`), which is also what the plan cleaner keeps: when the day cannot hold the item the repeat is refused here, before anything is skipped or stored, so it never vanishes.
     const r = addItem(planOf(get), day, { k: rep.k, id: rep.id, ...(rep.x ? { x: rep.x } : {}), ...(rep.s ? { s: rep.s } : {}) }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
-    if (r.plan === null) return `${r.error} Skip the repeat on this day to free the spot.`;
+    if (r.plan === null) return rep.h ? r.error : `${r.error} Skip the repeat on this day to free the spot.`; // a handy item just stays in the tray
     putPlan(get, r.plan, undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid));
     return r.plan[day]!.length - 1;
   },

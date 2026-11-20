@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PLAN_AHEAD, MAX_REPEATS } from '../shared/diet.js';
-import type { RepeatItem } from '../types.ts';
+import { MAX_HANDY, MAX_PLAN_AHEAD, MAX_REPEATS } from '../shared/diet.js';
+import type { Recipe, RepeatItem } from '../types.ts';
 import { shiftDay } from './dietLog.js';
-import { addRepeat, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, removeRepeatsFor, repeatPlanItem, retargetRepeats, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
+import { boardDay } from './weekBoard.js';
+import { addRepeat, handyOn, handyTrays, handyMealFor, skipsAfterRemovingHandy, trayMealOf, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, removeRepeatsFor, repeatPlanItem, retargetRepeats, repeatsShownOn, pruneHandy, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
 
 const today = '2026-11-16'; // a Monday
 const rep = (rid: string, days: number[], extra: Partial<RepeatItem> = {}): RepeatItem => ({ rid, k: 'r', id: 'oats', days, from: today, ...extra });
@@ -196,5 +197,85 @@ describe('retargetRepeats', () => {
   it('returns the same array when nothing changed', () => {
     const list = [rep('a', every, { s: 'breakfast' }), rep('b', every, { id: 'rice', s: 'snack' })];
     expect(retargetRepeats(list, 'oats', 'breakfast')).toBe(list);
+  });
+});
+
+describe('Keep handy (brief nutrition-keep-handy)', () => {
+  const rc = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'protein', ing: [{ n: 'x' }], steps: [], kcal: 300, p: 20, ...extra });
+  const recipes = [rc('oats', 'Oats', { meal: 'breakfast' }), rc('beef', 'Beef'), rc('tea', 'Tea', { uses: ['drink'] }), rc('abc', 'Apple', { meal: 'lunch' })];
+  const h = (rid: string, extra: Partial<RepeatItem> = {}) => rep(rid, every, { h: true, ...extra });
+  const day = '2026-11-18';
+  it('splits the shown repeats into the card and the tray', () => {
+    const l = [rep('a', every, { id: 'beef' }), h('b')];
+    expect(ids(repeatsShownOn(day, {}, l, undefined, today))).toEqual(['a']);
+    expect(ids(handyOn(day, {}, l, undefined, today))).toEqual(['b']);
+  });
+  it('a handy item adds nothing to the plan or the day', () => {
+    const l = [h('b')], plan = {};
+    expect(withRepeats(plan, l, undefined, [day], today)).toBe(plan);
+  });
+  it('a day with only handy items counts 0 and shows no plate hint', () => {
+    const rs = [rc('oats', 'Oats', { meal: 'breakfast' })], l = [h('b', { s: 'breakfast' })];
+    const d = boardDay(withRepeats({}, l, undefined, [day], today), day, rs, [], 2000);
+    expect(d).toMatchObject({ count: 0, kcal: 0, protein: 0 });
+    expect(d.slots.every(s => s.items.length === 0 && s.need.length === 0 && s.fixes.length === 0)).toBe(true);
+  });
+  it('the tray follows the repeat window, the start day, the skip and the stored copy', () => {
+    const l = [h('b', { s: 'breakfast' })];
+    expect(handyOn(shiftDay(today, MAX_PLAN_AHEAD + 1), {}, l, undefined, today)).toEqual([]);
+    expect(handyOn(shiftDay(today, -1), {}, l, undefined, today)).toEqual([]);
+    expect(handyOn(day, {}, [h('b', { from: '2026-11-20' })], undefined, today)).toEqual([]);
+    expect(handyOn(day, {}, l, { [day]: ['b'] }, today)).toEqual([]);
+    expect(handyOn('2026-11-19', {}, l, { [day]: ['b'] }, today)).toHaveLength(1);
+    expect(handyOn(day, { [day]: [{ k: 'r', id: 'oats', s: 'breakfast' }] }, l, undefined, today)).toEqual([]);
+  });
+  it('puts each food in its own meal, else its usual meal, else the first meal; leaves out drinks and gone foods', () => {
+    const l = [h('a', { id: 'oats' }), h('b', { id: 'beef', s: 'dinner' }), h('c', { id: 'beef' }), h('d', { id: 'tea' }), h('e', { id: 'gone' }), h('f', { id: 'abc' })];
+    const t = handyTrays(day, {}, l, undefined, today, recipes, []);
+    expect(Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v!.map(x => x.r.rid)]))).toEqual({ breakfast: ['c', 'a'], dinner: ['b'], lunch: ['f'] });
+    expect(trayMealOf(l[2]!, recipes)).toBe('breakfast');
+    expect(handyMealFor({ k: 'r', id: 'beef' }, recipes)).toBe('breakfast');
+    expect(handyMealFor({ k: 'r', id: 'abc' }, recipes)).toBe('lunch');
+  });
+  it('rows are A to Z with the numbers of one portion', () => {
+    const t = handyTrays(day, {}, [h('a', { id: 'oats' }), h('b', { id: 'beef', s: 'breakfast', x: 2 })], undefined, today, recipes, []);
+    expect(t.breakfast!.map(x => [x.res.name, x.res.kcal])).toEqual([['Beef', 600], ['Oats', 300]]);
+  });
+  it('saveRepeat: handy is every day, own cap of 24, repeats keep 12', () => {
+    const r = saveRepeat([], { item: { k: 'r', id: 'oats', s: 'breakfast' }, days: [], from: today, handy: true });
+    expect(r.list).toEqual([{ rid: 'rp1', k: 'r', id: 'oats', s: 'breakfast', days: every, from: today, h: true }]);
+    let l: RepeatItem[] = [];
+    for (let i = 0; i < MAX_HANDY; i++) l = saveRepeat(l, { item: { k: 'r', id: `h${i}` }, days: [], from: today, handy: true }).list!;
+    expect(saveRepeat(l, { item: { k: 'r', id: 'more' }, days: [], from: today, handy: true }).error).toMatch(/24 foods handy/);
+    expect(saveRepeat(l, { item: { k: 'r', id: 'more' }, days: [1], from: today }).error).toBeNull(); // repeats are counted apart
+    let full: RepeatItem[] = [];
+    for (let i = 0; i < MAX_REPEATS; i++) full = saveRepeat(full, { item: { k: 'r', id: `r${i}` }, days: [1], from: today }).list!;
+    expect(saveRepeat(full, { item: { k: 'r', id: 'x' }, days: [], from: today, handy: true }).error).toBeNull();
+    expect(saveRepeat(full, { item: { k: 'r', id: 'x' }, days: [1], from: today }).error).toMatch(/12 repeats/);
+  });
+  it('turns a handy item into a repeat and back, keeping its meal', () => {
+    const l = [h('a', { id: 'beef', s: 'dinner' })];
+    const rep2 = saveRepeat(l, { rid: 'a', item: { k: 'r', id: 'beef' }, days: weekdays, from: today }).list![0]!;
+    expect(rep2).toEqual({ rid: 'a', k: 'r', id: 'beef', s: 'dinner', days: weekdays, from: today });
+    const back = saveRepeat([rep2], { rid: 'a', item: { k: 'r', id: 'beef', s: 'dinner' }, days: [], from: today, handy: true }).list![0]!;
+    expect(back).toMatchObject({ h: true, days: every, s: 'dinner' });
+    expect(saveRepeat([rep('n', every, { id: 'beef' })], { rid: 'n', item: { k: 'r', id: 'beef', s: 'lunch' }, days: [], from: '2026-11-10', handy: true }).list![0]).toMatchObject({ s: 'lunch', from: '2026-11-10' });
+  });
+  it('a skip-on-leave never targets a handy item, so Remove on its start day returns it to the tray', () => {
+    expect(skipsAfterLeaving([h('a', { id: 'beef', s: 'dinner' })], undefined, today, { k: 'r', id: 'beef', s: 'dinner' })).toBeUndefined();
+  });
+  it('names the handy clash plainly and prunes handy items that can no longer show', () => {
+    expect(addRepeat([h('a', { id: 'beef' })], rep('n', [1], { id: 'beef' })).error).toMatch(/kept handy/);
+    expect(addRepeat([rep('a', [1], { id: 'beef' })], rep('n', [1], { id: 'beef' })).error).toMatch(/already repeats/);
+    const l = [h('a', { id: 'beef' }), h('b', { id: 'tea' }), h('c', { id: 'gone' }), h('d', { id: 'beef', k: 'm' }), rep('e', every, { id: 'gone' })];
+    expect(ids(pruneHandy(l, recipes) as RepeatItem[])).toEqual(['a', 'e']);
+    expect(pruneHandy([h('a', { id: 'beef' })], recipes)).toHaveLength(1);
+  });
+  it('removing an item added from the tray clears its skip; other items change nothing', () => {
+    const l = [h('a', { id: 'beef', s: 'dinner' })], skips = { [day]: ['a', 'z'] };
+    expect(skipsAfterRemovingHandy(l, skips, day, { k: 'r', id: 'beef', s: 'dinner' })).toEqual({ [day]: ['z'] });
+    expect(skipsAfterRemovingHandy(l, skips, day, { k: 'r', id: 'beef', s: 'lunch' })).toBeUndefined();
+    expect(skipsAfterRemovingHandy(l, undefined, day, { k: 'r', id: 'beef', s: 'dinner' })).toBeUndefined();
+    expect(skipsAfterRemovingHandy([rep('a', every, { id: 'beef', s: 'dinner' })], skips, day, { k: 'r', id: 'beef', s: 'dinner' })).toBeUndefined();
   });
 });

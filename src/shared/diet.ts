@@ -112,6 +112,9 @@ export function normSnackSkips(v: unknown, today?: string): Record<string, strin
 /** Most repeats a person can keep. */
 export const MAX_REPEATS = 12;
 
+/** Most foods a person can keep handy (brief nutrition-keep-handy); counted apart from the repeats. */
+export const MAX_HANDY = 24;
+
 /** The weekdays of a repeat as stored: whole numbers 0 (Sunday) to 6 (Saturday), once each, in order; null when none is usable. */
 export function cleanWeekdays(v: unknown): number[] | null {
   if (!Array.isArray(v)) return null;
@@ -119,15 +122,19 @@ export function cleanWeekdays(v: unknown): number[] | null {
   return kept.length ? kept : null;
 }
 
-/** The repeat list of a stored value, cleaned: a recipe or meal kind, an id, a name of its own (`rid`, unique), weekdays, a real start day; unusable and repeated ones dropped, at most MAX_REPEATS. */
+/** The repeat list of a stored value, cleaned: a recipe or meal kind, an id, a name of its own (`rid`, unique), weekdays, a real start day; `h: true` (kept handy) only when exactly true; unusable and repeated ones dropped, at most MAX_REPEATS repeats and MAX_HANDY handy ones. */
 export function normRepeats(v: unknown): RepeatItem[] {
   const out: RepeatItem[] = [];
+  let handy = 0;
   for (const raw of Array.isArray(v) ? v : []) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const o = raw as Record<string, unknown>, rid = str(o.rid, MAX_DIET_ID), id = str(o.id, MAX_DIET_ID), days = cleanWeekdays(o.days);
-    if (!rid || !id || (o.k !== 'r' && o.k !== 'm') || !days || !validDate(o.from) || out.some(r => r.rid === rid) || out.length >= MAX_REPEATS) continue;
+    if (!rid || !id || (o.k !== 'r' && o.k !== 'm') || !days || !validDate(o.from) || out.some(r => r.rid === rid)) continue;
+    const h = o.h === true;
+    if (h ? handy >= MAX_HANDY : out.length - handy >= MAX_REPEATS) continue;
+    if (h) handy++;
     const x = o.k === 'r' ? portionOf(o.x) : null, s = PLAN_SLOTS.find(t => t === o.s);
-    out.push({ rid, k: o.k, id, ...(x !== null ? { x } : {}), ...(s ? { s } : {}), days, from: o.from });
+    out.push({ rid, k: o.k, id, ...(x !== null ? { x } : {}), ...(s ? { s } : {}), days, from: o.from, ...(h ? { h: true as const } : {}) });
   }
   return out;
 }
