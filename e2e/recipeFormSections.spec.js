@@ -38,7 +38,7 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await expect(toggle(page, 'Ingredients')).toContainText('Ingredients · 5');
     await toggle(page, 'Ingredients').click();
-    await expect(page.getByLabel('Ingredient 5', { exact: true })).toHaveValue('pepper');
+    await expect(page.getByRole('button', { name: /^Ingredient 5: pepper/ })).toBeVisible(); // finished rows fold
   });
 
   test('Save is on screen in every section state', async ({ page }) => {

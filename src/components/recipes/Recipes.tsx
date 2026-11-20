@@ -11,6 +11,7 @@ import LibrarySignIn from './LibrarySignIn.js';
 import RecipeTypeTabs from './RecipeTypeTabs.js';
 import { useKept } from './useRecipesViewState.js';
 import ReadyMadeForm from './ReadyMadeForm.js';
+import type { LeaveGuard } from '../../lib/backNav.js';
 import RecipeForm from './RecipeForm.js';
 import '../Pill.css';
 import './Recipes.css';
@@ -63,7 +64,8 @@ export default function Recipes() {
   const chipCfg = useAppStore(s => s.cfg.recipeChips);
   const [view, setViewNow] = useState<View>({ kind: 'list' });
   // A recipe page or the form adds a Back step (#/daily/recipes/mine); the recipe itself is not in the address, so a reload or pasted address shows the list.
-  const page = pageOf(useRoutePath(), 'daily/recipes');
+  const path = useRoutePath(), page = pageOf(path, 'daily/recipes');
+  const formLeave = useRef<LeaveGuard | null>(null); // the open form's answer to Back (brief recipe-safer-editing)
   const setView = (v: View) => {
     setViewNow(v);
     if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind}`, page ? 'replace' : 'push');
@@ -71,11 +73,12 @@ export default function Recipes() {
   useEffect(() => {
     if (page === 'form' && view.kind === 'list') { const jump = takeRecipesJump(); if (jump && (jump.kind === 'new' || useAppStore.getState().recipes.some(r => r.id === jump.id))) { setViewNow(jump.kind === 'edit' ? { kind: 'form', id: jump.id } : { kind: 'form' }); return; } } // Nutrition's New recipe and Edit in Recipes buttons
     if (page === 'form' && view.kind === 'list') { const start = takeRecipeStart(); if (start) { setViewNow({ kind: 'form', start }); return; } } // New recipe with a shared link (the share sheet)
+    if (!page && path === 'daily/recipes' && view.kind === 'form' && formLeave.current?.holds()) { navigate('daily/recipes/form', 'push'); formLeave.current.ask(); return; } // Back with edits or the amount picker open: stay on the form (its entry is put back), close the picker or ask
     if (page && view.kind === 'list') navigate('daily/recipes', 'replace'); // an address for a page with nothing to show
     if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
     if (view.kind === 'mine' && view.from && page === 'mine') setViewNow({ kind: 'mine', id: view.from }); // Back from a linked sauce to the recipe it was opened from
     if (view.kind === 'mine' && !view.from && page === 'mine/sauce') navigate('daily/recipes/mine', 'replace'); // Forward to a sauce page with nothing it was opened from
-  }, [page, view]);
+  }, [page, path, view]);
   // Opening a linked sauce is a page opened from a page: it pushes its own address, so Back returns to the recipe.
   const openLinked = (id: string, from: string) => { setViewNow({ kind: 'mine', id, from }); navigate('daily/recipes/mine/sauce', 'push'); };
   // Kept while another Daily section is open and until reload (lib/recipesViewState.ts): the source, search, tabs, filters and the recipe in the pane.
@@ -196,7 +199,7 @@ export default function Recipes() {
       if (pane) { if (id) showSavedRecipe(id); else if (editing) setSelId(editing.id); back(); return; } // beside the list: back to the list with the recipe open in the pane
       if (id) setView({ kind: 'mine', id }); else if (editing) setView({ kind: 'mine', id: editing.id }); else back(); // a phone: the recipe's page; Cancel from Edit returns to the recipe, from New to the list
     };
-    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} {...(view.scan ? { scanFirst: true } : {})} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
+    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} {...(view.scan ? { scanFirst: true } : {})} /> : <RecipeForm recipe={editing} start={view.start} leave={formLeave} onDone={done} />}</section>;
   }
   if (view.kind === 'types') return <FoodTypeReview onDone={undo => { setTypesUndo(() => undo); back(); }} onBack={back} />;
   if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={view.from && recipes.some(r => r.id === view.from) ? backFromSauce : back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} onOpen={id => openLinked(id, mineRecipe.id)} />;

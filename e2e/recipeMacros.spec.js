@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startRecipe, unfoldAll } from './recipesNav.js';
+import { reopenRow, startRecipe, unfoldAll } from './recipesNav.js';
 
 // Recipe macros from ingredients (brief recipe-ingredient-macros). The rules (grams from an amount, the sums, per serving, what is left out) are node tests
 // in recipeMacros.test.ts; this covers the wiring with the food route stubbed: the panel, a lookup per row, a Grams box for an amount in cups, the Servings
@@ -17,7 +17,8 @@ const stub = page => page.route('**/api/foods/search*', route => {
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 // An amount is typed in the picker panel under its row (recipeServings.spec.js does the same).
 const setAmount = async (page, i, text) => {
-  await page.getByRole('button', { name: new RegExp(`^Amount for ingredient ${i + 1}:`) }).click();
+  await reopenRow(page, i); // a finished row is folded
+  await page.locator('.rc-ingblock').nth(i).locator('.rc-amt').click();
   await page.getByLabel('Type an amount instead').fill(text);
   await page.getByRole('button', { name: 'Done', exact: true }).click();
 };

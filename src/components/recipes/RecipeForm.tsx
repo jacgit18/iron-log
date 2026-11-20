@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, MutableRefObject, ReactNode } from 'react';
 import { VIDEO_ERR, isVideoUrl } from '../../lib/data.js';
 import { withoutUsed } from '../../lib/grocery.js';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
@@ -12,6 +12,9 @@ import { macroLine } from '../../lib/macroLine.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../lib/recipeTags.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
+import { backAction, enterTarget, isEdited, pickerShowing, removeRow, restoreRow, UNDO_MS, withoutPending, withPending } from '../../lib/recipeSaferEditing.js';
+import type { Pending } from '../../lib/recipeSaferEditing.js';
+import type { LeaveGuard } from '../../lib/backNav.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
@@ -46,7 +49,8 @@ const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?
 // 1 serving. Ingredients are compact rows with an amount picker, or typed as a list; each can have an Alternative, and names are offered from your
 // Groceries items as you type (choosing one pins it to that item). Steps are typed one per line. Nutrition per serving is folded away until opened.
 // `start`: a name and link to begin a new recipe with (a link shared in from another app, lib/shareTarget.ts).
-export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; onDone: (savedId: string | null) => void }) {
+// `leave`: where the form registers what Back should do (Recipes.tsx asks it before leaving the form's address; brief recipe-safer-editing).
+export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; leave?: MutableRefObject<LeaveGuard | null>; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
   const groceryAll = useAppStore(s => s.grocery);
   const groceryMonths = useAppStore(s => s.groceryMonths);
@@ -100,6 +104,59 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     const labelled = want ? [...form.querySelectorAll('label')].filter(l => l.textContent?.startsWith(want)).map(l => l.querySelector<HTMLElement>('input, select, textarea')) : [];
     (inputs[0] ?? labelled.find(Boolean) ?? form.querySelector<HTMLElement>(`#rcf-btn-${sectionOf(focusReq.field)}`))?.focus();
   }, [focusReq]);
+  // Safer editing (brief recipe-safer-editing): the form's edits are the fields now against a snapshot taken when it opened; Back, Cancel and reload ask before they lose them.
+  const sig = JSON.stringify([n, cat, uses, meal, servings, minutes, serving, servingG, kcal, protein, carbs, fat, rows, tags, tagText, own, ing, listText !== listBase ? listText : '', steps, note, url]);
+  const [baseSig] = useState(sig);
+  const edited = isEdited(baseSig, sig);
+  const [pickerAt, setPickerAt] = useState<number | null>(null); // the ingredient row whose amount picker is open
+  const [asking, setAsking] = useState(false); // "Discard changes?" is showing
+  const [pending, setPending] = useState<Pending<Row>[]>([]); // the rows Remove took out, each with its Undo for 5 seconds (newest last)
+  const [restored, setRestored] = useState<{ at: number; seq: number } | null>(null); // a row Undo put back: IngredientRows moves its own row numbers
+  const undoId = useRef(0);
+  const timers = useRef<number[]>([]);
+  const gone = useRef(false); // saved or discarded: leaving needs no question
+  const live = useRef({ edited, pickerAt, asking });
+  live.current = { edited, pickerAt: pickerShowing(pickerAt, listMode, ing.length) ? pickerAt : null, asking };
+  const state = () => backAction({ edited: live.current.edited && !gone.current, pickerOpen: live.current.pickerAt !== null, asking: live.current.asking });
+  useEffect(() => {
+    if (!leave) return;
+    const g: LeaveGuard = { holds: () => state() !== 'leave', ask: () => { if (state() === 'close-picker') setPickerAt(null); else setAsking(true); } };
+    leave.current = g;
+    return () => { if (leave.current === g) leave.current = null; };
+  }, [leave]); // eslint-disable-line react-hooks/exhaustive-deps -- reads the latest state through `live`
+  useEffect(() => {
+    if (!edited) return;
+    const warn = (e: BeforeUnloadEvent) => { if (gone.current) return; e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [edited]);
+  useEffect(() => { if (asking) document.getElementById('rc-keep')?.focus(); }, [asking]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // Enter in a text field never saves: a field that handles Enter itself (an ingredient name, the tag box, the amount picker's line) does so; any other moves to the next field, and the last one to Save.
+  const enterForward = (e: KeyboardEvent<HTMLFormElement>) => {
+    const el = e.target;
+    if (e.key !== 'Enter' || !(el instanceof HTMLInputElement) || el.type === 'checkbox' || el.type === 'radio') return;
+    const handled = e.defaultPrevented;
+    e.preventDefault();
+    if (handled) return;
+    const fields = [...e.currentTarget.querySelectorAll<HTMLElement>('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not(:disabled), select:not(:disabled), textarea:not(:disabled)')].filter(f => f.offsetParent !== null);
+    const to = enterTarget(Math.max(0, fields.indexOf(el)), fields.length);
+    (to === 'save' ? document.getElementById('rc-save') : fields[to])?.focus();
+  };
+  const cancel = () => { if (edited && !gone.current) setAsking(true); else onDone(null); };
+  const discard = () => { gone.current = true; setAsking(false); onDone(null); };
+  const removeIng = (i: number) => {
+    const out = removeRow<Row>(ing, i, () => ({ n: '', amt: '' }));
+    setIng(out.rows);
+    if (!out.removed) return; // a blank row loses nothing, and never clears an Undo that is waiting
+    const id = ++undoId.current;
+    setPending(list => withPending(list, { ...out.removed!, name: out.removed!.row.n.trim() || `ingredient ${i + 1}`, id }));
+    timers.current.push(window.setTimeout(() => setPending(list => withoutPending(list, id)), UNDO_MS));
+  };
+  const undoRemove = (p: Pending<Row>) => {
+    const back = restoreRow(ing, p, MAX_INGREDIENTS);
+    if (back) { setIng(back); setPending(list => withoutPending(list, p.id)); setRestored({ at: Math.min(p.at, ing.length), seq: (restored?.seq ?? 0) + 1 }); setErr(''); } else setErr(`A recipe holds at most ${MAX_INGREDIENTS} ingredients. Remove one to put ${p.name} back.`);
+  };
   const [calc, setCalc] = useState(false); // the Calculate from ingredients panel is open
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
 
@@ -129,7 +186,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     setListMode(false);
     return '';
   };
-  const showList = () => { const t = ingredientsToText(ing); setListText(t); setListBase(t); setListMode(true); setErr(''); };
+  const showList = () => { setPickerAt(null); const t = ingredientsToText(ing); setListText(t); setListBase(t); setListMode(true); setErr(''); };
 
   const parts = hasParts({ ing: shownRows() }); // some line links to a food or meal with an amount
   const roll = parts ? mealRollup({ id: recipe?.id, ing: shownRows(), servings: whole(servings) }, recipes) : null;
@@ -174,6 +231,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
     const microOut = recipeMicroToSave({ fromParts, rolled: rolled?.micro, rows, kcalText: kcal, kcalFrom: microKcal }); // from the parts, or the typed rows of a recipe on its own numbers
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), ...withMicro(microOut), n, cat, ...(meal ? { meal } : {}), ...(usesPicked && uses.join() !== defaultUsesFor(cat).join() ? { uses } : {}), ...(countsAs.toSave ? { counts: countsAs.toSave } : {}), ...(allTags.length ? { tags: allTags } : {}), ...(parts && own ? { own: true as const } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(url.trim() ? { url: url.trim() } : {}), ...(recipe?.from ? { from: recipe.from } : {}), ...(recipe?.usual !== undefined ? { usual: recipe.usual } : {}) }); // a usual amount has no field here (ReadyMadeForm edits it): it passes through unchanged
     if (e) { fail(fieldForSaveError(e), e); return; }
+    gone.current = true;
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
   };
@@ -252,7 +310,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   };
 
   return (
-    <form ref={formRef} className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
+    <form ref={formRef} className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} onKeyDown={enterForward} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit recipe' : 'New recipe'}</h3>
       <div className="rcf-cols">{/* from 1024 px two columns: basics, ingredients and steps beside nutrition and more (RecipeDesktop.css) */}
       <div className="rcf-col">
@@ -283,8 +341,9 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
           <p className="note" role="status">{scaleNote || servingsLine}</p>
           {listMode
             ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
-            : <IngredientRows rows={ing} options={options} sauces={sauces} foods={foods} meals={meals} partOf={rid => recipes.find(r => r.id === rid)} onAddFood={addFood} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
-                onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
+            : <IngredientRows rows={ing} open={pickerAt} onOpen={setPickerAt} restored={restored} options={options} sauces={sauces} foods={foods} meals={meals} partOf={rid => recipes.find(r => r.id === rid)} onAddFood={addFood} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
+                onRemove={removeIng} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
+          <div role="status">{pending.map(p => <p key={p.id} className="note rc-undo">Removed {p.name}. <button type="button" className="btn sm" aria-label={`Undo remove ${p.name}`} onClick={() => undoRemove(p)}>Undo</button></p>)}</div>
         </div>
       ))}
       {section('steps', (
@@ -362,9 +421,16 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
       </div>
       <div className="rcf-foot">
         {err && <p className="note gerr" role="alert">{err}</p>}
+        {asking && (
+          <div className="rc-leave" role="group" aria-label="Discard changes?" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setAsking(false); } }}>
+            <p><strong>Discard changes?</strong> Your edits to this recipe are not saved.</p>
+            <button type="button" id="rc-keep" className="btn" onClick={() => setAsking(false)}>Keep editing</button>
+            <button type="button" className="btn" onClick={discard}>Discard</button>
+          </div>
+        )}
         <div className="rc-actions rc-bar">
-          <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
-          <button type="submit" className="btn primary">Save recipe</button>
+          <button type="button" className="btn ghost" onClick={cancel}>Cancel</button>
+          <button type="submit" id="rc-save" className="btn primary">Save recipe</button>
         </div>
       </div>
     </form>

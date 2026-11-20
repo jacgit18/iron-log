@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
-import { startRecipe, unfoldAll } from './recipesNav.js';
+import { amountText, reopenRow, rowAmount, startRecipe, unfoldAll } from './recipesNav.js';
 
 // The recipe form (brief recipe-form-mobile-desktop): the amount picker, the typed list, Alternative, the folded Nutrition card, servings starting at
 // 1, and the phone and wide layouts. The rules (composing an amount, reading a list) are node tests (amountPicker.test.ts, ingredientList.test.ts);
@@ -64,9 +64,11 @@ test('Type a list reads amounts and "or" alternatives into rows, and the rows co
   await page.getByLabel(/^One ingredient per line/).fill('1 cup rolled oats\n1 cup milk or oat milk\npinch salt');
   await expect(page.getByLabel('What was read').locator('li')).toHaveCount(3);
   await page.getByRole('button', { name: 'Use these ingredients' }).click();
+  await expect(page.getByRole('button', { name: 'Ingredient 2: milk · 1 cup (or oat milk). Edit' })).toBeVisible(); // finished rows fold
+  await expect(rowAmount(page, 2)).toHaveText(amountText('pinch'));
+  await reopenRow(page, 1); // the real fields, not only the folded label
   await expect(page.getByLabel('Ingredient 2', { exact: true })).toHaveValue('milk');
   await expect(page.getByLabel('Alternative for ingredient 2')).toHaveValue('oat milk');
-  await expect(amountBtn(page, 2)).toHaveText('pinch');
   await page.getByRole('button', { name: 'Type a list' }).click();
   await expect(page.getByLabel(/^One ingredient per line/)).toHaveValue('1 cup rolled oats\n1 cup milk or oat milk\npinch salt');
   await page.getByRole('button', { name: 'Save recipe' }).click(); // saving from the list is the same as using it
@@ -87,11 +89,12 @@ test('Type a list keeps the rows of lines you did not change, and the pin and Sk
   await page.getByRole('button', { name: 'Type a list' }).click();
   await page.getByLabel(/^One ingredient per line/).fill('1 (14 oz) can tomatoes\n1 tsp salt or pepper\n3 cloves garlic');
   await page.getByRole('button', { name: 'Use these ingredients' }).click();
-  await expect(amountBtn(page, 0)).toHaveText('1 (14 oz) can'); // not read as "1"
+  await expect(rowAmount(page, 0)).toHaveText(amountText('1 (14 oz) can')); // not read as "1"
+  await expect(page.getByRole('button', { name: 'Ingredient 2: salt or pepper · 1 tsp · skipped. Edit' })).toBeVisible(); // not split into an Alternative, and the stored skip stayed with its row
+  await expect(rowAmount(page, 2)).toHaveText(amountText('3 cloves')); // the changed line was read again
+  await reopenRow(page, 1);
   await expect(page.getByLabel('Ingredient 2', { exact: true })).toHaveValue('salt or pepper'); // not split into an Alternative
   await expect(page.getByLabel('Alternative for ingredient 2')).toHaveValue('');
-  await expect(page.getByText('Skipped.')).toBeVisible(); // the stored skip stayed with its row
-  await expect(amountBtn(page, 2)).toHaveText('3 cloves'); // the changed line was read again
 });
 
 test('an empty list says so instead of clearing the rows', async ({ page }) => {
@@ -142,6 +145,7 @@ test.describe('on a phone, a recipe with an Alternative', () => {
     await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await unfoldAll(page);
+    await reopenRow(page, 0);
     const alt = page.getByLabel('Alternative for ingredient 1');
     await alt.fill('');
     await expect(alt).toBeVisible();
