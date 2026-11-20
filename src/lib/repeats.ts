@@ -59,9 +59,21 @@ export function withRepeats(plan: Plan, repeats: readonly RepeatItem[] | undefin
 type Edit = { list: RepeatItem[]; error: null } | { list: null; error: string };
 
 /** `list` with `item` added. An error text when the list is full or that repeat (same `rid`, or the same food in the same meal on the same days) is already there. */
+const CLASH = 'That already repeats on some of those days.', CLASH_HANDY = 'That food is already kept handy or repeats for that meal.';
+
+/** The error for a clash between two repeats: a handy item uses every day, so it clashes with any repeat of the same food and meal. */
+const clashText = (a: RepeatItem | undefined, b: { h?: true } | undefined): string => (a && isHandy(a)) || b?.h === true ? CLASH_HANDY : CLASH;
+
+/** `list` without the handy items that can no longer show (a drink now, or a food that is gone), so they stop counting toward the cap with nothing to remove. The same array when none. */
+export function pruneHandy(list: readonly RepeatItem[], recipes: readonly Pick<Recipe, 'id' | 'uses' | 'cat'>[]): readonly RepeatItem[] {
+  const drinks = drinkIdsOf(recipes as Recipe[]), kept = list.filter(r => !isHandy(r) || (r.k === 'r' && recipes.some(x => x.id === r.id) && !isDrinkItem({ k: r.k, id: r.id }, drinks)));
+  return kept.length === list.length ? list : kept;
+}
+
 export function addRepeat(list: readonly RepeatItem[], item: RepeatItem): Edit {
   if (isHandy(item) ? list.filter(isHandy).length >= MAX_HANDY : list.filter(r => !isHandy(r)).length >= MAX_REPEATS) return { list: null, error: isHandy(item) ? `You can keep ${MAX_HANDY} foods handy.` : `You can keep ${MAX_REPEATS} repeats.` };
-  if (list.some(r => r.rid === item.rid || (samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: item.k, id: item.id, s: item.s }) && r.days.some(d => item.days.includes(d))))) return { list: null, error: 'That already repeats on some of those days.' };
+  const clash = list.find(r => r.rid === item.rid || (samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: item.k, id: item.id, s: item.s }) && r.days.some(d => item.days.includes(d))));
+  if (clash) return { list: null, error: clashText(clash, item) };
   return { list: [...list, item], error: null };
 }
 
@@ -122,7 +134,8 @@ export function saveRepeat(list: readonly RepeatItem[], spec: { rid?: string; it
   if (spec.rid && list.some(r => r.rid === spec.rid)) {
     const me = list.find(r => r.rid === spec.rid)!;
     const meal = handy ? me.s ?? spec.item.s : me.s;
-    if (list.some(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: meal }) && r.days.some(d => days.includes(d)))) return { list: null, error: 'That already repeats on some of those days.' };
+    const clash = list.find(r => r.rid !== me.rid && samePlanItem({ k: r.k, id: r.id, s: r.s }, { k: me.k, id: me.id, s: meal }) && r.days.some(d => days.includes(d)));
+    if (clash) return { list: null, error: clashText(clash, handy ? { h: true } : undefined) };
     const { h: _was, ...rest } = me;
     const next: RepeatItem = { ...rest, days, ...(meal ? { s: meal } : {}), ...(handy ? { h: true as const, from: spec.from < me.from ? spec.from : me.from } : {}) };
     const out = list.map(r => (r.rid === spec.rid ? next : r));

@@ -1,6 +1,6 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import { macroLine } from '../../lib/macroLine.js';
-import { handyTrays } from '../../lib/repeats.js';
+import type { HandyRow } from '../../lib/repeats.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { PlanSlot } from '../../types.ts';
@@ -8,13 +8,10 @@ import type { Say } from '../../lib/eatenStep.js';
 import Icon from '../Icon.js';
 import './HandyTray.css';
 
-// A meal's Keep handy tray (brief nutrition-keep-handy): the foods kept handy for this meal, out of the day's card and totals. One button line "Handy · 6" opens the list (collapsed by default, not remembered); each row has Add, which stores the food in this meal on this day only (realizeRepeat) and takes it out of this day's tray, and Change, which opens the Repeat sheet for it. Nothing shows when the meal has no handy foods.
-export default function HandyTray({ day, slot, today, onMsg }: { day: string; slot: PlanSlot; today: string; onMsg: Say }) {
-  const repeats = useAppStore(s => s.cfg.diet?.repeats), skips = useAppStore(s => s.cfg.diet?.repeatSkips), plan = useAppStore(s => s.cfg.diet?.plan);
-  const recipes = useAppStore(s => s.recipes);
+// A meal's Keep handy tray (brief nutrition-keep-handy): the foods kept handy for this meal, out of the day's card and totals. One button line "Handy · 6" opens the list (collapsed by default, not remembered); each row has Add, which stores the food in this meal on this day only (realizeRepeat) and takes it out of this day's tray, and Change, which opens the Repeat sheet for it. `rows` are this meal's handy foods, worked out once per day by MealSections (`handyTrays`). Nothing shows when the meal has none.
+export default function HandyTray({ day, slot, rows, onMsg }: { day: string; slot: PlanSlot; rows: readonly HandyRow[]; onMsg: Say }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const rows = useMemo(() => handyTrays(day, plan ?? {}, repeats, skips, today, recipes, [])[slot] ?? [], [day, plan, repeats, skips, today, recipes, slot]);
   if (!rows.length) return null;
   const st = () => useAppStore.getState(), meal = SLOT_LABEL[slot];
   const add = (rid: string) => { const r = st().realizeRepeat(day, rid); if (typeof r === 'string') onMsg(r); };

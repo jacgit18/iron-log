@@ -1,5 +1,5 @@
 import { skipSnack } from '../lib/dailySnacks.js';
-import { dropRepeatSkips, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, skipsAfterRemovingHandy, unskipRepeat } from '../lib/repeats.js';
+import { dropRepeatSkips, pruneHandy, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, skipsAfterRemovingHandy, unskipRepeat } from '../lib/repeats.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, inWindow, markPlanned, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
@@ -318,7 +318,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   // Repeats (brief nutrition-meal-labels-year-repeat): cfg.diet.repeats, each stored once and shown on its weekdays of every week in the plan window.
   // Saving one from a planned item on `day` starts it that day (no back-fill); `rid` edits the days of a repeat already there.
   saveRepeat(day, item, days, rid, handy) {
-    const r = saveRepeat(get().cfg.diet?.repeats ?? [], { ...(rid ? { rid } : {}), item, days, from: handy ? ymd(new Date()) : day, ...(handy ? { handy: true } : {}) });
+    const r = saveRepeat(pruneHandy(get().cfg.diet?.repeats ?? [], get().recipes), { ...(rid ? { rid } : {}), item, days, from: handy ? ymd(new Date()) : day, ...(handy ? { handy: true } : {}) });
     if (r.list === null) return r.error;
     get().mutateCfg(c => {
       const next = { ...(c.diet || {}), repeats: r.list };

@@ -3,7 +3,7 @@ import { MAX_HANDY, MAX_PLAN_AHEAD, MAX_REPEATS } from '../shared/diet.js';
 import type { Recipe, RepeatItem } from '../types.ts';
 import { shiftDay } from './dietLog.js';
 import { boardDay } from './weekBoard.js';
-import { addRepeat, handyOn, handyTrays, handyMealFor, skipsAfterRemovingHandy, trayMealOf, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, removeRepeatsFor, repeatPlanItem, retargetRepeats, repeatsShownOn, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
+import { addRepeat, handyOn, handyTrays, handyMealFor, skipsAfterRemovingHandy, trayMealOf, repeatFor, repeatSummary, daysName, dropRepeatSkips, EVERY_DAY, newRid, removeRepeat, removeRepeatsFor, repeatPlanItem, retargetRepeats, repeatsShownOn, pruneHandy, sameDays, saveRepeat, skipRepeat, skipsAfterLeaving, toggleWeekday, unskipRepeat, WEEKDAYS, withRepeats } from './repeats.js';
 
 const today = '2026-11-16'; // a Monday
 const rep = (rid: string, days: number[], extra: Partial<RepeatItem> = {}): RepeatItem => ({ rid, k: 'r', id: 'oats', days, from: today, ...extra });
@@ -263,6 +263,13 @@ describe('Keep handy (brief nutrition-keep-handy)', () => {
   });
   it('a skip-on-leave never targets a handy item, so Remove on its start day returns it to the tray', () => {
     expect(skipsAfterLeaving([h('a', { id: 'beef', s: 'dinner' })], undefined, today, { k: 'r', id: 'beef', s: 'dinner' })).toBeUndefined();
+  });
+  it('names the handy clash plainly and prunes handy items that can no longer show', () => {
+    expect(addRepeat([h('a', { id: 'beef' })], rep('n', [1], { id: 'beef' })).error).toMatch(/kept handy/);
+    expect(addRepeat([rep('a', [1], { id: 'beef' })], rep('n', [1], { id: 'beef' })).error).toMatch(/already repeats/);
+    const l = [h('a', { id: 'beef' }), h('b', { id: 'tea' }), h('c', { id: 'gone' }), h('d', { id: 'beef', k: 'm' }), rep('e', every, { id: 'gone' })];
+    expect(ids(pruneHandy(l, recipes) as RepeatItem[])).toEqual(['a', 'e']);
+    expect(pruneHandy([h('a', { id: 'beef' })], recipes)).toHaveLength(1);
   });
   it('removing an item added from the tray clears its skip; other items change nothing', () => {
     const l = [h('a', { id: 'beef', s: 'dinner' })], skips = { [day]: ['a', 'z'] };
