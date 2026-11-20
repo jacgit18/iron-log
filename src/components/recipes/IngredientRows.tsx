@@ -3,7 +3,7 @@ import { addRecent, loadRecents, saveRecents } from '../../lib/amountPicker.js';
 import type { ScaleRow } from '../../lib/recipeScale.js';
 import type { Suggestion } from '../../lib/recipeSuggest.js';
 import { amountText } from '../../lib/foodUnit.js';
-import { afterAmount, foldedSummary, isFolded, landsAt } from '../../lib/recipeSaferEditing.js';
+import { afterAmount, foldedSummary, isFolded, landsAt, shiftForInsert, shiftSetForInsert } from '../../lib/recipeSaferEditing.js';
 import { MAX_INGREDIENTS, MAX_Q, MAX_RECIPE_NAME } from '../../shared/recipes.js';
 import type { Recipe, RecipeIngredient } from '../../types.ts';
 import Icon from '../Icon.js';
@@ -20,19 +20,25 @@ export type Row = RecipeIngredient & ScaleRow;
 // The ingredient rows of the recipe form (brief recipe-form-mobile-desktop): one line each (amount button, name, remove). The Alternative is a
 // third column on a wide screen and a "+ Alternative" link on a phone. Skip is not offered; a row that already has it says so and can be included
 // again, so stored data is never stuck.
-export default function IngredientRows({ rows, open, onOpen, options, sauces, foods, meals, partOf, onActive, onRename, onType, onSet, onRemove, onAdd, onAddSauce, onAddFood }: {
-  rows: Row[]; open: number | null; onOpen: (i: number | null) => void; // the row whose amount picker is open (held by the form, so Back can close it)
+export default function IngredientRows({ rows, open, onOpen, restored, options, sauces, foods, meals, partOf, onActive, onRename, onType, onSet, onRemove, onAdd, onAddSauce, onAddFood }: {
+  rows: Row[]; open: number | null; onOpen: (i: number | null) => void; restored: { at: number; seq: number } | null; // the row whose amount picker is open (held by the form, so Back can close it)
   options: Suggestion[]; sauces: Recipe[]; foods: Recipe[]; meals: Recipe[]; partOf: (rid: string) => Recipe | undefined; onActive: (i: number, field: 'n' | 'sub') => void; onRename: (i: number, name: string) => void; onType: (i: number, amt: string) => void;
   onSet: (i: number, patch: Partial<RecipeIngredient>) => void; onRemove: (i: number) => void; onAdd: () => void;
   onAddSauce: (sauce: Recipe) => number; // adds a linked row; the index it landed on, or -1 when the list is full
   onAddFood: (part: Recipe) => string | null; // adds a linked row with an amount; why it was refused (a loop, too deep, full), or null
 }) {
   const [editing, setEditing] = useState<number | null>(null); // the finished row kept open because it is being edited (brief recipe-safer-editing); unfinished rows are always open
+  const [seenRestore, setSeenRestore] = useState(restored?.seq ?? 0);
   const justFocused = useRef(false); // a name was just focused by a press: the release must not drop its selection
   const [alt, setAlt] = useState<ReadonlySet<number>>(new Set()); // rows whose Alternative was opened on a phone
   const [browse, setBrowse] = useState(false); // the Sauce or seasoning picker under the rows is open
   const [food, setFood] = useState(false); // the Food or meal picker under the rows is open
   const [recents, setRecents] = useState(loadRecents);
+  if (restored && restored.seq !== seenRestore) { // Undo put a row back: the rows below it moved down one, and so did our row numbers
+    setSeenRestore(restored.seq);
+    setEditing(e => shiftForInsert(e, restored.at));
+    setAlt(a => shiftSetForInsert(a, restored.at));
+  }
   const focus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
   const close = (i: number) => { onOpen(null); focus(`rc-amt-${i}`); };
   const edit = (i: number) => { setEditing(i); onOpen(null); };

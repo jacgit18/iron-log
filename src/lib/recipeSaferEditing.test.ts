@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterAmount, backAction, foldedSummary, isEdited, isFolded, landsAt, nextUnfinished, offersUndo, removeRow, restoreRow, rowDone, type EditRow } from './recipeSaferEditing.js';
+import { afterAmount, backAction, enterTarget, pickerShowing, shiftForInsert, shiftSetForInsert, withoutPending, withPending, type Pending, foldedSummary, isEdited, isFolded, landsAt, nextUnfinished, offersUndo, removeRow, restoreRow, rowDone, type EditRow } from './recipeSaferEditing.js';
 
 const r = (n: string, amt = '', more: Partial<EditRow> = {}): EditRow => ({ n, amt, ...more });
 const blank = () => r('');
@@ -30,6 +30,11 @@ describe('nextUnfinished and afterAmount', () => {
     expect(afterAmount([r('A', '1'), r('B')], 0)).toEqual({ kind: 'row', i: 1 });
     expect(afterAmount([r('A'), r('B', '1')], 1)).toEqual({ kind: 'row', i: 0 });
     expect(afterAmount([r('A', '1'), r('B', '2')], 1)).toEqual({ kind: 'save' });
+  });
+  it('keeps the row when its amount was cleared or it has no name, instead of going to Save', () => {
+    expect(afterAmount([r('A', '1'), r('B', '')], 1)).toEqual({ kind: 'row', i: 1 });
+    expect(afterAmount([r('A', '1'), r('', '2')], 1)).toEqual({ kind: 'row', i: 1 });
+    expect(afterAmount([r('A', ''), r('B')], 0)).toEqual({ kind: 'row', i: 0 });
   });
 });
 
@@ -100,5 +105,47 @@ describe('landsAt', () => {
     expect(landsAt([r('A', '1')])).toBe(1);
     expect(landsAt([r('A', '1'), r('', '', { sub: 'x' })])).toBe(2);
     expect(landsAt([])).toBe(0);
+  });
+});
+
+describe('pickerShowing', () => {
+  it('is open only on screen', () => {
+    expect(pickerShowing(1, false, 3)).toBe(true);
+    expect(pickerShowing(null, false, 3)).toBe(false);
+    expect(pickerShowing(1, true, 3)).toBe(false); // Type a list is showing
+    expect(pickerShowing(3, false, 3)).toBe(false); // the row is gone
+  });
+});
+
+describe('enterTarget', () => {
+  it('goes to the next field, and to Save after the last', () => {
+    expect(enterTarget(0, 3)).toBe(1);
+    expect(enterTarget(2, 3)).toBe('save');
+    expect(enterTarget(0, 0)).toBe('save');
+  });
+});
+
+describe('pending undo list', () => {
+  const p = (id: number, n: string): Pending => ({ row: r(n, '1'), at: id, name: n, id });
+  it('keeps every removed row, newest last, and a blank removal changes nothing', () => {
+    const one = withPending([], p(1, 'A'));
+    const two = withPending(one, p(2, 'B'));
+    expect(two.map(x => x.name)).toEqual(['A', 'B']);
+    expect(withPending(two, null)).toEqual(two);
+  });
+  it('drops one entry by id', () => {
+    const list = [p(1, 'A'), p(2, 'B')];
+    expect(withoutPending(list, 1).map(x => x.name)).toEqual(['B']);
+    expect(withoutPending(list, 9)).toEqual(list);
+  });
+});
+
+describe('indices after Undo', () => {
+  it('moves the open row and the Alternative boxes below a restored row', () => {
+    expect(shiftForInsert(2, 1)).toBe(3);
+    expect(shiftForInsert(1, 1)).toBe(2);
+    expect(shiftForInsert(0, 1)).toBe(0);
+    expect(shiftForInsert(null, 1)).toBeNull();
+    expect([...shiftSetForInsert(new Set([0, 1, 4]), 1)].sort()).toEqual([0, 2, 5]);
   });
 });

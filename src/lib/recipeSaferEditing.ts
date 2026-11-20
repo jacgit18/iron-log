@@ -19,6 +19,7 @@ export function nextUnfinished(rows: readonly EditRow[], after = -1): number | n
 
 /** Where to go once an amount is set on row `i`: the next unfinished row, or Save when none is left. */
 export function afterAmount(rows: readonly EditRow[], i: number): { kind: 'row'; i: number } | { kind: 'save' } {
+  if (rows[i] && !rowDone(rows[i]!)) return { kind: 'row', i }; // the amount was cleared (or there is no name): the row stays open and keeps focus
   const next = nextUnfinished(rows, i) ?? nextUnfinished(rows.slice(0, i));
   return next === null ? { kind: 'save' } : { kind: 'row', i: next };
 }
@@ -74,3 +75,21 @@ export function landsAt(rows: readonly EditRow[]): number {
   const last = rows[rows.length - 1];
   return last && !last.n.trim() && !last.amt?.trim() && !last.sub ? rows.length - 1 : rows.length;
 }
+
+/** The amount picker counts as open for Back only while it is on screen: not in Type a list, and not for a row that is gone. */
+export const pickerShowing = (at: number | null, listMode: boolean, rowCount: number): boolean => at !== null && !listMode && at < rowCount;
+
+/** Where Enter goes from field `i` of `count` fields in order: the next field, or Save after the last. Enter never saves. */
+export const enterTarget = (i: number, count: number): number | 'save' => (i + 1 < count ? i + 1 : 'save');
+
+/** A removed row waiting for Undo, with the id its 5 seconds are counted by. */
+export type Pending<T extends EditRow = EditRow> = Removed & { row: T; name: string; id: number };
+/** Adds a removed row to the Undo list (newest last); a removal that offers no Undo (a blank row) leaves every pending Undo alone. */
+export const withPending = <T extends EditRow>(list: readonly Pending<T>[], p: Pending<T> | null): Pending<T>[] => (p ? [...list, p] : [...list]);
+/** The Undo list without one entry (restored, or its 5 seconds are up). */
+export const withoutPending = <T extends EditRow>(list: readonly Pending<T>[], id: number): Pending<T>[] => list.filter(p => p.id !== id);
+
+/** A row index after a row was put back at `at`: rows from there on moved down one. */
+export const shiftForInsert = (i: number | null, at: number): number | null => (i !== null && i >= at ? i + 1 : i);
+/** The set of row indices (the Alternative boxes opened on a phone) after a row was put back at `at`. */
+export const shiftSetForInsert = (s: ReadonlySet<number>, at: number): Set<number> => new Set([...s].map(k => (k >= at ? k + 1 : k)));

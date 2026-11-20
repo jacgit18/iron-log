@@ -100,3 +100,66 @@ test('Remove shows Undo and Undo puts the row back where it was', async ({ page 
   await expect(page.getByText('Removed Corn.')).toBeVisible();
   await expect(page.getByText('Removed Corn.')).toHaveCount(0, { timeout: 8000 }); // the notice goes after 5 seconds
 });
+
+// Review fixes for PR 1053.
+const fillRows = async (page, rows) => {
+  for (const [i, [n, amt]] of rows.entries()) {
+    if (i > 0) await page.getByRole('button', { name: 'Add ingredient' }).click();
+    await name(page, i).fill(n);
+    await setAmount(page, i, amt);
+  }
+};
+
+test('Removing a blank row or a second row keeps the first row’s Undo', async ({ page }) => {
+  await open(page);
+  await fillRows(page, [['Rice', '1 cup'], ['Beans', '2 cups'], ['Corn', '3 cups']]);
+  await page.getByRole('button', { name: 'Remove ingredient 1' }).click();
+  await page.getByRole('button', { name: 'Add ingredient' }).click();
+  await page.getByRole('button', { name: 'Remove ingredient 3' }).click(); // a blank row: no Undo of its own, and the Rice one stays
+  await page.getByRole('button', { name: 'Remove ingredient 1' }).click(); // Beans, a second real row
+  await expect(page.getByRole('button', { name: 'Undo remove Rice' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Undo remove Beans' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo remove Beans' }).click();
+  await page.getByRole('button', { name: 'Undo remove Rice' }).click();
+  await expect(page.getByRole('button', { name: /^Ingredient 1: Rice/ })).toBeVisible();
+});
+
+test('Undo keeps the right row open', async ({ page }) => {
+  await open(page);
+  await fillRows(page, [['Rice', '1 cup'], ['Beans', '2 cups'], ['Corn', '3 cups']]);
+  await page.getByRole('button', { name: /^Ingredient 3: Corn/ }).click(); // Corn is the open row
+  await page.getByRole('button', { name: 'Remove ingredient 1' }).click();
+  await page.getByRole('button', { name: 'Undo remove Rice' }).click();
+  await expect(name(page, 2)).toHaveValue('Corn'); // still open, now at row 3
+  await expect(page.getByRole('button', { name: /^Ingredient 2: Beans/ })).toBeVisible(); // Beans stayed folded
+});
+
+test('Back after switching to Type a list closes nothing and leaves at once', async ({ page }) => {
+  await open(page);
+  await amountBtn(page, 0).click();
+  await page.getByRole('button', { name: 'Type a list' }).click();
+  await page.goBack();
+  await expect(page.locator('#recipes-new')).toBeVisible();
+});
+
+test('Enter in other fields moves to the next field and the last one to Save, never saving', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  await page.getByLabel('Name', { exact: true }).press('Enter');
+  await expect(page.getByLabel('Name', { exact: true })).not.toBeFocused();
+  await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
+  const link = page.getByLabel('Video link (optional)');
+  await link.press('Enter');
+  await expect(page.getByRole('button', { name: 'Save recipe' })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
+});
+
+test('Clearing an amount keeps focus on that row instead of jumping to Save', async ({ page }) => {
+  await open(page);
+  await fillRows(page, [['Rice', '1 cup']]);
+  await page.getByRole('button', { name: /^Ingredient 1: Rice/ }).click();
+  await amountBtn(page, 0).click();
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(amountBtn(page, 0)).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Save recipe' })).not.toBeFocused();
+});
