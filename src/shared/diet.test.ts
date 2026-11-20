@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAN_SLOTS, MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_PLAN_AHEAD, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { PLAN_SLOTS, MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_PLAN_AHEAD, MAX_HANDY, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -234,6 +234,17 @@ describe('repeats and repeatSkips in cfg.diet (brief nutrition-meal-labels-year-
     expect(MAX_REPEATS).toBe(12);
     const many = Array.from({ length: 20 }, (_, i) => ({ ...rep, rid: `r${i}` }));
     expect(normRepeats(many)).toHaveLength(12);
+  });
+  it('keeps h only when exactly true, and counts handy items apart from repeats (24 and 12)', () => {
+    expect(normRepeats([{ ...rep, h: true }])).toEqual([{ ...rep, h: true }]);
+    expect(normRepeats([{ ...rep, h: 'yes' }, { ...rep, rid: 'b', h: false }, { ...rep, rid: 'c', h: 1 }])).toEqual([rep, { ...rep, rid: 'b' }, { ...rep, rid: 'c' }]);
+    expect(MAX_HANDY).toBe(24);
+    const mixed = [...Array.from({ length: 30 }, (_, i) => ({ ...rep, rid: `h${i}`, h: true })), ...Array.from({ length: 15 }, (_, i) => ({ ...rep, rid: `r${i}` }))];
+    const out = normRepeats(mixed);
+    expect(out.filter(r => r.h)).toHaveLength(24);
+    expect(out.filter(r => !r.h)).toHaveLength(12);
+    const cfg = { repeats: [{ ...rep, h: true, s: 'lunch' }] };
+    expect(normDietCfg(normDietCfg(cfg, '2026-10-30'), '2026-10-30')).toEqual(cfg);
   });
   it('cleans skips: real dates, text ids once each, no empty day; with today the window applies', () => {
     const raw = { '2026-11-02': ['a', 'a', 'b', '', 5], nope: ['a'], '2026-11-03': [], '2026-10-01': ['a'], '2028-01-01': ['a'] };
