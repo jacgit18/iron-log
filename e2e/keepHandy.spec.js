@@ -24,12 +24,12 @@ const keepHandy = async page => {
   const rep = page.getByRole('dialog', { name: 'Repeat Almonds' });
   await rep.getByRole('button', { name: 'Keep handy', exact: true }).click();
   await expect(rep.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'false');
-  await expect(rep.getByRole('status')).toContainText('Kept handy for Snack. Add it to a day with + Add.');
+  await expect(rep.getByRole('status')).toContainText('Kept handy for Snack. Add it to a day with Add.');
   await rep.getByRole('button', { name: 'Keep handy', exact: true }).last().click(); // Save
   await expect(page.getByRole('dialog')).toHaveCount(0);
 };
 
-test('Keep handy puts the food in a collapsed tray on other days, and + Add stores it on that day only', async ({ page }) => {
+test('Keep handy puts the food in a collapsed tray on other days, and Add stores it on that day only', async ({ page }) => {
   await seed(page);
   await openNutrition(page);
   await keepHandy(page);
@@ -39,7 +39,7 @@ test('Keep handy puts the food in a collapsed tray on other days, and + Add stor
   await expect(tray(page, '2026-09-27')).toHaveCount(0); // the day it was planned on holds the real item
   await t.click();
   await expect(t).toHaveAttribute('aria-expanded', 'true');
-  await snack(col(page, '2026-09-28')).getByRole('button', { name: '+ Add Almonds to Snack' }).click();
+  await snack(col(page, '2026-09-28')).getByRole('button', { name: 'Add Almonds to Snack' }).click();
   await expect(snack(col(page, '2026-09-28')).locator('.wb-card', { hasText: 'Almonds' })).toHaveCount(1);
   await expect(tray(page, '2026-09-28')).toHaveCount(0); // gone from that day's tray
   await expect(tray(page, '2026-09-29')).toHaveCount(1); // other days keep it

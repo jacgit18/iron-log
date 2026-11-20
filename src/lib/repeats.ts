@@ -3,6 +3,7 @@ import { parseDate } from '../shared/dates.js';
 import type { PlanItem, PlanSlot, Recipe, RepeatItem, SavedMeal } from '../types.ts';
 import { inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { drinkIdsOf } from './recipeUses.js';
+import { nameCmp } from './sort.js';
 import { mealOfItem } from './usualMeal.js';
 
 /* ---------- Repeats (brief nutrition-meal-labels-year-repeat): an item stored once and shown on chosen weekdays of every week in the plan window. Pure; the store writes the list and the board draws what shows. ---------- */
@@ -40,7 +41,7 @@ export function handyTrays(day: string, plan: Plan, repeats: readonly RepeatItem
     if (res.gone || isDrinkItem({ k: r.k, id: r.id }, drinks)) continue;
     (out[trayMealOf(r, recipes)] ??= []).push({ r, res });
   }
-  for (const rows of Object.values(out)) rows.sort((a, b) => a.res.name.localeCompare(b.res.name, undefined, { sensitivity: 'base' }) || a.r.rid.localeCompare(b.r.rid));
+  for (const rows of Object.values(out)) rows.sort(nameCmp((x: HandyRow) => x.res.name, x => x.r.rid));
   return out;
 }
 
@@ -163,8 +164,8 @@ export function repeatFor(list: readonly RepeatItem[] | undefined, item: { k: st
   return list?.find(r => samePlanItem(item as PlanItem, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) }) && (!day || (day >= r.from && r.days.includes(weekday!))));
 }
 
-/** The sentence under the Keep handy choice. */
-export const handySummary = (meal: string): string => `Kept handy for ${meal}. Add it to a day with + Add.`;
+/** The sentence under the Keep handy choice (the tray button is "Add": the wording table has no "+ Add"). */
+export const handySummary = (meal: string): string => `Kept handy for ${meal}. Add it to a day with Add.`;
 
 /** The meal a food is kept handy for from the sheet: the card's own meal, else its usual meal, else the first meal of the day. */
 export const handyMealFor = (item: { k: 'r' | 'm'; id: string; s?: PlanSlot }, recipes: readonly Pick<Recipe, 'id' | 'meal'>[]): PlanSlot => mealOfItem(item, recipes) ?? PLAN_SLOTS[0]!;
