@@ -86,18 +86,18 @@ describe('hidden plate hints', () => {
   const plan = { [D]: [pp('toast', 'breakfast'), pp('chili', 'dinner')], [D2]: [pp('toast', 'breakfast')] };
   const slotOf = (d: ReturnType<typeof boardDay>, s: string) => d.slots.find(x => x.slot === s)!;
   it('a meal in the hidden list has no need and no fixes; the others keep theirs', () => {
-    const d = boardDay(plan, D, recipes, [], null, {}, ['breakfast']);
+    const d = boardDay(plan, D, recipes, [], null, {}, { off: ['breakfast'] });
     expect(slotOf(d, 'breakfast')).toMatchObject({ need: [], have: [], fixes: [] });
     expect(slotOf(d, 'dinner').fixes.length).toBeGreaterThan(0);
     expect(slotOf(boardDay(plan, D, recipes, [], null), 'breakfast').fixes.length).toBeGreaterThan(0);
   });
   it('hides calories and totals nowhere', () => {
-    expect(boardDay(plan, D, recipes, [], null, {}, ['breakfast', 'dinner'])).toMatchObject({ kcal: 560, protein: 35 });
+    expect(boardDay(plan, D, recipes, [], null, {}, { off: ['breakfast', 'dinner'] })).toMatchObject({ kcal: 560, protein: 35 });
   });
   it('hiddenHints joins the switch and the day dismissal; one day does not touch the next', () => {
     expect(hiddenHints(['breakfast'], { [D]: ['breakfast', 'lunch'] }, D)).toEqual(['breakfast', 'lunch']);
     expect(hiddenHints(undefined, { [D]: ['lunch'] }, D2)).toEqual([]);
-    const d2 = boardDay(plan, D2, recipes, [], null, {}, hiddenHints(undefined, { [D]: ['breakfast'] }, D2));
+    const d2 = boardDay(plan, D2, recipes, [], null, {}, { skips: { [D]: ['breakfast'] } });
     expect(slotOf(d2, 'breakfast').fixes.length).toBeGreaterThan(0);
   });
   it('withHintSwitch writes meal order, off adds and on removes', () => {
