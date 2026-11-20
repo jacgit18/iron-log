@@ -26,7 +26,7 @@ import { inLibraryTab, libraryEmptyNote, libraryHave } from '../../lib/libraryRo
 import { SOURCES, countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts, yourHeadingShown } from '../../lib/recipeMerged.js';
 import { comboIds, comboTabCounts, expandedRows, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
-import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, emptyTabNote, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
+import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, activeFilterCount, emptyTabNote, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
 import { loggableRecipe, recentRows } from '../../lib/recipeRows.js';
 import { NUTRITION_FILTERS, nutritionBadge } from '../../lib/recipeNutrition.js';
@@ -240,6 +240,8 @@ export default function Recipes() {
 
 
   const yours = src !== 'library'; // the Library filter hides your group
+  const nFilters = activeFilterCount({ cat, canMake, tags: activeTags, nutrition: nutSel }, yours); // shown on the Filters button, so a closed bar still says filters are on
+  const clearFilters = () => { setCat(null); setCanMake(false); setTagSel([]); setNutSel([]); };
   const libBox = boxOn ? (
     <section className="rc-libbox" id="recipes-library-box" aria-labelledby="rc-libbox-h">
       <h3 id="rc-libbox-h" className="rc-libhd">Library · not in your recipes yet{libReady ? ` (${countText('library', srcCounts)})` : ''}</h3>
@@ -276,7 +278,7 @@ export default function Recipes() {
       </div>
       <div className="rc-top">
         <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
-        <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
+        <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters{nFilters > 0 ? ` (${nFilters})` : ''}<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
       </div>
       <div className="rc-src" role="group" aria-label="Recipe source">
         {SOURCES.map(o => {
@@ -293,6 +295,7 @@ export default function Recipes() {
         <div className="rc-chips">
           {yours && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
           <button type="button" className="rc-manage" onClick={() => useAppStore.getState().openModal({ type: 'recipefilters' })}>Manage filters</button>
+          {nFilters > 0 && <button type="button" id="recipes-clear-filters" onClick={clearFilters}>Clear filters</button>}
         </div>
         {yours && tags.length > 0 && (
           <div className="rc-chips" role="group" aria-label="Tags">
@@ -335,7 +338,7 @@ export default function Recipes() {
           { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setBrowse(true) },
         ]} />
       )}
-      {yours && recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{libReady && groups.library.length > 0 ? 'None of yours match.' : recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)}</p>}
+      {yours && recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{libReady && groups.library.length > 0 ? 'None of yours match.' : recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)} {nFilters > 0 && <button type="button" className="btn sm" id="recipes-clear-empty" onClick={clearFilters}>Clear filters</button>}</p>}
       {!yours && !boxOn && <p className="note">The library has nothing for this tab or category.</p>}
       <div className={pane && yours ? 'rc-split' : undefined}>
         <div className="rc-merged">
