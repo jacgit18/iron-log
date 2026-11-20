@@ -47,7 +47,6 @@ test('desktop: Esc closes the picker first, then asks, then leaves; a phone igno
   await name(page, 0).fill('Rice');
   await page.getByRole('button', { name: /^Amount for ingredient 1:/ }).click();
   await expect(page.getByRole('group', { name: 'Amount for Rice' })).toBeVisible();
-  await page.getByRole('button', { name: 'Ingredient 1: Rice' }).count(); // no-op: keeps the row open
   await page.getByLabel('Name', { exact: true }).focus(); // focus outside the picker
   await page.keyboard.press('Escape');
   await expect(page.getByRole('group', { name: 'Amount for Rice' })).toHaveCount(0);
@@ -64,7 +63,7 @@ test('desktop: Esc closes the picker first, then asks, then leaves; a phone igno
   await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
 });
 
-test('desktop: Ctrl+Enter saves, and a double press makes one recipe', async ({ page }) => {
+test('desktop: Ctrl+Enter saves, and a double press makes exactly one recipe', async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await open(page);
   await page.getByLabel('Name', { exact: true }).fill('Ctrl soup');
@@ -72,8 +71,79 @@ test('desktop: Ctrl+Enter saves, and a double press makes one recipe', async ({ 
   await page.keyboard.press('Control+Enter');
   await page.keyboard.press('Control+Enter');
   await expect(page.getByRole('heading', { name: 'Ctrl soup' })).toBeVisible();
-  const stored = await page.evaluate(() => JSON.stringify(window.localStorage).split('Ctrl soup').length - 1);
-  expect(stored).toBeLessThanOrEqual(2); // one recipe (a name can appear in more than one stored place, never doubled by a second save)
+  await page.goBack();
+  await expect(page.getByText('Ctrl soup')).toHaveCount(1);
+});
+
+test('desktop: Ctrl+Enter does not save while the amount picker is open or Discard changes? shows', async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Held soup');
+  await name(page, 0).fill('Rice');
+  await page.getByRole('button', { name: /^Amount for ingredient 1:/ }).click();
+  await page.getByLabel('Type an amount instead').fill('2 cups');
+  await page.keyboard.press('Control+Enter');
+  await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible(); // not saved: Ctrl+Enter only confirmed the typed amount, which folded the row
+  await expect(page.getByRole('button', { name: 'Ingredient 1: Rice · 2 cups. Edit' })).toBeVisible();
+  await page.getByLabel('Name', { exact: true }).focus();
+  await page.keyboard.press('Escape'); // asks
+  await expect(page.getByRole('group', { name: 'Discard changes?' })).toBeVisible();
+  await page.keyboard.press('Control+Enter');
+  await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
+});
+
+test('a failed save keeps Save enabled and a fixed form saves', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Name', { exact: true }).fill('Fix soup');
+  await name(page, 0).fill('Rice');
+  await page.getByLabel('Servings', { exact: true }).fill('100');
+  await page.locator('#rc-save').click();
+  await expect(page.getByRole('alert')).toContainText('Servings');
+  await expect(page.locator('#rc-save')).toBeEnabled();
+  await expect(page.locator('#rc-save')).toHaveText('Save recipe');
+  await page.getByLabel('Servings', { exact: true }).fill('2');
+  await page.locator('#rc-save').click();
+  await expect(page.getByRole('heading', { name: 'Fix soup' })).toBeVisible();
+});
+
+test('Remove moves focus to the next row, else the previous, else Add ingredient; the menu closes on Tab away', async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await open(page);
+  for (const [i, n] of ['Rice', 'Beans', 'Corn'].entries()) {
+    await name(page, i).fill(n);
+    if (i < 2) await page.getByRole('button', { name: 'Add ingredient' }).click();
+  }
+  await page.getByRole('button', { name: 'More for ingredient 2' }).click();
+  await page.keyboard.press('Tab'); // leaves the menu
+  await expect(page.getByRole('button', { name: 'Remove ingredient 2' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'More for ingredient 2' }).click();
+  await page.getByRole('button', { name: 'Remove ingredient 2' }).click();
+  await expect(name(page, 1)).toBeFocused(); // Corn took its place
+  await page.getByRole('button', { name: 'More for ingredient 2' }).click();
+  await page.getByRole('button', { name: 'Remove ingredient 2' }).click();
+  await expect(name(page, 0)).toBeFocused(); // the last row went: the previous one
+});
+
+test('the sticky Save bar does not cover the open menu or the Undo notice at the bottom of a long list', async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await open(page);
+  for (let i = 0; i < 14; i++) {
+    await name(page, i).fill(`Item ${i}`);
+    await page.getByRole('button', { name: 'Add ingredient' }).click();
+  }
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const last = 14; // the empty last row
+  await name(page, last).fill('Last');
+  await page.getByRole('button', { name: `More for ingredient ${last + 1}` }).click();
+  const rm = page.getByRole('button', { name: `Remove ingredient ${last + 1}` });
+  await expect(rm).toBeInViewport();
+  const onTop = btn => btn.evaluate(el => { const r = el.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return el === hit || el.contains(hit); });
+  expect(await onTop(rm)).toBe(true);
+  await rm.click();
+  const undo = page.getByRole('button', { name: 'Undo remove Last' });
+  await undo.scrollIntoViewIfNeeded();
+  await expect(undo).toBeInViewport();
+  expect(await onTop(undo)).toBe(true);
 });
 
 test('a double click on Save makes one recipe', async ({ page }) => {

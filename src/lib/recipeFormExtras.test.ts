@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canSave, formKey, menuAfterRemove, progressLine, scrollDelta } from './recipeFormExtras.js';
+import { canSave, focusAfterRemove, formKey, menuAfterRemove, progressLine, scrollDelta } from './recipeFormExtras.js';
 
 const r = (n: string, amt = '') => ({ n, amt });
 const key = (key: string, mods: { ctrlKey?: boolean; metaKey?: boolean } = {}) => ({ key, ctrlKey: false, metaKey: false, ...mods });
@@ -26,6 +26,10 @@ describe('formKey', () => {
     expect(formKey(key('Enter', { metaKey: true }), true)).toBe('save');
     expect(formKey(key('Enter'), true)).toBeNull();
     expect(formKey(key('a', { ctrlKey: true }), true)).toBeNull();
+  });
+  it('does not save while the picker is open or the discard question shows, but Esc still goes back', () => {
+    expect(formKey(key('Enter', { ctrlKey: true }), true, true)).toBeNull();
+    expect(formKey(key('Escape'), true, true)).toBe('back');
   });
   it('does nothing on a phone', () => {
     expect(formKey(key('Escape'), false)).toBeNull();
@@ -55,5 +59,14 @@ describe('menuAfterRemove', () => {
     expect(menuAfterRemove(1, 1)).toBeNull();
     expect(menuAfterRemove(3, 1)).toBe(2);
     expect(menuAfterRemove(0, 1)).toBe(0);
+  });
+});
+
+describe('focusAfterRemove', () => {
+  it('goes to the row that took its place, else the previous, else Add ingredient', () => {
+    expect(focusAfterRemove(1, 3)).toEqual({ kind: 'row', i: 1 });
+    expect(focusAfterRemove(2, 2)).toEqual({ kind: 'row', i: 1 });
+    expect(focusAfterRemove(0, 1)).toEqual({ kind: 'row', i: 0 });
+    expect(focusAfterRemove(0, 0)).toEqual({ kind: 'add' });
   });
 });

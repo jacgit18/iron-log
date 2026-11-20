@@ -11,11 +11,11 @@ export function progressLine(rows: readonly EditRow[]): string {
   return `${n} of ${named.length} ingredient${named.length === 1 ? '' : 's'} done`;
 }
 
-/** What a key does in the form: Esc is Back (desktop only), Ctrl or Cmd+Enter saves (desktop only), anything else nothing. */
-export function formKey(k: { key: string; ctrlKey: boolean; metaKey: boolean }, desktop: boolean): 'back' | 'save' | null {
+/** What a key does in the form: Esc is Back (desktop only), Ctrl or Cmd+Enter saves (desktop only, never while `busy`), anything else nothing. */
+export function formKey(k: { key: string; ctrlKey: boolean; metaKey: boolean }, desktop: boolean, busy = false): 'back' | 'save' | null {
   if (!desktop) return null;
   if (k.key === 'Escape') return 'back';
-  if (k.key === 'Enter' && (k.ctrlKey || k.metaKey)) return 'save';
+  if (k.key === 'Enter' && (k.ctrlKey || k.metaKey) && !busy) return 'save'; // busy: the amount picker is open or "Discard changes?" is showing, so an unconfirmed amount would be lost
   return null;
 }
 
@@ -32,3 +32,7 @@ export function scrollDelta(f: { top: number; bottom: number }, view: { top: num
 
 /** A menu's open row after a row `i` was removed or another menu opened: the menu closes for the removed row, shifts for later ones. */
 export const menuAfterRemove = (open: number | null, removed: number): number | null => (open === null || open === removed ? null : open > removed ? open - 1 : open);
+
+/** Where focus goes after row `removed` is taken out and `rows` rows are left (a lone row is replaced by a blank one, so rows is at least 1): the row that took its place, else the one before, else Add ingredient. */
+export const focusAfterRemove = (removed: number, rows: number): { kind: 'row'; i: number } | { kind: 'add' } =>
+  removed < rows ? { kind: 'row', i: removed } : removed - 1 >= 0 && rows > 0 ? { kind: 'row', i: removed - 1 } : { kind: 'add' };

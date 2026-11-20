@@ -149,19 +149,23 @@ export default function RecipeForm({ recipe, start, leave, onDone }: { recipe?: 
   const savingNow = useRef(false);
   const isDesktop = () => window.matchMedia('(min-width: 701px)').matches;
   const extraKey = (e: KeyboardEvent<HTMLFormElement>) => {
-    const act = formKey(e, isDesktop());
+    const act = formKey(e, isDesktop(), live.current.pickerAt !== null || live.current.asking);
     if (!act || e.defaultPrevented) return;
     if (act === 'save') { e.preventDefault(); formRef.current?.requestSubmit(); return; }
     e.preventDefault(); // Esc is Back: the same single step (close the amount picker, else ask or leave)
     const a = state();
     if (a === 'close-picker') setPickerAt(null); else if (a === 'ask') setAsking(true); else onDone(null);
   };
+  const viewOff = useRef<(() => void) | null>(null); // one scroll-into-view listener at a time, removed when the form closes
   const keepInView = (el: HTMLElement) => {
+    viewOff.current?.();
     const vv = window.visualViewport, bar = document.querySelector<HTMLElement>('.rcf-foot');
-    const run = () => { const r = el.getBoundingClientRect(), d = scrollDelta(r, { top: 0, bottom: vv?.height ?? window.innerHeight }, bar?.offsetHeight ?? 0); if (d) window.scrollBy({ top: d }); };
-    setTimeout(run, 50);
+    const run = () => { if (!el.isConnected) return; const r = el.getBoundingClientRect(), d = scrollDelta(r, { top: 0, bottom: vv?.height ?? window.innerHeight }, bar?.offsetHeight ?? 0); if (d) window.scrollBy({ top: d }); };
+    const t = window.setTimeout(run, 50);
     vv?.addEventListener('resize', run, { once: true }); // the keyboard finishes opening a moment later
+    viewOff.current = () => { clearTimeout(t); vv?.removeEventListener('resize', run); viewOff.current = null; };
   };
+  useEffect(() => () => viewOff.current?.(), []);
   const cancel = () => { if (edited && !gone.current) setAsking(true); else onDone(null); };
   const discard = () => { gone.current = true; setAsking(false); onDone(null); };
   const removeIng = (i: number) => {
