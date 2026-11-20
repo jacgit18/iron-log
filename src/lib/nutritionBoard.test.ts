@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -381,12 +381,32 @@ describe('eaten food in meals (brief nutrition-items-row-sheet-and-more)', () =>
     expect(v.meters.find(m => m.key === 'kcal')!.value).toBe(500);
   });
   it('a meal line tells the menu in words and counts only eaten calories (wording A)', () => {
-    expect(mealKcalText({ items: 4, planned: 0 }, 0)).toBe('4 on the menu'); // no target, nothing eaten: nothing is compared
-    expect(mealKcalText({ items: 4, planned: 2 }, 0)).toBe('4 on the menu · 2 planned');
-    expect(mealKcalText({ items: 4, planned: 2 }, 245)).toBe('245 kcal eaten · 2 planned');
-    expect(mealKcalText({ items: 0, planned: 0 }, 150)).toBe('150 kcal eaten');
-    expect(mealKcalText({ items: 0, planned: 0 }, 0)).toBe('');
-    expect(mealKcalText({ items: 3, planned: 0 }, 1234)).toBe('1,234 kcal eaten');
+    expect(mealKcalText({ items: 4, planned: 0, anyEaten: false }, 0)).toBe('4 on the menu'); // no target, nothing eaten: nothing is compared
+    expect(mealKcalText({ items: 4, planned: 2, anyEaten: false }, 0)).toBe('4 on the menu · 2 planned');
+    expect(mealKcalText({ items: 4, planned: 2, anyEaten: true }, 245)).toBe('245 kcal eaten · 2 planned');
+    expect(mealKcalText({ items: 0, planned: 0, anyEaten: true }, 150)).toBe('150 kcal eaten');
+    expect(mealKcalText({ items: 0, planned: 0, anyEaten: false }, 0)).toBe('');
+    expect(mealKcalText({ items: 3, planned: 0, anyEaten: true }, 1234)).toBe('1,234 kcal eaten');
+  });
+  it('a ticked item with no calories still reads "0 kcal eaten" (review follow-up to ADR 139)', () => {
+    expect(mealKcalText({ items: 2, planned: 0, anyEaten: true }, 0)).toBe('0 kcal eaten');
+    expect(mealKcalText({ items: 2, planned: 1, anyEaten: true }, 0)).toBe('0 kcal eaten · 1 planned');
+    expect(mealKcalText({ items: 2, planned: 1, anyEaten: false }, 0)).toBe('2 on the menu · 1 planned');
+  });
+  it('mealFigures says something was eaten for a ticked item with no kcal, and for unplanned eaten food with 0 kcal', () => {
+    const it = (id: string, e?: string[], kcal?: number) => ({ r: { item: { k: 'r' as const, id, ...(e ? { e } : {}) }, ...(kcal === undefined ? {} : { kcal }) } }) as never;
+    const diet = [{ id: 'log1', kcal: 0 } as DietEntry];
+    expect(mealFigures([it('a', ['log1'])], [], diet).anyEaten).toBe(true);
+    expect(mealFigures([it('a', ['log1'])], [], diet).eatenKcal).toBe(0);
+    expect(mealFigures([it('a')], [], diet).anyEaten).toBe(false); // listed but not ticked
+    expect(mealFigures([it('a', ['gone'])], [], diet).anyEaten).toBe(false); // its log entry is gone
+    expect(mealFigures([], [{ id: 'x', kcal: 0 } as DietEntry], []).anyEaten).toBe(true);
+  });
+  it('the "Not set" group never warns, even if a share and a lot of eaten food are passed for it (by design)', () => {
+    expect(slotOverText(null, 100, 5000, 'Not set')).toBeNull(); // fails if the Not set group is ever given a warning
+    expect(slotOverText(null, null, 5000, 'Not set')).toBeNull();
+    expect(slotOverText('snack', 220, 245, 'Snack')).toBe('25 over snack share'); // a meal still warns
+    expect(slotOverText('snack', null, 245, 'Snack')).toBeNull();
   });
   it('mealFigures counts only eaten calories and only items that can be planned', () => {
     const it = (id: string, p?: true, s?: 'snack') => ({ r: { item: { k: 'r' as const, id, ...(p ? { p } : {}), ...(s ? { s } : {}) }, kcal: 100 } }) as never;

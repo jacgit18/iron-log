@@ -104,6 +104,6 @@ describe('the mark never changes the figures of a day (Done when 4)', () => {
     const withData = dayStock(TODAY, TODAY, items as never, diet, grocery(gi('y', 'Greek yogurt'), gi('o', 'Oats')), months({ y: { have: true } }), [a, b]);
     expect(withData.size).toBe(1); // a is eaten (no mark), b shows one
     expect(figures()).toEqual(without);
-    expect(without).toEqual({ planned: 2, eatenKcal: 120 });
+    expect(without).toEqual({ planned: 2, eatenKcal: 120, anyEaten: true });
   });
 });
