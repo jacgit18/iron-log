@@ -3,7 +3,7 @@ import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } fro
 import { resultText, type SkippedDay } from './dayPicker.js';
 import { fullReason, inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
 import { servingNumbers } from './dietLog.js';
-import { SLOT_SHARE, fatBarState, fatCoverage, marksOf, plateCheck } from './plate.js';
+import { SLOT_SHARE, fatBarState, fatCoverage, fitsMeal, hiddenHints, marksOf, plateCheck } from './plate.js';
 import { pairsOf } from './recipePairs.js';
 import { drinkIdsOf } from './recipeUses.js';
 import { sortByName } from './sort.js';
@@ -29,20 +29,25 @@ function fatOf(r: Resolved): number | undefined {
   return nums?.f;
 }
 
-/** A partner of the meal's foods that covers `mark` (from Goes with first), else your first recipe that covers it, favorites first then A to Z. Never something already in the meal. */
-export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: readonly Recipe[]): { recipe: Recipe; why: string | null } | null {
+/** A partner of the meal's foods that covers `mark` (from Goes with first), else your first recipe that covers it, favorites first then A to Z. Never something already in the meal. With `slot`, a food whose usual meal is that meal or unset is preferred; when none fits, today's pick stands (brief nutrition-plate-hints-per-meal). */
+export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: readonly Recipe[], slot?: PlanSlot): { recipe: Recipe; why: string | null } | null {
   const have = new Set(inMeal.map(r => r.id));
-  for (const food of inMeal) {
-    const partner = pairsOf(food, recipes).find(p => !have.has(p.id) && marksOf(p, recipes).includes(mark));
-    if (partner) return { recipe: partner, why: `goes with ${food.n}` };
-  }
-  const pool = sortByName(recipes.filter(r => !have.has(r.id) && marksOf(r, recipes).includes(mark) && r.kcal !== undefined && r.p !== undefined && r.cat !== 'sauces' && r.cat !== 'seasonings'), r => r.n, r => r.id);
-  const pick = pool.find(r => r.fav) ?? pool[0];
-  return pick ? { recipe: pick, why: null } : null;
+  const covers = (r: Recipe) => marksOf(r, recipes).includes(mark);
+  const partners = inMeal.flatMap(food => pairsOf(food, recipes).filter(p => !have.has(p.id) && covers(p)).map(recipe => ({ recipe, why: `goes with ${food.n}` })));
+  const pool = sortByName(recipes.filter(r => !have.has(r.id) && r.kcal !== undefined && r.p !== undefined && r.cat !== 'sauces' && r.cat !== 'seasonings' && covers(r)), r => r.n, r => r.id);
+  const partnerOf = (ok: (r: Recipe) => boolean) => partners.find(x => ok(x.recipe)) ?? null;
+  const poolPick = (ok: (r: Recipe) => boolean) => {
+    const list = pool.filter(ok), best = list.find(r => r.fav) ?? list[0];
+    return best ? { recipe: best, why: null } : null;
+  };
+  // A Goes with partner you set beats a plain food of the right meal (today's order, so a pairing is never lost); the meal preference then picks among the rest. Partners and the pool are built once.
+  const any = () => true, fit = slot ? (r: Recipe) => fitsMeal(r, slot) : any;
+  return partnerOf(fit) ?? partnerOf(any) ?? poolPick(fit) ?? poolPick(any);
 }
 
 /** One day of the plan as meals: an item with no meal of its own sits in its recipe's usual meal (`mealOfItem`), a drink in the Drinks list; each item with its numbers, each meal with its calories against its share of the target, its plate check and fixes, and the day's three totals. */
-export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}): BoardDay {
+export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}, hints: { off?: readonly PlanSlot[]; skips?: Readonly<Record<string, readonly PlanSlot[]>> } = {}): BoardDay {
+  const hidden = hiddenHints(hints.off, hints.skips, day); // meals whose plate check and fixes are not drawn on this day (brief nutrition-plate-hints-per-meal)
   const items = plan[day] ?? [];
   const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r), ...(it.v ? { virtual: true as const } : {}) }; });
   const live = rows.filter(x => !x.r.gone);
@@ -60,8 +65,8 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
     if (slot === null && here.length === 0) continue;
     const planned = here.filter(x => x.r.item.p === true); // the plate check reads the planned items only, so a menu of available food does not nag (brief nutrition-board-available-list)
     const foodsHere = planned.flatMap(x => (x.r.recipe ? [x.r.recipe] : []));
-    const chk = slot && !planned.some(x => x.r.meal) ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };
-    const fixes = chk.missing.flatMap(mark => { const f = fixFor(mark, foodsHere, recipes); return f ? [{ mark, ...f }] : []; });
+    const chk = slot && !hidden.includes(slot) && !planned.some(x => x.r.meal) ? plateCheck(slot, foodsHere, recipes) : { need: [] as readonly PlateMark[], have: [] as PlateMark[], missing: [] as PlateMark[] };
+    const fixes = chk.missing.flatMap(mark => { const f = fixFor(mark, foodsHere, recipes, slot ?? undefined); return f ? [{ mark, ...f }] : []; });
     slots.push({ slot, items: here, kcal: Math.round(here.reduce((a, x) => a + (x.r.gone ? 0 : x.r.kcal ?? 0), 0)), share: slot && kcalTarget ? Math.round(kcalTarget * SLOT_SHARE[slot]) : null, need: chk.need, have: chk.have, fixes });
   }
   return {

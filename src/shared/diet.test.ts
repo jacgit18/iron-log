@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAN_SLOTS, MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_PLAN_AHEAD, MAX_HANDY, MAX_REPEATS, isDrinkItem, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { PLAN_SLOTS, MAX_DIET_PER_DAY, MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_PLAN_AHEAD, MAX_HANDY, MAX_REPEATS, isDrinkItem, normHintSkips, normHintsOff, normRepeatSkips, normRepeats, plannedCount, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -294,5 +294,23 @@ describe('drinks outside the planned count', () => {
 describe('PLAN_SLOTS', () => {
   it('is the meal order everywhere (board sections and the Add food, Move to and log pickers): Dinner above Snack', () => {
     expect(PLAN_SLOTS).toEqual(['breakfast', 'lunch', 'dinner', 'snack']);
+  });
+});
+
+describe('hintsOff and hintSkips in cfg.diet (brief nutrition-plate-hints-per-meal)', () => {
+  it('keeps known meals once each in meal order and drops the rest', () => {
+    expect(normHintsOff(['dinner', 'breakfast', 'dinner', 'brunch', 3])).toEqual(['breakfast', 'dinner']);
+    expect(normHintsOff('breakfast')).toEqual([]);
+  });
+  it('keeps real days in the window and drops past days, bad days and empty lists', () => {
+    const v = { '2026-11-02': ['lunch', 'breakfast'], '2026-10-01': ['lunch'], nope: ['lunch'], '2026-11-03': [] };
+    expect(normHintSkips(v, '2026-10-30')).toEqual({ '2026-11-02': ['breakfast', 'lunch'] });
+    expect(normHintSkips([], '2026-10-30')).toEqual({});
+  });
+  it('round-trips through normDietCfg and is undefined when empty', () => {
+    const cfg = { hintsOff: ['breakfast'], hintSkips: { '2026-11-02': ['lunch'] } };
+    expect(normDietCfg(cfg, '2026-10-30')).toEqual(cfg);
+    expect(normDietCfg({ hintsOff: [], hintSkips: {} })).toBeUndefined();
+    expect(normDietCfg({ hintsOff: ['brunch'] })).toBeUndefined();
   });
 });

@@ -338,6 +338,8 @@ export interface DietSlice {
   stopRepeat(rid: string): void; // removes the repeat and its skips; items already stored on a day stay
   dropRepeatsFor(id: string): RepeatItem[]; // a deleted recipe or meal takes its repeats and their skips with it; the removed repeats come back for Undo
   restoreRepeats(list: RepeatItem[]): void; // puts repeats back (Undo of a recipe delete)
+  setPlateHint(slot: PlanSlot, on: boolean): void; // switches the plate hint of one meal on or off for every day (cfg.diet.hintsOff)
+  dismissPlateHint(day: string, slot: PlanSlot): void; // hides the plate hint of one meal on that day only (cfg.diet.hintSkips)
   skipRepeatDay(day: string, rid: string): void; // the repeat is not shown on that day only
   realizeRepeat(day: string, rid: string): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
   unstoreRepeat(day: string, index: number, rid: string): void; // takes back an item realizeRepeat just stored when its log failed

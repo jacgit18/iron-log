@@ -1,3 +1,4 @@
+import { PLAN_SLOTS } from '../shared/diet.js';
 import { PLATE_MARKS, cleanCounts } from '../shared/recipes.js';
 import type { PlanSlot, PlateMark, Recipe } from '../types.ts';
 import { hasParts } from './mealRollup.js';
@@ -63,3 +64,16 @@ export function togglePlateMark(current: readonly PlateMark[], m: PlateMark): Pl
 
 /** The `counts` a form saves: the person's own choice, kept even when it equals today's automatic marks (a later change of category or protein must not move it); nothing while automatic. */
 export const countsToSave = (picked: boolean, chosen: readonly PlateMark[]): PlateMark[] | undefined => (picked ? [...chosen] : undefined);
+
+/** True when a food can be suggested for `slot`: its usual meal is that meal or it has none (brief nutrition-plate-hints-per-meal). */
+export const fitsMeal = (r: Pick<Recipe, 'meal'>, slot: PlanSlot): boolean => r.meal === undefined || r.meal === slot;
+
+/** The meals whose plate hint is hidden on `day`: the ones switched off for good plus the ones dismissed for that day. Off wins by being a union; a dismissal for an off meal changes nothing. */
+export function hiddenHints(off: readonly PlanSlot[] | undefined, skips: Readonly<Record<string, readonly PlanSlot[]>> | undefined, day: string): PlanSlot[] {
+  return [...new Set([...(off ?? []), ...(skips?.[day] ?? [])])];
+}
+
+/** `off` with `slot` switched on or off (stored in meal order, no repeats); the list a toggle writes. */
+export function withHintSwitch(off: readonly PlanSlot[] | undefined, slot: PlanSlot, on: boolean): PlanSlot[] {
+  return PLAN_SLOTS.filter(s => (s === slot ? !on : (off ?? []).includes(s)));
+}

@@ -1,0 +1,35 @@
+@layer base, components;
+@layer components {
+/* Plate hints (brief nutrition-plate-hints-per-meal): the × at the end of a meal's plate line, and the Plate hints switches in Manage. */
+.wb-plate:has(> .wb-hide) {
+  position: relative;
+  padding-inline-end: calc(var(--sp-16) * 2);
+}
+.wb-hide {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translate(var(--sp-8), -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.nb-hints {
+  display: grid;
+  gap: var(--sp-4);
+  margin: 0 0 var(--sp-12);
+}
+.nb-hints label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+}

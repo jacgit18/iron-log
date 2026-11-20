@@ -1,5 +1,6 @@
 import { skipSnack } from '../lib/dailySnacks.js';
 import { dropRepeatSkips, pruneHandy, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, skipsAfterRemovingHandy, unskipRepeat } from '../lib/repeats.js';
+import { withHintSwitch } from '../lib/plate.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { addItem, inWindow, markPlanned, removeItem, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
@@ -360,6 +361,23 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (!list.length) return;
     get().mutateCfg(c => {
       const have = c.diet?.repeats ?? [], next = { ...(c.diet || {}), repeats: [...have, ...list.filter(r => !have.some(h => h.rid === r.rid))] };
+      const clean = normDietCfg(next, ymd(new Date()));
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+  },
+
+  // Plate hints (brief nutrition-plate-hints-per-meal): the setting per meal, and a one-day dismissal. Both go back through normDietCfg, which also drops past days.
+  setPlateHint(slot, on) {
+    get().mutateCfg(c => {
+      const hintsOff = withHintSwitch(c.diet?.hintsOff, slot, on), next = { ...(c.diet || {}) };
+      if (hintsOff.length) next.hintsOff = hintsOff; else delete next.hintsOff;
+      const clean = normDietCfg(next, ymd(new Date()));
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+  },
+  dismissPlateHint(day, slot) {
+    get().mutateCfg(c => {
+      const have = c.diet?.hintSkips ?? {}, next = { ...(c.diet || {}), hintSkips: { ...have, [day]: [...(have[day] ?? []).filter(s => s !== slot), slot] } };
       const clean = normDietCfg(next, ymd(new Date()));
       if (clean) c.diet = clean; else delete c.diet;
     });
