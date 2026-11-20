@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { dayStock } from '../../lib/boardStock.js';
-import { mealFigures, mealKcalText, slotOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
+import { mealFigures, mealKcalText, shortDay, slotOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
 import { drinkIdsOf } from '../../lib/recipeUses.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS, planItemKey } from '../../shared/diet.js';
@@ -59,7 +59,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
           {s.need.length > 0 && s.items.length > 0 && (
             <div className="wb-plate" role="group" aria-label={`${s.slot ? SLOT_LABEL[s.slot] : ''} plate check`}>
               {s.need.map(m => <span key={m} className={`wb-mk${s.have.includes(m) ? ' on' : ''}`}>{s.have.includes(m) ? '✓ ' : ''}{MARK_LABEL[m]}</span>)}
-              {s.slot && editable && <button type="button" className="wb-hide" aria-label={`Hide plate hint for ${SLOT_LABEL[s.slot]} today`} onClick={() => st().dismissPlateHint(view.day, s.slot!)}><Icon name="close" /></button>}
+              {s.slot && editable && <button type="button" className="wb-hide" aria-label={`Hide plate hint for ${SLOT_LABEL[s.slot]} ${view.day === today ? 'today' : `on ${shortDay(view.day)}`}`} onClick={() => st().dismissPlateHint(view.day, s.slot!)}><Icon name="close" /></button>}
             </div>
           )}
           {s.items.map(x => {

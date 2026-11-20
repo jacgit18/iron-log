@@ -32,16 +32,21 @@ function fatOf(r: Resolved): number | undefined {
 /** A partner of the meal's foods that covers `mark` (from Goes with first), else your first recipe that covers it, favorites first then A to Z. Never something already in the meal. With `slot`, a food whose usual meal is that meal or unset is preferred; when none fits, today's pick stands (brief nutrition-plate-hints-per-meal). */
 export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: readonly Recipe[], slot?: PlanSlot): { recipe: Recipe; why: string | null } | null {
   const have = new Set(inMeal.map(r => r.id));
-  const pick = (ok: (r: Recipe) => boolean): { recipe: Recipe; why: string | null } | null => {
+  const partnerOf = (ok: (r: Recipe) => boolean) => {
     for (const food of inMeal) {
       const partner = pairsOf(food, recipes).find(p => !have.has(p.id) && ok(p) && marksOf(p, recipes).includes(mark));
       if (partner) return { recipe: partner, why: `goes with ${food.n}` };
     }
+    return null;
+  };
+  const poolPick = (ok: (r: Recipe) => boolean) => {
     const pool = sortByName(recipes.filter(r => !have.has(r.id) && ok(r) && marksOf(r, recipes).includes(mark) && r.kcal !== undefined && r.p !== undefined && r.cat !== 'sauces' && r.cat !== 'seasonings'), r => r.n, r => r.id);
     const best = pool.find(r => r.fav) ?? pool[0];
     return best ? { recipe: best, why: null } : null;
   };
-  return (slot ? pick(r => fitsMeal(r, slot)) : null) ?? pick(() => true);
+  // A Goes with partner you set beats a plain food of the right meal (today's order, so a pairing is never lost); the meal preference then picks among the rest.
+  const any = () => true, fit = slot ? (r: Recipe) => fitsMeal(r, slot) : any;
+  return partnerOf(fit) ?? partnerOf(any) ?? poolPick(fit) ?? poolPick(any);
 }
 
 /** One day of the plan as meals: an item with no meal of its own sits in its recipe's usual meal (`mealOfItem`), a drink in the Drinks list; each item with its numbers, each meal with its calories against its share of the target, its plate check and fixes, and the day's three totals. */

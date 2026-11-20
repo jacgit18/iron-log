@@ -64,8 +64,8 @@ export default function ManageSheet() {
         <li><button type="button" className="btn" id="nb-manage-water" onClick={() => leave(() => { requestSettingsJump('alerts'); useAppStore.getState().setTab('settings'); })}>Water reminder</button><span className="note">Open Settings: the reminder is under Alerts.</span></li>
       </ul>
       <div className="sect" id="nb-manage-hints-h">Plate hints</div>
-      <p className="note">Show what a meal is missing (protein, carb, veg). Turn a meal off if you don't eat that way.</p>
-      <div className="nb-hints" role="group" aria-labelledby="nb-manage-hints-h">
+      <p className="note" id="nb-manage-hints-note">Show what a meal is missing (protein, carb, veg). Turn a meal off if you don't eat that way.</p>
+      <div className="nb-hints" role="group" aria-labelledby="nb-manage-hints-h" aria-describedby="nb-manage-hints-note">
         {HINT_MEALS.map(m => <label key={m}><input type="checkbox" checked={!cfg.diet?.hintsOff?.includes(m)} onChange={e => useAppStore.getState().setPlateHint(m, e.target.checked)} />{SLOT_LABEL[m]}</label>)}
       </div>
       {HINT_MEALS.every(m => cfg.diet?.hintsOff?.includes(m)) && <p className="note">Hints are off for every meal.</p>}

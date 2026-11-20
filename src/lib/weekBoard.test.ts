@@ -72,6 +72,10 @@ describe('fixFor prefers a food of that meal (brief nutrition-plate-hints-per-me
     expect(fixFor('protein', [toast], [toast, beef], 'breakfast')?.recipe.id).toBe('beef');
     expect(fixFor('protein', [toast], [toast, beef, eggs])?.recipe.id).toBe('beef'); // A to Z, as before
   });
+  it('keeps a Goes with partner of another meal over a plain food with no usual meal', () => {
+    const chili2 = { ...chili, pairs: ['rice2'] }, rice2 = rec('rice2', 'carbs', 200, 4, { meal: 'dinner' }), plain = rec('plain', 'carbs', 100, 3);
+    expect(fixFor('carb', [chili2], [chili2, rice2, plain], 'lunch')).toMatchObject({ recipe: { id: 'rice2' }, why: 'goes with Chili' });
+  });
   it('prefers a partner of that meal over a partner of another', () => {
     const t = { ...toast, pairs: ['beef', 'eggs'] };
     expect(fixFor('protein', [t], [t, beef, eggs], 'breakfast')).toMatchObject({ recipe: { id: 'eggs' }, why: 'goes with Toast' });
