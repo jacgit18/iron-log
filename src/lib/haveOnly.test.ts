@@ -93,9 +93,14 @@ describe('plannedWaitingNote: what the Add sheet adds after "Planned X for Lunch
     expect(note(yog, ['2026-12-03'], months({ y: { have: true } }))).toBe('');
     expect(note(yog, [day, '2026-12-03'])).toBe(PLANNED_WAITING_NOTE); // a day in today's month decides
   });
+  it('a drink gets no note, as the board never tucks a drink away; the same food as a non-drink does', () => {
+    const shake = food('shake', 'Protein shake', { uses: ['drink'] });
+    const gr = grocery(gi('s', 'Protein shake')); // matched by name, not ticked Have: Need
+    expect(plannedWaitingNote(shake, [day], TODAY, gr, months(), [shake])).toBe('');
+    expect(plannedWaitingNote({ ...shake, uses: undefined } as Recipe, [day], TODAY, gr, months(), [shake])).toBe(PLANNED_WAITING_NOTE);
+  });
   it('a past day gets no note, and neither does Groceries with no items', () => {
     expect(note(yog, ['2026-11-18'])).toBe('');
     expect(note(yog, [day], months(), grocery())).toBe('');
   });
 });
-
