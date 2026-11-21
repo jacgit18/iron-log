@@ -42,6 +42,34 @@ test('a Need ready-made food is hidden behind the chip; recipes and no-match foo
   await expect(todayCol(page).getByRole('button', { name: /1 waiting on inventory/ })).toHaveAttribute('aria-expanded', 'false');
 });
 
+const seedAhead = async page => { // a day ahead: Lunch holds only a food that is Need, and a second Need food waits to be planned
+  await page.evaluate(([recipes, items, plan]) => {
+    localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: recipes }));
+    localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: ['Anywhere'], items }));
+    const c = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}');
+    localStorage.setItem('ironlog:config/main', JSON.stringify({ ...c, diet: { plan: { '2026-09-25': plan } } }));
+  }, [[food('yog', 'Greek yogurt'), food('skyr', 'Skyr')], [item('yog', 'Greek yogurt'), item('skyr', 'Skyr')], [{ k: 'r', id: 'yog', s: 'lunch' }]]);
+  await page.reload();
+};
+
+test('a day-ahead meal that holds only a waiting food keeps its header Add, and planning another waiting food says where it went', async ({ page }) => {
+  await seedAhead(page);
+  await openNutrition(page);
+  const fri = page.locator('.nb-col[data-day="2026-09-25"]');
+  await expect(fri.getByRole('button', { name: /1 waiting on inventory/ })).toHaveAttribute('aria-expanded', 'false');
+  await expect(fri.getByRole('button', { name: /^Add to / })).toHaveCount(4); // Lunch holds only a tucked-away food and still has its Add
+  await expect(fri.getByText('Nothing planned')).toHaveCount(3); // Breakfast, Lunch and Dinner read empty while the chip is closed
+  await fri.getByRole('button', { name: /1 waiting on inventory/ }).click();
+  await expect(fri.locator('.wc-row', { hasText: 'Greek yogurt' })).toBeVisible();
+  await expect(fri.getByText('Nothing planned')).toHaveCount(2); // Lunch shows the waiting row instead
+  await fri.getByRole('button', { name: 'Add to Dinner' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: /^Recipes/ }).click();
+  await sheet.getByLabel('Find a recipe').fill('Skyr');
+  await sheet.getByRole('button', { name: 'Plan Skyr for Dinner' }).click();
+  await expect(sheet.getByRole('status')).toContainText('Planned Skyr for Dinner. It is waiting on inventory'); // the meal still reads Nothing planned, so the sheet says why
+});
+
 test('ticking Have on Groceries brings the food back, and the chip goes away', async ({ page }) => {
   await seed(page);
   await openNutrition(page);

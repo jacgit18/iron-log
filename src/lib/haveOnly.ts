@@ -46,3 +46,11 @@ export function waitingIds(recipes: readonly Recipe[], today: string, g: Grocery
   for (const r of recipes) if (isWaiting(r, ctx)) out.add(r.id);
   return out;
 }
+
+/** Said after "Planned X for Lunch." when the food is one the board will tuck behind the waiting chip, so a meal that still reads "Nothing planned" is not a surprise. */
+export const PLANNED_WAITING_NOTE = ' It is waiting on inventory, so the board keeps it behind the chip until Groceries has it.';
+
+/** The note to add to the planned message: `PLANNED_WAITING_NOTE` when the food waits on any of the days it was planned for, else an empty string. A saved meal, a recipe with ingredients, a food that is Have or matches nothing, and a day in another month than today's never wait (`isWaiting`). */
+export function plannedWaitingNote(recipe: Recipe | undefined, days: readonly string[], today: string, g: Grocery, months: Record<string, GroceryMonth>, recipes: readonly Recipe[]): string {
+  return days.some(d => isWaiting(recipe, stockContext(d, today, g, months, recipes))) ? PLANNED_WAITING_NOTE : '';
+}
