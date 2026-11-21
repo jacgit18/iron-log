@@ -9,7 +9,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { ymd, parseDate, addDays, fmtShort, weekStartOf } from '../../shared/dates.js';
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
-import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, currentWeekRecord, niceStep, mdLabel, volumeByWeek, personalBests } from '../../lib/trends.js';
+import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, currentWeekRecord, thisWeekPlaceholder, niceStep, mdLabel, volumeByWeek, personalBests } from '../../lib/trends.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 import { liftGoalStatus, goalPhaseLabel, scaledGoal } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.js';
@@ -44,7 +44,7 @@ function KpiTiles({ keys, byWeek, changes }: { keys: string[]; byWeek: Record<st
     <div className="kpis">
       {r
         ? <Kpi label="This week" value={<>{r.ex}<small> of {r.total}</small></>} sub={`exercises done · ${r.full} of ${DAY_COUNT} days${r.skipped ? ` · ${r.skipped} skipped` : ''}`} />
-        : <Kpi label="This week" value="—" sub="Loading this week…" />}
+        : <Kpi label="This week" value="—" sub={thisWeekPlaceholder(histFailed)} />}
       <Kpi label="Sets, last 4 weeks" value={fmtSets(s4)} sub={prev == null ? 'A comparison with the previous 4 weeks starts after 8 weeks of logs' : `${signed(s4 - prev)} vs the 4 weeks before`} />
       <Kpi label="Lifts going up" value={changes.length ? <>{up}<small> of {changes.length}</small></> : '—'} sub={changes.length ? 'heavier now than at the start of the last 8 weeks' : 'Log a lift with weight on two days to track it'} />
       {bw && <Kpi label="Body weight" value={<>{fmtLb(bw.last.w)}<small> lb</small></>} sub={bw.diff == null ? `Logged ${fmtShort(parseDate(bw.last.d))}` : `${signed(bw.diff, 1)} lb since ${fmtShort(parseDate(bw.base!.d))}`} />}
