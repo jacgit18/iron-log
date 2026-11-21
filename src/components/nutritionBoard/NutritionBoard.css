@@ -125,6 +125,18 @@
   justify-self: start;
   min-height: 44px;
 }
+.nb-slotrow {
+  display: flex;
+  gap: var(--sp-8);
+  align-items: center;
+}
+.nb-slotrow .wb-slothd {
+  flex: 1;
+  min-width: 0;
+}
+.nb-slotrow .nb-slotadd {
+  flex: none;
+}
 .nb-col.past {
   background: var(--surface);
 }
