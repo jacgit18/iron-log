@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem, GroceryMonth, PlanItem, Recipe } from '../types.ts';
 import { stockContext } from './boardStock.js';
 import type { Resolved } from './dietPlan.js';
-import { isReadyMade, isWaiting, splitHandy, waitingIndexes, waitingText, type HaveGate } from './haveOnly.js';
+import { PLANNED_LATER_NOTE, PLANNED_WAITING_NOTE, isReadyMade, isWaiting, plannedWaitingNote, splitHandy, waitingIndexes, waitingText, type HaveGate } from './haveOnly.js';
 
 const gi = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const grocery = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -71,4 +71,36 @@ describe('splitHandy and the chip text', () => {
     expect(splitHandy(rows, null).waiting).toEqual([]);
   });
   it('words the count', () => expect(waitingText(3)).toBe('3 waiting on inventory'));
+});
+
+describe('plannedWaitingNote: what the Add sheet adds after "Planned X for Lunch."', () => {
+  const day = '2026-11-20', all = [yog, oats, dragon];
+  const note = (r: Recipe | undefined, days: string[], m = months({ o: { have: true } }), gr = g) => plannedWaitingNote(r, days, TODAY, gr, m, all);
+  it('a ready-made food that is Need says so', () => expect(note(yog, [day])).toBe(PLANNED_WAITING_NOTE));
+  it('a food that is Have, matches nothing, or is not ready-made says nothing', () => {
+    expect(note(oats, [day])).toBe('');
+    expect(note(dragon, [day])).toBe('');
+    expect(note(meal('m', 'Greek yogurt'), [day])).toBe('');
+    expect(note(yog, [day], months({ y: { have: true } }))).toBe('');
+  });
+  it('no recipe (a saved meal) says nothing', () => expect(note(undefined, [day])).toBe(''));
+  it('says so when it waits on any of several days, and nothing for no days', () => {
+    expect(note(yog, ['2026-11-21', day])).toBe(PLANNED_WAITING_NOTE);
+    expect(note(yog, [])).toBe('');
+  });
+  it('a day only in a later month gets the later-month note while the food is Need now, and nothing once it is Have', () => {
+    expect(note(yog, ['2026-12-03'])).toBe(PLANNED_LATER_NOTE);
+    expect(note(yog, ['2026-12-03'], months({ y: { have: true } }))).toBe('');
+    expect(note(yog, [day, '2026-12-03'])).toBe(PLANNED_WAITING_NOTE); // a day in today's month decides
+  });
+  it('a drink gets no note, as the board never tucks a drink away; the same food as a non-drink does', () => {
+    const shake = food('shake', 'Protein shake', { uses: ['drink'] });
+    const gr = grocery(gi('s', 'Protein shake')); // matched by name, not ticked Have: Need
+    expect(plannedWaitingNote(shake, [day], TODAY, gr, months(), [shake])).toBe('');
+    expect(plannedWaitingNote({ ...shake, uses: undefined } as Recipe, [day], TODAY, gr, months(), [shake])).toBe(PLANNED_WAITING_NOTE);
+  });
+  it('a past day gets no note, and neither does Groceries with no items', () => {
+    expect(note(yog, ['2026-11-18'])).toBe('');
+    expect(note(yog, [day], months(), grocery())).toBe('');
+  });
 });

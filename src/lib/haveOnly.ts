@@ -1,6 +1,7 @@
 import type { DietEntry, Grocery, GroceryMonth, Recipe } from '../types.ts';
 import { isEaten, type Resolved } from './dietPlan.js';
 import { cardStock, stockContext, type StockContext } from './boardStock.js';
+import { isDrink } from './recipeUses.js';
 import type { HandyRow } from './repeats.js';
 
 /* ---------- The board shows what you have (brief ready-made-have-gate, ADR 144): a ready-made food that Groceries says you need is tucked away
@@ -45,4 +46,19 @@ export function waitingIds(recipes: readonly Recipe[], today: string, g: Grocery
   if (!ctx) return out;
   for (const r of recipes) if (isWaiting(r, ctx)) out.add(r.id);
   return out;
+}
+
+/** Said after "Planned X for Lunch." when the food is one the board will tuck behind the waiting chip, so a meal that still reads "Nothing planned" is not a surprise. */
+export const PLANNED_WAITING_NOTE = ' It is waiting on inventory, so the board keeps it behind the chip until Groceries has it.';
+
+/** Said instead when the food is only planned for a later month: the board does not tuck anything away outside today's month (`stockContext`), but the food is Need now, so it will wait once that month is today's. */
+export const PLANNED_LATER_NOTE = ' Groceries shows it as Need now, so once that month starts it will wait on inventory unless it is ticked Have.';
+
+/** The note to add to the planned message: `PLANNED_WAITING_NOTE` when the food is Need and any planned day falls in today's month (from today on), `PLANNED_LATER_NOTE` when it is Need and the planned days are all in later months, else an empty string. A saved meal, a recipe with ingredients, a drink (the board never tucks a drink away, `boardDay`), a food that is Have or matches nothing, and a past day never wait (`isWaiting`). Every day of today's month shares one answer, so it is worked out once, not per day. */
+export function plannedWaitingNote(recipe: Recipe | undefined, days: readonly string[], today: string, g: Grocery, months: Record<string, GroceryMonth>, recipes: readonly Recipe[]): string {
+  if (isDrink(recipe)) return ''; // a drink never waits on the board
+  const month = today.slice(0, 7);
+  const now = days.some(d => d >= today && d.slice(0, 7) === month), later = days.some(d => d > today && d.slice(0, 7) !== month);
+  if ((!now && !later) || !isWaiting(recipe, stockContext(today, today, g, months, recipes))) return '';
+  return now ? PLANNED_WAITING_NOTE : PLANNED_LATER_NOTE;
 }
