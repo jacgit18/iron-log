@@ -418,6 +418,9 @@ describe('setRecipeHome (brief ready-made-have-gate)', () => {
     expect(st().saveRecipe(food)).toBeNull();
     const id = st().recipes[0]!.id;
     st().setRecipeHome(id, 'item-1');
+    expect(st().recipes[0]).not.toHaveProperty('home'); // no such item on Groceries: nothing is stored
+    useAppStore.setState({ grocery: { stores: ['Anywhere'], items: [{ id: 'item-1', n: 'Greek yogurt', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }] } });
+    st().setRecipeHome(id, 'item-1');
     expect(st().recipes[0]!.home).toBe('item-1');
     expect(st().saveRecipe({ ...food, id, n: 'Skyr' })).toBeNull();
     expect(st().recipes[0]).toMatchObject({ n: 'Skyr', home: 'item-1' });

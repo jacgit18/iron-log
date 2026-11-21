@@ -93,6 +93,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const list = get().recipes;
     const r = list.find(x => x.id === id);
     if (!r || r.cat !== 'ready') return;
+    if (home && home !== '-' && !get().grocery.items.some(i => i.id === home)) return; // never store a pin to an item that is not there (a read would ignore it anyway)
     const { home: _h, ...rest } = r;
     const next = normRecipe(home ? { ...rest, home } : rest);
     if (!next) return;
