@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { foodMarks } from '../../lib/boardStock.js';
 import { onwardDays, plannedText } from '../../lib/dayPicker.js';
 import { entriesOn, entryFromFood, fmtNum, hasMacros, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
@@ -27,6 +28,7 @@ import SaveMeal from '../diet/SaveMeal.js';
 import SavedMeals from '../diet/SavedMeals.js';
 import type { FoodFill, ScanResume } from '../diet/FoodSearch.js';
 import Icon, { type IconName } from '../Icon.jsx';
+import StockPill from '../recipes/StockPill.js';
 import { openRecipesForm } from '../openRecipesForm.js';
 import Sheet from '../Sheet.js';
 import UndoButton from '../UndoButton.js';
@@ -120,6 +122,8 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
   const recipes = useAppStore(s => s.recipes);
   const { held } = useLegacyMeals();
   const [q, setQ] = useState('');
+  const grocery = useAppStore(s => s.grocery), groceryMonths = useAppStore(s => s.groceryMonths);
+  const marks = useMemo(() => foodMarks(recipes, today, grocery, groceryMonths), [recipes, today, grocery, groceryMonths]); // a ready-made food's Have / Need pill
   const newRecipe = () => openRecipesForm({ kind: 'new' });
   const [hour] = useState(() => new Date().getHours()); // read once on opening, not on each render
   const eat = addMode(day, today) === 'log';
@@ -180,6 +184,7 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
           {list.map(r => (
             <li key={r.id}>
               <span className="nb-eatn">{r.n}</span>
+              <StockPill stock={marks.get(r.id)} />
               {eat && <button type="button" className="btn sm" aria-label={`Log ${r.n}`} onClick={() => logNow(r)}>Log</button>}
               {!eat && <button type="button" className="btn sm" aria-label={`Plan ${r.n} for ${SLOT_LABEL[planned('r', r.id)]}`} onClick={() => plan('r', r.id, r.n)}>Plan</button>}
             </li>

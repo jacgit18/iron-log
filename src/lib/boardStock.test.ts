@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem, GroceryMonth, PlanItem, Recipe } from '../types.ts';
-import { cardStock, dayStock, foodItem, foodMarks, monthWithCarry, stockContext } from './boardStock.js';
+import { cardStock, dayStock, foodItem, foodMarks, monthWithCarry, pinValue, stockContext } from './boardStock.js';
 import { mealFigures } from './nutritionBoard.js';
 import { pantryStatus } from './recipePantry.js';
 
@@ -129,6 +129,9 @@ describe('cardStock: a ready-made food\'s pin beats its name (brief ready-made-h
     expect(foodItem(food('b'), g.items)?.id).toBe('b');
     expect(foodItem(food(), g.items)?.id).toBe('a');
     expect(foodItem(food('-'), g.items)).toBeNull();
+  });
+  it('pinValue is the pin, or empty for none, a pin to a gone item', () => {
+    expect([pinValue(food('b'), g.items), pinValue(food('-'), g.items), pinValue(food(), g.items), pinValue(food('deleted'), g.items)]).toEqual(['b', '-', '', '']);
   });
   it('a recipe with ingredient lines ignores a pin', () => {
     const r = { ...rec('p', 'Greek yogurt', ['skyr']), home: 'a' } as Recipe;

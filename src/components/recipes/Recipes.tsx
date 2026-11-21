@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FilterSelect from '../FilterSelect.jsx';
 import ComboChips from './ComboChips.js';
+import StockPill from './StockPill.js';
 import FoodTypeReview from './FoodTypeReview.js';
 import Icon from '../Icon.js';
 import RecipeDetail from './RecipeDetail.js';
@@ -17,7 +18,9 @@ import '../Pill.css';
 import './Recipes.css';
 import './RecipeFind.css';
 import { untypedBanner } from '../../lib/foodType.js';
+import { foodMarks, type CardStock } from '../../lib/boardStock.js';
 import { monthKey } from '../../lib/grocery.js';
+import { ymd } from '../../shared/dates.js';
 import { inLibraryTab, libraryEmptyNote, libraryHave } from '../../lib/libraryRows.js';
 import { SOURCES, countText, filtersSkipLibrary, libraryBoxShown, mergedGroups, sourceCounts, yourHeadingShown } from '../../lib/recipeMerged.js';
 import { comboIds, comboTabCounts, expandedRows, mineRows, partsLine, type ComboChip } from '../../lib/recipeCombos.js';
@@ -115,6 +118,7 @@ export default function Recipes() {
   useEffect(() => { if (activeTags.length !== tagSel.length) setTagSel(activeTags); }, [activeTags, tagSel]); // drop a renamed or deleted tag so it cannot come back selected
   useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
+  const foodStock = useMemo(() => foodMarks(recipes, ymd(new Date()), grocery, months), [recipes, grocery, months]); // the Have / Need pill of each ready-made food (lib/boardStock.ts)
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
   const counts = useMemo(() => comboTabCounts(narrowed, recipes), [narrowed, recipes]); // the rows each tab shows: a combo is a chip on its parts, a row only in Meals (brief recipes-combo-chips)
@@ -217,12 +221,12 @@ export default function Recipes() {
   };
 
   // One compact row (brief recipes-list-compact): name and star, then the type and the macro line; the same right-hand slot holds Log or + Add, or an arrow that opens the item.
-  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; est?: boolean; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
+  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; est?: boolean; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; stock?: CardStock | null; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
     <li key={o.key} className={`rc-item${o.lib ? ' rc-libitem' : ''}${o.current ? ' current' : ''}${o.chips?.length ? ' hascombos' : ''}`}>
       <button type="button" className="rc-row" onClick={o.open} aria-current={o.current ? 'true' : undefined}>
         <span className="rc-main">
           <span className="rc-title"><b id={`rc-t-${o.key}`}>{o.title}</b>{o.fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{o.edited && <span className="rc-edited">Edited</span>}</span>
-          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}{o.est && <> · <span aria-hidden="true">est.</span><span className="vh"> estimated</span></>}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}</span>
+          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}{o.est && <> · <span aria-hidden="true">est.</span><span className="vh"> estimated</span></>}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}<StockPill stock={o.stock} /></span>
         </span>
         {!o.logId && !o.addIt && <span className="rc-go" aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
@@ -337,7 +341,7 @@ export default function Recipes() {
           {yours && (
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
-                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
+                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, stock: foodStock.get(r.id), tag: typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
           )}

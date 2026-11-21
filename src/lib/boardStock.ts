@@ -47,6 +47,10 @@ export function foodItem(recipe: Pick<Recipe, 'n' | 'home'>, items: readonly Gro
   return matchHome({ n: recipe.n }, items as GroceryItem[]);
 }
 
+/** What the At home item picker shows as chosen: the pin when it is Not tracked or still an item, else '' (matched by name; a pin to a deleted item counts as none). */
+export const pinValue = (recipe: Pick<Recipe, 'home'>, items: readonly GroceryItem[]): string =>
+  recipe.home === NOT_TRACKED || (recipe.home && items.some(i => i.id === recipe.home)) ? recipe.home : '';
+
 /** The mark for a ready-made food (no ingredient lines) from its item, or null when it has none. */
 export function foodStock(recipe: Pick<Recipe, 'n' | 'home'>, ctx: StockContext): CardStock | null {
   const hit = foodItem(recipe, ctx.g.items);
