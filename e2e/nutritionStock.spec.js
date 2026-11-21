@@ -17,11 +17,11 @@ const seed = async page => {
 };
 const card = (page, name) => todayCol(page).locator('.wb-card', { hasText: name });
 
-test('a card shows Have or On Shopping from the Inventory tick, and a tick on Groceries changes it on return', async ({ page }) => {
+test('a card shows Have or Need from the Inventory tick, and a tick on Groceries changes it on return', async ({ page }) => {
   await seed(page);
   await openNutrition(page);
   await expect(card(page, 'Oats').locator('.wb-stock')).toHaveText('Have');
-  await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('On Shopping');
+  await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('Need');
   await expect(card(page, 'Dragon fruit').locator('.wb-stock')).toHaveCount(0); // no matching item: nothing, never "out"
   await page.click('#tab-daily'); await page.click('#daily-grocery');
   await page.evaluate(() => { location.hash = '#/daily/grocery/home'; });
@@ -47,5 +47,5 @@ test('the mark changes no calories and no count: the figures equal those with no
   await openNutrition(page);
   await todayCol(page).getByRole('checkbox', { name: /Oats as eaten/ }).click();
   await expect(card(page, 'Oats').locator('.wb-stock')).toHaveCount(0);
-  await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('On Shopping');
+  await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('Need');
 });
