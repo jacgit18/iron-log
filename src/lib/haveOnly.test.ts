@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem, GroceryMonth, PlanItem, Recipe } from '../types.ts';
 import { stockContext } from './boardStock.js';
 import type { Resolved } from './dietPlan.js';
-import { PLANNED_WAITING_NOTE, isReadyMade, isWaiting, plannedWaitingNote, splitHandy, waitingIndexes, waitingText, type HaveGate } from './haveOnly.js';
+import { PLANNED_LATER_NOTE, PLANNED_WAITING_NOTE, isReadyMade, isWaiting, plannedWaitingNote, splitHandy, waitingIndexes, waitingText, type HaveGate } from './haveOnly.js';
 
 const gi = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const grocery = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -88,8 +88,13 @@ describe('plannedWaitingNote: what the Add sheet adds after "Planned X for Lunch
     expect(note(yog, ['2026-11-21', day])).toBe(PLANNED_WAITING_NOTE);
     expect(note(yog, [])).toBe('');
   });
-  it('a day in another month than today\'s never waits, and neither does Groceries with no items', () => {
-    expect(note(yog, ['2026-12-03'])).toBe('');
+  it('a day only in a later month gets the later-month note while the food is Need now, and nothing once it is Have', () => {
+    expect(note(yog, ['2026-12-03'])).toBe(PLANNED_LATER_NOTE);
+    expect(note(yog, ['2026-12-03'], months({ y: { have: true } }))).toBe('');
+    expect(note(yog, [day, '2026-12-03'])).toBe(PLANNED_WAITING_NOTE); // a day in today's month decides
+  });
+  it('a past day gets no note, and neither does Groceries with no items', () => {
+    expect(note(yog, ['2026-11-18'])).toBe('');
     expect(note(yog, [day], months(), grocery())).toBe('');
   });
 });

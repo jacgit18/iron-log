@@ -137,7 +137,7 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
     if (scope === 'one') { const e = st().addPlanItem(day, kind, id, stored); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[slot]}.${waits([day])}`); return; }
     if (!targets.length) { onMsg('Pick a day first.'); return; }
     const r = st().addPlanItemToDays(kind, id, targets, stored);
-    onMsg(r.error ?? plannedText(name, SLOT_LABEL[slot], r.done, r.skipped) + (r.done.length ? waits(r.done) : ''));
+    onMsg(r.error ?? plannedText(name, SLOT_LABEL[slot], r.done, r.skipped, r.done.length ? waits(r.done) : ''));
   };
   const addFood = (f: Food) => {
     const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
