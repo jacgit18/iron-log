@@ -107,9 +107,9 @@ export function onwardDays(day: string, today: string): string[] {
   return out;
 }
 
-/** The sentence after planning one food on several days: "Planned Soup for Lunch on 5 days. Skipped Tue 18: full." */
-export function plannedText(name: string, meal: string, done: readonly string[], skipped: readonly SkippedDay[]): string {
+/** The sentence after planning one food on several days: "Planned Soup for Lunch on 5 days. Skipped Tue 18: full." A `note` (starting with a space) goes right after the Planned sentence, so it never reads as about a skipped day. */
+export function plannedText(name: string, meal: string, done: readonly string[], skipped: readonly SkippedDay[], note = ''): string {
   const skip = skipped.length ? ` Skipped ${skipped.map(s => `${shortDay(s.day)}: ${s.reason}`).join(', ')}.` : '';
   if (!done.length) return `Nothing planned.${skip}`;
-  return `Planned ${name} for ${meal} on ${done.length === 1 ? shortDay(done[0]!) : `${done.length} days`}.${skip}`;
+  return `Planned ${name} for ${meal} on ${done.length === 1 ? shortDay(done[0]!) : `${done.length} days`}.${note}${skip}`;
 }

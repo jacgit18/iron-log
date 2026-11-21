@@ -132,6 +132,7 @@ describe('goLabel, onwardDays, plannedText (the Add sheet and the buttons)', () 
   it('says what was planned and what was skipped', () => {
     expect(plannedText('Soup', 'Lunch', ['2026-11-15', '2026-11-16'], [{ day: '2026-11-17', reason: 'full' }])).toBe('Planned Soup for Lunch on 2 days. Skipped Tue 17: full.');
     expect(plannedText('Soup', 'Lunch', ['2026-11-15'], [])).toBe('Planned Soup for Lunch on Sun 15.');
+    expect(plannedText('Soup', 'Lunch', ['2026-11-15', '2026-11-16'], [{ day: '2026-11-17', reason: 'full' }], ' It waits.')).toBe('Planned Soup for Lunch on 2 days. It waits. Skipped Tue 17: full.'); // a note goes before the skipped days
     expect(plannedText('Soup', 'Lunch', [], [{ day: '2026-11-17', reason: 'full' }])).toBe('Nothing planned. Skipped Tue 17: full.');
   });
 });

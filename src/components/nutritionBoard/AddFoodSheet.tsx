@@ -3,6 +3,7 @@ import { foodMarks } from '../../lib/boardStock.js';
 import { onwardDays, plannedText } from '../../lib/dayPicker.js';
 import { entriesOn, entryFromFood, fmtNum, hasMacros, roomOn } from '../../lib/dietLog.js';
 import type { Food } from '../../lib/foodMacros.js';
+import { plannedWaitingNote } from '../../lib/haveOnly.js';
 import { withMicro } from '../../shared/foodMicro.js';
 import { runInstantLog } from '../../lib/instantLog.js';
 import { findMatches } from '../../lib/dietPlan.js';
@@ -132,10 +133,11 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
   const plan = (kind: 'r' | 'm', id: string, name: string) => {
     const slot = planned(kind, id); // the meal named to the person
     const stored = kind === 'r' ? storedMealFor(recipes.find(r => r.id === id), meal, explicit) : slot; // a recipe following its usual meal is stored with no meal of its own
-    if (scope === 'one') { const e = st().addPlanItem(day, kind, id, stored); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[slot]}.`); return; }
+    const waits = (days: readonly string[]) => (kind === 'r' ? plannedWaitingNote(recipes.find(r => r.id === id), days, today, grocery, groceryMonths, recipes) : ''); // a food the board will tuck behind the chip says so
+    if (scope === 'one') { const e = st().addPlanItem(day, kind, id, stored); onMsg(e ?? `Planned ${name} for ${SLOT_LABEL[slot]}.${waits([day])}`); return; }
     if (!targets.length) { onMsg('Pick a day first.'); return; }
     const r = st().addPlanItemToDays(kind, id, targets, stored);
-    onMsg(r.error ?? plannedText(name, SLOT_LABEL[slot], r.done, r.skipped));
+    onMsg(r.error ?? plannedText(name, SLOT_LABEL[slot], r.done, r.skipped, r.done.length ? waits(r.done) : ''));
   };
   const addFood = (f: Food) => {
     const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
