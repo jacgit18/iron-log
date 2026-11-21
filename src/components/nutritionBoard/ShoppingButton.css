@@ -1,0 +1,21 @@
+@layer base, components;
+@layer components {
+/* The phone's Shopping bar (ShoppingButton.tsx, bar): one line saying how many ingredients are missing for the week's plan, and the button that adds them. */
+.nb-shopbar {
+  display: flex;
+  gap: var(--sp-12);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-8);
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  font-size: var(--fs-md);
+}
+.nb-shopbar .btn {
+  flex: none;
+  min-height: 44px;
+  white-space: nowrap;
+}
+}

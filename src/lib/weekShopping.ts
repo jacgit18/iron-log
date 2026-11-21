@@ -38,3 +38,6 @@ export function shoppingNeed(ids: readonly string[], recipes: readonly Recipe[],
   }
   return names.size;
 }
+
+/** The line on the phone's Shopping bar above the day: how many new Shopping items one tap would add (`shoppingNeed`). Null at 0, so the bar is not drawn when there is nothing to add. */
+export const shoppingBarText = (need: number): string | null => (need > 0 ? `${need} ingredient${need === 1 ? '' : 's'} to add for this week's plan` : null);

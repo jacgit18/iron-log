@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, mealAddShown, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -467,5 +467,20 @@ describe('supplements taken through the Add button', () => {
     expect(d.extra.map(e => e.id)).toEqual(['mag']);
     expect(d.text).toBe('1 of 2 taken'); // D3 is scheduled and not ticked; Magnesium is the extra one
     expect(supplementDay(lib, TODAY).extra).toEqual([]);
+  });
+});
+
+describe('mealAddShown: a meal\'s own Add button', () => {
+  const today = '2026-09-24';
+  it('shows on a day ahead, for every real meal', () => {
+    for (const m of ['breakfast', 'lunch', 'dinner', 'snack'] as const) expect(mealAddShown(m, '2026-09-25', today)).toBe(true);
+  });
+  it('never shows today or earlier: eaten food has no meal of its own, the toolbar adds there', () => {
+    expect(mealAddShown('lunch', today, today)).toBe(false);
+    expect(mealAddShown('lunch', '2026-09-23', today)).toBe(false);
+  });
+  it('is off for the "Not set" group (no meal)', () => {
+    expect(mealAddShown(null, '2026-09-25', today)).toBe(false);
+    expect(mealAddShown(undefined, '2026-09-25', today)).toBe(false);
   });
 });

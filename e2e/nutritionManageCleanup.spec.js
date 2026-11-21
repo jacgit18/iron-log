@@ -49,7 +49,7 @@ test('Water reminder is in Manage, under the Water section, and opens Settings a
   await openNutrition(page);
   const m = await openManage(page);
   await expect(m.getByRole('button', { name: 'Supplements and library' })).toBeVisible();
-  await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toBeVisible();
+  await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toHaveCount(0); // Recipes is one tap away in the Daily switcher, so Manage no longer repeats it
   await expect(m.locator('#water-goal-edit')).toBeVisible();
   await m.locator('#nb-manage-water').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);

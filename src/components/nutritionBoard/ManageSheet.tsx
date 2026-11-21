@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { leaveSheet } from '../../lib/backNav.js';
 import { recommend } from '../../lib/dietTarget.js';
 import { goalLine, recommendInputs } from '../../lib/manageTargets.js';
-import { oldestLogged, weekDays, weekOf } from '../../lib/nutritionBoard.js';
-import { dayToShow, usePickedDay } from '../../lib/nutritionDayPick.js';
 import { requestProgressJump } from '../../lib/progressJump.js';
 import { requestSettingsJump } from '../../lib/settingsJump.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
@@ -14,8 +12,6 @@ import { navigate } from '../useRoute.js';
 import DietTargets from '../diet/DietTargets.js';
 import Sheet from '../Sheet.js';
 import SupplementLibrary from '../supplements/SupplementLibrary.jsx';
-import ShoppingButton from './ShoppingButton.js';
-import { usePhoneHeader } from './useWideBoard.js';
 import WaterGoal from './WaterGoal.js';
 import './PlateHints.css';
 import '../diet/Diet.css';
@@ -24,7 +20,6 @@ import '../supplements/Supplements.css';
 const HINT_MEALS = ['breakfast', 'lunch', 'dinner'] as const; // a snack needs nothing, so it has no hint to switch
 
 // The Manage sheet (brief nutrition-board, PR 2; brief targets-into-manage): daily targets with the weight goal under them (read-only: the goal is edited in Progress, the link opens the Body weight chart), the base water goal with its reminder link, and the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
-// Meals and foods (opens Recipes) opens the existing Recipes screen (the sheet closes first).
 export default function ManageSheet() {
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
@@ -33,11 +28,9 @@ export default function ManageSheet() {
   const now = useToday(s => s.today);
   const { latest, goalLb, weeksLeft } = recommendInputs(cfg.bwGoal, body, now);
   const rec = recommend(goalLb, latest, weeksLeft, cfg.diet);
-  const today = ymd(now), phone = usePhoneHeader(), kept = usePickedDay();
-  const [note, setNote] = useState('');
+  const today = ymd(now);
   const waterRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (modal?.section === 'water') waterRef.current?.scrollIntoView({ block: 'start' }); }, [modal?.section]); // the drink sheet's Change base goal lands on Water, not at the top
-  const oldest = oldestLogged(useAppStore(x => x.diet)), shownDay = dayToShow(kept, today, oldest), week = useMemo(() => weekDays(today, weekOf(today, shownDay)), [today, shownDay]); // one array per day shown, so the button's memos hold
   const [editing, setEditing] = useState(modal?.view === 'editor'); // reopened here after a library item was saved from its own sheet
   const leave = (go: () => void) => leaveSheet(window.history, window, go, closeModal); // a page opened at once would be undone by the sheet's own Back step (lib/backNav.ts)
   if (editing) {
@@ -72,10 +65,7 @@ export default function ManageSheet() {
       <div className="sect">Library</div>
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>
-        <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Meals and foods (opens Recipes)</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>
-        {phone && <li><ShoppingButton week={week} today={today} onMsg={setNote} onAdded={closeModal} /><span className="note">Put what this week's planned recipes are missing on Shopping.</span></li>}
       </ul>
-      {note && <p className="note" role="status">{note}</p>}
       <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>
     </Sheet>
   );

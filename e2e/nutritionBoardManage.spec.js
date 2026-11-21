@@ -74,27 +74,22 @@ test('the drink sheet sends the base goal to Manage, and the water base is there
   await expect(sheet(page).locator('#water-goal-edit')).toBeInViewport(); // Manage opens scrolled to Water, not at the top
 });
 
-test('Manage reaches the supplement editor, saved meals and foods, and the water reminder', async ({ page }) => {
+test('Manage reaches the supplement editor and the water reminder, and no longer repeats the Recipes tab', async ({ page }) => {
   await openNutrition(page);
   const m = await openManage(page);
   await expect(m.getByRole('button', { name: 'Supplements and library' })).toBeVisible();
-  await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toBeVisible();
+  await expect(m.getByRole('button', { name: 'Meals and foods (opens Recipes)' })).toHaveCount(0);
   await expect(m.getByRole('button', { name: 'Water reminder' })).toBeVisible();
   await expect(page.locator('#sched-h')).toHaveCount(0); // the editor is not on the page
 });
 
-test('Manage: Supplements and library has a way back, and Meals and foods (opens Recipes) opens Recipes with Back to Nutrition', async ({ page }) => {
+test('Manage: Supplements and library has a way back', async ({ page }) => {
   await openNutrition(page);
   await openManage(page);
   await page.locator('#sched-edit').click();
   await expect(page.locator('#suplib-h')).toBeVisible();
   await page.locator('#sched-back').click();
   await expect(sheet(page).getByRole('heading', { name: 'Manage' })).toBeVisible();
-  await page.locator('#nb-manage-meals').click();
-  await expect(sheet(page)).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => location.hash)).toContain('daily/recipes');
-  await page.goBack();
-  await expect(page.locator('#nb-h')).toBeVisible();
 });
 
 test('Manage: Water reminder opens Settings', async ({ page }) => {
@@ -104,6 +99,8 @@ test('Manage: Water reminder opens Settings', async ({ page }) => {
   await expect(sheet(page)).toHaveCount(0);
   await expect(page.locator('#tab-settings, #view').first()).toBeVisible();
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');
+  await page.goBack(); // the sheet left no step of its own behind: one Back returns to Nutrition
+  await expect(page.locator('#nb-h')).toBeVisible();
 });
 
 test('the Manage button is 44px tall on a phone', async ({ page }) => {

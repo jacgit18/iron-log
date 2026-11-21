@@ -120,6 +120,10 @@ export const startMeal = (last: PlanSlot | null | undefined, minutes: number): P
 export type AddMode = 'log' | 'plan';
 export const addMode = (day: string, today: string): AddMode => (day > today ? 'plan' : 'log');
 
+/** Whether a meal shows its own Add button in its header: on a day ahead, for every real meal, empty or not. Adding there plans into the meal that was pressed. Today and an earlier day log what was eaten,
+ *  and an eaten entry has no meal of its own (it lands by the hour it was logged or its food's usual meal, `placeEaten`), so a button there could not keep its promise: those days use the toolbar. */
+export const mealAddShown = (slot: PlanSlot | null | undefined, day: string, today: string): boolean => !!slot && addMode(day, today) === 'plan';
+
 /** The add sheet's ways of adding. A future day plans (recipes and saved meals only); today and an earlier day log what was eaten. */
 export type AddFlow = 'quick' | 'barcode' | 'oneoff' | 'find' | 'meals' | 'recipes' | 'copy' | 'savemeal';
 export const ADD_FLOWS: Record<AddFlow, { label: string; hint: string }> = {
