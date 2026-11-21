@@ -279,3 +279,25 @@ describe('Keep handy (brief nutrition-keep-handy)', () => {
     expect(skipsAfterRemovingHandy([rep('a', every, { id: 'beef', s: 'dinner' })], skips, day, { k: 'r', id: 'beef', s: 'dinner' })).toBeUndefined();
   });
 });
+
+describe('repeats and daily snacks that wait on inventory (brief ready-made-have-gate)', () => {
+  const food = (id: string, n: string): Recipe => ({ id, n, cat: 'ready', ing: [], steps: [], kcal: 100, p: 5 }) as Recipe;
+  const yog = food('yog', 'Greek yogurt'), oats = food('oats', 'Oats');
+  const rs = [yog, oats];
+  const g = { stores: ['Anywhere'], items: [{ id: 'y', n: 'Greek yogurt', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }, { id: 'o', n: 'Oats', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }] };
+  const gate = { today, g, months: { '2026-11': { lines: { o: { have: true as const } }, pulled: [] } }, diet: [] };
+  const day = '2026-11-18';
+  it('a repeat of a Need food is left out of the day and kept in the plan; a Have repeat shows', () => {
+    const l = [rep('a', every, { id: 'yog' }), rep('b', every, { id: 'oats' })];
+    const plan = withRepeats({}, l, undefined, [day], today);
+    expect(plan[day]).toHaveLength(2); // stored plan view still holds both
+    const d = boardDay(plan, day, rs, [], null, {}, {}, gate);
+    expect(d.slots.flatMap(s => s.items.map(x => x.r.name))).toEqual(['Oats']);
+    expect(d.waiting.map(w => w.r.name)).toEqual(['Greek yogurt']);
+    expect(d.count).toBe(1);
+  });
+  it('is not applied on a past day', () => {
+    const d = boardDay({ '2026-11-15': [{ k: 'r', id: 'yog', s: 'snack', v: true }] }, '2026-11-15', rs, [], null, {}, {}, gate);
+    expect(d.waiting).toEqual([]);
+  });
+});

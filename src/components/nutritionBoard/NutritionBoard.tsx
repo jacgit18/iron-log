@@ -40,6 +40,7 @@ export default function NutritionBoard() {
   const supp = useAppStore(s => s.supp);
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
+  const grocery = useAppStore(s => s.grocery), groceryMonths = useAppStore(s => s.groceryMonths);
   const kept = usePickedDay(); // the picked day lives outside this component so leaving for Recipes and coming back keeps it (lib/nutritionDayPick.ts); a reload shows today
   const setPicked = setPickedDay;
   const [anchor, setAnchor] = useState(today); // the first day of the 1 to 3 day window; tapping a column inside it keeps the window still, only the stepper moves it
@@ -60,7 +61,8 @@ export default function NutritionBoard() {
     const t = targetsFor(cfg.diet, recommend(goalLb, latest, weeksLeft, cfg.diet));
     return { kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs };
   }, [cfg.bwGoal, cfg.diet, body, now]);
-  const views = useMemo(() => days.map(d => dayView(d, today, { plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets, hintsOff: cfg.diet?.hintsOff, hintSkips: cfg.diet?.hintSkips })), [days, today, plan, recipes, legacy, diet, supp, body, targets, cfg.diet?.hintsOff, cfg.diet?.hintSkips]);
+  const gate = useMemo(() => ({ today, g: grocery, months: groceryMonths, diet }), [today, grocery, groceryMonths, diet]); // what hides a ready-made food that is Need (lib/haveOnly.ts)
+  const views = useMemo(() => days.map(d => dayView(d, today, { gate, plan, recipes, meals: legacy.held, moved: legacy.moved, diet, supp, body, targets, hintsOff: cfg.diet?.hintsOff, hintSkips: cfg.diet?.hintSkips })), [days, today, gate, plan, recipes, legacy, diet, supp, body, targets, cfg.diet?.hintsOff, cfg.diet?.hintSkips]);
   const st = () => useAppStore.getState();
   const goWeek = (o: WeekOffset) => { setPicked(dayOnArrival(today, o)); setMsg(''); };
   const prevWeek = stepWeek(offset, -1, range), nextWeek = stepWeek(offset, 1, range); // null at an end: the arrow stops

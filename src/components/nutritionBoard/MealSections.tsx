@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { dayStock } from '../../lib/boardStock.js';
+import { dayStock, stockContext } from '../../lib/boardStock.js';
+import { splitHandy } from '../../lib/haveOnly.js';
 import { mealFigures, mealKcalText, shortDay, slotOverText, type EatenPlacement } from '../../lib/nutritionBoard.js';
 import { drinkIdsOf } from '../../lib/recipeUses.js';
-import { handyTrays } from '../../lib/repeats.js';
+import { handyTrays, type HandyRow } from '../../lib/repeats.js';
 import { MARK_LABEL, SLOT_LABEL, type BoardDay, type BoardSlot } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS, planItemKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -12,10 +13,12 @@ import type { Say } from '../../lib/eatenStep.js';
 import Icon from '../Icon.js';
 import { EatenRows } from './EatenRows.js';
 import HandyTray from './HandyTray.js';
+import WaitingChip, { WaitingRow } from './WaitingChip.js';
 import './PlateHints.css';
 import type { Resolved } from '../../lib/dietPlan.js';
 
 const ORDER = PLAN_SLOTS;
+const REVEALED = new Set<string>(); // days whose waiting foods are shown: this visit only (a reload empties it), kept when a day column remounts
 const SLOT_KEY = ['', ...ORDER];
 
 // A day's meals (brief nutrition-board; header wording A, brief nutrition-board-available-list: "4 on the menu · 2 planned", then "245 kcal eaten" with a muted warning past the meal's share of a set target): Breakfast, Lunch, Dinner and Snack always (brief daily-snacks), with "Nothing planned" and no button when empty. Snack also lists the saved daily snacks (shown, not stored) and has the Daily snacks control; with no list it says "No daily snacks yet" and offers to set one up. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to and Remove (today it also has a check box that logs it as eaten);
@@ -32,10 +35,26 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `cards` is read through `cardsKey`
   const stock = useMemo(() => dayStock(view.day, today, cards, diet, grocery, groceryMonths, recipes), [view.day, today, cardsKey, diet, grocery, groceryMonths, recipes]); // the day's at-home marks (lib/boardStock.ts)
   const repeats = useAppStore(x => x.cfg.diet?.repeats), repeatSkips = useAppStore(x => x.cfg.diet?.repeatSkips), storedPlan = useAppStore(x => x.cfg.diet?.plan);
-  const trays = useMemo(() => (editable ? handyTrays(view.day, storedPlan ?? {}, repeats, repeatSkips, today, recipes, []) : {}), [editable, view.day, storedPlan, repeats, repeatSkips, today, recipes]); // the day's handy trays, once for all four meals
+  const allTrays = useMemo(() => (editable ? handyTrays(view.day, storedPlan ?? {}, repeats, repeatSkips, today, recipes, []) : {}), [editable, view.day, storedPlan, repeats, repeatSkips, today, recipes]); // the day's handy trays, once for all four meals
+  // Ready-made foods that are Need wait behind the chip (brief ready-made-have-gate): the plan's came from `view.waiting`, the handy ones are split here; revealing is this visit's view, never stored.
+  const [, redraw] = useState(0);
+  const reveal = REVEALED.has(view.day);
+  const toggleReveal = () => { if (reveal) REVEALED.delete(view.day); else REVEALED.add(view.day); redraw(n => n + 1); };
+  const { trays, waitingHandy } = useMemo(() => {
+    const ctx = stockContext(view.day, today, grocery, groceryMonths, recipes);
+    const shown: typeof allTrays = {}, waiting: Partial<Record<PlanSlot, HandyRow[]>> = {};
+    for (const slot of ORDER) {
+      const sp = splitHandy(allTrays[slot] ?? [], ctx);
+      if (sp.shown.length) shown[slot] = sp.shown;
+      if (sp.waiting.length) waiting[slot] = sp.waiting;
+    }
+    return { trays: shown, waitingHandy: waiting };
+  }, [allTrays, view.day, today, grocery, groceryMonths, recipes]);
+  const waitingCount = view.waiting.length + ORDER.reduce((n, s) => n + (waitingHandy[s]?.length ?? 0), 0);
   const hasSnacks = useAppStore(x => !!x.cfg.diet?.snacks?.length); // the saved daily snack list
   const slots: BoardSlot[] = [...view.slots];
   for (const s of ORDER) if (!slots.some(x => x.slot === s)) slots.push({ slot: s, items: [], kcal: 0, share: null, need: [], have: [], fixes: [] });
+  if (reveal && view.waiting.some(w => w.slot === null) && !slots.some(x => x.slot === null)) slots.push({ slot: null, items: [], kcal: 0, share: null, need: [], have: [], fixes: [] });
   slots.sort((a, b) => SLOT_KEY.indexOf(a.slot ?? '') - SLOT_KEY.indexOf(b.slot ?? ''));
   // A one-tap plate fix adds the food and marks it planned, as the check reads planned food only (brief nutrition-board-available-list).
   const addFix = (id: string, slot: PlanSlot) => onMsg(st().addPlateFix(view.day, id, slot)); // store action: finds the item it added, never assumes it is last
@@ -48,14 +67,16 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   };
   return (
     <>
+      <WaitingChip count={waitingCount} open={reveal} onToggle={toggleReveal} />
       {slots.map(s => {
         const extra = (s.slot && placed[s.slot]) || [];
         const { planned, eatenKcal, anyEaten } = mealFigures(s.items, extra, diet, snackList, drinkIdsOf(recipes)); // lib/nutritionBoard.ts
+        const waitHere = reveal ? [...view.waiting.filter(w => w.slot === s.slot).map(w => ({ key: `w${w.index}`, name: w.r.name, portion: w.r.portion })), ...(s.slot ? (waitingHandy[s.slot] ?? []).map(h => ({ key: `h${h.r.rid}`, name: h.res.name, portion: h.res.portion })) : [])] : [];
         const over = slotOverText(s.slot, s.share, eatenKcal, s.slot ? SLOT_LABEL[s.slot] : 'Not set'); // lib/nutritionBoard.ts: the "Not set" group never warns
         return (
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
-          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned, anyEaten }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
-          {s.items.length === 0 && extra.length === 0 && <span className="nb-empty">{s.slot === 'snack' && !hasSnacks ? 'No daily snacks yet' : 'Nothing planned'}</span>}
+          <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{s.slot === null && s.items.length === 0 ? 'Waiting on inventory' : mealKcalText({ items: s.items.length, planned, anyEaten }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
+          {s.items.length === 0 && extra.length === 0 && waitHere.length === 0 && <span className="nb-empty">{s.slot === 'snack' && !hasSnacks ? 'No daily snacks yet' : 'Nothing planned'}</span>}
           {s.items.length === 0 && s.slot && view.day > today && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot]}`} onClick={() => onAdd(s.slot!)}>Add</button>}
           {s.slot === 'snack' && editable && (hasSnacks
             ? <button type="button" className="btn sm ghost nb-slotadd" onClick={() => st().openModal({ type: 'nbsnacks' })}>Daily snacks</button>
@@ -70,6 +91,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
             const ck = `${view.day}:${planItemKey(x.r.item)}`;
             return <BoardCard key={ck} item={x} day={view.day} today={today} open={open === ck} stock={stock.get(x.index)} onOpen={() => setOpen(open === ck ? null : ck)} onLog={onLog} onMsg={onMsg} />;
           })}
+          {waitHere.map(w => <WaitingRow key={w.key} name={w.name} portion={w.portion} />)}
           {s.slot && !!trays[s.slot]?.length && <HandyTray day={view.day} slot={s.slot} rows={trays[s.slot]!} onMsg={onMsg} />}
           <EatenRows label={`Eaten in ${s.slot ? SLOT_LABEL[s.slot] : 'this meal'}`} entries={extra} onMsg={onMsg} />
           {s.slot && editable && s.fixes.map(f => <button type="button" key={f.mark} className="wb-fix" onClick={() => addFix(f.recipe.id, s.slot!)}>+ Add {f.mark === 'carb' ? 'a carb' : f.mark === 'protein' ? 'a protein' : 'a veg'}: {f.recipe.n}{f.why ? ` (${f.why})` : ''}</button>)}

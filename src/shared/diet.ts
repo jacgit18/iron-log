@@ -197,7 +197,11 @@ export const isDailySnackItem = (i: PlanItem, snacks: readonly { id: string }[] 
 /** Whether a stored item is a drink: a recipe whose id is in `drinks` (`drinkIdsOf` in `src/lib/recipeUses.ts` works the set out). A drink never counts toward MAX_PLAN_ITEMS or the plate check (brief nutrition-meal-labels-year-repeat). */
 export const isDrinkItem = (i: PlanItem, drinks: ReadonlySet<string> | undefined): boolean => i.k === 'r' && !!drinks?.has(i.id);
 /** How many of a day's stored items count toward MAX_PLAN_ITEMS: those marked planned (`p`), never a listed daily snack or, when `drinks` is given, a drink. An item stored before the marker existed is available, not planned. */
-export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>): number => items.filter(i => i.p === true && !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length;
+export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): number => items.filter(i => i.p === true && !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks) && !isWaitingItem(i, waiting)).length;
+/** Whether a stored item is a ready-made food tucked away because it is Need (`waiting` is the set of such recipe ids, from `waitingIds` in `src/lib/haveOnly.ts`; brief ready-made-have-gate). It is not on the board, so it never counts toward MAX_PLAN_ITEMS. */
+export const isWaitingItem = (i: PlanItem, waiting: ReadonlySet<string> | undefined): boolean => i.k === 'r' && !!waiting?.has(i.id);
+/** The refusal for adding a food the day already holds; says where a tucked-away one went. */
+export const alreadyThereText = (existing: PlanItem | undefined, waiting?: ReadonlySet<string>): string => (existing && isWaitingItem(existing, waiting) ? 'That food is already in that meal, waiting on inventory (Need).' : 'That is already in that meal.');
 
 /** The plan of a stored value, cleaned: real dates only, at most MAX_DAY_STORED a day (the planned count needs the daily list, so `addItem`, `moveItem` and `markPlanned` hold it), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {
