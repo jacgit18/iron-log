@@ -152,6 +152,16 @@ describe('currentWeekRecord: the week behind the "This week" tile', () => {
   it('is null while the saved weeks are still loading and the Board is on another week', () => {
     expect(currentWeekRecord('2026-10-18', shown, null, '2026-10-25')).toBeNull();
   });
+  it('is null after a failed load when the Board is on another week, even with partial weeks', () => {
+    expect(currentWeekRecord('2026-10-18', shown, { '2026-10-18': shown }, '2026-10-25', true)).toBeNull();
+    expect(currentWeekRecord('2026-10-18', shown, null, '2026-10-25', true)).toBeNull();
+  });
+  it('ignores a failed load while the Board is on the current week', () => {
+    expect(currentWeekRecord('2026-10-25', shown, null, '2026-10-25', true)).toBe(shown);
+  });
+  it('is unchanged after a successful load (failed false)', () => {
+    expect(currentWeekRecord('2026-10-18', shown, { '2026-10-18': shown, '2026-10-25': current }, '2026-10-25', false)).toBe(current);
+  });
   it('gives the current week\'s numbers whatever week is shown', () => {
     const hist = { '2026-10-18': shown, '2026-10-25': current };
     const onCurrent = weekSummary(cfg(), programs, '2026-10-25', currentWeekRecord('2026-10-25', current, hist, '2026-10-25'));

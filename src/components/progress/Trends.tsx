@@ -25,10 +25,10 @@ function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub: Reac
 function KpiTiles({ keys, byWeek, changes }: { keys: string[]; byWeek: Record<string, { sets: number; sessions: number }>; changes: Change[] }) {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
   const week = useAppStore(s => s.week); const body = useAppStore(s => s.body);
-  const shown = useAppStore(s => s.weekStart); const hist = useAppStore(s => s.weekHist); const today = useToday(s => s.today);
+  const shown = useAppStore(s => s.weekStart); const hist = useAppStore(s => s.weekHist); const histFailed = useAppStore(s => s.historyFailed); const today = useToday(s => s.today);
   // The calendar week, not the week the Board is showing: stepping the Board back must not change this tile.
   const currentKey = ymd(weekStartOf(today));
-  const rec = currentWeekRecord(ymd(shown), week, hist, currentKey);
+  const rec = currentWeekRecord(ymd(shown), week, hist, currentKey, histFailed);
   const r = rec ? weekSummary(cfg, programs, currentKey, rec) : null;
   const k4 = keys.slice(-4), p4 = keys.slice(-8, -4);
   const s4 = k4.reduce((a, k) => a + (byWeek[k] ? byWeek[k].sets : 0), 0);
