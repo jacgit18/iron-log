@@ -34,6 +34,18 @@ describe('food log in the backup file', () => {
   });
 });
 
+describe('At home pin in the backup file (brief ready-made-have-gate)', () => {
+  const food = { id: 'yog', n: 'Greek yogurt', cat: 'ready', ing: [], steps: [], kcal: 100, p: 10 };
+  const withRecipes = (recipes: unknown[]) => ({ ...snap([]), recipes } as unknown as Snapshot);
+  it('keeps a pin and Not tracked on a ready-made food through export and import, and drops a bad one', () => {
+    const back = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...food, home: 'i4' }, { ...food, id: 'b', home: '-' }]), {})));
+    expect(back.recipes?.map(r => r.home)).toEqual(['i4', '-']);
+    const bad = parseDataFile(JSON.stringify(buildDataFile(withRecipes([{ ...food, home: 7 }, { ...food, id: 'b', home: '' }, { ...food, id: 'c', home: 'x'.repeat(61) }]), {})));
+    expect(bad.recipes).toHaveLength(3);
+    for (const r of bad.recipes ?? []) expect(r).not.toHaveProperty('home');
+  });
+});
+
 describe('usual amount in the backup file (brief nutrition-usual-portion-field)', () => {
   const meal = { id: 'chili', n: 'Chili', cat: 'protein', ing: [], steps: [], kcal: 400, p: 30, usual: 1.5 };
   const withRecipes = (recipes: unknown[]) => ({ ...snap([]), recipes } as unknown as Snapshot);

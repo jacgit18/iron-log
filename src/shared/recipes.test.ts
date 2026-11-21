@@ -77,6 +77,22 @@ describe('serving size', () => {
   });
 });
 
+describe('home: the At home item of a ready-made food (brief ready-made-have-gate)', () => {
+  const food = { id: 'yog', n: 'Greek yogurt', cat: 'ready', ing: [], steps: [] };
+  it('keeps an item id and the not-tracked dash, and accepts them as valid', () => {
+    expect(normRecipe({ ...food, home: 'i4' })).toEqual({ ...food, home: 'i4' });
+    expect(normRecipe({ ...food, home: '-' })).toEqual({ ...food, home: '-' });
+    expect(validRecipe({ ...food, home: 'i4' })).toBe(true);
+  });
+  it('drops an empty, non-string, reserved or too long value, and a food saved before it is unchanged', () => {
+    expect(normRecipe(food)).toEqual(food);
+    for (const home of ['', '  ', 7, null, true, 'x'.repeat(MAX_RECIPE_ID + 1)]) expect(normRecipe({ ...food, home })).toEqual(food);
+  });
+  it('belongs to a ready-made food only', () => {
+    expect(normRecipe({ ...base, home: 'i4' })).toEqual(base);
+  });
+});
+
 describe('validRecipe', () => {
   it('refuses what the app would never send', () => {
     expect(validRecipe({ ...base, cat: 'soup' })).toBe(false);

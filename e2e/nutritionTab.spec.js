@@ -20,7 +20,7 @@ test('an admin also sees Medical', async ({ page }) => {
   await expect(page.locator('#daily-grocery')).toBeVisible();
   expect(await ids(page)).toEqual(['daily-grocery', 'daily-supplements', 'daily-medical', 'daily-recipes']);
   await page.click('#daily-recipes');
-  await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Foods', exact: true })).toBeVisible();
   await page.click('#daily-medical');
   await expect(page.getByRole('heading', { name: 'Medical' })).toBeVisible();
 });

@@ -26,7 +26,7 @@ test('empty Groceries: Set up sharing opens Sharing; Browse recipes opens Recipe
   await page.click('#groc-tile-sharing');
   await expect(page.locator('#groc-sharing')).toHaveAttribute('aria-pressed', 'true');
   await page.click('#groc-tile-recipes');
-  await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Foods', exact: true })).toBeVisible();
   await page.click('#daily-grocery');
   await page.click('#groc-view-inventory');
   await page.click('#groc-tile-add');

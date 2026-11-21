@@ -26,6 +26,7 @@ import { useToday } from '../../store/useToday.js';
 import GoesWith from './GoesWith.js';
 import MealMicroBars from './MealMicroBars.js';
 import RecipeMicro from './RecipeMicro.js';
+import AtHomeItem from './AtHomeItem.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
 import './RecipeDesktop.css';
@@ -102,6 +103,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Food</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
         {strip}
         {bar}
+        {mine && <AtHomeItem recipe={recipe} />}
         <RecipeMicro key={recipe.id} recipe={recipe} />
         {usual && <p className="note">{usual}</p>}
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}

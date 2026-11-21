@@ -358,6 +358,7 @@ export interface RecipesSlice {
   saveRecipes(): void;
   setRecipeMicro(id: string, micro: Micro): string | null; // one serving's vitamins and minerals onto a recipe that has none (never overwrites; brief portion-scaled-micros); an error text, or null
   setRecipeUsual(id: string, usual: number | undefined): string | null; // the usual portion alone (undefined clears it); an error text when the recipe is gone, else null
+  setRecipeHome(id: string, home: string | null): void; // a ready-made food's At home item: an item id, '-' for Not tracked, null to match by name again (brief ready-made-have-gate)
   toggleRecipeFav(id: string): void; // the star on a recipe (brief recipes-find-type-tabs); saved with the recipes
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
