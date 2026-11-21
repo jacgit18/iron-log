@@ -2,6 +2,7 @@ import { PLAN_SLOTS, isDrinkItem, samePlanItem } from '../shared/diet.js';
 import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { resultText, type SkippedDay } from './dayPicker.js';
 import { fullReason, inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
+import { waitingIndexes, type HaveGate } from './haveOnly.js';
 import { servingNumbers } from './dietLog.js';
 import { SLOT_SHARE, fatBarState, fatCoverage, fitsMeal, hiddenHints, marksOf, plateCheck } from './plate.js';
 import { pairsOf } from './recipePairs.js';
@@ -16,9 +17,11 @@ export const MARK_LABEL: Record<PlateMark, string> = { protein: 'Protein', carb:
 
 /** `virtual` is a listed daily snack shown on this day but not stored (brief daily-snacks): ticking, changing or moving it stores a real item first. */
 export interface BoardItem { index: number; r: Resolved; fat: number | undefined; virtual?: true }
+/** A card tucked away because it is a ready-made food on Need (brief ready-made-have-gate): kept off the day's figures, with the meal it would sit in. */
+export interface WaitingItem extends BoardItem { slot: PlanSlot | null }
 /** One meal of a day. `slot` null is the group of items with no meal set. `fixes` are the one-tap additions for what the meal lacks. */
 export interface BoardSlot { slot: PlanSlot | null; items: BoardItem[]; kcal: number; share: number | null; need: readonly PlateMark[]; have: PlateMark[]; fixes: { mark: PlateMark; recipe: Recipe; why: string | null }[] }
-export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[]; /** The day's drinks (brief nutrition-meal-labels-year-repeat): outside every meal, the plate check and the planned cap; their calories still count in the day's totals. */ drinks: BoardItem[] }
+export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[]; /** The day's drinks (brief nutrition-meal-labels-year-repeat): outside every meal, the plate check and the planned cap; their calories still count in the day's totals. */ drinks: BoardItem[]; /** Ready-made foods tucked away because they are Need (brief ready-made-have-gate): not in `count`, the totals, the meals or the plate check; A to Z. */ waiting: WaitingItem[] }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -46,16 +49,19 @@ export function fixFor(mark: PlateMark, inMeal: readonly Recipe[], recipes: read
 }
 
 /** One day of the plan as meals: an item with no meal of its own sits in its recipe's usual meal (`mealOfItem`), a drink in the Drinks list; each item with its numbers, each meal with its calories against its share of the target, its plate check and fixes, and the day's three totals. */
-export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}, hints: { off?: readonly PlanSlot[]; skips?: Readonly<Record<string, readonly PlanSlot[]>> } = {}): BoardDay {
+export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: SavedMeal[], kcalTarget: number | null, moved: Readonly<Record<string, string>> = {}, hints: { off?: readonly PlanSlot[]; skips?: Readonly<Record<string, readonly PlanSlot[]>> } = {}, gate?: HaveGate): BoardDay {
   const hidden = hiddenHints(hints.off, hints.skips, day); // meals whose plate check and fixes are not drawn on this day (brief nutrition-plate-hints-per-meal)
   const items = plan[day] ?? [];
-  const rows: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r), ...(it.v ? { virtual: true as const } : {}) }; });
+  const all: BoardItem[] = items.map((it, index) => { const r = resolve(it, recipes, meals, moved); return { index, r, fat: fatOf(r), ...(it.v ? { virtual: true as const } : {}) }; });
+  const drinkIds = drinkIdsOf(recipes);
+  const isDrink = (x: BoardItem) => isDrinkItem(x.r.item, drinkIds);
+  const wait = gate ? waitingIndexes(day, gate, all.filter(x => !isDrink(x)), recipes) : new Set<number>(); // a drink never waits
+  const rows = wait.size ? all.filter(x => !wait.has(x.index)) : all; // tucked-away cards stay stored; they are only left out of what is shown and counted
   const live = rows.filter(x => !x.r.gone);
   const sum = (pick: (x: BoardItem) => number | undefined) => round1(live.reduce((a, x) => a + (pick(x) ?? 0), 0));
   const foods = live.map(x => ({ r: { ...(x.r.kcal !== undefined ? { kcal: x.r.kcal } : {}), ...(x.fat !== undefined ? { f: x.fat } : {}) }, x: 1 }));
-  const drinkIds = drinkIdsOf(recipes);
-  const isDrink = (x: BoardItem) => isDrinkItem(x.r.item, drinkIds);
   const byName = (a: BoardItem, b: BoardItem) => a.r.name.localeCompare(b.r.name, undefined, { sensitivity: 'base' }) || a.index - b.index; // A to Z in every meal, whatever order the items were added or moved in (owner, 2026-11-18); `index` still points at the plan position
+  const waiting: WaitingItem[] = all.filter(x => wait.has(x.index)).sort(byName).map(x => ({ ...x, slot: mealOfItem(x.r.item, recipes) ?? null }));
   const drinks = rows.filter(isDrink).sort(byName);
   const meal = rows.filter(x => !isDrink(x));
   const slots: BoardSlot[] = [];
@@ -70,8 +76,8 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
     slots.push({ slot, items: here, kcal: Math.round(here.reduce((a, x) => a + (x.r.gone ? 0 : x.r.kcal ?? 0), 0)), share: slot && kcalTarget ? Math.round(kcalTarget * SLOT_SHARE[slot]) : null, need: chk.need, have: chk.have, fixes });
   }
   return {
-    day, count: items.length, kcal: Math.round(sum(x => x.r.kcal)), protein: sum(x => x.r.p), fat: sum(x => x.fat),
-    fatState: fatBarState(fatCoverage(foods)), fatFoods: { known: live.filter(x => x.fat !== undefined).length, all: live.length }, slots, drinks,
+    day, count: rows.length, kcal: Math.round(sum(x => x.r.kcal)), protein: sum(x => x.r.p), fat: sum(x => x.fat),
+    fatState: fatBarState(fatCoverage(foods)), fatFoods: { known: live.filter(x => x.fat !== undefined).length, all: live.length }, slots, drinks, waiting,
   };
 }
 
