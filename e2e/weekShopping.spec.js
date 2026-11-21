@@ -41,25 +41,25 @@ test('on a wide board the toolbar button is off with nothing planned; two planne
   await expect.poll(() => listed(page)).toEqual(['flour', 'garlic', 'pasta']);
 });
 
-test('on a phone the button is in the Manage sheet, not the toolbar; a tap closes the sheet and the board shows the Undo notice; last week dims it', async ({ page }) => {
+test('on a phone a bar above the day says how many are missing and adds them; it is drawn only when something is missing, never in Manage, and last week has none', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await seedRecipes(page);
   await openNutrition(page);
-  await expect(shopping(page)).toHaveCount(0); // the phone toolbar is unchanged (the day card stays under 400 px, nutritionLayout.spec.js)
+  await expect(shopping(page)).toHaveCount(0); // nothing planned: no bar, and the phone toolbar has no button (the day card stays under 400 px, nutritionLayout.spec.js)
   await page.locator('#nb-manage').click();
-  await expect(page.getByRole('dialog').locator('#nb-shopping')).toBeDisabled(); // nothing planned yet
+  await expect(page.getByRole('dialog').locator('#nb-shopping')).toHaveCount(0); // it no longer lives in Manage
   await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
   await planTomorrow(page, 'Pasta bake', true);
-  await page.locator('#nb-manage').click();
-  const manage = page.getByRole('dialog');
-  expect(await manage.locator('#nb-shopping').evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(43.5);
-  await manage.locator('#nb-shopping').click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const bar = page.locator('.nb-shopbar');
+  await expect(bar).toContainText('2 ingredients missing for this week');
+  expect(await shopping(page).evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(43.5);
+  await shopping(page).click();
+  await expect(bar).toHaveCount(0); // everything is on the list now, so the bar goes
   await expect(page.locator('.removednote')).toContainText('Added 2 to Shopping.');
   await expect.poll(() => listed(page)).toEqual(['garlic', 'pasta']);
   await page.locator('.removednote').getByRole('button', { name: 'Undo' }).click();
   await expect.poll(() => listed(page)).toEqual([]);
-  await page.getByRole('button', { name: 'Previous week' }).click(); // last week: its first day
-  await page.locator('#nb-manage').click();
-  await expect(page.getByRole('dialog').locator('#nb-shopping')).toBeDisabled(); // last week adds nothing
+  await expect(bar).toContainText('2 ingredients missing'); // Undo brings the bar back
+  await page.getByRole('button', { name: 'Previous week' }).click(); // last week: nothing to add
+  await expect(bar).toHaveCount(0);
 });

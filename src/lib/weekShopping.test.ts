@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DietCfg, DietEntry } from '../types.ts';
 import type { Plan } from './dietPlan.js';
 import type { Grocery, GroceryItem, Recipe } from '../types.ts';
-import { idsAdded, plannedShoppingIds, shoppingDays, shoppingNeed, shoppingRecipeIds } from './weekShopping.js';
+import { idsAdded, plannedShoppingIds, shoppingBarText, shoppingDays, shoppingNeed, shoppingRecipeIds } from './weekShopping.js';
 
 const recipes = [{ id: 'r1' }, { id: 'r2' }];
 const entry = (id: string, d: string): DietEntry => ({ id, d, n: 'x', kcal: 100, p: 1 } as DietEntry);
@@ -87,4 +87,12 @@ describe('plannedShoppingIds (daily snacks into Shopping)', () => {
     expect(plannedShoppingIds(d, ['2026-11-08'], today, all, [])).toEqual([]);
     expect(plannedShoppingIds(undefined, days, today, all, [])).toEqual([]);
   });
+});
+
+describe('shoppingBarText: the phone bar above the day', () => {
+  it('says how many are missing, singular for one', () => {
+    expect(shoppingBarText(3)).toBe("3 ingredients missing for this week's plan");
+    expect(shoppingBarText(1)).toBe("1 ingredient missing for this week's plan");
+  });
+  it('is null at zero, so the bar is not drawn when there is nothing to add', () => expect(shoppingBarText(0)).toBeNull());
 });
