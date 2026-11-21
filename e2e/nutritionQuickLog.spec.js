@@ -85,7 +85,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await scanned.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Drink' }).click();
   await expect(scanned.getByText('72 kcal · P 2.4 · C 2.4 · F 6 g')).toBeVisible();
   const go = scanned.getByRole('button', { name: 'Save and log it' });
-  await go.dblclick(); // a double tap still logs once
+  await go.evaluate(b => { b.click(); b.click(); }); // a double tap still logs once: two clicks on the button itself (dblclick sends the second to the same spot, which holds another control once the card has closed)
   await expect(page.getByText('Saved Almond milk (Silk) to Recipes as drink and logged it.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(1);
   await openRecipes(page);
