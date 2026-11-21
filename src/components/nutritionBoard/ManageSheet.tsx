@@ -20,7 +20,6 @@ import '../supplements/Supplements.css';
 const HINT_MEALS = ['breakfast', 'lunch', 'dinner'] as const; // a snack needs nothing, so it has no hint to switch
 
 // The Manage sheet (brief nutrition-board, PR 2; brief targets-into-manage): daily targets with the weight goal under them (read-only: the goal is edited in Progress, the link opens the Body weight chart), the base water goal with its reminder link, and the places the old page scattered. Supplements and library opens the one supplement list here (brief supplement-merged-list);
-// Meals and foods (opens Recipes) opens the existing Recipes screen (the sheet closes first).
 export default function ManageSheet() {
   const closeModal = useAppStore(s => s.closeModal);
   const modal = useAppStore(s => s.modal);
@@ -66,7 +65,6 @@ export default function ManageSheet() {
       <div className="sect">Library</div>
       <ul className="nb-manage">
         <li><button type="button" className="btn" id="sched-edit" onClick={() => setEditing(true)}>Supplements and library</button><span className="note">Edit what you take and when, and your whole supplement list.</span></li>
-        <li><button type="button" className="btn" id="nb-manage-meals" onClick={() => leave(() => { useAppStore.getState().setTab('daily'); navigate('daily/recipes', 'push'); })}>Meals and foods (opens Recipes)</button><span className="note">Open Recipes: your meals, foods and recipes.</span></li>
       </ul>
       <div className="actions"><button type="button" className="btn primary" onClick={closeModal}>Done</button></div>
     </Sheet>
