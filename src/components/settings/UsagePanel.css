@@ -1,0 +1,31 @@
+@layer base, components;
+@layer components {
+.usage-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  margin-top: var(--sp-12);
+  overflow-x: auto;
+}
+.usage-table {
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  width: 100%;
+}
+.usage-table caption {
+  font-weight: 600;
+  padding-bottom: var(--sp-4);
+  text-align: left;
+}
+.usage-table th,
+.usage-table td {
+  border-top: 1px solid var(--line);
+  padding: var(--sp-4) var(--sp-8) var(--sp-4) 0;
+  text-align: left;
+}
+.usage-table thead th {
+  border-top: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+}
