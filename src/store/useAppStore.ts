@@ -206,6 +206,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
   weekHist: null, // every saved week, loaded on demand for Progress and exports
   historyLoading: false,
+  historyFailed: false,
   dl: undefined, // downloads handle: undefined = not checked yet, null = unavailable
 
   // Muscle map selection; the Progress page clears it when you leave.
@@ -245,7 +246,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Callers that arrive while a load is running wait for that same load.
   loadHistory() {
     if (histPromise) return histPromise;
-    set({ historyLoading: true });
+    set({ historyLoading: true, historyFailed: false });
     histPromise = (async () => {
       await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
       const out: Record<string, any> = {}; histFailed = false;
@@ -258,7 +259,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
         }
       } catch { histFailed = true; /* show what loaded */ }
-      set({ weekHist: out, historyLoading: false });
+      set({ weekHist: out, historyLoading: false, historyFailed: histFailed });
       get().recordPastWeeks();
     })().finally(() => { histPromise = null; });
     return histPromise;
