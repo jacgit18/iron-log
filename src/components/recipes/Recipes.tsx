@@ -3,6 +3,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import FilterSelect from '../FilterSelect.jsx';
 import ComboChips from './ComboChips.js';
 import StockPill from './StockPill.js';
+import { useToday } from '../../store/useToday.js';
 import FoodTypeReview from './FoodTypeReview.js';
 import Icon from '../Icon.js';
 import RecipeDetail from './RecipeDetail.js';
@@ -118,7 +119,8 @@ export default function Recipes() {
   useEffect(() => { if (activeTags.length !== tagSel.length) setTagSel(activeTags); }, [activeTags, tagSel]); // drop a renamed or deleted tag so it cannot come back selected
   useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
-  const foodStock = useMemo(() => foodMarks(recipes, ymd(new Date()), grocery, months), [recipes, grocery, months]); // the Have / Need pill of each ready-made food (lib/boardStock.ts)
+  const today = ymd(useToday(s => s.today)); // the app clock, the same day the board's marks are worked out for
+  const foodStock = useMemo(() => foodMarks(recipes, today, grocery, months), [recipes, today, grocery, months]); // the Have / Need pill of each ready-made food (lib/boardStock.ts)
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the tab, so each tab's count is what it would show
   const counts = useMemo(() => comboTabCounts(narrowed, recipes), [narrowed, recipes]); // the rows each tab shows: a combo is a chip on its parts, a row only in Meals (brief recipes-combo-chips)
@@ -269,7 +271,7 @@ export default function Recipes() {
   return (
     <section className="panel" aria-labelledby="recipes-h">
       <div className="rc-titlebar">
-        <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
+        <h2 id="recipes-h" tabIndex={-1}>Foods</h2>
         <RecipeNewMenu onChoose={choose} />
       </div>
       <div className="rc-top">

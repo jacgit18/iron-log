@@ -133,6 +133,13 @@ describe('cardStock: a ready-made food\'s pin beats its name (brief ready-made-h
   it('pinValue is the pin, or empty for none, a pin to a gone item', () => {
     expect([pinValue(food('b'), g.items), pinValue(food('-'), g.items), pinValue(food(), g.items), pinValue(food('deleted'), g.items)]).toEqual(['b', '-', '', '']);
   });
+  it('foodMarks reads the month of the day it is given, with last month carried', () => {
+    const list = [food()];
+    const nov = { '2026-11': { lines: { a: { have: true } }, pulled: [] } } as Record<string, GroceryMonth>;
+    expect(foodMarks(list, '2026-11-20', g, nov).get('r1')?.kind).toBe('have');
+    expect(foodMarks(list, '2026-12-02', g, nov).get('r1')?.kind).toBe('have'); // December is not recorded yet: November's tick carries
+    expect(foodMarks(list, '2026-12-02', g, { ...nov, '2026-12': { lines: {}, pulled: [], carried: '2026-11' } }).get('r1')?.kind).toBe('shopping');
+  });
   it('a recipe with ingredient lines ignores a pin', () => {
     const r = { ...rec('p', 'Greek yogurt', ['skyr']), home: 'a' } as Recipe;
     expect(mark(card(r), g, months({ b: { have: true } }))).toEqual({ kind: 'have', text: 'Have' });
