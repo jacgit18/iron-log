@@ -54,7 +54,6 @@ let unsubWeek: (() => void) | null = null;
 let flagT: ReturnType<typeof setTimeout> | null = null, flagX: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
 let histPromise: Promise<void> | null = null;
-let histFailed = false; // the last history load lost some weeks to an error
 
 // Outside the Claude host, downloads are a plain blob link.
 const blobSave = {
@@ -206,6 +205,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
   weekHist: null, // every saved week, loaded on demand for Progress and exports
   historyLoading: false,
+  historyFailed: false,
   dl: undefined, // downloads handle: undefined = not checked yet, null = unavailable
 
   // Muscle map selection; the Progress page clears it when you leave.
@@ -245,10 +245,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Callers that arrive while a load is running wait for that same load.
   loadHistory() {
     if (histPromise) return histPromise;
-    set({ historyLoading: true });
+    set({ historyLoading: true, historyFailed: false });
     histPromise = (async () => {
       await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
-      const out: Record<string, any> = {}; histFailed = false;
+      const out: Record<string, any> = {}; let failed = false;
       try {
         if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach((d: any) => { if (d.exists) out[d.id] = d.data(); }); }
         else {
@@ -257,8 +257,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             if (k && k.startsWith('ironlog:weeks/')) { const v = LS.get(k.slice(8)); if (v) out[k.slice(14)] = v; }
           }
         }
-      } catch { histFailed = true; /* show what loaded */ }
-      set({ weekHist: out, historyLoading: false });
+      } catch { failed = true; /* show what loaded */ }
+      set({ weekHist: out, historyLoading: false, historyFailed: failed });
       get().recordPastWeeks();
     })().finally(() => { histPromise = null; });
     return histPromise;
@@ -611,7 +611,7 @@ useAppStore.subscribe((s, prev) => {
   if (s.ready === prev.ready || !allReady(s.ready) || allReady(prev.ready)) return;
   s.refreshRan();
   if (LS.get(RAN_FLAG(s))) return;
-  void s.loadHistory().then(() => { const st = useAppStore.getState(); if (st.weekHist && !histFailed) LS.set(RAN_FLAG(st), true); });
+  void s.loadHistory().then(() => { const st = useAppStore.getState(); if (st.weekHist && !st.historyFailed) LS.set(RAN_FLAG(st), true); });
 });
 // Saved meals move into Recipes once the data is in AND the recipes list has been read: a list built on an unread one could replace the account's
 // recipes (brief saved-meals-into-recipes). Each saved meal moves once (cfg.diet.mealsMoved); the old list is left alone.

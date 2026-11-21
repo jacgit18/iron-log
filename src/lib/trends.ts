@@ -30,11 +30,17 @@ export function weekSummary(cfg: Cfg, programs: Record<string, Program>, key: st
 
 // The record behind Progress's "This week" tile: the real current week's, whichever week the Board is showing. The Board's own record
 // is only used while it is on the current week; on another week the saved weeks (`hist`, loaded on demand) hold it, and a current week
-// nobody has opened yet reads as untouched. Null while the saved weeks are still loading and the Board is on another week.
-export function currentWeekRecord(shownKey: string, shownWeek: Week, hist: Record<string, Week> | null, currentKey: string): Week | null {
+// nobody has opened yet reads as untouched. Null while the saved weeks are still loading, or when they failed to load (the current week
+// may be the one missing, so 0 would be a guess), and the Board is on another week.
+export function currentWeekRecord(shownKey: string, shownWeek: Week, hist: Record<string, Week> | null, currentKey: string, failed: boolean): Week | null {
   if (shownKey === currentKey) return shownWeek;
-  if (!hist) return null;
+  if (!hist || failed) return null;
   return hist[currentKey] ?? normWeek(null);
+}
+
+// What the "This week" tile says under its dash while it has no record: still loading, or the load failed (not a guess of zero).
+export function thisWeekPlaceholder(failed: boolean): string {
+  return failed ? 'Couldn\u2019t load this week' : 'Loading this week\u2026';
 }
 
 // Week keys for the charts: up to `max` weeks ending this week, starting no earlier than the first logged week (min `min` columns).

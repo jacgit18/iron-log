@@ -507,6 +507,7 @@ export interface CoreSlice {
   modal: Modal | null;
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
+  historyFailed: boolean; // the last history load hit an error, so weekHist may be missing weeks
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
   bodySel: MuscleKey | null;
   bodySec: boolean;

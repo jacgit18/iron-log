@@ -974,6 +974,19 @@ describe('bug check fixes', () => {
     await p;
     expect(st().weekHist['2026-01-04']).toBeTruthy();
   });
+  it('a failed history load sets historyFailed and the next good load clears it', async () => {
+    useAppStore.setState({ weekHist: null, historyFailed: false });
+    mem['ironlog:weeks/2026-01-04'] = JSON.stringify({ done: { x: true } });
+    const spy = vi.spyOn(localStorage, 'key').mockImplementation(() => { throw new Error('read failed'); });
+    try {
+      await st().loadHistory();
+      expect(st().historyFailed).toBe(true);
+      expect(st().historyLoading).toBe(false);
+    } finally { spy.mockRestore(); }
+    await st().loadHistory();
+    expect(st().historyFailed).toBe(false);
+    expect(st().weekHist['2026-01-04']).toBeTruthy();
+  });
   it('ticking both default boxes keeps the slot default', () => {
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
     st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeDefault: true, makeExDefault: true });
