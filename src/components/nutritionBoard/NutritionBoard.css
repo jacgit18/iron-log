@@ -126,6 +126,7 @@
   min-height: 44px;
 }
 .nb-slotrow {
+  container-type: inline-size;
   display: flex;
   gap: var(--sp-8);
   align-items: center;
@@ -136,6 +137,17 @@
 }
 .nb-slotrow .nb-slotadd {
   flex: none;
+}
+/* In a narrow day column (the seven columns from 1440 px) Add is the plus alone, so the meal's counts keep their row; its aria-label still names it. */
+@container (max-width: 240px) {
+  .nb-slotadd-t {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 .nb-col.past {
   background: var(--surface);

@@ -41,7 +41,7 @@ test('on a wide board the toolbar button is off with nothing planned; two planne
   await expect.poll(() => listed(page)).toEqual(['flour', 'garlic', 'pasta']);
 });
 
-test('on a phone a bar above the day says how many are missing and adds them; it is drawn only when something is missing, never in Manage, and last week has none', async ({ page }) => {
+test('on a phone a bar above the day says how many it would add and adds them; it is drawn only when something is missing, never in Manage, and last week has none', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await seedRecipes(page);
   await openNutrition(page);
@@ -51,15 +51,16 @@ test('on a phone a bar above the day says how many are missing and adds them; it
   await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
   await planTomorrow(page, 'Pasta bake', true);
   const bar = page.locator('.nb-shopbar');
-  await expect(bar).toContainText('2 ingredients missing for this week');
+  await expect(bar).toContainText('2 ingredients to add for this week');
   expect(await shopping(page).evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(43.5);
   await shopping(page).click();
   await expect(bar).toHaveCount(0); // everything is on the list now, so the bar goes
+  await expect(page.locator('.removednote').getByRole('button', { name: 'Undo' })).toBeFocused(); // the pressed button is gone, so focus lands on Undo, not the page
   await expect(page.locator('.removednote')).toContainText('Added 2 to Shopping.');
   await expect.poll(() => listed(page)).toEqual(['garlic', 'pasta']);
   await page.locator('.removednote').getByRole('button', { name: 'Undo' }).click();
   await expect.poll(() => listed(page)).toEqual([]);
-  await expect(bar).toContainText('2 ingredients missing'); // Undo brings the bar back
+  await expect(bar).toContainText('2 ingredients to add'); // Undo brings the bar back
   await page.getByRole('button', { name: 'Previous week' }).click(); // last week: nothing to add
   await expect(bar).toHaveCount(0);
 });

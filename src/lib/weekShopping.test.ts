@@ -90,9 +90,9 @@ describe('plannedShoppingIds (daily snacks into Shopping)', () => {
 });
 
 describe('shoppingBarText: the phone bar above the day', () => {
-  it('says how many are missing, singular for one', () => {
-    expect(shoppingBarText(3)).toBe("3 ingredients missing for this week's plan");
-    expect(shoppingBarText(1)).toBe("1 ingredient missing for this week's plan");
+  it('says how many a tap would add, singular for one', () => {
+    expect(shoppingBarText(3)).toBe("3 ingredients to add for this week's plan");
+    expect(shoppingBarText(1)).toBe("1 ingredient to add for this week's plan");
   });
   it('is null at zero, so the bar is not drawn when there is nothing to add', () => expect(shoppingBarText(0)).toBeNull());
 });

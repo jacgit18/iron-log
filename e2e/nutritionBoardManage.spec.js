@@ -99,6 +99,8 @@ test('Manage: Water reminder opens Settings', async ({ page }) => {
   await expect(sheet(page)).toHaveCount(0);
   await expect(page.locator('#tab-settings, #view').first()).toBeVisible();
   await expect.poll(() => page.evaluate(() => location.hash)).toContain('settings');
+  await page.goBack(); // the sheet left no step of its own behind: one Back returns to Nutrition
+  await expect(page.locator('#nb-h')).toBeVisible();
 });
 
 test('the Manage button is 44px tall on a phone', async ({ page }) => {

@@ -56,7 +56,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
         <div key={s.slot ?? 'none'} className="wb-slot" onDragOver={e => { if (s.slot && editable) e.preventDefault(); }} onDrop={e => { if (s.slot && editable) drop(e, s.slot); }}>
           <div className="nb-slotrow">
             <div className="wb-slothd"><b>{s.slot ? SLOT_LABEL[s.slot] : 'Not set'}</b><span>{mealKcalText({ items: s.items.length, planned, anyEaten }, eatenKcal)}{over && <em className="wb-over"> · {over}</em>}</span></div>
-            {mealAddShown(s.slot, view.day, today) && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot!]}`} onClick={() => onAdd(s.slot!)}><Icon name="plus" /> Add</button>}
+            {mealAddShown(s.slot, view.day, today) && <button type="button" className="btn sm nb-slotadd" aria-label={`Add to ${SLOT_LABEL[s.slot!]}`} onClick={() => onAdd(s.slot!)}><Icon name="plus" /><span className="nb-slotadd-t"> Add</span></button>}
           </div>
           {s.items.length === 0 && extra.length === 0 && <span className="nb-empty">{s.slot === 'snack' && !hasSnacks ? 'No daily snacks yet' : 'Nothing planned'}</span>}
           {s.slot === 'snack' && editable && (hasSnacks

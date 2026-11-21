@@ -31,6 +31,7 @@ export default function ShoppingButton({ week, today, onMsg, onAdded, bar }: { w
     }, { verb: 'Added', undone: 'Removed from Shopping' });
     if (r.refused) { onMsg(r.refused); return; } // the reason shows where the tap was: the Manage sheet stays open so its note is read, and the board's Undo notice waits behind it
     onAdded?.(); // the Manage sheet closes so the board's Undo notice is the thing on screen
+    if (bar) requestAnimationFrame(() => document.querySelector<HTMLElement>('.removednote button')?.focus()); // the bar goes now that nothing is missing: focus moves to the notice's Undo instead of falling to the page
   };
   if (bar) {
     const text = shoppingBarText(need);
