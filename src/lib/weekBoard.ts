@@ -92,7 +92,7 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   const moved: PlanItem = { ...rest, ...(slot ? { s: slot } : {}) };
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
-  if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal.' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
+  if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal (or waiting on inventory).' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
   const rejoin = toDay !== fromDay; // a move never changes the marker, so a same-day move changes no count; a moved item keeps its marker (brief nutrition-board-available-list)
   const full = rejoin ? fullReason(target, moved, snacks, drinks) : null;
   if (full) return { plan: null, error: full };

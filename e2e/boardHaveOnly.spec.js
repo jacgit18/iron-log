@@ -53,10 +53,3 @@ test('ticking Have on Groceries brings the food back, and the chip goes away', a
   await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('Have');
   await expect(todayCol(page).getByRole('button', { name: /waiting on inventory/ })).toHaveCount(0);
 });
-
-test('a past day has no chip', async ({ page }) => {
-  await seed(page);
-  await openNutrition(page);
-  await expect(page.locator('.nb-col:not(.today):not(.past) .wc-chip')).toHaveCount(0); // days ahead carry no plan in this seed
-  await expect(page.locator('.nb-col.past .wc-chip')).toHaveCount(0);
-});

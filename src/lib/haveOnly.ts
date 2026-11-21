@@ -1,9 +1,9 @@
-import type { DietEntry, Grocery, GroceryMonth, PlanItem, Recipe } from '../types.ts';
+import type { DietEntry, Grocery, GroceryMonth, Recipe } from '../types.ts';
 import { isEaten, type Resolved } from './dietPlan.js';
 import { cardStock, stockContext, type StockContext } from './boardStock.js';
 import type { HandyRow } from './repeats.js';
 
-/* ---------- The board shows what you have (brief ready-made-have-gate, ADR 142): a ready-made food that Groceries says you need is tucked away
+/* ---------- The board shows what you have (brief ready-made-have-gate, ADR 144): a ready-made food that Groceries says you need is tucked away
    behind a "waiting on inventory" chip. Pure; nothing is stored or deleted, only what the board draws and counts changes. ---------- */
 
 /** What `boardDay` reads to decide which cards wait: today, the Inventory, its month ticks and the diet log (an eaten card never waits). */
@@ -24,7 +24,7 @@ export function waitingIndexes(day: string, gate: HaveGate, cards: readonly { r:
   if (!cards.length) return out;
   const ctx = stockContext(day, gate.today, gate.g, gate.months, recipes);
   if (!ctx) return out;
-  for (const c of cards) if (!c.r.gone && !isEaten(c.r.item as PlanItem, gate.diet) && isWaiting(c.r.recipe, ctx)) out.add(c.index);
+  for (const c of cards) if (!c.r.gone && !isEaten(c.r.item, gate.diet) && isWaiting(c.r.recipe, ctx)) out.add(c.index);
   return out;
 }
 

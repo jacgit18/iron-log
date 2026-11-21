@@ -18,6 +18,7 @@ import './PlateHints.css';
 import type { Resolved } from '../../lib/dietPlan.js';
 
 const ORDER = PLAN_SLOTS;
+const REVEALED = new Set<string>(); // days whose waiting foods are shown: this visit only (a reload empties it), kept when a day column remounts
 const SLOT_KEY = ['', ...ORDER];
 
 // A day's meals (brief nutrition-board; header wording A, brief nutrition-board-available-list: "4 on the menu · 2 planned", then "245 kcal eaten" with a muted warning past the meal's share of a set target): Breakfast, Lunch, Dinner and Snack always (brief daily-snacks), with "Nothing planned" and no button when empty. Snack also lists the saved daily snacks (shown, not stored) and has the Daily snacks control; with no list it says "No daily snacks yet" and offers to set one up. Each meal shows its plate check and one-tap fixes; a planned item opens Less, More, Move to and Remove (today it also has a check box that logs it as eaten);
@@ -36,7 +37,9 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   const repeats = useAppStore(x => x.cfg.diet?.repeats), repeatSkips = useAppStore(x => x.cfg.diet?.repeatSkips), storedPlan = useAppStore(x => x.cfg.diet?.plan);
   const allTrays = useMemo(() => (editable ? handyTrays(view.day, storedPlan ?? {}, repeats, repeatSkips, today, recipes, []) : {}), [editable, view.day, storedPlan, repeats, repeatSkips, today, recipes]); // the day's handy trays, once for all four meals
   // Ready-made foods that are Need wait behind the chip (brief ready-made-have-gate): the plan's came from `view.waiting`, the handy ones are split here; revealing is this visit's view, never stored.
-  const [reveal, setReveal] = useState(false);
+  const [, redraw] = useState(0);
+  const reveal = REVEALED.has(view.day);
+  const toggleReveal = () => { if (reveal) REVEALED.delete(view.day); else REVEALED.add(view.day); redraw(n => n + 1); };
   const { trays, waitingHandy } = useMemo(() => {
     const ctx = stockContext(view.day, today, grocery, groceryMonths, recipes);
     const shown: typeof allTrays = {}, waiting: Partial<Record<PlanSlot, HandyRow[]>> = {};
@@ -64,7 +67,7 @@ export default function MealSections({ view, placed, today, editable, onLog, onM
   };
   return (
     <>
-      <WaitingChip count={waitingCount} open={reveal} onToggle={() => setReveal(!reveal)} />
+      <WaitingChip count={waitingCount} open={reveal} onToggle={toggleReveal} />
       {slots.map(s => {
         const extra = (s.slot && placed[s.slot]) || [];
         const { planned, eatenKcal, anyEaten } = mealFigures(s.items, extra, diet, snackList, drinkIdsOf(recipes)); // lib/nutritionBoard.ts

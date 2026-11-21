@@ -56,7 +56,7 @@ export function markPlanned(plan: Plan, day: string, index: number, on: boolean,
 export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next 52 weeks.');
   const list = plan[day] ?? [];
-  if (list.some(i => samePlanItem(i, item))) return fail('That is already in that meal.'); // the same food may be in two different meals
+  if (list.some(i => samePlanItem(i, item))) return fail('That is already in that meal (or waiting on inventory).'); // the same food may be in two different meals
   const full = fullReason(list, item, snacks, drinks);
   if (full) return fail(full);
   return { plan: { ...plan, [day]: [...list, item] }, error: null };
