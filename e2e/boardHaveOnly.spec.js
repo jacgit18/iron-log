@@ -53,3 +53,12 @@ test('ticking Have on Groceries brings the food back, and the chip goes away', a
   await expect(card(page, 'Greek yogurt').locator('.wb-stock')).toHaveText('Have');
   await expect(todayCol(page).getByRole('button', { name: /waiting on inventory/ })).toHaveCount(0);
 });
+
+test('a past day is never gated: its column has no cards, pills or chip', async ({ page }) => {
+  await seed(page);
+  await openNutrition(page);
+  const past = page.locator('.nb-col.past').first();
+  await expect(past).toHaveCount(1); // the fixed clock is a Thursday, so earlier days of the week are past columns
+  await expect(past.locator('.wb-card, .wc-row, .wb-stock')).toHaveCount(0); // no plan cards and no stock pills
+  await expect(past.locator('.wc-chip')).toHaveCount(0);
+});

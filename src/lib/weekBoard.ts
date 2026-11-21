@@ -1,4 +1,4 @@
-import { PLAN_SLOTS, isDrinkItem, samePlanItem } from '../shared/diet.js';
+import { PLAN_SLOTS, alreadyThereText, isDrinkItem, samePlanItem } from '../shared/diet.js';
 import type { DailySnack, PlanItem, PlanSlot, PlateMark, Recipe, SavedMeal } from '../types.ts';
 import { resultText, type SkippedDay } from './dayPicker.js';
 import { fullReason, inWindow, resolve, type Plan, type Resolved } from './dietPlan.js';
@@ -84,7 +84,7 @@ export function boardDay(plan: Plan, day: string, recipes: Recipe[], meals: Save
 type Moved = { plan: Plan; error: null } | { plan: null; error: string };
 
 /** `plan` with the item at `index` of `fromDay` moved to meal `slot` of `toDay` (the same day changes only its meal). An error text when the day is outside the window or full, or the food is already in that meal. */
-export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Moved {
+export function moveItem(plan: Plan, fromDay: string, index: number, toDay: string, slot: PlanSlot | undefined, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): Moved {
   const it = plan[fromDay]?.[index];
   if (!it) return { plan: null, error: 'That is gone.' };
   if (!inWindow(toDay, today)) return { plan: null, error: 'You can plan today and the next 52 weeks.' };
@@ -92,9 +92,9 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
   const moved: PlanItem = { ...rest, ...(slot ? { s: slot } : {}) };
   if (toDay !== fromDay) delete moved.e; // eaten belongs to the day it was checked on
   const target = (plan[toDay] ?? []).filter((_, i) => !(toDay === fromDay && i === index));
-  if (target.some(x => samePlanItem(x, moved))) return { plan: null, error: 'That is already in that meal (or waiting on inventory).' }; // the same rule as addItem: the same food may be in two meals of a day, never twice in one
+  { const dup = target.find(x => samePlanItem(x, moved)); if (dup) return { plan: null, error: alreadyThereText(dup, waiting) }; } // the same rule as addItem: the same food may be in two meals of a day, never twice in one
   const rejoin = toDay !== fromDay; // a move never changes the marker, so a same-day move changes no count; a moved item keeps its marker (brief nutrition-board-available-list)
-  const full = rejoin ? fullReason(target, moved, snacks, drinks) : null;
+  const full = rejoin ? fullReason(target, moved, snacks, drinks, waiting) : null;
   if (full) return { plan: null, error: full };
   const from = (plan[fromDay] ?? []).filter((_, i) => i !== index);
   const next: Plan = { ...plan };
@@ -106,19 +106,19 @@ export function moveItem(plan: Plan, fromDay: string, index: number, toDay: stri
 export interface ManyPlanResult { plan: Plan; added: string[]; skipped: SkippedDay[] }
 
 /** Why `item` can't be added to `day` of `plan` (the `addItem` rules, as a short reason), or null. */
-function addReject(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): string | null {
+function addReject(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): string | null {
   if (!inWindow(day, today)) return 'out of reach';
   const list = plan[day] ?? [];
   if (list.some(i => samePlanItem(i, item))) return 'already there';
-  return fullReason(list, item, snacks, drinks) ? 'full' : null;
+  return fullReason(list, item, snacks, drinks, waiting) ? 'full' : null;
 }
 
 /** `plan` with each `{ day, item }` added (several cards for several days, or the same card on several days). A day that is full, outside the window or already holds that food in that meal is skipped and named; the rest are added. Never throws; an all-skipped batch returns the plan unchanged. */
-export function addItemsToDays(plan: Plan, adds: readonly { day: string; item: PlanItem }[], today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): ManyPlanResult {
+export function addItemsToDays(plan: Plan, adds: readonly { day: string; item: PlanItem }[], today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): ManyPlanResult {
   let next = plan;
   const added: string[] = [], skipped: SkippedDay[] = [];
   for (const { day, item } of adds) {
-    const why = addReject(next, day, item, today, snacks, drinks);
+    const why = addReject(next, day, item, today, snacks, drinks, waiting);
     if (why) { skipped.push({ day, reason: why }); continue; }
     next = { ...next, [day]: [...(next[day] ?? []), item] };
     added.push(day);
@@ -127,13 +127,13 @@ export function addItemsToDays(plan: Plan, adds: readonly { day: string; item: P
 }
 
 /** Copy the planned item at `index` of `fromDay` to the same meal of each of `toDays` (the portion and meal kept, the eaten ticks left behind). The source's own day is skipped; `error` is set when the item is gone or nothing could be added. */
-export function copyItemToDays(plan: Plan, fromDay: string, index: number, toDays: readonly string[], today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): ManyPlanResult & { error: string | null } {
+export function copyItemToDays(plan: Plan, fromDay: string, index: number, toDays: readonly string[], today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): ManyPlanResult & { error: string | null } {
   const it = plan[fromDay]?.[index];
   if (!it) return { plan, added: [], skipped: [], error: 'That is gone.' };
   const { e: _eaten, v: _virtual, ...item } = it;
   const days = [...new Set(toDays)];
   const own: SkippedDay[] = days.includes(fromDay) ? [{ day: fromDay, reason: 'its own day' }] : [];
-  const r = addItemsToDays(plan, days.filter(d => d !== fromDay).map(day => ({ day, item })), today, snacks, drinks);
+  const r = addItemsToDays(plan, days.filter(d => d !== fromDay).map(day => ({ day, item })), today, snacks, drinks, waiting);
   const skipped = [...own, ...r.skipped];
   return { ...r, skipped, error: r.added.length ? null : resultText('Copied', [], skipped) };
 }

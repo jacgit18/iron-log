@@ -37,3 +37,12 @@ export function splitHandy<T extends Pick<HandyRow, 'res'>>(rows: readonly T[], 
 
 /** The chip's text. */
 export const waitingText = (n: number): string => `${n} waiting on inventory`;
+
+/** The ids of the ready-made foods that are Need today, for the planned cap: a tucked-away food does not use it up. Empty when nothing can wait (Groceries empty). */
+export function waitingIds(recipes: readonly Recipe[], today: string, g: Grocery, months: Record<string, GroceryMonth>): ReadonlySet<string> {
+  const out = new Set<string>();
+  const ctx = stockContext(today, today, g, months, recipes);
+  if (!ctx) return out;
+  for (const r of recipes) if (isWaiting(r, ctx)) out.add(r.id);
+  return out;
+}
