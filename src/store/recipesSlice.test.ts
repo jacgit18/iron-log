@@ -411,3 +411,29 @@ describe('fillRecipeNumbers (brief recipe-auto-nutrition)', () => {
     expect(st().fillRecipeNumbers('nope', fields)).toBe('That recipe is gone.');
   });
 });
+
+describe('setRecipeHome (brief ready-made-have-gate)', () => {
+  const food = { n: 'Greek yogurt', cat: 'ready' as const, ing: [], steps: [], kcal: 120, p: 15 };
+  it('pins a ready-made food to an item or to Not tracked, clears it, and an edit keeps it', () => {
+    expect(st().saveRecipe(food)).toBeNull();
+    const id = st().recipes[0]!.id;
+    st().setRecipeHome(id, 'item-1');
+    expect(st().recipes[0]).not.toHaveProperty('home'); // no such item on Groceries: nothing is stored
+    useAppStore.setState({ grocery: { stores: ['Anywhere'], items: [{ id: 'item-1', n: 'Greek yogurt', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }] } });
+    st().setRecipeHome(id, 'item-1');
+    expect(st().recipes[0]!.home).toBe('item-1');
+    expect(st().saveRecipe({ ...food, id, n: 'Skyr' })).toBeNull();
+    expect(st().recipes[0]).toMatchObject({ n: 'Skyr', home: 'item-1' });
+    st().setRecipeHome(id, '-');
+    expect(st().recipes[0]!.home).toBe('-');
+    st().setRecipeHome(id, null);
+    expect(st().recipes[0]).not.toHaveProperty('home');
+    st().setRecipeHome('nope', 'item-1'); // an unknown id changes nothing
+    expect(st().recipes).toHaveLength(1);
+  });
+  it('does not pin a recipe that is not a ready-made food', () => {
+    st().saveRecipe(draft);
+    st().setRecipeHome(st().recipes[0]!.id, 'item-1');
+    expect(st().recipes[0]).not.toHaveProperty('home');
+  });
+});

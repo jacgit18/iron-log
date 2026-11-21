@@ -11,8 +11,8 @@ import { pickView } from './pickView.js';
 import { activeFormGuard } from '../../lib/recipeFormGuard.js';
 
 // The things you check off or log every day, under one tab. Add a section by adding a row here.
-// The Supplements section is called Nutrition ('supplements' stays its key, so a saved view and the button id keep working). Medical is admin-only for now; Recipes is for everyone (ADR 084).
-const DAILY: [string, string, ComponentType][] = [['grocery', 'Groceries', Grocery], ['supplements', 'Nutrition', Supplements], ['medical', 'Medical', Medical], ['recipes', 'Recipes', Recipes]];
+// The Supplements section is called Nutrition ('supplements' stays its key, so a saved view and the button id keep working). Medical is admin-only for now; Recipes is for everyone (ADR 084); its tab reads Foods (brief ready-made-have-gate), the key and address stay `recipes`.
+const DAILY: [string, string, ComponentType][] = [['grocery', 'Groceries', Grocery], ['supplements', 'Nutrition', Supplements], ['medical', 'Medical', Medical], ['recipes', 'Foods', Recipes]];
 
 export default function Daily() {
   const view = useAppStore(s => s.dailyView);

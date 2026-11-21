@@ -22,7 +22,7 @@ const write = async (page, name, ingredients, steps = 'Mix.') => {
 
 test('Recipes is on the Daily tab for everyone and starts empty', async ({ page }) => {
   await recipes(page);
-  await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Foods', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();
   await noViolations(page);
 });

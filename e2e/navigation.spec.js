@@ -83,6 +83,15 @@ test('the Daily section and the Grocery view are in the address', async ({ page 
   await expect(page.locator('#groc-bought-history')).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('the Daily tab reads Foods and keeps its address (brief ready-made-have-gate)', async ({ page }) => {
+  await page.click('#tab-daily');
+  await expect(page.locator('#daily-recipes')).toHaveText('Foods');
+  await page.click('#daily-recipes');
+  await expect.poll(() => hash(page)).toBe('#/daily/recipes');
+  await page.reload();
+  await expect(page.locator('#daily-recipes')).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('a recipe form adds a Back step; a reload on it shows the list', async ({ page }) => {
   await page.click('#tab-daily');
   await page.click('#daily-recipes');
