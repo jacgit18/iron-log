@@ -52,6 +52,8 @@ test('on a phone a bar above the day says how many it would add and adds them; i
   await planTomorrow(page, 'Pasta bake', true);
   const bar = page.locator('.nb-shopbar');
   await expect(bar).toContainText('2 ingredients to add for this week');
+  await page.locator('.wdc-tabs [role="tab"]').first().click(); // an earlier day of this week: the bar is about the week's plan, so it stays
+  await expect(bar).toContainText('2 ingredients to add');
   expect(await shopping(page).evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(43.5);
   await shopping(page).click();
   await expect(bar).toHaveCount(0); // everything is on the list now, so the bar goes

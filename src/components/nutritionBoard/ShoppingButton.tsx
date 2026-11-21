@@ -9,7 +9,7 @@ const NO_MONTH = { lines: {}, pulled: [] };
 
 // Week to Shopping (brief week-shopping): one tap puts the missing ingredients of the shown week's planned, uneaten recipes and listed daily snacks on Shopping. What it added
 // comes back with the board's Undo notice (RemovedNotice scope "diet"); a tap that adds nothing says why in the message line of whoever holds it. On a phone it is a bar above the day, drawn only when something is missing (`bar`); elsewhere it is the toolbar button.
-export default function ShoppingButton({ week, today, onMsg, onAdded, bar }: { week: readonly string[]; today: string; onMsg: (text: string) => void; onAdded?: () => void; bar?: boolean }) {
+export default function ShoppingButton({ week, today, onMsg, bar }: { week: readonly string[]; today: string; onMsg: (text: string) => void; bar?: boolean }) {
   const cfg = useAppStore(s => s.cfg);
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
@@ -29,8 +29,7 @@ export default function ShoppingButton({ week, today, onMsg, onAdded, bar }: { w
       for (const id of r.ids) useAppStore.getState().removeGroceryItem(id, { quiet: true });
       return true;
     }, { verb: 'Added', undone: 'Removed from Shopping' });
-    if (r.refused) { onMsg(r.refused); return; } // the reason shows where the tap was: the Manage sheet stays open so its note is read, and the board's Undo notice waits behind it
-    onAdded?.(); // the Manage sheet closes so the board's Undo notice is the thing on screen
+    if (r.refused) { onMsg(r.refused); return; } // the reason shows in the board's message line, and the Undo notice waits behind it
     if (bar) requestAnimationFrame(() => document.querySelector<HTMLElement>('.removednote button')?.focus()); // the bar goes now that nothing is missing: focus moves to the notice's Undo instead of falling to the page
   };
   if (bar) {

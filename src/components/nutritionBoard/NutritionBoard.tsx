@@ -108,7 +108,7 @@ export default function NutritionBoard() {
       </WeekDayCard>
       {phone && dates}
       {phone && toolbar}
-      {phone && foodEditable(day, today) && <ShoppingButton bar week={days} today={today} onMsg={setMsg} />}
+      {phone && <ShoppingButton bar week={days} today={today} onMsg={setMsg} />}
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
       <p className="note nb-msg" role="status">{msg}{undo && <UndoButton onUndo={() => { setMsg('Undone.'); undo(); }} />}</p>
