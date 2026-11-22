@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FoodType, Recipe, RecipeCategory, RecipeUse } from '../types.ts';
 import { RECIPE_CATEGORIES } from '../shared/recipes.js';
-import { FOOD_GROUPS, FOOD_SECTIONS, alsoIn, alsoTag, firstSection, groupOf, inSection, inSectionList, openingSection, onFoodsList, searchCounts, sectionAfterSave, sectionEmptyNote, sectionForPath, sectionCountText, sectionCounts, sectionLabel, sectionsInGroup, sectionsOf } from './foodSections.js';
+import { FOOD_GROUPS, FOOD_SECTIONS, alsoIn, alsoTag, libraryMatchCount, firstSection, groupOf, inSection, inSectionList, openingSection, onFoodsList, searchCounts, sectionAfterSave, sectionEmptyNote, sectionForPath, sectionCountText, sectionCounts, sectionLabel, sectionsInGroup, sectionsOf } from './foodSections.js';
 
 const mk = (id: string, cat: RecipeCategory, extra: Partial<Recipe> = {}): Recipe => ({ id, n: id, cat, ing: [], steps: [], ...extra });
 const withSteps = ['mix'];
@@ -197,5 +197,16 @@ describe('searchCounts: the Made number is exact only when the library cannot ad
     expect(searchCounts(list, null).madePlus).toBe(true);
     expect(searchCounts(list, 3, true).madePlus).toBe(true);
     expect(searchCounts(list, 0, false)).toMatchObject({ madePlus: false, groups: { made: 1, store: 0 } }); // signed out: Recipes.tsx passes 0
+  });
+});
+
+describe('libraryMatchCount', () => {
+  it('is a known 0 signed out (so Made has no "+") and the loaded count, or null, signed in', () => {
+    const list = [mk('a', 'protein', { steps: withSteps })];
+    expect(libraryMatchCount(false, null)).toBe(0);
+    expect(libraryMatchCount(true, null)).toBeNull();
+    expect(libraryMatchCount(true, 4)).toBe(4);
+    expect(searchCounts(list, libraryMatchCount(false, null)).madePlus).toBe(false);
+    expect(searchCounts(list, libraryMatchCount(true, null)).madePlus).toBe(true);
   });
 });

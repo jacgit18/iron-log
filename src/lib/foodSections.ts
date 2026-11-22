@@ -82,6 +82,9 @@ export function searchCounts(matches: readonly Recipe[], libraryMatches: number 
   return { sections, groups: { made: libraryMatches === null ? made : made + libraryMatches, store }, madePlus: libraryMatches === null || more };
 }
 
+/** The library number to hand `searchCounts`: signed out the library can never add a match, so it counts as a known 0 (Made's number is then exact, no "+"); signed in it is the loaded count, or null while unknown. */
+export const libraryMatchCount = (signedIn: boolean, loaded: number | null): number | null => (signedIn ? loaded : 0);
+
 /** The sections tried, in order, when no section was used yet this visit. */
 export const OPENING_ORDER: readonly OwnSection[] = ['meals', 'recipes', 'ready'];
 

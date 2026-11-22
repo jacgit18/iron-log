@@ -25,7 +25,7 @@ import { ymd } from '../../shared/dates.js';
 import { libraryHave } from '../../lib/libraryRows.js';
 import { filtersSkipLibrary, mergedGroups } from '../../lib/recipeMerged.js';
 import { comboIds, expandedRows, partsLine, sectionRows, type ComboChip } from '../../lib/recipeCombos.js';
-import { alsoTag, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
+import { alsoTag, libraryMatchCount, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, activeFilterCount, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
@@ -91,7 +91,7 @@ export default function Recipes() {
     if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
     if (view.kind === 'mine' && view.from && page === 'mine') setViewNow({ kind: 'mine', id: view.from }); // Back from a linked sauce to the recipe it was opened from
     if (view.kind === 'mine' && !view.from && page === 'mine/sauce') navigate('daily/recipes/mine', 'replace'); // Forward to a sauce page with nothing it was opened from
-  }, [page, path, view, fix, sec, section]);
+  }, [page, path, view, fix, sec, section, setSec]);
   // Opening a linked sauce is a page opened from a page: it pushes its own address, so Back returns to the recipe.
   const openLinked = (id: string, from: string) => { setViewNow({ kind: 'mine', id, from }); navigate('daily/recipes/mine/sauce', 'push'); };
   // Kept while another Daily section is open and until reload (lib/recipesViewState.ts): the source, search, tabs, filters and the recipe in the pane.
@@ -145,7 +145,7 @@ export default function Recipes() {
   const libMore = libNow.status === 'ready' && libNow.more;
   const libCount = syncing && libNow.status === 'ready' ? libGroup.length : null; // blank until the library has loaded once for this search
   const secCounts = sectionCounts(narrowed, libCount, libMore);
-  const searchNums = q.trim() !== '' ? searchCounts(narrowed, syncing ? libCount : 0, libMore) : undefined; // signed out the library can never add a match, so Made's number is exact (no "+") // the other group's "n matches" while a search is typed
+  const searchNums = q.trim() !== '' ? searchCounts(narrowed, libraryMatchCount(syncing, libCount), libMore) : undefined; // signed out the library can never add a match, so Made's number is exact (no "+") // the other group's "n matches" while a search is typed
   const libHave = useMemo(() => new Map(libGroup.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libGroup, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   // The rows with "+N more" pressed. Held here, not in the chip line, so they stay open while a combo's page replaces the list on a phone;
   // folded when the section changes (owner rule, 2026-11-14) or the row has nothing more to show. No search text, section or filter is touched.
