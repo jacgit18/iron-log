@@ -1,6 +1,6 @@
 import { eatenMax, type Say } from '../../lib/eatenStep.js';
 import { amountText } from '../../lib/foodUnit.js';
-import { nudgeSentence, saveUsualLabel, STALE_OFFER, undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
+import { ALREADY_USUAL, nudgeSentence, offerNow, saveUsualLabel, STALE_OFFER, undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { DietEntry, Recipe } from '../../types.ts';
 
@@ -20,8 +20,9 @@ export function saveUsual(entryId: string, recipeId: string, to: number, today: 
   const st = useAppStore.getState();
   const entry = st.diet.find(x => x.id === entryId);
   const now = st.recipes.find(r => r.id === recipeId);
-  const change = entry && now && (entry.x ?? 1) === to ? usualAfterStep(entry.d, today, now, to) : null;
-  if (!now || !change) { say(STALE_OFFER); return; }
+  const o = offerNow(entry, now, today, to);
+  if (o.kind !== 'holds' || !now) { say(o.kind === 'already' ? ALREADY_USUAL : STALE_OFFER); return; }
+  const change = o.change;
   const err = st.setRecipeUsual(now.id, change.next);
   if (err) { say(err); return; }
   say(`Usual portion saved: ${now.n}, ${amountText(to, now)}.`, () => undoStep(now.id, change, say));

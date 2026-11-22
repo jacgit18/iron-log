@@ -46,10 +46,11 @@ export default function NutritionBoard() {
   const [anchor, setAnchor] = useState(today); // the first day of the 1 to 3 day window; tapping a column inside it keeps the window still, only the stepper moves it
   const [msg, setMsgText] = useState('');
   const [undo, setUndo] = useState<(() => void) | null>(null); // the status line's Undo (a log, a saved usual portion); any new sentence without one clears it
-  const back = useRef<HTMLElement | null>(null); // the control that was focused when a sentence with an Undo or a Save came (a row's Less or More): focus returns to it after the button is pressed, which goes away
+  const lastButton = useRef<HTMLElement | null>(null); // the button last clicked on the board (a tapped button is not focused on Safari, so document.activeElement cannot tell)
+  const back = useRef<HTMLElement | null>(null); // the button that was clicked when a sentence with an Undo or a Save came (a row's Less or More): focus returns to it after that button is pressed, which goes away
   const [offer, setOffer] = useState<SayAction | null>(null); // a button after the sentence (Save N as my usual); any new sentence without one clears it
-  const setMsg: Say = (t, u, a) => { setMsgText(t); setUndo(u ? () => u : null); setOffer(a ?? null); if (u || a) back.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null; };
-  const refocus = () => { const el = back.current; if (el?.isConnected) el.focus(); }; // not when that control is gone (a closed sheet)
+  const setMsg: Say = (t, u, a) => { setMsgText(t); setUndo(u ? () => u : null); setOffer(a ?? null); if (u || a) back.current = lastButton.current; };
+  const refocus = () => { const el = back.current; if (!el?.isConnected) return; (el instanceof HTMLButtonElement && el.disabled ? el.closest('.nb-step')?.querySelector<HTMLElement>('button:not(:disabled)') : el)?.focus(); }; // not when that control is gone (a closed sheet); a More disabled at the limit hands focus to its Less
   const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
   const oldest = useMemo(() => oldestLogged(diet), [diet]); // the oldest logged day sets how far back the weeks reach
   const range = useMemo(() => weekRange(today, oldest), [today, oldest]);
@@ -102,7 +103,7 @@ export default function NutritionBoard() {
     </div>
   );
   return (
-    <section className="wb nb" aria-labelledby="nb-h">
+    <section className="wb nb" aria-labelledby="nb-h" onClickCapture={e => { lastButton.current = e.target instanceof Element ? e.target.closest<HTMLElement>('button') : null; }}>
       <div className="nb-head">
         <h2 id="nb-h" className="cond vh">Nutrition</h2>
       </div>

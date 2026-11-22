@@ -1,4 +1,5 @@
-import type { Recipe } from '../types.ts';
+import type { DietEntry, Recipe } from '../types.ts';
+import { portionBasis } from './portionBasis.js';
 import { cleanUsual } from '../shared/recipes.js';
 import { usualStart } from './foodUnit.js';
 
@@ -40,6 +41,16 @@ export const nudgeSentence = (name: string, amount: string): string => `${name},
 export const saveUsualLabel = (amount: string): string => `Save ${amount} as my usual`;
 /** What the Save button says when the row no longer matches the offer (nudged again, deleted, or the day or recipe changed): nothing is saved. */
 export const STALE_OFFER = 'That amount has changed since, so no usual was saved.';
+/** What it says when the usual is already that count (set elsewhere in between): nothing to save. */
+export const ALREADY_USUAL = 'That amount is already the usual.';
+
+/** What a Save pressed after a nudge finds, reading the entry and recipe as they are now: the row has moved on (gone, or no longer at `to`, by the store's own reading of an entry's count), the usual is already `to`, or the offer holds with the change to write. */
+export type OfferNow = { kind: 'moved' } | { kind: 'already' } | { kind: 'holds'; change: UsualChange };
+export function offerNow(entry: Pick<DietEntry, 'd' | 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'x'> | undefined, recipe: Basis | undefined, today: string, to: number): OfferNow {
+  if (!entry || !recipe || portionBasis(entry).x !== to) return { kind: 'moved' };
+  const change = usualAfterStep(entry.d, today, recipe, to);
+  return change ? { kind: 'holds', change } : { kind: 'already' };
+}
 
 /** What the Undo of a saved usual does now (brief nutrition-log-first-portion-row): the recipe is gone, its usual was changed since (leave it), or write `usual` back. Pure; the component makes the write and says the sentence. */
 export type UndoOutcome = { kind: 'gone' } | { kind: 'changed' } | { kind: 'write'; usual: number | undefined };

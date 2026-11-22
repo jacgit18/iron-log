@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { usualStart } from './foodUnit.js';
-import { nudgeSentence, saveUsualLabel, STALE_OFFER, undoUsual, undoUsualOutcome, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
+import { ALREADY_USUAL, nudgeSentence, offerNow, saveUsualLabel, STALE_OFFER, undoUsual, undoUsualOutcome, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
 
 const rice = { cat: 'ready' as const, servings: 4, kcal: 200, p: 4 };
 
@@ -93,5 +93,25 @@ describe('the words after a Less or More on an eaten row', () => {
     expect(saveUsualLabel('1.5 portions')).toBe('Save 1.5 portions as my usual');
     expect(saveUsualLabel('4 eggs')).toBe('Save 4 eggs as my usual');
     expect(STALE_OFFER).toBe('That amount has changed since, so no usual was saved.');
+  });
+});
+
+describe('offerNow: what a Save pressed after a nudge finds', () => {
+  const oats = { cat: 'other' as const, kcal: 300, p: 10 };
+  const entry = (x?: number) => ({ d: '2026-11-15', kcal: 300, p: 10, ...(x === undefined ? {} : { x }) });
+  it('holds when the entry is still at the count and the usual would change', () => {
+    const o = offerNow(entry(1.5), oats, '2026-11-15', 1.5);
+    expect(o.kind).toBe('holds');
+  });
+  it('has moved on when the entry is gone, the recipe is gone, or the count differs (an entry with no x reads as 1)', () => {
+    expect(offerNow(undefined, oats, '2026-11-15', 1.5).kind).toBe('moved');
+    expect(offerNow(entry(1.5), undefined, '2026-11-15', 1.5).kind).toBe('moved');
+    expect(offerNow(entry(), oats, '2026-11-15', 1.5).kind).toBe('moved');
+    expect(offerNow(entry(), oats, '2026-11-15', 1).kind).toBe('already');
+  });
+  it('is already the usual when the recipe already stores that count', () => {
+    expect(offerNow(entry(1.5), { ...oats, usual: 1.5 }, '2026-11-15', 1.5).kind).toBe('already');
+    expect(ALREADY_USUAL).toBe('That amount is already the usual.');
+    expect(STALE_OFFER.length).toBeGreaterThan(0);
   });
 });

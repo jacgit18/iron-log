@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
-import { STALE_OFFER } from '../lib/usualPortion.js';
+import { ALREADY_USUAL, STALE_OFFER } from '../lib/usualPortion.js';
 import type { DietEntry } from '../types.ts';
 
 // Less and More on an eaten row (brief nutrition-log-first-portion-row): the store calls and the usual's Undo. The rules are node tests in src/lib (eatenStep, usualPortion); this covers the paths that touch the store.
@@ -74,6 +74,11 @@ describe('stepEatenRow', () => {
     const said = nudgeThenElse(() => { useAppStore.setState({ diet: [] }); });
     expect(st().recipes[0]!.usual).toBeUndefined();
     expect(said.at(-1)!.t).toBe(STALE_OFFER);
+  });
+  it('Save when the usual was set to that count elsewhere says it is already the usual, not that the amount changed', () => {
+    const said = nudgeThenElse(() => { st().setRecipeUsual('o1', 1.5); });
+    expect(said.at(-1)!.t).toBe(ALREADY_USUAL);
+    expect(st().recipes[0]!.usual).toBe(1.5);
   });
   it('Save after the usual was changed elsewhere writes the count, and Undo restores the usual as it stood then', () => {
     const said = nudgeThenElse(() => { st().setRecipeUsual('o1', 3); });
