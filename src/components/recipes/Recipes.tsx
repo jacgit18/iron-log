@@ -81,7 +81,7 @@ export default function Recipes() {
   useEffect(() => {
     if (!page) leaving.current = false;
     if (onFoodsList(path) && pendingSec.current) { const to = pendingSec.current; pendingSec.current = null; setSec(to); navigate(foodSectionPath(to), 'replace'); return; } // Back after Save lands on the section the saved item belongs in
-    if (fix) { navigate(fix, 'replace'); return; } // the bare address names the section shown
+    if (fix && view.kind !== 'form') { navigate(fix, 'replace'); return; } // the bare address names the section shown (not while the form holds the screen: the guard below puts its entry back)
     const named = foodSectionOf(path);
     if (named && named !== sec) setSec(named); // the address wins on reload and Back
     if (page === 'form' && view.kind === 'list') { const jump = takeRecipesJump(); if (jump && (jump.kind === 'new' || useAppStore.getState().recipes.some(r => r.id === jump.id))) { setViewNow(jump.kind === 'edit' ? { kind: 'form', id: jump.id } : { kind: 'form' }); return; } } // Nutrition's New recipe and Edit in Recipes buttons
@@ -195,7 +195,7 @@ export default function Recipes() {
   const switchSection = (to: FoodSection) => { setSec(to); setRecent(false); if (to === 'library' && cat === 'ready') setCat(null); navigate(foodSectionPath(to), 'replace'); }; // the library has no ready-made foods, so that category filter is dropped
   const showInSection = (id: string) => { // a pick the open section does not list (a linked item, a saved one) shows in the section it belongs in
     const r = recipes.find(x => x.id === id);
-    if (r && !shown.some(x => x.id === id)) { const to = sectionAfterSave(r, section); if (to !== section) switchSection(to); else setRecent(false); }
+    if (r && !shown.some(x => x.id === id)) { const to = sectionAfterSave(r, section); if (to !== section) switchSection(to); else { setRecent(false); setQ(''); setCat(null); setCanMake(false); setTagSel([]); setNutSel([]); } } // in this section but hidden by the search, a filter or Recent: show it
     setSelId(id);
   };
   const openRecipe = (id: string) => {
