@@ -68,6 +68,7 @@ test('the drink sheet sends the base goal to Manage, and the water base is there
   await openDrink(page, '2026-09-24');
   await expect(sheet(page).getByLabel('Fixed daily goal (oz)')).toHaveCount(0); // the editor moved
   await expect(page.locator('#water-goal-edit')).toHaveCount(0); // the inline editor's id is not reused by this button
+  await expect(sheet(page).locator('#water-goal-targets')).toHaveText('Change base goal in Manage'); // it says where it goes
   await sheet(page).locator('#water-goal-targets').click();
   await expect(sheet(page).getByRole('heading', { name: 'Manage' })).toBeVisible();
   await expect(sheet(page).locator('#water-goal-edit')).toBeVisible();
