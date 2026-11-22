@@ -45,3 +45,7 @@ export function plannedEntryStep(entry: Stepped, dir: 1 | -1, max?: number): { c
   if (count === null) return null;
   return { count, plan: count >= PORTION_MIN && count <= PORTION_CEIL && count * 2 === Math.round(count * 2) ? count : null };
 }
+
+/** The accessible name of a card's tick (brief nutrition-planned-available-tray; owner 2026-11-22): a food is "Check Oats as eaten", a drink "Log Water as drunk"; unticking says "Uncheck ... as eaten" or "Uncheck ... as drunk". The tray button says Ate for a food and Drank for a drink. */
+export const tickLabel = (name: string, drink: boolean, done: boolean): string => `${done ? 'Uncheck' : drink ? 'Log' : 'Check'} ${name} as ${drink ? 'drunk' : 'eaten'}`;
+export const tickWord = (drink: boolean): 'Ate' | 'Drank' => (drink ? 'Drank' : 'Ate');

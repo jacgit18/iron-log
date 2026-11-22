@@ -242,6 +242,16 @@ describe('repeats and repeatSkips in cfg.diet (brief nutrition-meal-labels-year-
     const many = Array.from({ length: 20 }, (_, i) => ({ ...rep, rid: `r${i}` }));
     expect(normRepeats(many)).toHaveLength(12);
   });
+  it('keeps p (planned) only when exactly true and never on a handy item (brief nutrition-planned-available-tray)', () => {
+    expect(normRepeats([{ ...rep, p: true }])).toEqual([{ ...rep, p: true }]);
+    expect(normRepeats([{ ...rep, p: 'yes' }, { ...rep, rid: 'b', p: false }, { ...rep, rid: 'c', p: 1 }])).toEqual([rep, { ...rep, rid: 'b' }, { ...rep, rid: 'c' }]);
+    expect(normRepeats([{ ...rep, h: true, p: true }])).toEqual([{ ...rep, h: true }]);
+    const cfg = { repeats: [{ ...rep, p: true }] };
+    expect(normDietCfg(normDietCfg(cfg, '2026-10-30'), '2026-10-30')).toEqual(cfg);
+  });
+  it('loads a repeat stored before p existed as not planned', () => {
+    expect(normRepeats([rep])[0]).not.toHaveProperty('p');
+  });
   it('keeps h only when exactly true, and counts handy items apart from repeats (24 and 12)', () => {
     expect(normRepeats([{ ...rep, h: true }])).toEqual([{ ...rep, h: true }]);
     expect(normRepeats([{ ...rep, h: 'yes' }, { ...rep, rid: 'b', h: false }, { ...rep, rid: 'c', h: 1 }])).toEqual([rep, { ...rep, rid: 'b' }, { ...rep, rid: 'c' }]);

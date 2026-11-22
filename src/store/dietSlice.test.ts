@@ -357,7 +357,7 @@ describe('the meal planner', () => {
     const m = meal();
     expect(st().addPlanItem(tomorrow, 'r', 'r1')).toBeNull();
     expect(st().addPlanItem(tomorrow, 'm', m)).toBeNull();
-    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'r1' }, { k: 'm', id: m }]);
+    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'r1', p: true }, { k: 'm', id: m, p: true }]);
   });
   it('refuses a recipe or meal that is gone, a repeat and a day outside the window', () => {
     expect(st().addPlanItem(today, 'r', 'zzz')).toMatch(/gone/);
@@ -369,7 +369,7 @@ describe('the meal planner', () => {
   it('sets a portion and removes an item; removing the last leaves no plan or diet key behind', () => {
     st().addPlanItem(today, 'r', 'r1');
     st().setPlanPortion(today, 0, 2);
-    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'r1', x: 2 }]);
+    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'r1', x: 2, p: true }]);
     st().removePlanItem(today, 0);
     expect(st().cfg.diet).toBeUndefined();
   });
@@ -629,7 +629,7 @@ describe('daily snacks (brief daily-snacks)', () => {
   it('a recipe on the list and planned by hand in another meal hides the listed copy; taking the hand-planned one out or away leaves the listed snack as it was', () => {
     st().saveDailySnacks([{ id: 'yog' }]);
     st().addPlanItem(tomorrow, 'r', 'yog', 'lunch');
-    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'lunch' }]);
+    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'lunch', p: true }]);
     st().removePlanItem(tomorrow, 0);
     expect(st().cfg.diet!.snackSkips).toBeUndefined();
     expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }]);
@@ -726,7 +726,7 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
     const r = st().copyPlanItems(today, 0, [at(1), at(2), at(3), at(365)]);
     expect(r.done).toEqual([at(1), at(3)]);
     expect(r.skipped.map(s => s.reason)).toEqual(['already there', 'out of reach']);
-    expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner' }]);
+    expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner', p: true }]);
     expect(st().cfg.diet!.plan![today]).toHaveLength(1);
     const before = st().cfg.diet!.plan;
     expect(st().copyPlanItems(today, 0, [today]).error).toBeTruthy();
@@ -739,7 +739,7 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
     expect(r.error).toBeNull();
     expect(r.done).toEqual([at(1), at(3)]);
     expect(r.skipped.map(x => x.reason)).toEqual(['already there', 'out of reach']);
-    expect(st().cfg.diet!.plan![at(3)]).toEqual([{ k: 'r', id: 'rc', s: 'lunch' }]);
+    expect(st().cfg.diet!.plan![at(3)]).toEqual([{ k: 'r', id: 'rc', s: 'lunch', p: true }]);
     const before = st().cfg.diet!.plan;
     expect(st().addPlanItemToDays('r', 'rc', [at(1)], 'lunch').error).toBeTruthy();
     expect(st().addPlanItemToDays('r', 'nope', [at(4)], 'lunch').error).toBe('That recipe is gone.');
@@ -902,5 +902,122 @@ describe('plate hints (brief nutrition-plate-hints-per-meal)', () => {
     st().dismissPlateHint(shiftDay(today, 1), 'breakfast');
     st().dismissPlateHint(shiftDay(today, 2), 'lunch');
     expect(st().cfg.diet).toMatchObject({ kcal: 2200, hintSkips: { [shiftDay(today, 1)]: ['breakfast'], [shiftDay(today, 2)]: ['lunch'] } });
+  });
+});
+
+describe('Plan, forward Plan and Unplan (brief nutrition-planned-available-tray)', () => {
+  const today = ymd(new Date());
+  const recipe = (id: string, n: string) => ({ id, n, cat: 'ready' as const, ing: [], steps: [], kcal: 100, p: 5 });
+  const every = [0, 1, 2, 3, 4, 5, 6];
+  const d1 = shiftDay(today, 1), d2 = shiftDay(today, 2), d3 = shiftDay(today, 3);
+  const plan = () => st().cfg.diet?.plan ?? {};
+  const put = (p: Record<string, object[]>) => st().mutateCfg(c => { c.diet = { ...(c.diet ?? {}), plan: p as never }; });
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe('a', 'Almonds'), recipe('b', 'Banana'), ...Array.from({ length: 9 }, (_, i) => recipe(`x${i}`, `Food ${i}`))], removed: null }); });
+
+  it('Plan marks one stored item planned and never changes what the day holds', () => {
+    put({ [d1]: [{ k: 'r', id: 'a', s: 'snack' }, { k: 'r', id: 'b', s: 'snack' }] });
+    expect(st().planRow(d1, { index: 0 }, false)).toEqual({ ok: true, message: '' });
+    expect(plan()[d1]).toEqual([{ k: 'r', id: 'a', s: 'snack', p: true }, { k: 'r', id: 'b', s: 'snack' }]);
+  });
+  it('a ninth Plan is refused with the reason and the item stays unplanned (a shown repeat is not stored either)', () => {
+    put({ [d1]: [...Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })), { k: 'r', id: 'a', s: 'snack' }] });
+    expect(st().planRow(d1, { index: 8 }, false)).toEqual({ ok: false, message: 'A day can hold 8 planned things. Unplan one to plan another.' });
+    expect(plan()[d1]![8]).toEqual({ k: 'r', id: 'a', s: 'snack' });
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().planRow(d1, { rid }, false).ok).toBe(false);
+    expect(plan()[d1]).toHaveLength(9); // nothing was stored for the repeat
+    expect(st().cfg.diet!.repeatSkips).toBeUndefined();
+  });
+  it('This day only on a shown repeat stores a real planned item, skips the repeat there and leaves the repeat unplanned', () => {
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().planRow(d1, { rid }, false).ok).toBe(true);
+    expect(plan()[d1]).toEqual([{ k: 'r', id: 'b', s: 'snack', p: true }]);
+    expect(st().cfg.diet!.repeats![0]).not.toHaveProperty('p');
+    expect(effectivePlan(st().cfg.diet, [d2], today)[d2]![0]!.p).toBeUndefined();
+  });
+  it('This day and every future day marks the stored copies and the repeat in one write, skipping and naming a full day', () => {
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    put({ [d1]: [{ k: 'r', id: 'b', s: 'snack' }], [d2]: [{ k: 'r', id: 'b', s: 'snack' }], [d3]: [...Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })), { k: 'r', id: 'b', s: 'snack' }] });
+    const r = st().planRow(d1, { index: 0 }, true);
+    expect(r.ok).toBe(true);
+    expect(r.message).toContain('every future day it appears');
+    expect(r.message).toContain('8 things are planned there already');
+    expect(plan()[d1]![0]!.p).toBe(true);
+    expect(plan()[d2]![0]!.p).toBe(true);
+    expect(plan()[d3]![8]!.p).toBeUndefined();
+    expect(st().cfg.diet!.repeats!.find(x => x.rid === rid)!.p).toBe(true);
+    const later = shiftDay(today, 10);
+    expect(effectivePlan(st().cfg.diet, [later], today)[later]!.find(i => i.id === 'b')!.p).toBe(true);
+  });
+  it('Undo of a forward Plan takes back exactly what it marked', () => {
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    put({ [d1]: [{ k: 'r', id: 'b', s: 'snack' }], [d2]: [{ k: 'r', id: 'b', s: 'snack' }, { k: 'r', id: 'a', s: 'snack', p: true }] });
+    st().planRow(d1, { index: 0 }, true);
+    expect(st().removed!.verb).toBe('Planned');
+    expect(st().removed!.restore()).toBe(true);
+    expect(plan()[d1]![0]).toEqual({ k: 'r', id: 'b', s: 'snack' });
+    expect(plan()[d2]).toEqual([{ k: 'r', id: 'b', s: 'snack' }, { k: 'r', id: 'a', s: 'snack', p: true }]); // the other food's plan is kept
+    expect(st().cfg.diet!.repeats![0]).not.toHaveProperty('p');
+  });
+  it('Plan of a handy food stores it planned for this day only; a day at 8 refuses it and it stays handy', () => {
+    st().saveRepeat(today, { k: 'r', id: 'a', s: 'snack' }, every, undefined, true);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().planRow(d1, { rid }, true).ok).toBe(true); // handy: no forward, this day only
+    expect(plan()[d1]).toEqual([{ k: 'r', id: 'a', s: 'snack', p: true }]);
+    expect(st().cfg.diet!.repeats![0]).not.toHaveProperty('p');
+    put({ [d2]: Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })) });
+    expect(st().planRow(d2, { rid }, false).ok).toBe(false);
+    expect(plan()[d2]).toHaveLength(8);
+    expect(st().cfg.diet!.repeatSkips?.[d2]).toBeUndefined(); // still in that day's tray
+  });
+  it('Unplan puts the item in the tray, never removes it, and Undo plans it again; other days stay planned', () => {
+    put({ [d1]: [{ k: 'r', id: 'a', s: 'snack', p: true }], [d2]: [{ k: 'r', id: 'a', s: 'snack', p: true }] });
+    expect(st().unplanRow(d1, 0)).toBeNull();
+    expect(plan()[d1]).toEqual([{ k: 'r', id: 'a', s: 'snack' }]);
+    expect(plan()[d2]![0]!.p).toBe(true);
+    expect(st().removed!.verb).toBe('Unplanned');
+    expect(st().removed!.restore()).toBe(true);
+    expect(plan()[d1]![0]!.p).toBe(true);
+  });
+  it('Unplan of a shown planned repeat stores that day unplanned and leaves the repeat planned for other days', () => {
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    st().planRow(d1, { rid }, true); // marks the repeat planned (this day stored planned)
+    const rid2 = st().cfg.diet!.repeats![0]!.rid;
+    expect(st().unplanRow(d2, 0, rid2)).toBeNull();
+    expect(plan()[d2]).toEqual([{ k: 'r', id: 'b', s: 'snack' }]);
+    expect(st().cfg.diet!.repeats![0]!.p).toBe(true);
+    expect(effectivePlan(st().cfg.diet, [d3], today)[d3]![0]!.p).toBe(true);
+  });
+  it('an old plan with no p anywhere loads unchanged: everything is available and nothing is lost', () => {
+    put({ [d1]: [{ k: 'r', id: 'a', s: 'snack' }, { k: 'r', id: 'b', s: 'lunch' }] });
+    expect(plan()[d1]).toHaveLength(2);
+    expect(plan()[d1]!.every(i => i.p === undefined)).toBe(true);
+  });
+  it('adding food to a day with Plan puts it on the plate, and on a day that holds 8 planned things it is stored unplanned and waits in the tray', () => {
+    put({ [d1]: Array.from({ length: 7 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })) });
+    expect(st().addPlanItem(d1, 'r', 'a', 'snack')).toBeNull();
+    expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'a', s: 'snack', p: true }); // the 8th planned
+    expect(st().addPlanItem(d1, 'r', 'b', 'snack')).toBeNull(); // never refused for the 8
+    expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'b', s: 'snack' });
+    expect(st().addPlanItemToDays('r', 'x8', [d1, d2], 'dinner').done).toEqual([d1, d2]);
+    expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'x8', s: 'dinner' });
+    expect(plan()[d2]!.at(-1)).toEqual({ k: 'r', id: 'x8', s: 'dinner', p: true });
+  });
+  it('storing a planned repeat (a tick, Less, More or Move) keeps it planned; on a day at 8 it is stored unplanned; Unplan stores it without the marker', () => {
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    st().planRow(d1, { rid }, true); // marks the repeat planned
+    expect(st().realizeRepeat(d2, rid)).toBe(0);
+    expect(plan()[d2]).toEqual([{ k: 'r', id: 'b', s: 'snack', p: true }]);
+    expect(st().realizeRepeat(d3, rid, false)).toBe(0); // what Unplan does
+    expect(plan()[d3]).toEqual([{ k: 'r', id: 'b', s: 'snack' }]);
+    const d4 = shiftDay(today, 4);
+    put({ ...plan(), [d4]: Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })) });
+    expect(st().realizeRepeat(d4, rid)).toBe(8); // never refused for the 8: it is stored unplanned
+    expect(plan()[d4]![8]).toEqual({ k: 'r', id: 'b', s: 'snack' });
   });
 });

@@ -280,24 +280,26 @@ describe('Keep handy (brief nutrition-keep-handy)', () => {
   });
 });
 
-describe('repeats and daily snacks that wait on inventory (brief ready-made-have-gate)', () => {
-  const food = (id: string, n: string): Recipe => ({ id, n, cat: 'ready', ing: [], steps: [], kcal: 100, p: 5 }) as Recipe;
-  const yog = food('yog', 'Greek yogurt'), oats = food('oats', 'Oats');
-  const rs = [yog, oats];
-  const g = { stores: ['Anywhere'], items: [{ id: 'y', n: 'Greek yogurt', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }, { id: 'o', n: 'Oats', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }] };
-  const gate = { today, g, months: { '2026-11': { lines: { o: { have: true as const } }, pulled: [] } }, diet: [] };
-  const day = '2026-11-18';
-  it('a repeat of a Need food is left out of the day and kept in the plan; a Have repeat shows', () => {
-    const l = [rep('a', every, { id: 'yog' }), rep('b', every, { id: 'oats' })];
-    const plan = withRepeats({}, l, undefined, [day], today);
-    expect(plan[day]).toHaveLength(2); // stored plan view still holds both
-    const d = boardDay(plan, day, rs, [], null, {}, {}, gate);
-    expect(d.slots.flatMap(s => s.items.map(x => x.r.name))).toEqual(['Oats']);
-    expect(d.waiting.map(w => w.r.name)).toEqual(['Greek yogurt']);
-    expect(d.count).toBe(1);
+describe('planned repeats (brief nutrition-planned-available-tray)', () => {
+  const day = '2026-11-18'; // a Wednesday, shown by an every-day repeat
+  const stored = (n: number) => Array.from({ length: n }, (_, i) => ({ k: 'r' as const, id: `x${i}`, p: true as const }));
+  it('a planned repeat shows as planned; an unplanned one does not', () => {
+    expect(repeatPlanItem(rep('a', every, { p: true }))).toEqual({ k: 'r', id: 'oats', p: true, v: true, rp: 'a' });
+    expect(repeatPlanItem(rep('a', every))).toEqual({ k: 'r', id: 'oats', v: true, rp: 'a' });
+    expect(withRepeats({}, [rep('a', every, { p: true })], undefined, [day], today)[day]).toEqual([{ k: 'r', id: 'oats', p: true, v: true, rp: 'a' }]);
   });
-  it('is not applied on a past day', () => {
-    const d = boardDay({ '2026-11-15': [{ k: 'r', id: 'yog', s: 'snack', v: true }] }, '2026-11-15', rs, [], null, {}, {}, gate);
-    expect(d.waiting).toEqual([]);
+  it('a day already holding 8 planned things draws the repeat as available, never a 9th planned', () => {
+    const out = withRepeats({ [day]: stored(8) }, [rep('a', every, { p: true })], undefined, [day], today)[day]!;
+    expect(out.at(-1)).toEqual({ k: 'r', id: 'oats', v: true, rp: 'a' });
+    const seven = withRepeats({ [day]: stored(7) }, [rep('a', every, { p: true }), rep('b', every, { id: 'tea', p: true })], undefined, [day], today)[day]!;
+    expect(seven.filter(i => i.p === true)).toHaveLength(8); // the first takes the last place, the second is available
+    expect(seven.at(-1)!.p).toBeUndefined();
+  });
+  it('saving it again keeps p, and a handy item never carries p', () => {
+    const r = saveRepeat([rep('a', [1, 3], { p: true })], { rid: 'a', item: { k: 'r', id: 'oats' }, days: [1, 2], from: today });
+    expect(r.list![0]).toMatchObject({ days: [1, 2], p: true });
+    const h = saveRepeat([rep('a', [1, 3], { p: true })], { rid: 'a', item: { k: 'r', id: 'oats' }, days: [1], from: today, handy: true });
+    expect(h.list![0]).not.toHaveProperty('p');
+    expect(h.list![0]).toMatchObject({ h: true });
   });
 });

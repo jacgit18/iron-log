@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
 import { entryTotalsAt } from './portionBasis.js';
-import { eatenAmount, eatenMax, loggedEntry, plannedEntryStep, plannedStep, rowStepper } from './eatenStep.js';
+import { eatenAmount, eatenMax, loggedEntry, plannedEntryStep, plannedStep, rowStepper, tickLabel, tickWord } from './eatenStep.js';
 
 const entry = (o: Partial<DietEntry> = {}): DietEntry => ({ id: 'e1', d: '2026-11-15', n: 'Oats', kcal: 300, p: 10, ...o });
 const oats = { cat: 'other' as const, kcal: 300, p: 10 };
@@ -86,5 +86,18 @@ describe('plannedEntryStep (a ticked card)', () => {
   it('has no step where the entry has none (half a portion, or totals that stop fitting)', () => {
     expect(plannedEntryStep(entry({ x: 0.5, kcal: 150 }), -1)).toBeNull();
     expect(plannedEntryStep(entry({ x: 1.5, kcal: 9000 }), 1)).toBeNull();
+  });
+});
+
+describe('tickLabel and tickWord (brief nutrition-planned-available-tray)', () => {
+  it('a food is checked as eaten and a drink is logged as drunk', () => {
+    expect(tickLabel('Oats', false, false)).toBe('Check Oats as eaten');
+    expect(tickLabel('Oats', false, true)).toBe('Uncheck Oats as eaten');
+    expect(tickLabel('Water', true, false)).toBe('Log Water as drunk');
+    expect(tickLabel('Water', true, true)).toBe('Uncheck Water as drunk');
+  });
+  it('the button says Ate for a food and Drank for a drink', () => {
+    expect(tickWord(false)).toBe('Ate');
+    expect(tickWord(true)).toBe('Drank');
   });
 });

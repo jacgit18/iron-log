@@ -341,10 +341,12 @@ export interface DietSlice {
   setPlateHint(slot: PlanSlot, on: boolean): void; // switches the plate hint of one meal on or off for every day (cfg.diet.hintsOff)
   dismissPlateHint(day: string, slot: PlanSlot): void; // hides the plate hint of one meal on that day only (cfg.diet.hintSkips)
   skipRepeatDay(day: string, rid: string): void; // the repeat is not shown on that day only
-  realizeRepeat(day: string, rid: string): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
+  realizeRepeat(day: string, rid: string, planned?: boolean): number | string; // stores a shown repeat as a real item of that day and skips the repeat there; its index, or an error text (day full or outside the window)
   unstoreRepeat(day: string, index: number, rid: string): void; // takes back an item realizeRepeat just stored when its log failed
   addPlateFix(day: string, id: string, slot: PlanSlot): string; // the plate check's one-tap fix: adds the recipe to the meal and marks it planned; '' on success, else the reason (an error, or the 8-planned cap: the food is still added, just not marked)
   setPlanned(day: string, index: number, on: boolean): string | null; // marks a stored item planned or unmarks it; an error text when the day already holds 8 planned things
+  planRow(day: string, ref: { index?: number; rid?: string }, forward: boolean): { ok: boolean; message: string }; // Plan from a tray row or card (`index` a stored item, `rid` a repeat or handy food shown that day, stored first): this day, or with `forward` the later days it appears too, in one write; refused (nothing stored) when the day holds 8 planned things; gives an Undo notice
+  unplanRow(day: string, index: number, rid?: string): string | null; // Unplan: the item goes back to the tray (a shown planned repeat is stored first, unplanned); an error text, or null; gives an Undo notice
   setPlanEaten(day: string, index: number, ids: string[]): void; // marks a planned item eaten by the log entries its check added (none clears it)
   planToShopping(days: string[], month?: string, today?: string): { added: number; already: number; refused: string | null; recipes: number; ids: string[] }; // the days' planned, uneaten recipes' missing ingredients go on Shopping; `month` is the Shopping month (YYYY-MM, default the clock's); `today` (YYYY-MM-DD, default the clock's) sets the window the listed daily snacks show in; `ids` are the items it created, for Undo
   uncheckPlanItem(day: string, index: number): void; // removes the entries its check added and clears the mark

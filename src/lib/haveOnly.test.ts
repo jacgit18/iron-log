@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Grocery, GroceryItem, GroceryMonth, PlanItem, Recipe } from '../types.ts';
+import type { Grocery, GroceryItem, GroceryMonth, Recipe } from '../types.ts';
 import { stockContext } from './boardStock.js';
-import type { Resolved } from './dietPlan.js';
-import { PLANNED_LATER_NOTE, PLANNED_WAITING_NOTE, isReadyMade, isWaiting, plannedWaitingNote, splitHandy, waitingIndexes, waitingText, type HaveGate } from './haveOnly.js';
+import { NEED_TO_BUY, PLANNED_LATER_NOTE, PLANNED_WAITING_NOTE, isNeed, isNeedFood, isReadyMade, plannedWaitingNote, tickHeld } from './haveOnly.js';
 
 const gi = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const grocery = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -11,8 +10,6 @@ const meal = (id: string, n: string): Recipe => ({ id, n, cat: 'dinner', ing: [{
 const TODAY = '2026-11-19', MONTH = '2026-11';
 const months = (lines: GroceryMonth['lines'] = {}): Record<string, GroceryMonth> => ({ [MONTH]: { lines, pulled: [] } });
 const g = grocery(gi('y', 'Greek yogurt'), gi('o', 'Oats'));
-const gate = (o: Partial<HaveGate> = {}): HaveGate => ({ today: TODAY, g, months: months({ o: { have: true } }), diet: [], ...o });
-const card = (r: Recipe, index: number, item: Partial<PlanItem> = {}) => ({ r: { item: { k: 'r', id: r.id, ...item } as PlanItem, gone: false, recipe: r }, index });
 const yog = food('yog', 'Greek yogurt'), oats = food('oats', 'Oats'), dragon = food('dr', 'Dragon fruit');
 
 describe('isReadyMade', () => {
@@ -25,52 +22,42 @@ describe('isReadyMade', () => {
   });
 });
 
-describe('waitingIndexes', () => {
-  const day = '2026-11-20';
-  const cards = [card(yog, 0), card(oats, 1), card(dragon, 2)];
-  it('a ready-made food that is Need waits; Have and no match do not', () => {
-    expect([...waitingIndexes(day, gate(), cards, [yog, oats, dragon])]).toEqual([0]);
+describe('isNeed and isNeedFood', () => {
+  const ctx = (o: Partial<{ g: Grocery; months: Record<string, GroceryMonth>; day: string }> = {}) => stockContext(o.day ?? '2026-11-20', TODAY, o.g ?? g, o.months ?? months({ o: { have: true } }), []);
+  it('a ready-made food that is Need is Need; Have and no match are not', () => {
+    expect(isNeed(yog, ctx())).toBe(true);
+    expect(isNeed(oats, ctx())).toBe(false);
+    expect(isNeed(dragon, ctx())).toBe(false);
   });
-  it('ticking Have brings it back', () => {
-    expect(waitingIndexes(day, gate({ months: months({ y: { have: true }, o: { have: true } }) }), cards, [yog]).size).toBe(0);
+  it('ticking Have clears it', () => expect(isNeed(yog, ctx({ months: months({ y: { have: true } }) }))).toBe(false));
+  it('today counts, a past day or another month or an empty Inventory does not', () => {
+    expect(isNeed(yog, ctx({ day: TODAY }))).toBe(true);
+    expect(isNeed(yog, ctx({ day: '2026-11-18' }))).toBe(false);
+    expect(isNeed(yog, ctx({ day: '2026-12-02' }))).toBe(false);
+    expect(isNeed(yog, ctx({ g: grocery() }))).toBe(false);
   });
-  it('today counts, a past day does not', () => {
-    expect(waitingIndexes(TODAY, gate(), cards, [yog]).size).toBe(1);
-    expect(waitingIndexes('2026-11-18', gate(), cards, [yog]).size).toBe(0);
+  it('a recipe with ingredients, a saved meal and a food pinned Not tracked are never Need', () => {
+    expect(isNeed(meal('m', 'Greek yogurt bowl'), ctx())).toBe(false);
+    expect(isNeed(undefined, ctx())).toBe(false);
+    expect(isNeed(food('yog', 'Greek yogurt', { home: '-' }), ctx())).toBe(false);
   });
-  it('nothing waits when Groceries is empty or the day is in another month', () => {
-    expect(waitingIndexes(day, gate({ g: grocery() }), cards, [yog]).size).toBe(0);
-    expect(waitingIndexes('2026-12-02', gate(), cards, [yog]).size).toBe(0);
+  it('a pin to another item decides', () => {
+    expect(isNeed(food('yog', 'Greek yogurt', { home: 'o' }), ctx())).toBe(false);
+    expect(isNeed(food('dr', 'Dragon fruit', { home: 'y' }), ctx())).toBe(true);
   });
-  it('a recipe with ingredients and a saved meal never wait, even when Need', () => {
-    const rcp = meal('m', 'Greek yogurt bowl');
-    const saved = { r: { item: { k: 'm', id: 's' } as PlanItem, gone: false }, index: 5 };
-    expect(waitingIndexes(day, gate(), [card(rcp, 3), saved], [rcp]).size).toBe(0);
+  it('the flag is for a ready-made food whose mark says shopping; a recipe with ingredients is never flagged', () => {
+    expect(isNeedFood(yog, 'shopping')).toBe(true);
+    expect(isNeedFood(yog, 'have')).toBe(false);
+    expect(isNeedFood(yog, undefined)).toBe(false);
+    expect(isNeedFood(meal('m', 'Bowl'), 'shopping')).toBe(false);
+    expect(isNeedFood(undefined, 'shopping')).toBe(false);
   });
-  it('an eaten card, a gone card and a food pinned Not tracked never wait', () => {
-    expect(waitingIndexes(day, gate({ diet: [{ id: 'e1' }] }), [card(yog, 0, { e: ['e1'] })], [yog]).size).toBe(0);
-    expect(waitingIndexes(day, gate(), [{ ...card(yog, 0), r: { ...card(yog, 0).r, gone: true } }], [yog]).size).toBe(0);
-    const pinned = food('yog', 'Greek yogurt', { home: '-' });
-    expect(waitingIndexes(day, gate(), [card(pinned, 0)], [pinned]).size).toBe(0);
+  it('the tick is held for a flagged food that is not eaten, and an eaten one can always be unticked', () => {
+    expect(tickHeld(true, false)).toBe(true);
+    expect(tickHeld(true, true)).toBe(false);
+    expect(tickHeld(false, false)).toBe(false);
+    expect(NEED_TO_BUY).toBe('Need to buy');
   });
-  it('a pin to another item decides: pinned to Oats (Have) the food is not waiting', () => {
-    const pinned = food('yog', 'Greek yogurt', { home: 'o' });
-    expect(waitingIndexes(day, gate(), [card(pinned, 0)], [pinned]).size).toBe(0);
-    const toYog = food('dr', 'Dragon fruit', { home: 'y' });
-    expect(waitingIndexes(day, gate(), [card(toYog, 0)], [toYog]).size).toBe(1);
-  });
-});
-
-describe('splitHandy and the chip text', () => {
-  it('splits a meal tray into shown and waiting rows', () => {
-    const ctx = stockContext('2026-11-20', TODAY, g, months({ o: { have: true } }), []);
-    const rows = [yog, oats, dragon].map(r => ({ res: { item: { k: 'r', id: r.id }, name: r.n, gone: false, portion: 1, recipe: r } as Resolved }));
-    const { shown, waiting } = splitHandy(rows, ctx);
-    expect(waiting.map(x => x.res.recipe!.id)).toEqual(['yog']);
-    expect(shown.map(x => x.res.recipe!.id)).toEqual(['oats', 'dr']);
-    expect(splitHandy(rows, null).waiting).toEqual([]);
-  });
-  it('words the count', () => expect(waitingText(3)).toBe('3 waiting on inventory'));
 });
 
 describe('plannedWaitingNote: what the Add sheet adds after "Planned X for Lunch."', () => {

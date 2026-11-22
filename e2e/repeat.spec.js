@@ -5,7 +5,8 @@ import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHe
 // Repeat (brief nutrition-meal-labels-year-repeat). The rules (which days a repeat shows on, skips, the limit, the sheet's choices) are node tests (repeats.test.ts, dietSlice.test.ts);
 // this covers the wiring: the Repeat sheet from a planned card, the repeat showing in the same meal on the same weekday of other weeks, Skip this day only, Stop repeating, a reload, and the daily snacks list still showing. The fixed clock is Thursday 2026-09-24.
 const mk = (id, n, kcal, p) => ({ id, n, cat: 'sides', ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p });
-const seed = async page => { await page.evaluate(l => localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })), [mk('alm', 'Almonds', 170, 6), mk('oat', 'Oats', 320, 12)]); await page.reload(); };
+// A shown repeat is Available, so it sits in its meal's tray; every tray is opened up front (its state is kept in this browser) so the cards can be counted (brief nutrition-planned-available-tray).
+const seed = async page => { await page.evaluate(l => { localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })); localStorage.setItem('loadbearer.trayOpen', JSON.stringify({ breakfast: true, lunch: true, dinner: true, snack: true })); }, [mk('alm', 'Almonds', 170, 6), mk('oat', 'Oats', 320, 12)]); await page.reload(); };
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const snack = c => c.locator('.wb-slot', { has: c.page().locator('.wb-slothd b', { hasText: /^Snack$/ }) });
 const weekOf = async (page, name) => { await page.locator('.nb-weekname').click(); await page.getByRole('dialog', { name: 'Choose a week' }).getByRole('button', { name }).click(); };
