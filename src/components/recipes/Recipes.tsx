@@ -241,7 +241,7 @@ export default function Recipes() {
 
   const yours = src !== 'library'; // the Library filter hides your group
   const nFilters = activeFilterCount({ cat, canMake, tags: activeTags, nutrition: nutSel }, yours); // shown on the Filters button, so a closed bar still says filters are on
-  const clearFilters = () => { setCat(null); setCanMake(false); setTagSel([]); setNutSel([]); };
+  const clearFilters = () => { setCat(null); if (yours) { setCanMake(false); setTagSel([]); setNutSel([]); } }; // the Library source shows only the category: keep what Mine has set
   const libBox = boxOn ? (
     <section className="rc-libbox" id="recipes-library-box" aria-labelledby="rc-libbox-h">
       <h3 id="rc-libbox-h" className="rc-libhd">Library · not in your recipes yet{libReady ? ` (${countText('library', srcCounts)})` : ''}</h3>
