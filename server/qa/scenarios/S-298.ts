@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-298', feature: 'Meal vitamin bars', title: 'Build a meal from two foods and check its calcium adds up', persona: 'meal-planner', brief: 'meal-micro-breakdown',
   steps: [
-    'Open Recipes, New, Add a food by hand. Name it Oat cereal, set 150 calories and 5 g protein, and add calcium 100 mg and vitamin D 1 mcg in the vitamins and minerals rows. Save it. Do the same for Whole milk: 150 calories, 8 g protein, calcium 300 mg, vitamin D 2.9 mcg.',
+    'Open Recipes, New, Add a food. Name it Oat cereal, set 150 calories and 5 g protein, and add calcium 100 mg and vitamin D 1 mcg in the vitamins and minerals rows. Save it. Do the same for Whole milk: 150 calories, 8 g protein, calcium 300 mg, vitamin D 2.9 mcg.',
     'Open Recipes, New, Recipe or meal. Name it Cereal bowl. Press + Food or meal and pick Oat cereal, then + Food or meal again and pick Whole milk.',
     'Under "Per serving, from the parts", read the button, press it, and read the Calcium and Vitamin D rows. Then press More next to Whole milk.',
   ],

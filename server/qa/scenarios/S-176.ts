@@ -5,7 +5,7 @@ const scenario: Scenario = {
   steps: [
     'Open + New, Recipe or meal. Change the category to Sauces, then to Carbs, and read Used as each time.',
     'Press Meal to turn it off, then change the category to Sauces again.',
-    'On + New, Add a food by hand, press Ready to eat off, then press Drink, then press Ingredient.',
+    'On + New, Add a food, press Ready to eat off, then press Drink, then press Ingredient.',
   ],
   expected: [
     'Sauces gives Ingredient only; Carbs gives Meal and Ingredient. Once you press a chip the category stops changing it.',

@@ -4,7 +4,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
   steps: [
-    'On Recipes press + New, then Add a food by hand, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
+    'On Recipes press + New, then Add a food, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
     'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
     'Press Whole pack (12) again, press Ate this, then press Undo.',
   ],

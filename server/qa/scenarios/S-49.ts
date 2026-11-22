@@ -4,7 +4,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
   steps: [
-    'On a phone. On Recipes press + New, then Add a food by hand, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
+    'On a phone. On Recipes press + New, then Add a food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Pick from photos and pick a saved photo of a label.',
     'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
     'Press Save food, open it, and use Ate this with 1.5 portions.',
   ],
