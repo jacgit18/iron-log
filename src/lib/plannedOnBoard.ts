@@ -12,6 +12,8 @@ export const PLANNED_DAYS = 7;
 /** One planned spot: the day, and the meal it sits in (none when the item and its food name no meal). */
 export interface PlannedSpot { day: string; slot?: PlanSlot }
 
+const rank = (s: PlannedSpot): number => (s.slot ? SLOT_ORDER.indexOf(s.slot) : SLOT_ORDER.length);
+
 /** What the plan is read from: the board's stored plan, its repeats and their skips, and the saved-meal to recipe record (`mealsMoved`). */
 export interface PlanSource { plan?: Plan | undefined; repeats?: readonly RepeatItem[] | undefined; repeatSkips?: Readonly<Record<string, string[]>> | undefined; moved?: Readonly<Record<string, string>> | undefined }
 
@@ -30,13 +32,13 @@ export function plannedIndex(src: PlanSource, entries: readonly { id: string }[]
       if (it.p !== true || isEaten(it, entries)) continue;
       const id = it.k === 'r' ? it.id : moved[it.id];
       if (!id) continue;
-      const slot = mealOfItem(it, recipes);
+      const slot = mealOfItem({ k: 'r', id, ...(it.s ? { s: it.s } : {}) }, recipes); // a saved meal follows the recipe it became
       const list = out.get(id) ?? [];
       if (!list.some(s => s.day === day && s.slot === slot)) list.push({ day, ...(slot ? { slot } : {}) });
       out.set(id, list);
     }
   }
-  for (const list of out.values()) list.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : SLOT_ORDER.indexOf(a.slot ?? 'snack') - SLOT_ORDER.indexOf(b.slot ?? 'snack')));
+  for (const list of out.values()) list.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : rank(a) - rank(b)));
   return out;
 }
 

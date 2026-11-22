@@ -41,6 +41,7 @@ describe('plannedIndex: what the board has planned in the next 7 days', () => {
     const i = idx(diet);
     expect(plannedWhen(i, 'soup')).toEqual([{ day: T, slot: 'lunch' }]);
     expect([...i.keys()]).toEqual(['soup']);
+    expect(plannedWhen(idx({ moved: { m1: 'soup' }, plan: { [T]: [{ k: 'm', id: 'm1', p: true }] } }), 'soup')).toEqual([{ day: T, slot: 'lunch' }]); // no meal of its own: the recipe's usual meal
   });
   it('a planned repeat marks each day it shows in the window; an unplanned or handy repeat does not', () => {
     const base = { k: 'r' as const, from: '2026-11-01' };
