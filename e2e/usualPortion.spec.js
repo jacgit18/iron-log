@@ -31,6 +31,7 @@ test('More on a row logged today changes the entry only; Save as my usual makes 
   await expect(page.locator('.nb-msg')).not.toContainText('Usual portion saved'); // the nudge itself saves no usual
   await page.locator('.nb-msg').getByRole('button', { name: 'Save 1.5 portions as my usual' }).click();
   await expect(page.locator('.nb-msg')).toContainText('Usual portion saved: Chili, 1.5 portions.');
+  await expect(row.getByRole('button', { name: 'More Chili' })).toBeFocused(); // focus goes back to the control that was nudged, since Save goes away once pressed
   await openChiliSheet(page); // opens... logs at the usual
   await expect(dlg(page).getByText('Logged Chili, 1.5 portions.')).toBeVisible();
   await finish(page);
