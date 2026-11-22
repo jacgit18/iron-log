@@ -27,6 +27,7 @@ import GoesWith from './GoesWith.js';
 import MealMicroBars from './MealMicroBars.js';
 import RecipeMicro from './RecipeMicro.js';
 import AtHomeItem from './AtHomeItem.js';
+import { PlannedPanel } from './PlannedMarker.js';
 import RecipeStar from './RecipeStar.js';
 import ServingsScaler from './ServingsScaler.js';
 import './RecipeDesktop.css';
@@ -103,6 +104,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         <div className="rc-titlerow"><h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Food</span></h2><RecipeStar recipe={recipe} mine={mine} />{mine && <MoreActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} />}</div>
         {strip}
         {bar}
+        {mine && <PlannedPanel id={recipe.id} />}
         {mine && <AtHomeItem recipe={recipe} />}
         <RecipeMicro key={recipe.id} recipe={recipe} />
         {usual && <p className="note">{usual}</p>}
@@ -121,6 +123,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {strip}
       {bar}
+      {mine && <PlannedPanel id={recipe.id} />}
       {roll && <p className="note rc-rolled">{recipe.own ? `Your own numbers are used.${rollText ? ` The parts add up to ${rollText}.` : ' The parts need numbers.'}` : `Per serving, from the parts: ${rollText || 'Needs numbers'}.`} {countedNote(roll)}.</p>}
       {breakdown ? <MealMicroBars key={recipe.id} breakdown={breakdown} /> : <RecipeMicro key={recipe.id} recipe={recipe} />}
       <div className="rc-cols">{/* from 1024 px on the full page: ingredients beside the steps (RecipeDesktop.css); the pane and a phone keep one column */}

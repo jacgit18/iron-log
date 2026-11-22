@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FilterSelect from '../FilterSelect.jsx';
 import ComboChips from './ComboChips.js';
+import { PlannedPill, usePlannedIndex } from './PlannedMarker.js';
 import StockPill from './StockPill.js';
 import { useToday } from '../../store/useToday.js';
 import FoodTypeReview from './FoodTypeReview.js';
@@ -28,6 +29,7 @@ import { comboIds, expandedRows, partsLine, sectionRows, type ComboChip } from '
 import { alsoTag, libraryMatchCount, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, activeFilterCount, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
+import { plannedWhen, type PlannedSpot } from '../../lib/plannedOnBoard.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
 import { loggableRecipe, recentRows } from '../../lib/recipeRows.js';
 import { NUTRITION_FILTERS, nutritionBadge } from '../../lib/recipeNutrition.js';
@@ -129,6 +131,7 @@ export default function Recipes() {
   useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const today = ymd(useToday(s => s.today)); // the app clock, the same day the board's marks are worked out for
+  const plannedOn = usePlannedIndex(); // what the board has planned in the next 7 days (lib/plannedOnBoard.ts), marked on each row
   const foodStock = useMemo(() => foodMarks(recipes, today, grocery, months), [recipes, today, grocery, months]); // the Have / Need pill of each ready-made food (lib/boardStock.ts)
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const narrowed = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable]); // before the section, so each section's count is what it would show
@@ -240,12 +243,12 @@ export default function Recipes() {
   };
 
   // One compact row (brief recipes-list-compact): name and star, then the type and the macro line; the same right-hand slot holds Log or + Add, or an arrow that opens the item.
-  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; est?: boolean; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; stock?: CardStock | null; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
+  const row = (o: { key: string; title: string; meta?: string; badge?: string | null; est?: boolean; tag?: string | null; parts?: string; chips?: readonly ComboChip[]; have?: string | null; haveAll?: boolean; stock?: CardStock | null; planned?: readonly PlannedSpot[]; edited?: boolean; fav?: boolean; current?: boolean; logId?: string; addIt?: () => void; lib?: boolean; open: () => void }) => (
     <li key={o.key} className={`rc-item${o.lib ? ' rc-libitem' : ''}${o.current ? ' current' : ''}${o.chips?.length ? ' hascombos' : ''}`}>
       <button type="button" className="rc-row" onClick={o.open} aria-current={o.current ? 'true' : undefined}>
         <span className="rc-main">
           <span className="rc-title"><b id={`rc-t-${o.key}`}>{o.title}</b>{o.fav && <span className="rc-favmark" role="img" aria-label="Favorite"><Icon name="star-fill" /></span>}{o.edited && <span className="rc-edited">Edited</span>}</span>
-          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}{o.est && <> · <span aria-hidden="true">est.</span><span className="vh"> estimated</span></>}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}<StockPill stock={o.stock} /></span>
+          <span className="rc-meta">{o.tag && <span className="rc-typetag">{o.tag}</span>}{o.badge ? <span className="rc-badge">{o.badge}{o.est && <> · <span aria-hidden="true">est.</span><span className="vh"> estimated</span></>}</span> : o.meta}{o.parts && <span className="rc-parts">{o.parts}</span>}{o.have && <span className={`rc-have${o.haveAll ? ' all' : ''}`}>{o.have}</span>}<StockPill stock={o.stock} /><PlannedPill spots={o.planned ?? []} /></span>
         </span>
         {!o.logId && !o.addIt && <span className="rc-go" aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
@@ -351,7 +354,7 @@ export default function Recipes() {
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
                 const also = r.cat === 'ready' ? alsoTag(r, section) : '';
-                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, stock: foodStock.get(r.id), tag: also || typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
+                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, stock: foodStock.get(r.id), planned: plannedWhen(plannedOn, r.id), tag: also || typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
           )}
