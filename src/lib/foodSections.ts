@@ -63,7 +63,8 @@ export function sectionCountText(s: FoodSection, c: SectionCounts): string {
   return s === 'library' && c.plus ? `${n}+` : String(n);
 }
 
-export interface SearchCounts { sections: SectionCounts; groups: Record<FoodGroup, number | null> }
+/** `madePlus` is true when the Made number is "at least": more library pages exist, or the library has not loaded yet (so it is not in the number). */
+export interface SearchCounts { sections: SectionCounts; groups: Record<FoodGroup, number | null>; madePlus: boolean }
 
 /** The numbers while a search is typed. `matches` is your own list narrowed by the search (and the filters), `libraryMatches` the library rows that match (null until loaded).
  *  A group counts each item once, so a food listed in two Store-bought sections is one match on the Store-bought button. */
@@ -71,7 +72,7 @@ export function searchCounts(matches: readonly Recipe[], libraryMatches: number 
   const sections = sectionCounts(matches, libraryMatches, more);
   const made = matches.filter(r => sectionsOf(r).some(s => groupOf(s) === 'made')).length;
   const store = matches.filter(r => sectionsOf(r).some(s => groupOf(s) === 'store')).length;
-  return { sections, groups: { made: libraryMatches === null ? made : made + libraryMatches, store } };
+  return { sections, groups: { made: libraryMatches === null ? made : made + libraryMatches, store }, madePlus: libraryMatches === null || more };
 }
 
 /** The sections tried, in order, when no section was used yet this visit. */

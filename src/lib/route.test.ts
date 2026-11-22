@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOOD_SECTION_KEYS, PATHS, boardFix, boardView, dailyFix, foodSectionOf, foodSectionPath, programKey, programPath, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
+import { FOOD_SECTION_KEYS, PATHS, recipesPage, recipesPagePath, boardFix, boardView, dailyFix, foodSectionOf, foodSectionPath, programKey, programPath, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
 
 // Screen addresses (brief navigation-urls): every address round-trips, an unknown one falls back to the screen above it, and none can carry personal data.
 describe('parseRoute', () => {
@@ -125,5 +125,17 @@ describe('Foods section addresses', () => {
   });
   it('keeps section addresses to screen names (no ids, emails or numbers)', () => {
     for (const k of FOOD_SECTION_KEYS) expect(foodSectionPath(k)).toMatch(/^daily\/recipes\/[a-z]+$/);
+  });
+  it('opens a library recipe at library/item and the other pages by kind', () => {
+    expect(recipesPagePath('library')).toBe('daily/recipes/library/item');
+    expect(recipesPagePath('mine')).toBe('daily/recipes/mine');
+    expect(recipesPagePath('form')).toBe('daily/recipes/form');
+    expect(parseRoute(`#/${recipesPagePath('library')}`)?.path).toBe('daily/recipes/library/item');
+  });
+  it('treats the bare address and a section address as the screen itself, not a page (so it stays in the bar)', () => {
+    for (const p of ['daily/recipes', ...FOOD_SECTION_KEYS.map(foodSectionPath)]) expect(recipesPage(p)).toBeNull();
+    expect(recipesPage('daily/recipes/mine')).toBe('mine');
+    expect(recipesPage('daily/recipes/library/item')).toBe('library/item');
+    expect(recipesPage('daily/grocery')).toBeNull();
   });
 });

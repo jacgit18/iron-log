@@ -118,6 +118,11 @@ describe('counts', () => {
     expect(c.groups).toEqual({ made: 3 + 3, store: 3 }); // eggs is one Store-bought match, not two
     expect(searchCounts(list).groups.made).toBe(3);
   });
+  it('searchCounts marks the Made number "at least" while more library pages exist or the library is not loaded', () => {
+    expect(searchCounts(list, 3, true).madePlus).toBe(true);
+    expect(searchCounts(list).madePlus).toBe(true);
+    expect(searchCounts(list, 3, false).madePlus).toBe(false);
+  });
   it('searchCounts of no match is zero everywhere', () => {
     expect(searchCounts([], 0).groups).toEqual({ made: 0, store: 0 });
   });
