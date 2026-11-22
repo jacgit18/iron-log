@@ -1,0 +1,32 @@
+@layer base, components;
+@layer components {
+/* The planned marker on Foods (PlannedMarker.tsx): a pill on a row and a panel on the food's page. */
+.rc-planned {
+  flex: none;
+  margin-inline-start: var(--sp-6);
+  padding: 0 var(--sp-6);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.rc-plannedbox {
+  margin: var(--sp-12) 0;
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.rc-plannedbox h3 {
+  margin: 0 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+.rc-plannedbox p {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+.rc-plannednote {
+  color: var(--muted);
+}
+}

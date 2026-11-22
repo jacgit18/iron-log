@@ -86,6 +86,27 @@ test('a food used two ways is one record in two sections, with one star and a Re
   await expect(page.locator('#recipes-recent')).toHaveCount(0); // Recent never mixes sections: nothing starred here
 });
 
+test('the planned marker: a row and the food\'s page show what the board plans in the next 7 days, and nothing when it plans nothing', async ({ page }) => {
+  // The rules (window, repeats, eaten, saved meals) are node tests (plannedOnBoard.test.ts); this covers the wiring from the board's plan to the row pill and the page panel. The fixed clock is Thursday 2026-09-24.
+  const plan = { '2026-09-25': [{ k: 'r', id: 'soup', s: 'lunch', p: true }, { k: 'r', id: 'bar', s: 'snack', p: true }], '2026-09-26': [{ k: 'r', id: 'bar', s: 'snack', p: true }, { k: 'r', id: 'egg' }], '2026-10-05': [{ k: 'r', id: 'box', p: true }] };
+  await page.addInitScript(p => { const c = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}'); localStorage.setItem('ironlog:config/main', JSON.stringify({ ...c, diet: { plan: p } })); }, plan);
+  await open(page);
+  await expect.poll(() => hash(page)).toBe('#/daily/recipes/meals');
+  await expect(page.locator('.rc-row', { hasText: 'Lunch box' }).locator('.rc-planned')).toHaveCount(0); // planned after the 7 days
+  await page.click('#recipes-sec-recipes');
+  await expect(page.locator('.rc-row', { hasText: 'Lentil soup' }).locator('.rc-planned')).toHaveText('Planned · Fri lunch');
+  await page.click('#recipes-group-store');
+  await page.click('#recipes-sec-ready');
+  await expect(page.locator('.rc-row', { hasText: 'Granola bar' }).locator('.rc-planned')).toHaveText('Planned · 2 days');
+  await expect(page.locator('.rc-row', { hasText: 'Eggs' }).locator('.rc-planned')).toHaveCount(0); // stored but not marked planned
+  await page.locator('.rc-row', { hasText: 'Granola bar' }).click();
+  await expect(page.getByRole('heading', { name: 'Planned on the board' })).toBeVisible();
+  await expect(page.locator('.rc-plannedbox')).toContainText('Fri snack, Sat snack');
+  await page.goBack();
+  await page.locator('.rc-row', { hasText: 'Eggs' }).click();
+  await expect(page.locator('.rc-plannedbox')).toContainText('Not planned in the next 7 days.');
+});
+
 test('after Save the list returns to the section the new item belongs in (a page on a phone)', async ({ page }) => {
   await open(page);
   await expect.poll(() => hash(page)).toBe('#/daily/recipes/meals');
