@@ -12,6 +12,7 @@ import RecipeDetailPane, { useDetailPaneWidth } from './RecipeDetailPane.js';
 import RecipeNewMenu, { type NewChoice } from './RecipeNewMenu.js';
 import LibrarySignIn from './LibrarySignIn.js';
 import FoodSections from './FoodSections.js';
+import NewFromGroceries from './NewFromGroceries.js';
 import { useKept } from './useRecipesViewState.js';
 import ReadyMadeForm from './ReadyMadeForm.js';
 import { activeFormGuard } from '../../lib/recipeFormGuard.js';
@@ -26,7 +27,7 @@ import { ymd } from '../../shared/dates.js';
 import { libraryHave } from '../../lib/libraryRows.js';
 import { filtersSkipLibrary, mergedGroups } from '../../lib/recipeMerged.js';
 import { comboIds, expandedRows, partsLine, sectionRows, type ComboChip } from '../../lib/recipeCombos.js';
-import { alsoTag, libraryMatchCount, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
+import { alsoTag, groupOf, libraryMatchCount, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, activeFilterCount, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
 import { plannedWhen, type PlannedSpot } from '../../lib/plannedOnBoard.js';
@@ -296,6 +297,7 @@ export default function Recipes() {
         <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters{nFilters > 0 ? ` (${nFilters})` : ''}<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
       </div>
       <FoodSections section={section} counts={secCounts} search={searchNums} onSection={switchSection} recent={picks.length && yours ? { on: recentOn, onToggle: () => setRecent(!recentOn) } : undefined} />
+      {groupOf(section) === 'store' && <NewFromGroceries onAddNutrition={id => setView({ kind: 'form', id })} />}
       <div className="rc-filterbar" id="recipes-filterbar" hidden={!filtersOpen}>
         <FilterSelect label="Category" value={cat ?? ''} onChange={v => setCat(v === '' ? null : v as RecipeCategory)}>
           <option value="">All categories</option>

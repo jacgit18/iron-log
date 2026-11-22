@@ -5,6 +5,7 @@ import Supplements from '../supplements/Supplements.jsx';
 import Grocery from '../grocery/Grocery.js';
 import Medical from './Medical.js';
 import Recipes from '../recipes/Recipes.js';
+import '../recipes/NewFromGroceries.css';
 import { dailyFix, dailySection } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import { pickView } from './pickView.js';
@@ -19,6 +20,7 @@ export default function Daily() {
   const setDailyView = useAppStore(s => s.setDailyView);
   const shown: Record<string, boolean> = { medical: useFeature('medical') };
   const sections = DAILY.filter(([k]) => shown[k] !== false);
+  const waiting = useAppStore(s => s.recipes.filter(r => r.fromGroc).length); // a dot on Foods while something made from groceries waits for a look
   const path = useRoutePath();
   const keys = sections.map(([k]) => k);
   // The address wins when it names a section that is offered (#/daily/recipes). Nutrition stays the one that opens first; the buttons follow what is shown, not the raw saved view.
@@ -30,7 +32,7 @@ export default function Daily() {
     <>
       <div className="edtop">
         <div className="seg" role="group" aria-label="Daily section">
-          {sections.map(([k, l]) => <button type="button" key={k} id={`daily-${k}`} className={cur === k ? 'on' : ''} aria-pressed={cur === k} onClick={() => { const go = () => { setDailyView(k); navigate(dailyFix('daily', k) ?? 'daily', 'replace'); }; const g = activeFormGuard(); if (g) g.tap(go); else go(); }}>{l}</button>)}
+          {sections.map(([k, l]) => <button type="button" key={k} id={`daily-${k}`} className={cur === k ? 'on' : ''} aria-pressed={cur === k} onClick={() => { const go = () => { setDailyView(k); navigate(dailyFix('daily', k) ?? 'daily', 'replace'); }; const g = activeFormGuard(); if (g) g.tap(go); else go(); }}>{l}{k === 'recipes' && waiting > 0 && <><span className="nfg-dot" aria-hidden="true" /><span className="vh">, {waiting} new from groceries</span></>}</button>)}
         </div>
       </div>
       <View />

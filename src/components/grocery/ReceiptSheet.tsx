@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NEW_STORE, addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, paidAfterRewards, parseRewards, planReceipt, proposeItem, receiptTotal, remapPlan, restoreSnapshot, stageDraft, stagedAt, takeSnapshot, withRewards, withoutReceiptMoney, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
 import { aliasAddsFor, applyNames, movedFrom, resolveName, savedNamesText, type RowEdit } from '../../lib/groceryAliases.js';
+import { madeFoodsText } from '../../lib/foodFromItem.js';
 import { MAX_STORES, RESERVED_STORE, centsText, isReservedName, money, monthLabel, withoutUsed } from '../../lib/grocery.js';
 import { duplicateOf, freshKey } from '../../lib/groceryLedger.js';
 import { allPeople, hasSharing } from '../../lib/grocerySettle.js';
@@ -202,11 +203,12 @@ export default function ReceiptSheet() {
     if (Object.keys(nm.names).length) snap.names = nm.names;
     if (Object.keys(nm.aliases).length) snap.aliases = nm.aliases;
     const namesText = `${savedNamesText(nm.saved)}${nm.refused.length ? ` Could not rename: ${nm.refused.join(', ')}.` : ''}`;
+    const foodsText = madeFoodsText(made.created.map(x => made.ids[x.id]!), useAppStore.getState().recipes); // the Foods those new items made (brief groceries-make-foods); the receipt Undo takes back the untouched ones
     const storeText = newStore ? ` Added the store ${newStore}.` : '';
     finished.current = true; dropDraft(draftId.current); // applied: nothing left to resume
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || out.unticked || real.taxStore || real.creditStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || out.unticked || real.taxStore || real.creditStore || made.created.length || made.refused.length || nm.saved) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Moved ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} back to Shopping for ${monthLabel(mk)}.${addedText(made.created, made.refused)}${foodsText}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${storeText}${addedText(made.created, made.refused)}${foodsText}${namesText}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
     return true;
   };
   // A receipt from To log claims its saved row first (one PATCH, only if it still waits): if another device logged or deleted it, nothing is applied here and the sheet says so.

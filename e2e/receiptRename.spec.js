@@ -98,7 +98,7 @@ test.describe('as an admin', () => {
     const names = page.getByRole('group', { name: 'Receipt names for Large eggs' });
     await expect(names).toContainText('EGGS LRG 5 DZ');
     await names.getByRole('button', { name: 'Forget EGGS LRG 5 DZ' }).click();
-    await expect(names).toHaveCount(0);
+    await expect(names).not.toContainText('EGGS LRG 5 DZ'); // "Eggs" stays: the item had a Food, so its old name was saved as a receipt name when it was renamed (brief groceries-make-foods)
     await expect(page.getByText('Removed the receipt name “EGGS LRG 5 DZ” from Large eggs.')).toBeVisible();
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(page.getByRole('group', { name: 'Receipt names for Large eggs' })).toContainText('EGGS LRG 5 DZ');

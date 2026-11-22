@@ -404,7 +404,7 @@ describe('planToShopping (week to Shopping)', () => {
   it('leaves what is already on the list and adds nothing for an eaten item, a saved meal or no plan', () => {
     st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
     st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
-    const id = st().recipes[0]!.id;
+    const id = st().recipes.find(r => !r.fromGroc)!.id;
     plan({ k: 'r', id, e: ['gone-entry'] }, { k: 'm', id: 'm1' });
     expect(st().planToShopping([today])).toMatchObject({ added: 1, already: 1 }); // the eaten mark points at a removed entry, so the item still counts
     plan({ k: 'm', id: 'm1' });
@@ -426,7 +426,7 @@ describe('planToShopping (week to Shopping)', () => {
   it('lets Undo remove exactly the items the call created', () => {
     st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
     st().saveRecipe({ n: 'Pasta', cat: 'protein', ing: [{ n: 'garlic' }, { n: 'pasta' }], steps: [] });
-    plan({ k: 'r', id: st().recipes[0]!.id });
+    plan({ k: 'r', id: st().recipes.find(r => !r.fromGroc)!.id });
     const r = st().planToShopping([today]);
     for (const id of r.ids) st().removeGroceryItem(id, { quiet: true });
     expect(itemNames()).toEqual(['Garlic']);

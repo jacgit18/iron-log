@@ -208,19 +208,24 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (isReservedName(typedStore)) return RESERVED_STORE;
       const note = (d.note ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE);
       const unit = UNITS.find(u => u === d.unit);
-      return mutateCatalogue(g => {
+      const made: { it?: GroceryItem } = {};
+      const err = mutateCatalogue(g => {
         const store = sameStore(g, typedStore);
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         const used = usedOneTime(g, get().groceryMonths); // a used one-time item is out of the list, so it does not block the same name
         if (g.items.some(i => !used.has(i.id) && i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         const full = ensureStore(g, store); if (full) return full;
-        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: !d.oneTime, out: !!d.oneTime, ...(d.oneTime ? { oneTime: monthKey(new Date()) } : {}), ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        const item: GroceryItem = { id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: !d.oneTime, out: !!d.oneTime, ...(d.oneTime ? { oneTime: monthKey(new Date()) } : {}), ...(note ? { note } : {}), ...(unit ? { unit } : {}) };
+        g.items.unshift(item); made.it = item;
         return null;
       });
+      if (!err && made.it) get().foodForNewItem(made.it); // brief groceries-make-foods: every add path (Inventory, receipt line) ends here; the Food never blocks the add
+      return err;
     },
 
     updateGroceryItem(id, patch) {
       const was = get().grocery.items.find(i => i.id === id)?.store;
+      const wasName = get().grocery.items.find(i => i.id === id)?.n;
       const err = mutateCatalogue(g => {
         const it = g.items.find(i => i.id === id);
         if (!it) return 'That item is gone.';
@@ -245,6 +250,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (patch.every !== undefined) { it.every = patch.every; if (it.every) it.out = false; }
         const used = usedOneTime(g, get().groceryMonths);
         if (g.items.some(i => i !== it && !used.has(i.id) && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
+        // A renamed item keeps its Food's name (brief groceries-make-foods); the old name becomes a receipt name so receipts and matching still find it.
+        if (wasName && wasName.toLowerCase() !== it.n.toLowerCase() && get().recipes.some(r => r.cat === 'ready' && r.home === id) && !findByAlias(g.items.filter(x => x !== it), wasName)) { const a = cleanAliases([...(it.aliases ?? []), wasName]); if (a) it.aliases = a; }
         return null;
       });
       if (!err && patch.store !== undefined && was !== undefined && get().grocery.items.find(i => i.id === id)?.store !== was) pinPastStores(id, was);
@@ -257,13 +264,16 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const it = get().grocery.items[i];
       pinRemoved(it);
       if (mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; }) !== null) return;
+      const unpinned = get().foodOfRemovedItem(it, !!opts?.quiet); // quiet is an Undo of an add: it takes back an untouched Food; a delete keeps the Food and clears its pin (brief groceries-make-foods)
       if (opts?.quiet) return; // the receipt Undo removes what Apply made and has its own notice
       get().noteRemoved('grocery', it.n, () => {
-        return mutateCatalogue(g => {
+        const back = mutateCatalogue(g => {
           if (g.items.some(x => x.id === id)) return 'back';
           if (it.store) ensureStore(g, it.store);
           g.items.splice(Math.min(i, g.items.length), 0, it); return null;
         }) === null;
+        if (back) get().repinFoods(unpinned, id);
+        return back;
       });
     },
 

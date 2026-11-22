@@ -4,10 +4,12 @@ import { fieldsOf, sameFields, withFields } from '../lib/recipeFill.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
 import { removeTag, renameTag, restoreTag, tagLimitError } from '../lib/recipeTags.js';
 import { withUsual } from '../lib/usualPortion.js';
+import { GROCERY_FOODS_ON, planFoodForItem } from '../lib/foodFromItem.js';
+import { confirmed, isFoodReferenced, sweepFoods, untouchedFood, withFoodType } from '../lib/newFromGroceries.js';
 import { cleanMicro } from '../shared/foodMicro.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
-import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
+import type { CatalogItem, FoodType, GroceryItem, Recipe, RecipeIngredient } from '../types.ts';
 import type { RecipesSlice, StoreGet, StoreSet } from './types.ts';
 
 // Your recipes (ADR 084): one document, recipes/main, saved like every other (synced when syncing is on, in this browser otherwise). A
@@ -99,6 +101,60 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     if (!next) return;
     set({ recipes: list.map(x => (x.id === id ? next : x)) });
     get().saveRecipes();
+  },
+
+  foodForNewItem(item) {
+    if (!GROCERY_FOODS_ON || !get().recipesLoaded) return; // a write built on an unread list could replace the account's
+    const list = get().recipes, plan = planFoodForItem(item, list);
+    if (plan.kind === 'make') {
+      const food = normRecipe(plan.food);
+      if (!food) return;
+      set({ recipes: [...list, food] });
+      get().saveRecipes();
+    } else if (plan.kind === 'link') {
+      const f = list.find(r => r.id === plan.id);
+      if (f && f.cat === 'ready' && !f.home) get().setRecipeHome(f.id, item.id);
+    }
+  },
+
+  foodOfRemovedItem(item, undoAdd) {
+    if (!get().recipesLoaded) return [];
+    const list = get().recipes, pinned = list.filter(r => r.cat === 'ready' && r.home === item.id);
+    if (!pinned.length) return [];
+    const st = get(), refs = { entries: st.diet, diet: st.cfg.diet, recipes: list };
+    const drop = new Set(undoAdd ? pinned.filter(r => untouchedFood(r, item, isFoodReferenced(r.id, refs))).map(r => r.id) : []);
+    const unpin = new Set(pinned.filter(r => !drop.has(r.id)).map(r => r.id));
+    set({ recipes: list.filter(r => !drop.has(r.id)).map(r => { if (!unpin.has(r.id)) return r; const { home: _h, ...rest } = r; return rest; }) });
+    get().saveRecipes();
+    return [...unpin];
+  },
+
+  repinFoods(ids, itemId) {
+    for (const id of ids) { const r = get().recipes.find(x => x.id === id); if (r && !r.home) get().setRecipeHome(id, itemId); }
+  },
+
+  setGroceryFoodType(id, type: FoodType) {
+    const r = get().recipes.find(x => x.id === id);
+    if (!r || r.cat !== 'ready') return;
+    set({ recipes: get().recipes.map(x => (x.id === id ? withFoodType(x, type) : x)) });
+    get().saveRecipes();
+  },
+
+  confirmGroceryFoods(ids) {
+    const list = get().recipes, next = confirmed(list, ids);
+    const n = list.filter((r, i) => r.fromGroc && !next[i]!.fromGroc).length;
+    if (!n) return 0;
+    set({ recipes: next });
+    get().saveRecipes();
+    return n;
+  },
+
+  makeFoodsFromItems() {
+    if (!get().recipesLoaded) return { made: 0, waiting: 0 };
+    const s = sweepFoods(get().grocery.items, get().recipes);
+    const make = s.make.map(normRecipe).filter((r): r is Recipe => !!r);
+    if (make.length) { set({ recipes: [...get().recipes, ...make] }); get().saveRecipes(); }
+    return { made: make.length, waiting: s.waiting };
   },
 
   copyCatalogRecipe(item: CatalogItem, servings?: number) {
