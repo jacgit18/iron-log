@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { entryText, hasMacros } from '../../lib/dietLog.js';
-import { logFoodAtUsual, logRecipeAtUsual } from '../../lib/logAtUsual.js';
+import { logFoodAtUsual, logFoodGrams, logRecipeAtUsual } from '../../lib/logAtUsual.js';
 import type { Say } from '../../lib/eatenStep.js';
 import { findFoods } from '../../lib/foodMacros.js';
 import { foodTypeOf } from '../../lib/foodType.js';
@@ -25,6 +25,12 @@ export default function FindFood({ day, today, onFood, onMsg, reopen, resume }: 
     const m = rec ? logRecipeAtUsual(st(), rec, day, today) : logFoodAtUsual(st(), f, day, today);
     if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error);
   };
+  // A database food (or a scanned product) at the grams chosen: Log it logs it on a day that can be logged; Use still opens the One-off form to edit it first.
+  const logGrams = (f: FoodFill, grams: number) => {
+    setQ('');
+    const m = logFoodGrams(st(), f, grams, day, today);
+    if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error);
+  };
   return (
     <div className="dt-find">
       <label className="field" htmlFor="dt-find-q">Search your past meals and recipes
@@ -44,7 +50,7 @@ export default function FindFood({ day, today, onFood, onMsg, reopen, resume }: 
         </ul>
       )}
       {q.trim() !== '' && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}
-      <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />
+      <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(day <= today ? { onLog: logGrams } : {})} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />
     </div>
   );
 }
