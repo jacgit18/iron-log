@@ -11,7 +11,7 @@ export function stepEatenRow(e: DietEntry, to: number, recipe: Recipe | undefine
   if (err) { say(err); return; }
   const now = recipe ? useAppStore.getState().recipes.find(r => r.id === recipe.id) : undefined; // the recipe as it is now
   const change = usualAfterStep(e.d, today, now, to);
-  if (!now || !change) return;
+  if (!now || !change) { say(''); return; } // nothing to offer now: clear any earlier sentence and its Save button, which no longer matches the row
   say(nudgeSentence(now.n, amountText(to, now)), undefined, { label: saveUsualLabel(amountText(to, now)), run: () => saveUsual(now, to, change, say) });
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { effectivePlan } from '../../lib/dailySnacks.js';
 import { entryFromFood } from '../../lib/dietLog.js';
 import { runInstantLog } from '../../lib/instantLog.js';
@@ -46,6 +46,7 @@ export default function NutritionBoard() {
   const [anchor, setAnchor] = useState(today); // the first day of the 1 to 3 day window; tapping a column inside it keeps the window still, only the stepper moves it
   const [msg, setMsgText] = useState('');
   const [undo, setUndo] = useState<(() => void) | null>(null); // the status line's Undo (a log, a saved usual portion); any new sentence without one clears it
+  const msgLine = useRef<HTMLParagraphElement>(null); // focus returns here after the Save button, which goes away once pressed
   const [offer, setOffer] = useState<SayAction | null>(null); // a button after the sentence (Save N as my usual); any new sentence without one clears it
   const setMsg: Say = (t, u, a) => { setMsgText(t); setUndo(u ? () => u : null); setOffer(a ?? null); };
   const [scanned, setScanned] = useState<{ hit: FoodHit; day: string } | null>(null); // the day is the one the scan began on, so picking another day before Save and log it does not move the entry
@@ -114,7 +115,7 @@ export default function NutritionBoard() {
       {phone && <ShoppingButton bar week={days} today={today} onMsg={setMsg} />}
       <RemovedNotice scope="diet" expires />
       {scanned && <div className="nb-scan"><ScanFood key={scanned.hit.id} hit={scanned.hit} day={scanned.day} onDone={setMsg} onCancel={() => setScanned(null)} /></div>}
-      <p className="note nb-msg" role="status">{msg}{undo && <UndoButton onUndo={() => { setMsg('Undone.'); undo(); }} />}{offer && <> <button type="button" className="btn sm ghost" onClick={offer.run}>{offer.label}</button></>}</p>
+      <p ref={msgLine} tabIndex={-1} className="note nb-msg" role="status">{msg}{undo && <UndoButton onUndo={() => { setMsg('Undone.'); undo(); }} />}{offer && <> <button type="button" className="btn sm ghost" onClick={() => { offer.run(); msgLine.current?.focus(); }}>{offer.label}</button></>}</p>
       {shown === 7 ? (
         <div className="wb-board nb-board">{views.map(v => <DayColumn key={v.day} v={v} today={today} selected={v.day === day} onPick={() => setPicked(v.day)} onLog={log} onMsg={setMsg} onAdd={meal => open(undefined, v.day, meal)} />)}</div>
       ) : (

@@ -52,10 +52,19 @@ describe('stepEatenRow', () => {
     const seen = pressSaveThenUndo(() => { useAppStore.setState({ recipes: [] }); });
     expect(seen.at(-1)).toBe('This food was removed, so there is no usual to restore.');
   });
+  it('a nudge back to the usual start clears the earlier offer, so a stale Save cannot be pressed', () => {
+    const said: Said[] = [];
+    const say = (t: string, undo?: () => void, action?: { label: string; run: () => void }) => said.push({ t, ...(undo ? { undo } : {}), ...(action ? { action } : {}) });
+    stepEatenRow(entry, 1.5, st().recipes[0], TODAY, say); // More: offers Save 1.5
+    stepEatenRow({ ...entry, x: 1.5 }, 1, st().recipes[0], TODAY, say); // Less back to 1, the opening portion: nothing to offer
+    expect(said[0]!.action).toBeDefined();
+    expect(said[1]).toEqual({ t: '' }); // the status line is told an empty sentence and no button
+    expect(st().recipes[0]!.usual).toBeUndefined();
+  });
   it('an earlier day steps the entry and offers nothing', () => {
     const old = { ...entry, d: '2026-11-14' };
     useAppStore.setState({ diet: [old] });
-    expect(run(1.5, old)).toEqual([]);
+    expect(run(1.5, old)).toEqual([{ t: '' }]);
     expect(st().recipes[0]!.usual).toBeUndefined();
   });
   it('says the store\'s words and changes nothing when the count is out of range', () => {
