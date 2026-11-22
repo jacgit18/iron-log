@@ -7,7 +7,7 @@ const scenario: Scenario = {
     'Narrow the window to a phone width (or open the app on a phone) and press a row, then press Back.',
   ],
   expected: [
-    'The list stays on the left and the pressed recipe shows on the right, in place, with no Back to recipes bar.',
+    'The list stays on the left and the pressed recipe shows on the right, in place, with no Back bar.',
     'The recipe opens as its own page and Back returns to the list.',
   ],
 };
