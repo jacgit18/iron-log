@@ -116,4 +116,14 @@ describe('confirm, type and the sweep', () => {
     expect(foodOf('Whole milk')).toMatchObject({ fromGroc: true, type: 'drink' });
     expect(st().makeFoodsFromItems()).toEqual({ made: 0, waiting: 0 });
   });
+  it('saving a waiting Food through the form keeps the marker; Looks right clears it', () => {
+    add('Lasagna');
+    const f = foodOf('Lasagna')!;
+    const { id: _id, fromGroc: _g, ...draft } = f; // the form's draft says nothing about the marker
+    expect(st().saveRecipe({ ...draft, id: f.id, kcal: 300 })).toBeNull(); // e.g. a scan saved to the food
+    expect(foodOf('Lasagna')).toMatchObject({ kcal: 300, fromGroc: true, home: f.home });
+    st().confirmGroceryFoods([f.id]);
+    expect(st().saveRecipe({ ...draft, id: f.id, kcal: 310 })).toBeNull();
+    expect(foodOf('Lasagna')!.fromGroc).toBeUndefined();
+  });
 });

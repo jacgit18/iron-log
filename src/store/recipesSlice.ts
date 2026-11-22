@@ -75,7 +75,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     if (limit) return limit;
     for (const i of d.ing) { const loop = i.rid && i.q !== undefined ? linkError(list, d.id, i.rid) : null; if (loop) return loop; } // a meal inside a meal: no loop, three levels at most
     const kept = d.id ? list.find(r => r.id === d.id) : undefined; // the star and the saved-meal mark belong to the recipe, not to the form
-    const made = normRecipe({ ...d, ...(kept?.fav && d.fav === undefined ? { fav: true } : {}), ...(kept?.home && d.home === undefined ? { home: kept.home } : {}), ...(kept?.fromMeal && d.fromMeal === undefined ? { fromMeal: kept.fromMeal } : {}), id, n: clean(d.n) });
+    const made = normRecipe({ ...d, ...(kept?.fav && d.fav === undefined ? { fav: true } : {}), ...(kept?.home && d.home === undefined ? { home: kept.home } : {}), ...(kept?.fromGroc && d.fromGroc === undefined ? { fromGroc: true as const } : {}), ...(kept?.fromMeal && d.fromMeal === undefined ? { fromMeal: kept.fromMeal } : {}), id, n: clean(d.n) });
     if (!made) return 'That recipe can’t be saved.';
     const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
     set({ recipes: settleMeals(d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item]) }); // meals built from this one follow its numbers and name
