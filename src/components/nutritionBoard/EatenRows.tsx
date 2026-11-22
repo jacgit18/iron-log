@@ -13,7 +13,7 @@ import { MicroLine } from './MicroLine.js';
 import './EatenRows.css';
 
 // Eaten food that no planned item's check added (brief nutrition-items-row-sheet-and-more). Today it sits in its meal (MealSections) or in "Not in a meal"; each row is one button that opens the row sheet (EatenRowSheet), so a row carries no inline Edit or Delete.
-// Less, the amount and More sit on the row itself (brief nutrition-log-first-portion-row, option A): a tap steps the entry's portion by half through `setDietPortion`; the entry changes only. On a food logged today from a recipe, `onMsg` is also given a "Save N as my usual" button (its third argument), and the person presses it to make the amount the usual (button review N3).
+// Less, the amount and More sit on the row itself (brief nutrition-log-first-portion-row, option A): a tap steps the entry's portion by half through `setDietPortion`; the entry changes only. On a food logged today from a recipe whose usual would change, `onMsg` is also given a "Save N as my usual" button (its third argument), and the person presses it to make the amount the usual (button review N3).
 // An earlier day's rows open the row sheet too (brief nutrition-any-day-add), and every row has Move to and Copy to (brief nutrition-move-copy-eaten). `onMsg` is the board's status line, for the sentence after a move or copy.
 export function EatenRow({ e, recipe, onMsg }: { e: DietEntry; recipe?: Recipe; onMsg: Say }) {
   const today = ymd(useToday(s => s.today));
