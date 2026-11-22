@@ -147,7 +147,7 @@ for (const [w, h] of [[768, 1024], [375, 812]]) {
 }
 
 test('+ New offers every way to add and each opens its flow', async ({ page }) => {
-  await page.addInitScript(() => { localStorage.setItem('ironlog:session/admin', 'true'); navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
+  await page.addInitScript(() => { localStorage.setItem('ironlog:session/admin', 'true'); });
   await open(page);
   const menu = page.locator('#recipes-new-list');
   await page.click('#recipes-new');
