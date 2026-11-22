@@ -44,7 +44,7 @@ export default function NewFromGroceries({ onAddNutrition }: { onAddNutrition: (
                       {TYPE_CHOICES.map(c => <button type="button" key={c.key} className="pillbtn" aria-pressed={(f.type ?? 'ready') === c.key} aria-label={`Set ${f.n} to ${c.label}`} onClick={() => act().setGroceryFoodType(f.id, c.key)}>{c.label}</button>)}
                     </div>
                     {f.kcal === undefined && <span className="nfg-nonut">No nutrition yet <button type="button" className="btn sm ghost" aria-label={`Scan or type nutrition for ${f.n}`} onClick={() => onAddNutrition(f.id)}>Scan or type</button></span>}
-                    <button type="button" className="btn sm" aria-label={`Confirm ${f.n}`} onClick={() => act().confirmGroceryFoods([f.id])}>Looks right</button>
+                    <button type="button" className="btn sm" aria-label={`Looks right for ${f.n}`} onClick={() => act().confirmGroceryFoods([f.id])}>Looks right</button>
                   </li>
                 ))}
               </ul>

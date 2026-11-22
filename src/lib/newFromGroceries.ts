@@ -26,9 +26,13 @@ export function confirmed(recipes: readonly Recipe[], ids?: readonly string[]): 
   return recipes.map(r => { if (!r.fromGroc || (pick && !pick.has(r.id))) return r; const { fromGroc: _f, ...rest } = r; return rest; });
 }
 
+/** Equal whatever the key order (a synced copy can come back with its keys in another order). */
+const canon = (v: unknown): unknown => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, canon(x)])) : v);
+const sameShape = (a: Recipe, b: Recipe): boolean => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+
 /** Whether Undo of the add may take the Food back: still flagged, exactly as it was made (no type change, edit, number or star), and nothing refers to it (`referenced`: planned, logged, repeated, snacked, in a meal or paired). */
 export function untouchedFood(food: Recipe, item: Pick<GroceryItem, 'id' | 'n'>, referenced: boolean): boolean {
-  return food.fromGroc === true && !referenced && JSON.stringify(food) === JSON.stringify(madeFood(item, food.id));
+  return food.fromGroc === true && !referenced && sameShape(food, madeFood(item, food.id));
 }
 
 export interface Candidate { item: GroceryItem; type: FoodType }

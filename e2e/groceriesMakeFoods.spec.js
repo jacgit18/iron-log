@@ -22,14 +22,14 @@ test('an added item makes a Food that waits in the new-from-groceries row until 
   await expect(pill).toContainText('1 new from groceries');
   await expect(pill).toHaveAttribute('aria-expanded', 'false');
   await pill.click();
-  await expect(page.getByLabel('Confirm Whole milk')).toBeVisible();
+  await expect(page.getByLabel('Looks right for Whole milk')).toBeVisible();
   await expect(page.getByText('No nutrition yet')).toBeVisible();
   await page.click('#recipes-sec-drinks'); // guessed Drink: it is in Drinks at once
   await expect(page.locator('.rc-cards .rc-title b')).toHaveText(['Whole milk']);
   await page.getByLabel('Set Whole milk to Ingredient').click();
   await page.click('#recipes-sec-ingredients');
   await expect(page.locator('.rc-cards .rc-title b')).toHaveText(['Whole milk']);
-  await page.getByLabel('Confirm Whole milk').click();
+  await page.getByLabel('Looks right for Whole milk').click();
   await expect(page.locator('#nfg-pill')).toHaveCount(0);
   await expect(page.locator('#daily-recipes .nfg-dot')).toHaveCount(0);
 });

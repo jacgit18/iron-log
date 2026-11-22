@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { foodNoticeText } from '../../lib/foodFromItem.js';
 import { MAX_NOTE, UNITS, storeChoices, unitWords } from '../../lib/grocery.js';
 import useDockHeight from './useDockHeight.js';
 import type { Grocery as GroceryT, GroceryUnit } from '../../types.ts';
@@ -10,11 +11,11 @@ const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: 
 // While editing, the add form floats at the bottom of the screen with Done beside it, so adding an item or finishing never means
 // scrolling the whole list. Name and Add are always there; store, count, price, unit and note open under "More".
 export default function EditDock({ g, onDone, onAdded }: { g: GroceryT; onDone: () => void; onAdded: () => void }) {
-  const [f, setF] = useState(EMPTY_FORM); const [err, setErr] = useState<string | null>(null); const [more, setMore] = useState(false);
+  const [f, setF] = useState(EMPTY_FORM); const [err, setErr] = useState<string | null>(null); const [more, setMore] = useState(false); const [food, setFood] = useState('');
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const m = useAppStore.getState().addGroceryItem(f);
-    setErr(m); if (!m) { onAdded(); setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
+    setErr(m); setFood(''); if (!m) { const st = useAppStore.getState(); const it = st.grocery.items.find(i => i.n === f.n.trim().replace(/\s+/g, ' ').slice(0, 80)); if (it) setFood(foodNoticeText(it, st.recipes)); onAdded(); setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
   };
   const finish = () => { if (f.n.trim()) { setErr('Add or clear this item first.'); document.getElementById('groc-name')?.focus(); return; } onDone(); }; // typed text is kept, not dropped by Done
   const { mine, suggested } = storeChoices(g);
@@ -39,6 +40,7 @@ export default function EditDock({ g, onDone, onAdded }: { g: GroceryT; onDone: 
           </div>
         )}
         {err && <p className="note gerr" role="alert">{err}</p>}
+        {!err && food && <p className="note" role="status">{food}</p>}
         <div className="gdockrow">
           <input type="text" id="groc-name" aria-label="Item name" placeholder="Add an item" maxLength={80} value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
           <button type="submit" className="btn sm gdockadd" id="groc-add" disabled={!f.n.trim()}>Add</button>

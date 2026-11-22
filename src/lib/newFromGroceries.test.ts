@@ -36,6 +36,7 @@ describe('untouchedFood', () => {
     const f = madeFood(i, 'g-r');
     expect(untouchedFood(f, i, false)).toBe(true);
     expect(untouchedFood(f, i, true)).toBe(false);
+    expect(untouchedFood(Object.fromEntries(Object.entries(f).reverse()) as Recipe, i, false)).toBe(true); // key order does not matter
     expect(untouchedFood(withFoodType(f, 'drink'), i, false)).toBe(false);
     expect(untouchedFood({ ...f, kcal: 100 }, i, false)).toBe(false);
     expect(untouchedFood({ ...f, fav: true }, i, false)).toBe(false);
