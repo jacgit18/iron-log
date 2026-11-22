@@ -127,4 +127,9 @@ describe('historyRows after a failed history load', () => {
     expect(summary).not.toBeNull();
     expect(note).toBeNull();
   });
+
+  it('keeps the this-week flag on an unread current week when the Board is on another week', () => {
+    const { rows } = historyRows(cfg, programs, { '2026-09-13': one(), '2026-09-27': one() }, empty(), '2026-09-27', today, 12, true);
+    expect(rows[0]).toMatchObject({ key: NOW, isNow: true, unread: true, label: UNREAD_LABEL });
+  });
 });

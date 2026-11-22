@@ -45,11 +45,11 @@ function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => 
         <h2>Weekly history</h2>
         {summary && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {summary.met} of {summary.pastCount} past week{summary.pastCount > 1 ? 's' : ''} · average {summary.mean} days{summary.perDay != null && <> · {summary.perDay.toFixed(1)} exercises per training day</>}</span>}
       </div>
-      {note && <p className="note" role="status">{note}</p>}
+      {note && <p className="note">{note}</p>}
       <div className="weeks">
         {rows.map(r => r.unread ? (
           <div className="wkrow unread" key={r.key}>
-            <span className="wkdate">{fmtShort(r.start)}</span>
+            <span className="wkdate">{fmtShort(r.start)}{r.isNow && <> <small>this week</small></>}</span>
             <span aria-hidden="true" />
             <span className="wkread" role="img" aria-label={r.label}><span aria-hidden="true">–</span> not read</span>
           </div>
