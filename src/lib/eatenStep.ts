@@ -5,8 +5,9 @@ import { PORTION_CEIL, PORTION_MIN, PORTION_STEP, stepEntryCount } from './porti
 
 /* ---------- Less and More on an eaten row (brief nutrition-log-first-portion-row, PR b). Pure: which rows get a stepper, what the amount reads, where a step lands. The store writes (`setDietPortion`, `setPlanPortion`) stay in the components. ---------- */
 
-/** The board's status line: a sentence and, when the change can be taken back, its Undo. */
-export type Say = (t: string, undo?: () => void) => void;
+/** What the board's status line is told: the sentence, an Undo when the change can be taken back, and (optional) one button that offers the next step, such as saving a usual portion. */
+export interface SayAction { label: string; run: () => void }
+export type Say = (t: string, undo?: () => void, action?: SayAction) => void;
 
 type Stepped = Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f' | 'micro' | 'x'>;
 type Unit = Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual' | 'unit' | 'plural'>;

@@ -123,11 +123,14 @@ test.describe('Less and More on an eaten row', () => {
     await expect(row(page, 'Feast').getByRole('button', { name: 'More Feast' })).toBeDisabled();
   });
 
-  test('on a food logged today from a recipe the amount becomes its usual, with the notice and an Undo; an earlier day leaves it alone', async ({ page }) => {
+  test('on a food logged today from a recipe a nudge offers Save as my usual (the nudge itself saves none), with the notice and an Undo; an earlier day offers nothing', async ({ page }) => {
     await seed(page, [OATS], [{ id: 'a', d: TODAY, n: 'Oats', kcal: 300, p: 10, from: 'o1', x: 1 }, { id: 'b', d: TUE, n: 'Oats', kcal: 300, p: 10, from: 'o1', x: 1 }]);
     await openNutrition(page);
     await row(page, 'Oats').getByRole('button', { name: 'More Oats' }).click();
     const status = page.locator('.nb-msg');
+    await expect(status).toContainText('Oats, 1.5 portions.');
+    expect((await storedRecipes(page))[0].usual).toBeUndefined(); // the nudge changed the entry only
+    await status.getByRole('button', { name: 'Save 1.5 portions as my usual' }).click();
     await expect(status).toContainText('Usual portion saved: Oats, 1.5 portions.');
     await expect.poll(async () => (await storedRecipes(page))[0].usual).toBe(1.5);
     await status.getByRole('button', { name: 'Undo' }).click();
@@ -136,6 +139,7 @@ test.describe('Less and More on an eaten row', () => {
     await row(page, 'Oats', TUE).getByRole('button', { name: 'More Oats' }).click(); // an earlier day
     await expect(row(page, 'Oats', TUE).locator('.nb-stepamt')).toHaveText('1.5 portions');
     expect((await storedRecipes(page))[0].usual).toBeUndefined();
+    await expect(status.getByRole('button', { name: /as my usual/ })).toHaveCount(0);
     await expect(status).not.toContainText('Usual portion saved');
   });
 

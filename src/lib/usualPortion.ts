@@ -30,9 +30,13 @@ export function withUsual<T extends { usual?: number }>(recipe: T, usual: number
   return (usual === undefined ? rest : { ...rest, usual }) as T;
 }
 
-/** The usual a Less or More on an eaten row saves (brief nutrition-log-first-portion-row): only for a food logged today from a recipe that still exists (`recipe` given, `entryDay` is `today`); an earlier day leaves it alone. Same rule as the portion sheet's `usualChange`. */
+/** The usual a Less or More on an eaten row offers to save (brief nutrition-log-first-portion-row; button review N3: offered, not saved): only for a food logged today from a recipe that still exists (`recipe` given, `entryDay` is `today`); an earlier day leaves it alone. Same rule as the portion sheet's `usualChange`. */
 export const usualAfterStep = (entryDay: string, today: string, recipe: Basis | undefined, count: number): UsualChange | null =>
   recipe && entryDay === today ? usualChange(recipe, count) : null;
+
+/** The sentence and button label after a Less or More on an eaten row: the nudge changed this entry only, and saving the count as the food's usual is the person's tap (button review N3). */
+export const nudgeSentence = (name: string, amount: string): string => `${name}, ${amount}.`;
+export const saveUsualLabel = (amount: string): string => `Save ${amount} as my usual`;
 
 /** What the Undo of a saved usual does now (brief nutrition-log-first-portion-row): the recipe is gone, its usual was changed since (leave it), or write `usual` back. Pure; the component makes the write and says the sentence. */
 export type UndoOutcome = { kind: 'gone' } | { kind: 'changed' } | { kind: 'write'; usual: number | undefined };
