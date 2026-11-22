@@ -12,7 +12,8 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows, savedMealsNote } from '../../lib/quickMeals.js';
-import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, shortDay, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, mealFlows, shortDay, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
+import { stampMeal } from '../../lib/stampMeal.js';
 import { planMealFor, storedMealFor } from '../../lib/usualMeal.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
 import { PLAN_SLOTS } from '../../shared/diet.js';
@@ -51,7 +52,8 @@ export default function AddFoodSheet() {
   const today = ymd(useToday(s => s.today));
   const day = typeof modal?.day === 'string' ? modal.day : today;
   const eaten = useAppStore(st => entriesOn(st.diet, day).length);
-  const flows = addFlows(day, today, eaten);
+  const intoMeal = addMode(day, today) === 'log' ? PLAN_SLOTS.find(s => s === modal?.meal) : undefined; // a meal's own Add on today: what is logged goes into that meal (button review N8)
+  const flows = intoMeal ? mealFlows(addFlows(day, today, eaten)) : addFlows(day, today, eaten);
   const first = typeof modal?.flow === 'string' && (flows as readonly string[]).includes(modal.flow) ? (modal.flow as AddFlow) : null;
   const [picked, setFlow] = useState<AddFlow | null>(first);
   const flow = picked && (flows as readonly string[]).includes(picked) ? picked : null; // a way that stops being offered (the day's last food went) falls back to the list
@@ -72,11 +74,11 @@ export default function AddFoodSheet() {
   const said: Say = (t, u) => { setMsg(t); setUndo(u ? () => u : null); (modal?.onMsg as Say | undefined)?.(t, u); };
   const resume = modal?.resume as ScanResume | undefined;
   const reopen = (r: ScanResume) => useAppStore.getState().openModal({ ...(modal ?? { type: 'nbadd' }), type: 'nbadd', day, flow: 'find', resume: r });
-  const body = flow && <FlowBody flow={flow} day={day} today={today} meal={meal} explicit={explicit} scope={scope} targets={targets} fill={fill} reopen={reopen} {...(resume ? { resume } : {})} onFill={f => { setFill(o => ({ key: o.key + 1, food: f })); setFlow('oneoff'); }} onMsg={said} />;
+  const body = flow && <FlowBody flow={flow} day={day} today={today} intoMeal={intoMeal} meal={meal} explicit={explicit} scope={scope} targets={targets} fill={fill} reopen={reopen} {...(resume ? { resume } : {})} onFill={f => { setFill(o => ({ key: o.key + 1, food: f })); setFlow('oneoff'); }} onMsg={said} />;
   return (
-    <Sheet className="nbsheet sheet-wide" aria-label={`Add food, ${addingTo(day, today)}`}>
+    <Sheet className="nbsheet sheet-wide" aria-label={`Add food, ${addingTo(day, today)}${intoMeal ? `, into ${SLOT_LABEL[intoMeal]}` : ''}`}>
       <h2 className="cond">{flow ? ADD_FLOWS[flow].label : 'Add food'}</h2>
-      <p className="note">{addingTo(day, today)}{day < today && ' · logs food you ate that day'}</p>
+      <p className="note">{addingTo(day, today)}{day < today && ' · logs food you ate that day'}{intoMeal && ` · into ${SLOT_LABEL[intoMeal]}`}</p>
       {addMode(day, today) === 'plan' && (
         <div role="group" aria-label="Which meal">
           <p className="note" id="nb-meal-h">Which meal?</p>
@@ -98,7 +100,7 @@ export default function AddFoodSheet() {
       )}
       {!flow && (
         <div className="nb-menu" aria-label="Ways to add food" role="group">
-          {addGroups(day, today, eaten).map(g => (
+          {addGroups(day, today, eaten).map(g => ({ ...g, flows: g.flows.filter(f => (flows as readonly string[]).includes(f)) })).filter(g => g.flows.length > 0).map(g => (
             <section key={g.label} aria-labelledby={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>
               <h3 className="nb-grouph" id={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>{g.label}</h3>
               <ul>
@@ -118,7 +120,7 @@ export default function AddFoodSheet() {
   );
 }
 
-function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; meal: PlanSlot; explicit: boolean; scope: Scope; targets: string[]; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: Say; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
+function FlowBody({ flow, day, today, intoMeal, meal, explicit, scope, targets, fill, onFill, onMsg, reopen, resume }: { flow: AddFlow; day: string; today: string; intoMeal: PlanSlot | undefined; meal: PlanSlot; explicit: boolean; scope: Scope; targets: string[]; fill: { key: number; food?: FoodFill }; onFill: (f: FoodFill) => void; onMsg: Say; reopen: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const { held } = useLegacyMeals();
@@ -140,10 +142,10 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
     onMsg(r.error ?? plannedText(name, SLOT_LABEL[slot], r.done, r.skipped, r.done.length ? waits(r.done) : ''));
   };
   const addFood = (f: Food) => {
-    const run = runInstantLog(st().addDietEntry, [entryFromFood(day, f)], { from: f.n });
+    const run = runInstantLog(stampMeal(st(), intoMeal).addDietEntry, [entryFromFood(day, f)], { from: f.n });
     onMsg(run.error ?? run.text); // a refusal shows the store's words alone, never 'Added 0 from ...'
   };
-  const logNow = (r: Recipe) => { if (!hasMacros(r)) { st().openModal({ type: 'portion', id: r.id, day }); return; } const m = logRecipeAtUsual(st(), r, day, today); if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error); }; // one tap logs at the usual portion and the sheet stays open; a day ahead plans through the portion sheet (below)
+  const logNow = (r: Recipe) => { if (!hasMacros(r)) { st().openModal({ type: 'portion', id: r.id, day }); return; } const m = logRecipeAtUsual(stampMeal(st(), intoMeal), r, day, today); if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error); }; // one tap logs at the usual portion and the sheet stays open; a day ahead plans through the portion sheet (below)
   if (flow === 'quick') {
     const items = quickItems(diet, recipes);
     const suggested = day === today ? suggestNow(diet, hour, today) : []; // 'now' means today's clock: an earlier day gets no suggestions built from it
@@ -158,13 +160,13 @@ function FlowBody({ flow, day, today, meal, explicit, scope, targets, fill, onFi
   if (flow === 'oneoff') {
     return <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add"
       amounts={{ ...(fill.food?.micro ? { micro: fill.food.micro } : {}), ...(fill.food ? { kcal: fill.food.kcal } : {}) }}
-      onSubmit={v => { const r = st().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(v.micro ?? undefined) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
+      onSubmit={v => { const r = stampMeal(st(), intoMeal).addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}), ...withMicro(v.micro ?? undefined) }); if (!r.error) onMsg(`Added ${v.n.trim()}.`); return r.error; }} />;
   }
-  if (flow === 'find') return <FindFood day={day} today={today} onFood={onFill} onMsg={onMsg} reopen={reopen} {...(resume ? { resume } : {})} />;
+  if (flow === 'find') return <FindFood day={day} today={today} {...(intoMeal ? { slot: intoMeal } : {})} onFood={onFill} onMsg={onMsg} reopen={reopen} {...(resume ? { resume } : {})} />;
   if (flow === 'copy') return <CopyDay key={day} day={day} onAdded={onMsg} />;
   if (flow === 'savemeal') return <SaveMeal key={day} day={day} onSaved={onMsg} />;
   if (flow === 'meals') {
-    if (eat) return <SavedMeals day={day} full={!roomOn(diet, day)} onAdded={onMsg} />;
+    if (eat) return <SavedMeals day={day} {...(intoMeal ? { slot: intoMeal } : {})} full={!roomOn(diet, day)} onAdded={onMsg} />;
     const rows = quickRows(recipes, held);
     return rows.length === 0 ? <p className="note">No saved meals yet.</p> : (
       <div>

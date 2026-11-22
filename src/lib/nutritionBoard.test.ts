@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, mealAddShown, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, mealAddShown, mealFlows, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -481,13 +481,19 @@ describe('supplements taken through the Add button', () => {
   });
 });
 
+describe('mealFlows: the ways that log into a pressed meal', () => {
+  it('keeps Quick add, One-off, Find food, Saved meals and Recipes; leaves out the scan, Copy yesterday and Save as a meal', () => {
+    expect(mealFlows(addFlows('2026-09-24', '2026-09-24', 3))).toEqual(['quick', 'oneoff', 'find', 'meals', 'recipes']);
+  });
+});
+
 describe('mealAddShown: a meal\'s own Add button', () => {
   const today = '2026-09-24';
   it('shows on a day ahead, for every real meal', () => {
     for (const m of ['breakfast', 'lunch', 'dinner', 'snack'] as const) expect(mealAddShown(m, '2026-09-25', today)).toBe(true);
   });
-  it('never shows today or earlier: eaten food has no meal of its own, the toolbar adds there', () => {
-    expect(mealAddShown('lunch', today, today)).toBe(false);
+  it('shows today for every real meal (it logs into the meal pressed), and never on an earlier day, which draws no meals', () => {
+    for (const m of ['breakfast', 'lunch', 'dinner', 'snack'] as const) expect(mealAddShown(m, today, today)).toBe(true);
     expect(mealAddShown('lunch', '2026-09-23', today)).toBe(false);
   });
   it('is off for the "Not set" group (no meal)', () => {
