@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, Recipe, Supplements } from '../types.ts';
-import { addFlows, addMode, addGroups, addingTo, mealAddShown, mealFlows, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
+import { addFlows, addMode, addGroups, addingTo, mealAddShown, mealFlows, mealGroups, carbsMeter, mealForHour, mealFigures, mealKcalText, mealOverText, slotOverText, placeEaten, suppPickList, toolbarFlows, dayView, daysShown, foodEditable, hydrationView, mealByTime, meterLabel, onBoard, planLine, startMeal, suppMeter, supplementDay, weekDates, weekDays, weekLabel, weekOf, windowDays, oldestLogged, stepWeek, weekChoices, weekName, weekRange, dayOnArrival } from './nutritionBoard.js';
 
 const TODAY = '2026-11-08'; // a Sunday
 const supp = (over: Partial<Supplements> = {}): Supplements => ({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {}, ...over });
@@ -478,6 +478,16 @@ describe('supplements taken through the Add button', () => {
     expect(d.extra.map(e => e.id)).toEqual(['mag']);
     expect(d.text).toBe('1 of 2 taken'); // D3 is scheduled and not ticked; Magnesium is the extra one
     expect(supplementDay(lib, TODAY).extra).toEqual([]);
+  });
+});
+
+describe('mealGroups: the menu of a pressed meal', () => {
+  it('moves Saved meals into "From what you have" and drops the now-empty whole-days group', () => {
+    const groups = addGroups('2026-09-24', '2026-09-24', 3).map(g => ({ ...g, flows: g.flows.filter(f => mealFlows([f]).length > 0) })).filter(g => g.flows.length > 0);
+    expect(groups.map(g => g.label)).toEqual(['Fastest', 'From what you have', 'Whole days and meals']);
+    const merged = mealGroups(groups);
+    expect(merged.map(g => g.label)).toEqual(['Fastest', 'From what you have']);
+    expect(merged[1]!.flows).toEqual(['find', 'recipes', 'meals']);
   });
 });
 

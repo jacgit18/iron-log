@@ -12,7 +12,7 @@ import { quickItems } from '../../lib/dietRecent.js';
 import { suggestNow } from '../../lib/dietSuggest.js';
 import { mealLine } from '../../lib/dietMeals.js';
 import { quickRows, savedMealsNote } from '../../lib/quickMeals.js';
-import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, mealFlows, shortDay, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
+import { ADD_FLOWS, addFlows, addGroups, addMode, addingTo, mealFlows, mealGroups, shortDay, startMeal, type AddFlow } from '../../lib/nutritionBoard.js';
 import { stampMeal } from '../../lib/stampMeal.js';
 import { planMealFor, storedMealFor } from '../../lib/usualMeal.js';
 import { SLOT_LABEL } from '../../lib/weekBoard.js';
@@ -100,7 +100,7 @@ export default function AddFoodSheet() {
       )}
       {!flow && (
         <div className="nb-menu" aria-label="Ways to add food" role="group">
-          {addGroups(day, today, eaten).map(g => ({ ...g, flows: g.flows.filter(f => (flows as readonly string[]).includes(f)) })).filter(g => g.flows.length > 0).map(g => (
+          {(intoMeal ? mealGroups : (g: { label: string; flows: AddFlow[] }[]) => g)(addGroups(day, today, eaten).map(g => ({ ...g, flows: g.flows.filter(f => (flows as readonly string[]).includes(f)) })).filter(g => g.flows.length > 0)).map(g => (
             <section key={g.label} aria-labelledby={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>
               <h3 className="nb-grouph" id={`nb-grp-${g.label.replace(/\W+/g, '-')}`}>{g.label}</h3>
               <ul>

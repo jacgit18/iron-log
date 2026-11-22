@@ -151,6 +151,11 @@ export const ADD_GROUPS: readonly { label: string; flows: readonly AddFlow[] }[]
   { label: 'From what you have', flows: ['find', 'recipes'] },
   { label: 'Whole days and meals', flows: ['meals', 'copy', 'savemeal'] },
 ];
+/** The menu groups for a meal that was pressed on today: only Saved meals is left of "Whole days and meals", so it joins "From what you have" instead of standing alone under a heading about whole days. */
+export const mealGroups = (groups: readonly { label: string; flows: AddFlow[] }[]): { label: string; flows: AddFlow[] }[] => {
+  const whole = groups.find(g => g.label === 'Whole days and meals');
+  return groups.filter(g => g !== whole).map(g => (g.label === 'From what you have' && whole ? { ...g, flows: [...g.flows, ...whole.flows] } : g));
+};
 export const addGroups = (day: string, today: string, eaten: number): { label: string; flows: AddFlow[] }[] => {
   const on = addFlows(day, today, eaten);
   return ADD_GROUPS.map(g => ({ label: g.label, flows: g.flows.filter(f => on.includes(f)) })).filter(g => g.flows.length > 0);
