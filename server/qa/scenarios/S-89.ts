@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
   steps: [
-    'On a phone, open + New, then Add a food by hand, press Scan to fill form and scan something neither source knows (a book, a local product with no entry).',
+    'On a phone, open + New, then Add a food, press Scan to fill form and scan something neither source knows (a book, a local product with no entry).',
     'Read the sheet, then press Photo the label.',
     'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
   ],

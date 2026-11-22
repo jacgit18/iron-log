@@ -4,7 +4,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-55', feature: 'Usual amount', title: 'Log 4 eggs in two taps', persona: 'diet-on-target', brief: 'usual-amount-and-unit',
   steps: [
-    'On Recipes press + New, then Add a food by hand, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
+    'On Recipes press + New, then Add a food, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
     'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
     'Press Ate this, look at today\'s eaten rows on Nutrition, then press Undo.',
   ],

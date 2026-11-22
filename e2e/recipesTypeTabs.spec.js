@@ -49,7 +49,7 @@ test('a tab with nothing in it names the next step', async ({ page }) => {
   await page.click('#recipes-tab-drinks');
   await expect(page.locator('#recipes-empty')).toContainText('No drinks yet');
   await page.click('#recipes-tab-foods');
-  await expect(page.locator('#recipes-empty')).toContainText('Scan to fill a food form');
+  await expect(page.locator('#recipes-empty')).toContainText('Add a food');
 });
 
 test('Filters is closed at first, and what is under it still filters and keeps the counts honest', async ({ page }) => {
@@ -147,27 +147,26 @@ for (const [w, h] of [[768, 1024], [375, 812]]) {
 }
 
 test('+ New offers every way to add and each opens its flow', async ({ page }) => {
-  await page.addInitScript(() => { localStorage.setItem('ironlog:session/admin', 'true'); navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
+  await page.addInitScript(() => { localStorage.setItem('ironlog:session/admin', 'true'); });
   await open(page);
   const menu = page.locator('#recipes-new-list');
   await page.click('#recipes-new');
-  await expect(menu.getByRole('button')).toHaveText([/Recipe or meal/, /Scan to fill a food form/, /Add a food by hand/]);
+  await expect(menu.getByRole('button')).toHaveText([/Recipe or meal/, /Add a food/]); // one entry for a food: scanning starts from its form
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
   await expect(page.locator('#recipes-new')).toBeFocused(); // Escape hands focus back to + New
   await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Recipe or meal' }).click();
   await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
   await page.goBack();
-  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Add a food by hand' }).click();
+  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Add a food' }).click();
   await expect(page.getByRole('heading', { name: 'New food' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0); // the form opens as it is; no camera sheet over it
+  await expect(page.locator('#dt-scan-barcode')).toBeVisible(); // the scan starts here
   await page.goBack();
   await page.click('#recipes-library');
   await expect(page.locator('#recipes-library')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#recipes-new')).toBeVisible(); // + New is there under every filter (Recipes as one list)
   await page.click('#recipes-mine');
-  await page.click('#recipes-new'); await menu.getByRole('button', { name: 'Scan to fill a food form' }).click();
-  await expect(page.getByRole('heading', { name: 'Scan barcode' })).toBeVisible(); // the barcode sheet opens over the ready-made form
-  await expect(page.getByRole('heading', { name: 'New food' })).toBeVisible();
 });
 
 for (const [w, h] of [[1440, 900], [375, 812]]) {

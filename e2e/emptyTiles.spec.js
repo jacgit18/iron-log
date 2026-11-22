@@ -36,7 +36,7 @@ test('empty Groceries: Set up sharing opens Sharing; Browse recipes opens Recipe
   await expect(page.locator('.emptytiles')).toHaveCount(0);
 });
 
-test('empty Recipes shows two tiles that open the form and the Library (the food form is + New, Add a food by hand); they go once a recipe exists', async ({ page }) => {
+test('empty Recipes shows two tiles that open the form and the Library (the food form is + New, Add a food); they go once a recipe exists', async ({ page }) => {
   await recipes(page);
   await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();
   await expect(tiles(page)).toHaveCount(2);
@@ -46,7 +46,7 @@ test('empty Recipes shows two tiles that open the form and the Library (the food
   await expect(page.locator('#recipes-library-box')).toBeVisible(); // the tile opens the library box under the tiles (Recipes as one list)
   await page.click('#recipes-mine');
   await page.click('#recipes-new');
-  await page.getByRole('button', { name: /Add a food by hand/ }).click();
+  await page.getByRole('button', { name: /Add a food/ }).click();
   await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
   await page.goBack();
   await recipes(page);

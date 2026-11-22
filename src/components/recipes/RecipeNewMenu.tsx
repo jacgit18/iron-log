@@ -2,13 +2,12 @@ import { useRef, useState } from 'react';
 import Icon from '../Icon.js';
 import { useDismiss } from '../useDismiss.js';
 
-export type NewChoice = 'scan' | 'recipe' | 'food';
-// One + New button for every way to add (briefs recipes-find-type-tabs, recipes-list-compact: three rows; the Library is the other tab): a disclosure of plain buttons, closed again by a choice, Escape or a tap outside.
-// "Add a food by hand" is the old New ready-made food button: the brief lists four entries, and without it a food with no barcode and no label photo could not be typed in.
+export type NewChoice = 'recipe' | 'food';
+// One + New button for every way to add (briefs recipes-find-type-tabs, recipes-list-compact: the Library is the other tab; one way into a food, R4 of the button review: two rows): a disclosure of plain buttons, closed again by a choice, Escape or a tap outside.
+// "Add a food" opens the food form, which has the scan buttons (barcode, label photo, choose photo) and the lookup box: one way in, not a separate scan entry.
 const CHOICES: { key: NewChoice; label: string; hint: string }[] = [
   { key: 'recipe', label: 'Recipe or meal', hint: 'Ingredients and steps' },
-  { key: 'scan', label: 'Scan to fill a food form', hint: 'Barcode or label photo. Nothing is saved until you save' },
-  { key: 'food', label: 'Add a food by hand', hint: 'A packaged food and its numbers' },
+  { key: 'food', label: 'Add a food', hint: 'Type it, or scan a barcode or a label photo. Nothing is saved until you save' },
 ];
 
 export default function RecipeNewMenu({ onChoose }: { onChoose: (c: NewChoice) => void }) {
