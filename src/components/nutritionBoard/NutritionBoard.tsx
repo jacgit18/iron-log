@@ -73,8 +73,8 @@ export default function NutritionBoard() {
     if (run.ids.length) st().setPlanEaten(today, index, run.ids); // the planned item shows a check
     setMsg(run.text);
   };
-  const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }) });
-  const open = (flow?: string, forDay = day, meal?: PlanSlot) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg });
+  const scan = () => st().openModal({ type: 'barcode', onFound: (h: FoodHit) => setScanned({ hit: h, day }), onType: () => setTimeout(() => open('find', day, undefined, true), 0) }); // a miss: Type the name opens Find food, after the barcode sheet has closed itself
+  const open = (flow?: string, forDay = day, meal?: PlanSlot, typing = false) => st().openModal({ type: 'nbadd', day: forDay, ...(flow ? { flow } : {}), ...(meal ? { meal } : {}), ...(typing ? { resume: {} } : {}), onScan: (h: FoodHit) => setScanned({ hit: h, day: forDay }), onMsg: setMsg }); // `typing`: arriving from a scan miss, so Find food puts the cursor in its search box
   const target = addingTo(day, today);
   const weekSwitch = (
     <div className="weeknav nb-weeksw" role="group" aria-label="Week">

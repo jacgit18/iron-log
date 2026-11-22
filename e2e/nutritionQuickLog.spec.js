@@ -66,6 +66,35 @@ test('Recipes rows have Log, and the food page has Add to today and no Ate this'
   await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible(); // the row's Log
 });
 
+// A barcode that is not found: "Type the name" must lead to a search box. The reader, the camera and the route are stubbed, as in the scan test below.
+const missingBarcode = async page => {
+  await page.addInitScript(() => {
+    window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13', 'upc_a']; } async detect() { return [{ rawValue: '016000275287', format: 'upc_a' }]; } };
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
+  });
+  await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ why: 'not-found' }) }));
+  await page.reload();
+  await openNutrition(page);
+};
+
+test('Scan and log in the toolbar: after a miss, Type the name opens Find food with the search box ready', async ({ page }) => {
+  await missingBarcode(page);
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click();
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  await page.locator('#bc-type').click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Find food' })).toBeVisible();
+  await expect(page.locator('#dt-find-q')).toBeFocused(); // the box to type the name in
+});
+
+test('Scan and log in the Add food sheet: after a miss, Type the name comes back to Find food with the search box ready', async ({ page }) => {
+  await missingBarcode(page);
+  await openAdd(page, 'Scan and log');
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  await page.locator('#bc-type').click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Find food' })).toBeVisible();
+  await expect(page.locator('#dt-find-q')).toBeFocused();
+});
+
 test('a scanned food is created with the chosen type and logged once', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:session/admin', 'true');
