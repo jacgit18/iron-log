@@ -43,7 +43,11 @@ test('the food form has Drink only in Used as, beside the usual meal', async ({ 
   await startFood(page);
   await expect(page.getByRole('group', { name: 'Usual meal' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Beverage' })).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Used as' }).getByRole('button', { name: 'Drink' })).toBeVisible();
+  const used = page.getByRole('group', { name: 'Used as' });
+  await used.getByRole('button', { name: 'Drink' }).click();
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true');
+  await used.getByRole('button', { name: 'Ready to eat' }).click(); // another label turns Drink off
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('the add sheet pre-picks the usual meal, a pressed meal wins, and a hand-placed copy is stored with its own meal', async ({ page }) => {
