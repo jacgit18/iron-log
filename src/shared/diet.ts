@@ -225,6 +225,9 @@ export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]>
 /** The hour of day an entry was added, as stored: a whole number from 0 to 23, or null. */
 export const cleanHour = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23 ? v : null);
 
+/** The meal an entry was logged into as stored: one of the four meals, or null. */
+export const cleanSlot = (v: unknown): PlanSlot | null => (typeof v === 'string' && (PLAN_SLOTS as readonly string[]).includes(v) ? (v as PlanSlot) : null);
+
 /** The portions an entry's totals are for as stored: 0.5 to 99, two decimals, or null. */
 export const cleanPortion = (v: unknown): number | null => (fin(v) && v >= 0.5 && v <= 99 ? Math.round(v * 100) / 100 : null);
 
@@ -237,9 +240,10 @@ export function normDietEntry(x: unknown): DietEntry | null {
   if (!id || !n || !validDate(o.d) || kcal === null || p === null) return null;
   const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f); // optional: an unusable one is left out
   const t = cleanHour(o.t); // optional too
+  const s = cleanSlot(o.s); // the meal it was logged into; optional, an unknown word is left out
   const micro = cleanMicro(o.micro); // vitamins and minerals as eaten; unusable keys are dropped, none left means no field
   const xp = cleanPortion(o.x); // the portions the totals are for; optional
-  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(micro ? { micro } : {}), ...(micro && o.est === true ? { est: true as const } : {}), ...(xp !== null ? { x: xp } : {}) };
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}), ...(s ? { s } : {}), ...(micro ? { micro } : {}), ...(micro && o.est === true ? { est: true as const } : {}), ...(xp !== null ? { x: xp } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */

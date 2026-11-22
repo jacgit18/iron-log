@@ -23,6 +23,13 @@ describe('normDietEntry', () => {
     for (const bad of [0.49, 0, -1, 100, NaN, '2', null]) expect(normDietEntry({ ...ok, x: bad })).toEqual(ok);
     expect('x' in normDietEntry(ok)!).toBe(false);
   });
+  it('keeps the meal s when it is one of the four, drops anything else, and an entry without it stays without it (it also round-trips as the app writes it)', () => {
+    for (const s of PLAN_SLOTS) expect(normDietEntry({ ...ok, s })).toEqual({ ...ok, s });
+    for (const bad of ['brunch', '', 'Lunch', 1, null, true, ['lunch']]) expect(normDietEntry({ ...ok, s: bad })).toEqual(ok);
+    expect('s' in normDietEntry(ok)!).toBe(false);
+    expect(validDietEntry({ ...ok, s: 'dinner' })).toBe(true);
+    expect(validDietEntry({ ...ok, s: 'brunch' })).toBe(false);
+  });
   it('allows zero protein', () => { expect(normDietEntry({ ...ok, p: 0 })).toMatchObject({ p: 0 }); });
   it('keeps optional carbs and fat, one decimal, and leaves an unusable one out (the entry is still good)', () => {
     expect(normDietEntry({ ...ok, c: 44.26, f: 0 })).toEqual({ ...ok, c: 44.3, f: 0 });

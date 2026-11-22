@@ -18,6 +18,13 @@ describe('copyEaten', () => {
     expect(r.list.find(e => e.id === 'a')).toEqual(rice);
     expect(r.list).toHaveLength(3);
   });
+  it('the meal s travels with a copy and a move', () => {
+    const placed = { ...rice, s: 'dinner' as const };
+    const r = copyEaten([placed, eggs], 'a', yday, today, 'n1', false);
+    expect(r.list.find(e => e.id === 'n1')).toMatchObject({ s: 'dinner' });
+    const m = copyEaten([placed, eggs], 'a', yday, today, 'n2', true);
+    expect(m.list.find(e => e.id === 'n2')).toMatchObject({ s: 'dinner' });
+  });
   it('the stored portion x travels with a copy and a move', () => {
     const eaten = { ...rice, x: 2.5 };
     expect(copyEaten([eaten], 'a', yday, today, 'n1', false).list.find(e => e.id === 'n1')?.x).toBe(2.5);
@@ -107,6 +114,12 @@ describe('copyEatenMany', () => {
     expect(r.list.find(e => e.id === 'a')).toEqual(rice);
     expect(r.list).toHaveLength(5);
     expect(new Set(r.list.map(e => e.id)).size).toBe(5);
+  });
+  it('the meal s travels with every copy', () => {
+    const placed = { ...rice, s: 'dinner' as const };
+    const r = copyEatenMany([placed, eggs], 'a', [day(11), day(10)], today, ids(), false);
+    for (const c of r.copied) expect(r.list.find(e => e.id === c.id)).toMatchObject({ s: 'dinner' });
+    expect(r.copied).toHaveLength(2);
   });
   it('skips a full day and the own day, names them, and still copies the rest', () => {
     const full = Array.from({ length: 20 }, (_, i): DietEntry => ({ id: `f${i}`, d: day(10), n: 'X', kcal: 1, p: 1 }));

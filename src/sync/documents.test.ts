@@ -226,6 +226,11 @@ describe('diet/main (the food log)', () => {
   const e = (id: string, d: string) => ({ id, d, n: 'Rice', kcal: 200, p: 4 });
   const positions = (items: unknown[]) => new Map(desiredRows(kind('diet/main'), { items }, mirrorOf([])).flatMap(r => (r.table === 'list_items' ? [[r.key, r.position] as [string, number]] : [])));
   it('is a synced path', () => { expect(kind('diet/main')).toEqual({ kind: 'diet' }); });
+  it('keeps the meal s on an entry through the row map, and drops one that is not a meal', () => {
+    const rows = (items: unknown[]) => desiredRows(kind('diet/main'), { items }, mirrorOf([])).flatMap(r => (r.table === 'list_items' && r.list === 'diet_entry' ? [r.item] : []));
+    expect(rows([{ ...e('a', '2026-10-27'), s: 'lunch' }])).toEqual([{ ...e('a', '2026-10-27'), s: 'lunch' }]);
+    expect(rows([{ ...e('a', '2026-10-27'), s: 'brunch' }])).toEqual([e('a', '2026-10-27')]);
+  });
   it('positions an entry by its day, so deleting one never moves the others', () => {
     const all = [e('a', '2026-10-27'), e('b', '2026-10-28'), e('c', '2026-10-29')];
     const before = positions(all);

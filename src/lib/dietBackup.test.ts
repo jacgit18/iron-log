@@ -24,6 +24,11 @@ describe('food log in the backup file', () => {
     expect(parseDataFile(JSON.stringify(buildDataFile(snap(eaten), {}))).diet).toEqual(eaten);
   });
 
+  it('keeps the meal s of an entry through the data file (button review N8)', () => {
+    const eaten: DietEntry[] = [{ id: 'p1', d: '2026-10-30', n: 'Oats', kcal: 600, p: 30, s: 'lunch' }];
+    expect(parseDataFile(JSON.stringify(buildDataFile(snap(eaten), {}))).diet).toEqual(eaten);
+  });
+
   it('counts toward the backup score, so a wipe of the food log cannot replace a fuller copy of the same day', () => {
     const full = backupScore(buildDataFile(snap(entries(40)), {}));
     const wiped = backupScore(buildDataFile(snap([]), {}));
