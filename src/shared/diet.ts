@@ -122,7 +122,7 @@ export function cleanWeekdays(v: unknown): number[] | null {
   return kept.length ? kept : null;
 }
 
-/** The repeat list of a stored value, cleaned: a recipe or meal kind, an id, a name of its own (`rid`, unique), weekdays, a real start day; `h: true` (kept handy) only when exactly true; unusable and repeated ones dropped, at most MAX_REPEATS repeats and MAX_HANDY handy ones. */
+/** The repeat list of a stored value, cleaned: a recipe or meal kind, an id, a name of its own (`rid`, unique), weekdays, a real start day; `h: true` (kept handy) and `p: true` (planned, never together with `h`) only when exactly true; unusable and repeated ones dropped, at most MAX_REPEATS repeats and MAX_HANDY handy ones. */
 export function normRepeats(v: unknown): RepeatItem[] {
   const out: RepeatItem[] = [];
   let handy = 0;
@@ -130,11 +130,11 @@ export function normRepeats(v: unknown): RepeatItem[] {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const o = raw as Record<string, unknown>, rid = str(o.rid, MAX_DIET_ID), id = str(o.id, MAX_DIET_ID), days = cleanWeekdays(o.days);
     if (!rid || !id || (o.k !== 'r' && o.k !== 'm') || !days || !validDate(o.from) || out.some(r => r.rid === rid)) continue;
-    const h = o.h === true;
+    const h = o.h === true, planned = !h && o.p === true;
     if (h ? handy >= MAX_HANDY : out.length - handy >= MAX_REPEATS) continue;
     if (h) handy++;
     const x = o.k === 'r' ? portionOf(o.x) : null, s = PLAN_SLOTS.find(t => t === o.s);
-    out.push({ rid, k: o.k, id, ...(x !== null ? { x } : {}), ...(s ? { s } : {}), days, from: o.from, ...(h ? { h: true as const } : {}) });
+    out.push({ rid, k: o.k, id, ...(x !== null ? { x } : {}), ...(s ? { s } : {}), days, from: o.from, ...(h ? { h: true as const } : {}), ...(planned ? { p: true as const } : {}) });
   }
   return out;
 }
