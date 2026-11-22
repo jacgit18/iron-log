@@ -34,7 +34,7 @@ import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { showSavedRecipe } from '../../lib/recipesViewState.js';
-import { pageOf } from '../../lib/route.js';
+import { recipesPage, recipesPagePath } from '../../lib/route.js';
 import { takeRecipesJump } from '../../lib/recipesJump.js';
 import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -68,10 +68,10 @@ export default function Recipes() {
   const chipCfg = useAppStore(s => s.cfg.recipeChips);
   const [view, setViewNow] = useState<View>({ kind: 'list' });
   // A recipe page or the form adds a Back step (#/daily/recipes/mine); the recipe itself is not in the address, so a reload or pasted address shows the list.
-  const path = useRoutePath(), page = pageOf(path, 'daily/recipes');
+  const path = useRoutePath(), page = recipesPage(path);
   const setView = (v: View) => {
     setViewNow(v);
-    if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind}`, page ? 'replace' : 'push');
+    if (v.kind === 'list') goUp('daily/recipes'); else navigate(recipesPagePath(v.kind), page ? 'replace' : 'push');
   };
   useEffect(() => {
     if (page === 'form' && view.kind === 'list') { const jump = takeRecipesJump(); if (jump && (jump.kind === 'new' || useAppStore.getState().recipes.some(r => r.id === jump.id))) { setViewNow(jump.kind === 'edit' ? { kind: 'form', id: jump.id } : { kind: 'form' }); return; } } // Nutrition's New recipe and Edit in Recipes buttons

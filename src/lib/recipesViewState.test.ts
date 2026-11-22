@@ -40,6 +40,20 @@ describe('recipesViewState', () => {
     setRecipesViewState('src', 'library');
     expect(getRecipesViewState().src).toBe('library');
   });
+  it('keeps the section last used this visit, starting with none', () => {
+    expect(getRecipesViewState().sec).toBeNull();
+    setRecipesViewState('sec', 'drinks');
+    expect(getRecipesViewState().sec).toBe('drinks');
+    resetRecipesViewState();
+    expect(getRecipesViewState().sec).toBeNull();
+  });
+  it('showSavedRecipe moves to the section the recipe belongs in, and keeps the section when none is given', () => {
+    setRecipesViewState('sec', 'library');
+    showSavedRecipe('r1');
+    expect(getRecipesViewState().sec).toBe('library');
+    showSavedRecipe('r2', 'recipes');
+    expect(getRecipesViewState()).toMatchObject({ sec: 'recipes', selId: 'r2', q: '' });
+  });
   it('does not share its arrays with the defaults', () => {
     setRecipesViewState('tagSel', ['a']);
     expect(INITIAL_VIEW_STATE.tagSel).toEqual([]);
