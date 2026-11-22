@@ -7,6 +7,8 @@ import { closeSheet, openNutrition, todayCol } from './nutritionBoardHelpers.js'
 const TOMORROW = '2026-09-25';
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const snack = c => c.locator('.wb-slot', { has: c.page().locator('.wb-slothd b', { hasText: /^Snack$/ }) });
+// A listed daily snack is Available, not planned (it can never be planned), so it sits in Snack's closed tray (brief nutrition-planned-available-tray).
+const openTray = async c => { const b = snack(c).getByRole('button', { name: /^Available · / }); if ((await b.getAttribute('aria-expanded')) !== 'true') await b.click(); };
 const mk = (id, n, kcal, p) => ({ id, n, cat: 'sides', ing: [{ n: 'x' }], steps: ['Cook.'], kcal, p });
 const seedRecipes = async page => { await page.evaluate(l => localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: l })), [mk('yog', 'Yogurt', 120, 17), mk('bar', 'Bar', 210, 20)]); await page.reload(); };
 // Sets up the list from the Snack section, the way a person does.
@@ -28,6 +30,8 @@ test('Snack sits after Dinner, says so when empty, and a saved list shows on tod
   await expect(snack(col(page, TOMORROW)).getByRole('button', { name: 'Set up daily snacks' })).toBeVisible(); // any editable day can start it, not only today
   await setUp(page);
   for (const c of [todayCol(page), col(page, TOMORROW)]) {
+    await expect(snack(c).locator('.wb-slothd')).toContainText('0 planned · 2 available');
+    await openTray(c);
     await expect(snack(c).locator('.wb-card')).toHaveCount(2);
     await expect(snack(c)).toContainText('Yogurt');
     await expect(snack(c)).toContainText('Bar');
@@ -35,6 +39,7 @@ test('Snack sits after Dinner, says so when empty, and a saved list shows on tod
   await expect(snack(todayCol(page)).getByRole('button', { name: 'Daily snacks', exact: true })).toBeVisible(); // the same control now edits the list
   await page.reload();
   await openNutrition(page);
+  await openTray(col(page, TOMORROW));
   await expect(snack(col(page, TOMORROW)).locator('.wb-card')).toHaveCount(2); // the list is saved, not just drawn
 });
 
@@ -42,7 +47,8 @@ test('ticking a daily snack logs it today only; skipping one skips that day; rem
   await seedRecipes(page);
   await openNutrition(page);
   await setUp(page);
-  await todayCol(page).getByRole('checkbox', { name: 'Check Yogurt as eaten' }).click();
+  await openTray(todayCol(page)); await openTray(col(page, TOMORROW));
+  await snack(todayCol(page)).getByRole('button', { name: 'Ate Yogurt' }).click(); // the tray's Ate puts it on the plate as eaten
   await expect(todayCol(page).getByRole('checkbox', { name: 'Uncheck Yogurt as eaten' })).toBeChecked();
   await expect(snack(col(page, TOMORROW))).toContainText('Yogurt'); // tomorrow still lists it, with no check box
   await expect(col(page, TOMORROW).getByRole('checkbox')).toHaveCount(0);

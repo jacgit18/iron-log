@@ -179,8 +179,8 @@ export function repeatFor(list: readonly RepeatItem[] | undefined, item: { k: st
   return list?.find(r => samePlanItem(item as PlanItem, { k: r.k, id: r.id, ...(r.s ? { s: r.s } : {}) }) && (!day || (day >= r.from && r.days.includes(weekday!))));
 }
 
-/** The sentence under the Keep handy choice (the tray button is "Add": the wording table has no "+ Add"). */
-export const handySummary = (meal: string): string => `Kept handy for ${meal}. Add it to a day with Add.`;
+/** The sentence under the Keep handy choice. */
+export const handySummary = (meal: string): string => `Kept handy for ${meal}. It waits in the Available tray: Plan it or tick Ate.`;
 
 /** The meal a food is kept handy for from the sheet: the card's own meal, else its usual meal, else the first meal of the day. */
 export const handyMealFor = (item: { k: 'r' | 'm'; id: string; s?: PlanSlot }, recipes: readonly Pick<Recipe, 'id' | 'meal'>[]): PlanSlot => mealOfItem(item, recipes) ?? PLAN_SLOTS[0]!;
