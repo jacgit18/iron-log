@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlanItem, Recipe } from '../types.ts';
-import { USUAL_MEAL_CHOICES, followFoodMeal, followsUsualMeal, mealOfItem, planMealFor, setBeverage, startMealFor, storedMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
+import { USUAL_MEAL_CHOICES, followFoodMeal, followsUsualMeal, mealOfItem, planMealFor, startMealFor, storedMealFor, usualMealLine, usualMealOf } from './usualMeal.js';
 
 const foods: Pick<Recipe, 'id' | 'meal'>[] = [{ id: 'oats', meal: 'breakfast' }, { id: 'rice' }, { id: 'tea', meal: 'snack' }];
 const r = (id: string, s?: PlanItem['s']): PlanItem => ({ k: 'r', id, ...(s ? { s } : {}) });
@@ -44,12 +44,6 @@ describe('the form and the add sheet', () => {
     expect(startMealFor({}, 'lunch')).toBe('lunch');
     expect(startMealFor(undefined, 'lunch')).toBe('lunch');
   });
-  it('Beverage on is a Drink alone; off returns to the category default', () => {
-    expect(setBeverage(['meal'], 'other', true)).toEqual(['drink']);
-    expect(setBeverage(['drink'], 'protein', false)).toEqual(['meal', 'ingredient']);
-    expect(setBeverage(['drink'], 'drinks', false)).toEqual(['meal']);
-    expect(setBeverage(['meal'], 'other', false)).toEqual(['meal']);
-  });
 });
 
 describe('planMealFor', () => {
@@ -67,11 +61,7 @@ describe('usualMealLine', () => {
   });
 });
 
-describe('Beverage off keeps the other labels, and an add follows the usual meal', () => {
-  it('puts back the labels the food had before Beverage was turned on', () => {
-    expect(setBeverage(['drink'], 'other', false, ['meal', 'ingredient'])).toEqual(['meal', 'ingredient']);
-    expect(setBeverage(['drink'], 'other', false, ['drink'])).toEqual(['meal']); // nothing else to put back: the category's
-  });
+describe('an add follows the usual meal', () => {
   it('stores no meal for a food with a usual meal unless one was pressed', () => {
     expect(storedMealFor({ meal: 'breakfast' }, 'lunch', false)).toBeUndefined();
     expect(storedMealFor({ meal: 'breakfast' }, 'lunch', true)).toBe('lunch');
