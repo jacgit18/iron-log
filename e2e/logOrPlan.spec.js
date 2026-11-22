@@ -15,12 +15,11 @@ const logBtn = page => page.getByRole('button', { name: 'Log', exact: true });
 const eaten = page => todayCol(page).locator('.nb-eat');
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 
-test('the recipe page has one Log, no Ate this, no Log form and no day field', async ({ page }) => {
+test('the recipe page has one Log, no Ate this and no day field', async ({ page }) => {
   await seed(page);
   await openChili(page);
   await expect(page.getByRole('button', { name: 'Ate this' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(1);
-  await expect(logBtn(page)).toHaveCount(0);
+  await expect(logBtn(page)).toHaveCount(1); // the one-tap Log; there was a second, form-opening Log button before the page's action was renamed from Add to today
   await expect(page.getByLabel('Day')).toHaveCount(0);
 });
 

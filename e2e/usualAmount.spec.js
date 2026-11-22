@@ -20,7 +20,7 @@ const amountIn = loc => loc.getByRole('status').filter({ hasText: /^[0-9.]+ [a-z
 const amount = page => amountIn(page.getByRole('dialog')); // the portion sheet Plan… opens
 const plan = page => page.getByRole('button', { name: 'Plan…' }).click();
 
-test('The recipe page and the portion sheet use the usual amount in the unit name, and Log logs it in those words', async ({ page }) => {
+test('The recipe page and the portion sheet use the usual amount in the unit name, and the Log button logs it in those words', async ({ page }) => {
   await make(page, 'Egg (large)', { usual: '4', unit: 'egg' });
   await expect(page.locator('.rc-strip')).toContainText('Usual 4 eggs');
   await plan(page);

@@ -92,7 +92,7 @@ test.describe('Fill nutrition', () => {
     await expect(s.getByText('3 fills left today.')).toBeVisible();
   });
 
-  test('Log stays Added after a Fill, and each Undo undoes its own action (review finding 1)', async ({ page }) => {
+  test('the Log button stays Added after a Fill, and each Undo undoes its own action (review finding 1)', async ({ page }) => {
     await stub(page);
     await seed(page, [mk('r1', 'Rice bowl', { servings: 2, kcal: 400, p: 20 })]);
     await open(page, 'Rice bowl');

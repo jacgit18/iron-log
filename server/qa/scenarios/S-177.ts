@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-177', feature: 'Library rows', title: 'Library rows: a one-tap Add to Mine with Undo, and the copy moves up', persona: 'recipe-collector', brief: 'recipes-used-as-ingredients-tab',
   steps: [
-    'Open Recipes and press the Library pill (beside All and Mine). Read a row in the dashed "Library · not in your recipes yet" box: it has a Add to Mine button. Press it.',
+    'Open Recipes and press the Library pill (beside All and Mine). Read a row in the dashed "Library · not in your recipes yet" box: it has an Add to Mine button. Press it.',
     'Read the notice, press Undo, then press Add to Mine on the same row again and press Open.',
     'Go back to Recipes, press the Library pill again and look for that recipe, then press the All pill, press "Browse the library" and look for it under the "Your recipes" heading.',
   ],

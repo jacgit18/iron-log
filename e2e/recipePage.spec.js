@@ -37,7 +37,7 @@ test('with inventory items the strip says how many ingredients are at home', asy
   await expect(strip(page).getByText('24 missing')).toBeVisible();
 });
 
-test('Log logs the usual portion in one tap, reads Added until Undo, and Undo removes only that entry', async ({ page }) => {
+test('the Log button logs the usual portion in one tap, reads Added until Undo, and Undo removes only that entry', async ({ page }) => {
   await seed(page, [{ ...stew, usual: 2 }]);
   await open(page);
   await page.getByRole('button', { name: 'Log', exact: true }).click();
