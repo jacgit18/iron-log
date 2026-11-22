@@ -151,6 +151,7 @@ test('Remove tag has an Undo that puts the tag back on the same recipes', async 
   await sheet.getByRole('button', { name: 'Delete tag weeknight' }).click();
   await sheet.getByRole('button', { name: 'Remove tag' }).click();
   await expect(sheet.getByText('Removed weeknight from 2 recipes.')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toBeFocused(); // focus goes to Undo, not past it to Done
   await expect(sheet.getByText('weeknight · 2 recipes')).toHaveCount(0);
   await sheet.getByRole('button', { name: 'Undo' }).click();
   await expect(sheet.getByText('Put weeknight back on 2 recipes.')).toBeVisible();
@@ -171,4 +172,9 @@ test('Manage filters has no accessibility violations and fits a phone', async ({
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const b of await sheet.getByRole('button').all()) { const box = await b.boundingBox(); if (box) expect(box.height).toBeGreaterThanOrEqual(43.5); }
+  for (const w of [375, 320]) { // a category row is one line (name, two chevrons, Hide), not two
+    await page.setViewportSize({ width: w, height: 700 });
+    const row = sheet.locator('.rcf-list').first().locator('li').first();
+    expect((await row.boundingBox()).height).toBeLessThanOrEqual(48);
+  }
 });

@@ -29,8 +29,9 @@ export default function RecipeFilters() {
     setNote(`Renamed to ${r.name}.`); setUndo(null); setEditing(null); setErr(''); toDone();
   };
   const remove = (tag: string) => {
-    const before = st.recipes, n = st.removeTag(tag);
-    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setUndo(n ? { tag, before } : null); setAsking(null); toDone();
+    const before = useAppStore.getState().recipes, n = st.removeTag(tag); // the list as it is at the click, for Undo
+    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setUndo(n ? { tag, before } : null); setAsking(null);
+    setTimeout(() => (document.querySelector<HTMLElement>('.rcf-undo') ?? document.getElementById('rcf-done'))?.focus(), 0); // Undo when there is one, else Done: the row that held focus is replaced
   };
   const undoRemove = () => {
     if (!undo) return;
