@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
-import { logFoodAtUsual, logRecipeAtUsual } from './logAtUsual.js';
+import { logFoodAtUsual, logFoodGrams, logRecipeAtUsual } from './logAtUsual.js';
 import { entryTotalsAt, stepEntryCount } from './portionBasis.js';
 
 const TODAY = '2026-11-15';
@@ -69,5 +69,38 @@ describe('logFoodAtUsual', () => {
     const made = logFoodAtUsual(ports, { n: 'Chili', kcal: 400, p: 30 }, TODAY, TODAY);
     if (made.ok) made.undo();
     expect(s.entries).toHaveLength(0);
+  });
+});
+
+describe('logFoodGrams: a database food at the grams chosen', () => {
+  const milk = { n: 'Almond milk', kcal: 72, p: 2.4, c: 2.4, f: 6 };
+  it('logs one entry with the numbers it was given and says the grams', () => {
+    const { s, ports } = fake();
+    const made = logFoodGrams(ports, milk, 240, TODAY, TODAY);
+    expect(made.ok && made.text).toBe('Logged Almond milk, 240 g.');
+    expect(s.entries).toEqual([expect.objectContaining({ d: TODAY, n: 'Almond milk', kcal: 72, p: 2.4, c: 2.4, f: 6, x: 1 })]);
+  });
+  it('its Undo removes exactly that entry', () => {
+    const { s, ports } = fake();
+    const made = logFoodGrams(ports, milk, 240, TODAY, TODAY);
+    expect(s.entries).toHaveLength(1);
+    if (made.ok) made.undo();
+    expect(s.entries).toHaveLength(0);
+  });
+  it('refuses numbers out of range and a day ahead, and logs nothing', () => {
+    const { s, ports } = fake();
+    expect(logFoodGrams(ports, { ...milk, kcal: 99999999 }, 240, TODAY, TODAY).ok).toBe(false);
+    expect(logFoodGrams(ports, milk, 240, '2026-11-16', TODAY).ok).toBe(false);
+    expect(s.entries).toHaveLength(0);
+  });
+  it('says so when the grams make it under 1 calorie, not that the numbers are out of range', () => {
+    const { s, ports } = fake();
+    expect(logFoodGrams(ports, { n: 'Coffee', kcal: 0.4, p: 0 }, 20, TODAY, TODAY)).toEqual({ ok: false, error: 'That is under 1 calorie at these grams, which can’t be logged.' });
+    expect(logFoodGrams(ports, { n: 'Coffee', kcal: 99999999, p: 0 }, 20, TODAY, TODAY)).toEqual({ ok: false, error: 'Those numbers are out of range.' });
+    expect(s.entries).toHaveLength(0);
+  });
+  it('shows a store refusal in the store\'s words', () => {
+    const ports = { addDietEntry: () => ({ id: null, error: 'That’s 20 things for the day.' }), removeDietEntry: () => {} };
+    expect(logFoodGrams(ports as never, milk, 100, TODAY, TODAY)).toEqual({ ok: false, error: 'That’s 20 things for the day.' });
   });
 });

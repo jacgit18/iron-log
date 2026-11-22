@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { openAdd, openNutrition } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition, stubReader, todayCol } from './nutritionBoardHelpers.js';
 
 // "Search your past meals and recipes" also asks the USDA food search (brief diet-food-lookup follow-up, 2026-10-31). The parsing and caps are node tests;
 // this covers the wiring with the route stubbed: one box shows your own matches and the database results, and a database pick fills the Quick add form.
@@ -26,6 +26,40 @@ test('typing in the past-meals search shows database results, and a pick fills t
   await diet(page).getByRole('button', { name: 'Back to ways of adding' }).click();
   await diet(page).getByRole('button', { name: /^Find food/ }).click();
   await expect(diet(page).getByLabel('Search your past meals and recipes')).toHaveValue('');
+});
+
+test('a database pick can be logged straight from Find food with Log it, and Undo takes it back', async ({ page }) => {
+  await stub(page, 200, { ok: true, hits });
+  await nutrition(page);
+  await diet(page).getByLabel('Search your past meals and recipes').fill('oats');
+  await diet(page).getByRole('list', { name: 'Food database results' }).getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' }).click();
+  await diet(page).getByLabel('Grams').fill('50');
+  await diet(page).getByRole('button', { name: 'Log it', exact: true }).click(); // no One-off form step
+  await expect(diet(page).getByRole('status').filter({ hasText: 'Logged Oats, rolled, 50 g.' })).toBeVisible();
+  await expect(diet(page).getByLabel('Grams')).toHaveCount(0); // the pick is closed and the box is clear
+  await expect(diet(page).getByLabel('Search your past meals and recipes')).toHaveValue('');
+  await closeSheet(page);
+  await expect(todayCol(page).getByText('Oats, rolled')).toBeVisible(); // it is on today's board
+  await openAdd(page, 'Find food');
+  await diet(page).getByLabel('Search your past meals and recipes').fill('oats');
+  await diet(page).getByRole('list', { name: 'Food database results' }).getByRole('button', { name: 'Oats, rolled · 379 kcal per 100 g' }).click();
+  await diet(page).getByRole('button', { name: 'Log it', exact: true }).click();
+  await diet(page).getByRole('status').getByRole('button', { name: 'Undo' }).click();
+  await expect(diet(page).getByRole('status').filter({ hasText: 'Undone.' })).toBeVisible(); // Undo removes only the last one
+  await closeSheet(page);
+  await expect(todayCol(page).getByText('Oats, rolled')).toHaveCount(1);
+});
+
+test('a product found by the barcode scan inside Find food can be logged with Log it', async ({ page }) => {
+  await stubReader(page);
+  await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Cheerios Cereal', brand: 'General Mills', kcal: 380, p: 10, c: 70, f: 6, serving: 28 } }) }));
+  await page.reload();
+  await nutrition(page);
+  await page.locator('#dt-scan-barcode').click();
+  await page.getByLabel('Barcode photo').setInputFiles({ name: 'barcode.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+  await expect(diet(page).getByLabel('Grams')).toHaveValue('28'); // the scan came back to Find food with the product picked
+  await diet(page).getByRole('button', { name: 'Log it', exact: true }).click();
+  await expect(diet(page).getByRole('status').filter({ hasText: 'Logged Cheerios Cereal, 28 g.' })).toBeVisible();
 });
 
 test('when the database is down the box still says so and your own matches still work', async ({ page }) => {

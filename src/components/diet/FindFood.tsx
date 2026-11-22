@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { entryText, hasMacros } from '../../lib/dietLog.js';
-import { logFoodAtUsual, logRecipeAtUsual } from '../../lib/logAtUsual.js';
+import { logFoodAtUsual, logFoodGrams, logRecipeAtUsual } from '../../lib/logAtUsual.js';
 import type { Say } from '../../lib/eatenStep.js';
 import { findFoods } from '../../lib/foodMacros.js';
 import { foodTypeOf } from '../../lib/foodType.js';
@@ -23,10 +23,17 @@ export default function FindFood({ day, today, onFood, onMsg, reopen, resume }: 
     const m = rec ? logRecipeAtUsual(st(), rec, day, today) : logFoodAtUsual(st(), f, day, today);
     if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error);
   };
+  // A database food (or a scanned product) at the grams chosen: Log it logs it on a day that can be logged; Use still opens the One-off form to edit it first.
+  const logGrams = (f: FoodFill, grams: number): boolean => { // true when it was logged: the pick and the box clear only then, so a refusal keeps the grams to change
+    const m = logFoodGrams(st(), f, grams, day, today);
+    if (!m.ok) { onMsg(m.error); return false; }
+    setQ(''); onMsg(m.text, m.undo);
+    return true;
+  };
   return (
     <div className="dt-find">
       <label className="field" htmlFor="dt-find-q">Search your past meals and recipes
-        <input id="dt-find-q" type="search" value={q} maxLength={80} autoComplete="off" onChange={e => setQ(e.target.value)} />
+        <input id="dt-find-q" type="search" autoFocus={Boolean(resume && !resume.hit && !resume.label)} value={q} maxLength={80} autoComplete="off" onChange={e => setQ(e.target.value)} />
       </label>
       {found.length > 0 && (
         <ul className="dt-recents" aria-label="Matches">
@@ -42,7 +49,7 @@ export default function FindFood({ day, today, onFood, onMsg, reopen, resume }: 
         </ul>
       )}
       {q.trim() !== '' && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}
-      <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />
+      <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} {...(day <= today ? { onLog: logGrams } : {})} {...(reopen ? { reopen } : {})} {...(resume ? { resume } : {})} />
     </div>
   );
 }

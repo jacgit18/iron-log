@@ -65,7 +65,7 @@ export default function AddFoodSheet() {
   const [fill, setFill] = useState<{ key: number; food?: FoodFill }>({ key: 0 });
   const scan = () => {
     const onScan = modal?.onScan as ((h: FoodHit) => void) | undefined;
-    useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => onScan?.(h) });
+    useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => onScan?.(h), onType: () => setTimeout(() => reopen({}), 0) }); // a miss: Type the name comes back to Find food, with its search box ready
   };
   const pick = (s: PlanSlot) => { setMeal(s); setExplicit(true); remember(s); };
   const choose = (f: AddFlow) => { if (f === 'barcode') { scan(); return; } setFlow(f); setMsg(''); setUndo(null); };

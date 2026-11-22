@@ -11,7 +11,7 @@ const scenario: Scenario = {
   expected: [
     'The goal rises by 16 oz and the Goal breakdown gains a "Hot day" line; training adds 12 oz per 30 minutes, so 60 minutes adds a "Training 60 min" line of 24 oz; the Goal line is the sum.',
     '700 is refused with "Enter training minutes, up to 600" and the field returns to 60.',
-    'Hydration shows tags "Hot day +16" and "Training 60 min +24" and the Water meter uses the new goal. Change base goal opens Manage (S-216).',
+    'Hydration shows tags "Hot day +16" and "Training 60 min +24" and the Water meter uses the new goal. The link “Change base goal in Manage” opens Manage (S-216).',
   ],
 };
 

@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 import { startFood } from './recipesNav.js';
-import { closeSheet, openAdd, openNutrition } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition, stubReader } from './nutritionBoardHelpers.js';
 
 // Logging from the Nutrition tab (brief nutrition-quick-log). The rules (the chips, the numbers, the day check) are node tests (dietRecent.test.ts, dietLog.test.ts);
 // this covers the wiring: the strip, the portion sheet with its Undo, the Log button in Recipes, and a scanned food created and logged once. The reader, the camera and the route
@@ -64,6 +64,32 @@ test('Recipes rows have Log, and the food page has Add to today and no Ate this'
   await expect(page.getByText('Logged Boiled egg, 3 eggs, for today.')).toBeVisible();
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible(); // the row's Log
+});
+
+// A barcode that is not found: "Type the name" must lead to a search box. The reader, the camera and the route are stubbed, as in the scan test below.
+const missingBarcode = async page => {
+  await stubReader(page);
+  await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ why: 'not-found' }) }));
+  await page.reload();
+  await openNutrition(page);
+};
+
+test('Scan and log in the toolbar: after a miss, Type the name opens Find food with the search box ready', async ({ page }) => {
+  await missingBarcode(page);
+  await page.getByRole('button', { name: 'Scan and log', exact: true }).click();
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  await page.locator('#bc-type').click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Find food' })).toBeVisible();
+  await expect(page.locator('#dt-find-q')).toBeFocused(); // the box to type the name in
+});
+
+test('Scan and log in the Add food sheet: after a miss, Type the name comes back to Find food with the search box ready', async ({ page }) => {
+  await missingBarcode(page);
+  await openAdd(page, 'Scan and log');
+  await page.getByLabel('Barcode photo').setInputFiles(photo);
+  await page.locator('#bc-type').click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Find food' })).toBeVisible();
+  await expect(page.locator('#dt-find-q')).toBeFocused();
 });
 
 test('a scanned food is created with the chosen type and logged once', async ({ page }) => {
