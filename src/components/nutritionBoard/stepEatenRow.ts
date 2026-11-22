@@ -1,6 +1,6 @@
 import { eatenMax, type Say } from '../../lib/eatenStep.js';
 import { amountText } from '../../lib/foodUnit.js';
-import { nudgeSentence, saveUsualLabel, undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
+import { ALREADY_USUAL, nudgeSentence, offerNow, saveUsualLabel, STALE_OFFER, undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { DietEntry, Recipe } from '../../types.ts';
 
@@ -11,13 +11,19 @@ export function stepEatenRow(e: DietEntry, to: number, recipe: Recipe | undefine
   if (err) { say(err); return; }
   const now = recipe ? useAppStore.getState().recipes.find(r => r.id === recipe.id) : undefined; // the recipe as it is now
   const change = usualAfterStep(e.d, today, now, to);
-  if (!now || !change) { say(''); return; } // nothing to offer now: clear any earlier sentence and its Save button, which no longer matches the row
-  say(nudgeSentence(now.n, amountText(to, now)), undefined, { label: saveUsualLabel(amountText(to, now)), run: () => saveUsual(now, to, change, say) });
+  if (!now || !change) return; // nothing to offer; the status line is left alone (an Undo or a message there still matters), and a Save offered earlier checks itself when pressed
+  say(nudgeSentence(now.n, amountText(to, now)), undefined, { label: saveUsualLabel(amountText(to, now)), run: () => saveUsual(e.id, now.id, to, today, say) });
 }
 
-/** The offered button: writes the usual, or says the store's words when it refuses (the person pressed it, so silence would read as nothing happening). */
-export function saveUsual(now: Recipe, to: number, change: UsualChange, say: Say): void {
-  const err = useAppStore.getState().setRecipeUsual(now.id, change.next);
+/** The offered button. It reads the entry and the recipe as they are now, not as they were at the nudge: if the entry no longer has `to` portions (nudged again, deleted) or the offer no longer applies, it saves nothing and says so; else it writes the usual, with an Undo that restores the usual as it stood now. A refusal says the store's words (the person pressed it, so silence would read as nothing happening). */
+export function saveUsual(entryId: string, recipeId: string, to: number, today: string, say: Say): void {
+  const st = useAppStore.getState();
+  const entry = st.diet.find(x => x.id === entryId);
+  const now = st.recipes.find(r => r.id === recipeId);
+  const o = offerNow(entry, now, today, to);
+  if (o.kind !== 'holds' || !now) { say(o.kind === 'already' ? ALREADY_USUAL : STALE_OFFER); return; }
+  const change = o.change;
+  const err = st.setRecipeUsual(now.id, change.next);
   if (err) { say(err); return; }
   say(`Usual portion saved: ${now.n}, ${amountText(to, now)}.`, () => undoStep(now.id, change, say));
 }
