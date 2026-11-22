@@ -31,7 +31,7 @@ const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 // A ready-made food (brief recipe-first-diet-log): something bought or frozen that you only heat up. It is a recipe in the Ready-made category with
 // no ingredients or steps, so it is listed, searched, logged with the log control and planned like any recipe. Numbers are per serving, typed from the
 // label or filled from the food lookup (still editable).
-export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: Recipe; onDone: (savedId: string | null) => void; scanFirst?: boolean }) {
+export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onDone: (savedId: string | null) => void }) {
   const [n, setN] = useState(recipe?.n ?? '');
   const [kcal, setKcal] = useState(str(recipe?.kcal));
   // Vitamins and minerals per serving (brief recipes-vitamins-minerals): never typed; they come with a lookup or a label scan and are kept only while calories are still the number they came with.
@@ -95,7 +95,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     <form className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New food'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit food' : 'New food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
-        <FoodSearch onUse={fillFrom} {...(scanFirst ? { scanFirst } : {})} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
+        <FoodSearch onUse={fillFrom} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
       </div>
       {canScan && (
         <div className="rc-scan">

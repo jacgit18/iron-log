@@ -45,7 +45,7 @@ export function tabCounts(list: readonly Recipe[]): Record<RecipeTab, number> {
 export const emptyTabNote = (tab: RecipeTab, searching: boolean): string =>
   tab === 'all' ? 'No recipe matches. Clear the search or the filters.'
     : searching ? 'Nothing in this tab matches. Clear the search, the filters or pick another tab.'
-      : tab === 'foods' ? 'No foods yet. Use + New, then Scan to fill a food form.' : tab === 'ingredients' ? 'No ingredients yet. Write a Sauces or Seasonings recipe, or mark a recipe or food as an Ingredient.' : tab === 'drinks' ? 'No drinks yet. Use + New, then Recipe or meal in the Drinks category, or Scan to fill a food form for a drink.' : 'No meals yet. Use + New, then Recipe or meal.';
+      : tab === 'foods' ? 'No foods yet. Use + New, then Add a food.' : tab === 'ingredients' ? 'No ingredients yet. Write a Sauces or Seasonings recipe, or mark a recipe or food as an Ingredient.' : tab === 'drinks' ? 'No drinks yet. Use + New, then Recipe or meal in the Drinks category, or Add a food for a drink.' : 'No meals yet. Use + New, then Recipe or meal.';
 
 /** How many list filters are on, for the count on the Filters button: the category, "Can make", each tag and each nutrition filter. The search, the sort, the source and the tab are not
  *  filters here. In the Library source only the category applies (the others are hidden and skipped), so only it counts. */
