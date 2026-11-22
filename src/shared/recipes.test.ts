@@ -77,6 +77,22 @@ describe('serving size', () => {
   });
 });
 
+describe('fromGroc: a food made from the grocery list and not confirmed yet (brief groceries-make-foods)', () => {
+  const food = { id: 'g-i4', n: 'Greek yogurt', cat: 'ready', ing: [], steps: [] };
+  it('keeps a literal true and accepts it as valid', () => {
+    expect(normRecipe({ ...food, fromGroc: true })).toEqual({ ...food, fromGroc: true });
+    expect(validRecipe({ ...food, fromGroc: true })).toBe(true);
+  });
+  it('drops anything but true, and a food saved before it is unchanged', () => {
+    expect(normRecipe(food)).toEqual(food);
+    for (const fromGroc of [false, 'true', 1, 0, null, {}, []]) expect(normRecipe({ ...food, fromGroc })).toEqual(food);
+  });
+  it('survives a second clean (the server cleans what the app saved)', () => {
+    const once = normRecipe({ ...food, fromGroc: true });
+    expect(normRecipe(once)).toEqual(once);
+  });
+});
+
 describe('home: the At home item of a ready-made food (brief ready-made-have-gate)', () => {
   const food = { id: 'yog', n: 'Greek yogurt', cat: 'ready', ing: [], steps: [] };
   it('keeps an item id and the not-tracked dash, and accepts them as valid', () => {
