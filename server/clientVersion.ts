@@ -25,10 +25,12 @@ export function minVersionFrom(env: string | undefined): number | null {
   return n;
 }
 
-/** Why the gate cannot be used with this build, or null. A MIN_CLIENT_VERSION newer than the build this server itself serves would refuse that very build (and so every app a user can get from it): a wrong commit or a typo. The server then refuses to start, so a deploy with a bad value never takes traffic and the revision before it keeps serving. `build` is the server's own APP_VERSION (the commit time the Docker build passes in); with no number there (a local run, a test) nothing is checked. */
-export function minVersionProblem(min: number | null, build: string | undefined): string | null {
+/** Why the gate cannot be used with this build, or null. A MIN_CLIENT_VERSION newer than the build this server itself serves would refuse that very build (and so every app a user can get from it): a wrong commit or a typo. The server then refuses to start, so a deploy with a bad value never takes traffic and the revision before it keeps serving. `build` is the server's own APP_VERSION (the commit time the Docker build passes in). With no number there, the app this server serves is stamped "dev" (the same build argument), which the gate refuses wherever the development sign-in is not allowed (`allowDev` false: production), so a gate set on such a build locks everyone out too; where `allowDev` is true (a local run, a test) nothing is checked. */
+export function minVersionProblem(min: number | null, build: string | undefined, allowDev: boolean): string | null {
+  if (min === null) return null;
   const have = parseVersion(build?.trim());
-  if (min === null || have === null || min <= have) return null;
+  if (have === null) return allowDev ? null : `MIN_CLIENT_VERSION (${min}) is set but this build has no version number (it was built without APP_VERSION), so the app it serves calls itself "dev" and every user would be refused. Build the image with APP_VERSION=$(git log -1 --format=%ct), or unset MIN_CLIENT_VERSION.`;
+  if (min <= have) return null;
   return `MIN_CLIENT_VERSION (${min}) is newer than the build this server serves (${have}), so every app, including the one it serves, would be refused. Deploy a build from the commit you mean first, or lower MIN_CLIENT_VERSION.`;
 }
 
