@@ -1,7 +1,8 @@
 // A failed history load must never produce a partial result: allWeeks() reloads once and otherwise throws, and every caller
 // (export, daily backup, import, erase) stops and leaves things as they were. The failure cannot be reached by a person, so it is made here.
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
-import { mem, clearStorage } from '../test/browserStubs.js';
+import { mem as memRaw, clearStorage } from '../test/browserStubs.js';
+const mem = memRaw as Record<string, string>;
 
 // No IndexedDB in the test environment: the daily copy's save is recorded instead.
 vi.mock('../lib/autoBackup.js', async importOriginal => ({ ...(await importOriginal<object>()), saveDailyBackup: vi.fn(async () => 'saved') }));
