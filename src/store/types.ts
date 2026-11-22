@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, RepeatItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, RepeatItem, Cfg, DailySnack, DataFile, DietEntry, DietPace, PlanSlot, Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, FoodType, LibraryItem, LogEntry, Logs, Recipe, RecipeUse, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementIngredient, SupplementNutrient, SupplementServing, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { SkippedDay } from '../lib/dayPicker.ts';
@@ -375,6 +375,12 @@ export interface RecipesSlice {
   makeMealFromPair(aId: string, bId: string): { id: string } | { error: string }; // a new meal linked to both, numbers rolled up
   undoCatalogCopy(id: string): boolean; // takes back a Library copy made a moment ago, silently (no removed-note); false when it is gone or not a Library copy
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
+  foodForNewItem(item: GroceryItem): void; // brief groceries-make-foods: a new grocery item makes its Food, or pins the Food it matches; nothing for a one-time item, a full Foods list or recipes not loaded yet
+  foodOfRemovedItem(item: GroceryItem, undoAdd: boolean): string[]; // the item is leaving: Undo of an add takes back a Food it made when untouched; otherwise the Food stays and loses its pin (the ids unpinned are returned, for the item's own Undo)
+  repinFoods(ids: string[], itemId: string): void; // Undo of an item's delete: the Foods unpinned a moment ago are pinned to it again (only those with no pin now)
+  setGroceryFoodType(id: string, type: FoodType): void; // a type chip on a waiting Food: type changes, its labels follow, the Food stays flagged
+  confirmGroceryFoods(ids?: string[]): number; // Looks right: the flag goes off these Foods (every waiting one when ids is left out); how many
+  makeFoodsFromItems(only?: string[]): { made: number; waiting: number }; // the opt-in sweep: a flagged Food for each list item that matches none (only the ids given, when given), up to the cap; `waiting` items had no room
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
   acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned
   addMissingToGrocery(id: string, month: string): { added: number; already: number; refused: string | null }; // new names go on the list; the rest are on To get already; `refused`: why an add was refused (a full list), else null

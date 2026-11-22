@@ -143,9 +143,9 @@ describe('acceptSuggestions', () => {
     const id_ = (n: string) => st().grocery.items.find(i => i.n === n)!.id;
     const pb = { id: id_('Peanut butter') }, gp = { id: id_('Roasted garlic powder') };
     st().saveRecipe({ n: 'Sauce', cat: 'sauces', ing: [{ n: 'butter' }, { n: 'garlic' }, { n: 'rice' }, { n: 'water' }, { n: 'butter', skip: true }], steps: [] });
-    const id = st().recipes[0]!.id;
+    const id = st().recipes.find(r => !r.fromGroc)!.id;
     expect(st().acceptSuggestions(id, monthKey(new Date()))).toBe(2);
-    expect(st().recipes[0]!.ing.map(i => i.home ?? null)).toEqual([pb.id, gp.id, null, null, null]);
+    expect(st().recipes.find(r => !r.fromGroc)!.ing.map(i => i.home ?? null)).toEqual([pb.id, gp.id, null, null, null]);
     expect(st().acceptSuggestions(id, monthKey(new Date()))).toBe(0);
     expect(st().acceptSuggestions('gone', monthKey(new Date()))).toBe(0);
   });
@@ -157,7 +157,7 @@ describe('addMissingToGrocery', () => {
     st().addGroceryItem({ n: 'Garlic', store: '', qty: '1', price: '', every: false });
     const garlic = st().grocery.items[0]!;
     st().saveRecipe({ n: 'Dressing', cat: 'sauces', ing: [{ n: 'garlic' }, { n: 'parsley' }, { n: 'fresh parsley' }], steps: [] });
-    const id = st().recipes[0]!.id;
+    const id = st().recipes.find(r => !r.fromGroc)!.id;
     expect(st().addMissingToGrocery(id, monthKey(new Date()))).toEqual({ added: 1, already: 1, refused: null });
     expect(st().grocery.items.map(i => i.n).sort()).toEqual(['Garlic', 'parsley']);
     st().setGroceryHave(monthKey(new Date()), garlic.id, true);
@@ -171,7 +171,7 @@ describe('addMissingToGrocery with a full list', () => {
     const { normGrocery } = await import('../lib/grocery.js');
     useAppStore.setState({ grocery: normGrocery({ stores: [], items: Array.from({ length: MAX_ITEMS }, (_, i) => ({ id: `i${i}`, n: `Item ${i}`, store: '', qty: 1, cents: null, every: false, out: false })) }) });
     st().saveRecipe({ n: 'Dip', cat: 'sauces', ing: [{ n: 'saffron' }], steps: [] });
-    const r = st().addMissingToGrocery(st().recipes[0]!.id, monthKey(new Date()));
+    const r = st().addMissingToGrocery(st().recipes.find(r => !r.fromGroc)!.id, monthKey(new Date()));
     expect(r).toMatchObject({ added: 0, already: 0 });
     expect(r.refused).toBeTruthy();
   });
