@@ -317,7 +317,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (out.error !== null) return { ok: false, message: out.error };
     putPlanAndRepeats(get, out.plan, out.repeats);
     const food: PlanItem = { k: it.k, id: it.id, ...(it.s ? { s: it.s } : {}) }, days = [day, ...fp.marks.map(m => m.day)];
-    get().noteRemoved('diet', forward ? `${name} for every future day it appears` : name, () => {
+    if (forward) get().noteRemoved('diet', `${name} for every future day it appears`, () => { // a plain Plan gives no Undo (Unplan is its undo), so it never replaces another pending Undo
       if (get().blocked()) return false;
       const back = withoutPlanned(planOf(get), get().cfg.diet?.repeats, days, food, fp.repeat);
       putPlanAndRepeats(get, back.plan, back.repeats);
