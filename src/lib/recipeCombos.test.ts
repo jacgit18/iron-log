@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { chipLabel, chipsShown, comboIds, comboParts, comboTabCounts, expandedRows, isCombo, mineRows, partsLine } from './recipeCombos.js';
+import { chipLabel, chipsShown, comboIds, comboParts, comboTabCounts, expandedRows, isCombo, mineRows, partsLine, sectionRows } from './recipeCombos.js';
 import { filterRecipes } from './recipeList.js';
 
 const food = (id: string, n: string, extra: Partial<Recipe> = {}): Recipe => ({ id, n, cat: 'ready', type: 'ready', ing: [{ n }], steps: [], ...extra });
@@ -128,5 +128,30 @@ describe('comboIds', () => {
     const only = meal('only', 'Only combos', ['cwm', 'bowl']);
     const list = [cereal, milk, cwm, bowl, only];
     expect(ids(mineRows(list, list, 'all').rows)).toEqual(['cereal', 'milk', 'only']);
+  });
+});
+
+describe('sectionRows', () => {
+  const all = [cereal, milk, rice, cwm];
+  it('lists exactly the items of the section, so the count equals the rows; a combo is a Meals row', () => {
+    expect(ids(sectionRows(all, all, 'meals').rows)).toEqual(['cwm']);
+    expect(ids(sectionRows(all, all, 'ready').rows)).toEqual(['cereal', 'rice']);
+    expect(ids(sectionRows(all, all, 'drinks').rows)).toEqual(['milk']);
+    expect(sectionRows(all, all, 'meals').chips.size).toBe(0);
+  });
+  it('chips a combo onto the part rows shown in the other sections, never hiding a row', () => {
+    const r = sectionRows(all, all, 'ready');
+    expect(r.chips.get('cereal')).toEqual([{ id: 'cwm', label: 'with Milk', name: 'Cereal with Milk' }]);
+    expect(r.chips.has('rice')).toBe(false);
+    expect(sectionRows(all, all, 'drinks').chips.get('milk')?.[0]?.id).toBe('cwm');
+  });
+  it('does not chip a combo that has steps (it is a Recipes row, not a meal with no steps)', () => {
+    const stepped = { ...cwm, steps: ['mix'] };
+    const list = [cereal, milk, stepped];
+    expect(sectionRows(list, list, 'ready').chips.size).toBe(0);
+    expect(ids(sectionRows(list, list, 'recipes').rows)).toEqual(['cwm']);
+  });
+  it('has no rows or chips for Library (its rows are the catalog)', () => {
+    expect(sectionRows(all, all, 'library')).toEqual({ rows: [], chips: new Map() });
   });
 });

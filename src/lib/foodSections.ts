@@ -1,5 +1,5 @@
 import type { Recipe } from '../types.ts';
-import { FOOD_SECTION_KEYS, type FoodSectionKey } from './route.js';
+import { FOOD_SECTION_KEYS, foodSectionOf, foodSectionPath, type FoodSectionKey } from './route.js';
 import { usesOf } from './recipeUses.js';
 
 /* ---------- Foods sections (brief foods-made-and-store-bought): Made (Meals, Recipes, Library) and Store-bought (Ingredients, Ready to eat, Drinks).
@@ -89,3 +89,26 @@ export function sectionAfterSave(r: Pick<Recipe, 'cat' | 'type' | 'uses' | 'step
   const all = sectionsOf(r);
   return from && (all as FoodSection[]).includes(from) ? (from as OwnSection) : all[0];
 }
+
+/** What an empty section says to do. `searching` is a typed search or an active filter. */
+export function sectionEmptyNote(s: FoodSection, searching: boolean): string {
+  if (searching) return 'Nothing in this section matches. Clear the search or the filters, or pick another section.';
+  switch (s) {
+    case 'meals': return 'No meals yet. A meal is made from foods you already have, with no steps (a recipe with no steps is a meal). Use + New, then Recipe or meal.';
+    case 'recipes': return 'No recipes yet. Use + New, then Recipe or meal, or find one in Library.';
+    case 'ingredients': return 'No ingredients yet. Use + New, then Scan to fill a food form or Add a food by hand, and mark it as an Ingredient.';
+    case 'ready': return 'No ready-to-eat foods yet. Use + New, then Add a food by hand.';
+    case 'drinks': return 'No drinks yet. Use + New, then Add a food by hand and press Drink.';
+    case 'library': return 'Everything here is already in your recipes.';
+  }
+}
+
+/** Which section the Foods screen shows for an address, and where to rewrite the address when it should name one. A section's own address (or a page opened from it) wins;
+ *  otherwise the section last used this visit, else the first with an item. `fix` is set only for the bare address, which is rewritten to the section's own. */
+export function sectionForPath(path: string, last: FoodSection | null, list: readonly Recipe[]): { section: FoodSection; fix: string | null } {
+  const section = foodSectionOf(path) ?? openingSection(last, list);
+  return { section, fix: path === 'daily/recipes' ? foodSectionPath(section) : null };
+}
+
+/** Whether the address is the Foods list itself: bare, or a section's own address (not a page like `mine`, `form` or `library/item`). */
+export const onFoodsList = (path: string): boolean => path === 'daily/recipes' || FOOD_SECTION_KEYS.some(k => path === foodSectionPath(k));
