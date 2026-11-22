@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { usualStart } from './foodUnit.js';
-import { nudgeSentence, saveUsualLabel, undoUsual, undoUsualOutcome, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
+import { nudgeSentence, saveUsualLabel, STALE_OFFER, undoUsual, undoUsualOutcome, usualAfterStep, usualChange, withUsual } from './usualPortion.js';
 
 const rice = { cat: 'ready' as const, servings: 4, kcal: 200, p: 4 };
 
@@ -92,5 +92,6 @@ describe('the words after a Less or More on an eaten row', () => {
     expect(nudgeSentence('Oats', '1.5 portions')).toBe('Oats, 1.5 portions.');
     expect(saveUsualLabel('1.5 portions')).toBe('Save 1.5 portions as my usual');
     expect(saveUsualLabel('4 eggs')).toBe('Save 4 eggs as my usual');
+    expect(STALE_OFFER).toBe('That amount has changed since, so no usual was saved.');
   });
 });
