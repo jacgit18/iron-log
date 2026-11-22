@@ -36,7 +36,7 @@ test('a recipe you write is saved, marked Custom, found by an ingredient, and ke
   await page.getByLabel('Search recipes').fill('olive');
   await expect(page.locator('.rc-row', { hasText: /Garlic dressing/ })).toBeVisible();
   await page.getByLabel('Search recipes').fill('zzz');
-  await expect(page.getByText('No recipe matches')).toBeVisible();
+  await expect(page.getByText('Nothing in this section matches')).toBeVisible();
   await page.reload();
   await recipes(page);
   await expect(page.locator('.rc-row', { hasText: /Garlic dressing/ })).toBeVisible();
@@ -94,6 +94,6 @@ test('a recipe can be deleted with Undo', async ({ page }) => {
 
 test('the Library asks for a sign-in when syncing is off', async ({ page }) => {
   await recipes(page);
-  await page.click('#recipes-library');
+  await page.click('#recipes-sec-library');
   await expect(page.getByText('Sign in to browse the recipe library.')).toBeVisible();
 });

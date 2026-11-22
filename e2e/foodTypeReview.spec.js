@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startFood } from './recipesNav.js';
+import { openSection, startFood } from './recipesNav.js';
 
 // Food type and the Review types screen (brief food-type-and-migration). The name rules, the cleaner and the store action are node tests
 // (foodType.test.ts, recipes.test.ts, recipesSlice.test.ts); this covers what they cannot: the Type buttons on the real form, the banner, the
@@ -41,7 +41,7 @@ test('untyped foods show a banner; Review types suggests from the name, a change
   await pressed('Eggs, large', 'Ready to eat'); // eggs are both: one food, two labels
   await pressed('Frozen lasagna', 'Ready to eat');
   await page.reload(); // the page is not kept in the address: a reload shows the list
-  await expect(page).toHaveURL(/#\/daily\/recipes$/);
+  await expect(page).toHaveURL(/#\/daily\/recipes\/(meals|recipes|ready)$/); // the list, at the section it opens on
   await page.getByRole('button', { name: 'Review types' }).click();
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Foods', exact: true })).toBeVisible();
@@ -50,8 +50,8 @@ test('untyped foods show a banner; Review types suggests from the name, a change
   await page.getByRole('button', { name: 'Looks right' }).click();
   await expect(page.getByText('Food types saved.')).toBeVisible();
   await expect(page.getByText(/needs? a type/)).toHaveCount(0);
-  for (const tab of ['ingredients', 'foods']) { // the two-label food is in both tabs
-    await page.locator(`#recipes-tab-${tab}`).click();
+  for (const section of ['ingredients', 'ready']) { // the two-label food is in both sections
+    await openSection(page, section);
     await expect(page.locator('.rc-row', { hasText: /Eggs, large/ })).toBeVisible();
   }
   await page.getByRole('button', { name: 'Undo' }).click();

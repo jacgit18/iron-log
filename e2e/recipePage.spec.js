@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openSection } from './recipesNav.js';
 import { deleteEaten, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // The recipe page after the log form left (brief recipe-page-after-log): a summary strip, one action row (Log, Plan…, Add N missing to Shopping), "Cook for N" always in the Ingredients heading, nothing fixed over the tab bar.
@@ -14,7 +15,7 @@ const seed = async (page, list, extra = {}) => {
   }, [list, extra]);
   await page.reload(); // the fixture has already loaded the page once
 };
-const open = async (page, name = 'Long stew') => { await page.click('#tab-daily'); await page.click('#daily-recipes'); await page.locator('.rc-row', { hasText: name }).click(); await expect(page.locator('#rc-h')).toHaveText(new RegExp(name)); };
+const open = async (page, name = 'Long stew', section = null) => { await page.click('#tab-daily'); await page.click('#daily-recipes'); if (section) await openSection(page, section); await page.locator('.rc-row', { hasText: name }).click(); await expect(page.locator('#rc-h')).toHaveText(new RegExp(name)); };
 const box = (page, sel) => page.locator(sel).first().boundingBox();
 const strip = page => page.locator('.rc-strip');
 
@@ -108,7 +109,7 @@ test('a recipe with no calories and protein shows "Add them" in place of Log', a
 
 test('a ready-made food gets the strip and the action row, and no ingredients, steps or Cook for', async ({ page }) => {
   await seed(page, [food('a', 'Oat cereal', { kcal: 150, p: 5 })]);
-  await open(page, 'Oat cereal');
+  await open(page, 'Oat cereal', 'ingredients'); // a ready-made food typed Ingredient is under Store-bought
   await expect(strip(page).getByText('150 kcal', { exact: true })).toBeVisible();
   await expect(strip(page).locator('li')).toHaveCount(2); // per serving and last eaten; no at-home box
   await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible();

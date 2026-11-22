@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FoodType, Recipe, RecipeCategory, RecipeUse } from '../types.ts';
 import { RECIPE_CATEGORIES } from '../shared/recipes.js';
-import { FOOD_GROUPS, FOOD_SECTIONS, alsoIn, firstSection, groupOf, inSection, inSectionList, openingSection, searchCounts, sectionAfterSave, sectionCountText, sectionCounts, sectionLabel, sectionsInGroup, sectionsOf } from './foodSections.js';
+import { FOOD_GROUPS, FOOD_SECTIONS, alsoIn, alsoTag, libraryMatchCount, firstSection, groupOf, inSection, inSectionList, openingSection, onFoodsList, searchCounts, sectionAfterSave, sectionEmptyNote, sectionForPath, sectionCountText, sectionCounts, sectionLabel, sectionsInGroup, sectionsOf } from './foodSections.js';
 
 const mk = (id: string, cat: RecipeCategory, extra: Partial<Recipe> = {}): Recipe => ({ id, n: id, cat, ing: [], steps: [], ...extra });
 const withSteps = ['mix'];
@@ -150,5 +150,63 @@ describe('opening section', () => {
     expect(sectionAfterSave(eggs)).toBe('ingredients');
     expect(sectionAfterSave(eggs, 'ready')).toBe('ready'); // a two-use food goes back to where it was opened
     expect(sectionAfterSave(mk('a', 'protein'), 'drinks')).toBe('meals'); // not a section it is in
+  });
+});
+
+describe('sectionEmptyNote', () => {
+  it('says what to do in each section, and that a recipe with no steps is a meal under Meals', () => {
+    for (const s of FOOD_SECTIONS) expect(sectionEmptyNote(s.key, false).length).toBeGreaterThan(10);
+    expect(sectionEmptyNote('meals', false)).toMatch(/no steps/);
+    expect(sectionEmptyNote('recipes', true)).toMatch(/Clear the search/);
+  });
+});
+
+describe('sectionForPath and onFoodsList', () => {
+  const list = [mk('a', 'protein', { steps: withSteps })];
+  it('reads the section from its address, a library page address and nothing else', () => {
+    expect(sectionForPath('daily/recipes/drinks', 'meals', list)).toEqual({ section: 'drinks', fix: null });
+    expect(sectionForPath('daily/recipes/library/item', null, list)).toEqual({ section: 'library', fix: null });
+  });
+  it('rewrites the bare address to the last section used, else the first with an item', () => {
+    expect(sectionForPath('daily/recipes', 'ingredients', list)).toEqual({ section: 'ingredients', fix: 'daily/recipes/ingredients' });
+    expect(sectionForPath('daily/recipes', null, list)).toEqual({ section: 'recipes', fix: 'daily/recipes/recipes' });
+    expect(sectionForPath('daily/recipes', null, [])).toEqual({ section: 'meals', fix: 'daily/recipes/meals' });
+  });
+  it('leaves a page address alone and shows the last section behind it', () => {
+    expect(sectionForPath('daily/recipes/mine', 'ready', list)).toEqual({ section: 'ready', fix: null });
+  });
+  it('is the list only for the bare address and a section address', () => {
+    expect(['daily/recipes', 'daily/recipes/meals', 'daily/recipes/library'].every(onFoodsList)).toBe(true);
+    expect(['daily/recipes/mine', 'daily/recipes/form', 'daily/recipes/library/item', 'daily/recipes/types'].some(onFoodsList)).toBe(false);
+  });
+});
+
+describe('alsoTag', () => {
+  it('names the other use of a two-use food, singular, and nothing for a food listed once', () => {
+    const eggs = mk('e', 'ready', { type: 'ready', uses: ['ingredient', 'ready'] });
+    expect(alsoTag(eggs, 'ingredients')).toBe('also Ready to eat');
+    expect(alsoTag(eggs, 'ready')).toBe('also Ingredient');
+    expect(alsoTag(mk('m', 'ready', { type: 'drink' }), 'drinks')).toBe('');
+    expect(alsoTag(mk('r', 'protein', { steps: withSteps }), 'recipes')).toBe('');
+  });
+});
+
+describe('searchCounts: the Made number is exact only when the library cannot add to it', () => {
+  it('is "at least" while the library is unknown or has more pages, exact when it is known to add nothing more', () => {
+    const list = [mk('a', 'protein', { steps: withSteps })];
+    expect(searchCounts(list, null).madePlus).toBe(true);
+    expect(searchCounts(list, 3, true).madePlus).toBe(true);
+    expect(searchCounts(list, 0, false)).toMatchObject({ madePlus: false, groups: { made: 1, store: 0 } }); // signed out: Recipes.tsx passes 0
+  });
+});
+
+describe('libraryMatchCount', () => {
+  it('is a known 0 signed out (so Made has no "+") and the loaded count, or null, signed in', () => {
+    const list = [mk('a', 'protein', { steps: withSteps })];
+    expect(libraryMatchCount(false, null)).toBe(0);
+    expect(libraryMatchCount(true, null)).toBeNull();
+    expect(libraryMatchCount(true, 4)).toBe(4);
+    expect(searchCounts(list, libraryMatchCount(false, null)).madePlus).toBe(false);
+    expect(searchCounts(list, libraryMatchCount(true, null)).madePlus).toBe(true);
   });
 });

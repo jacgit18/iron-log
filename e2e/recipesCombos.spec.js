@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openSection } from './recipesNav.js';
 
 // Combo chips (brief recipes-combo-chips). The rows rule and the counts are node tests (recipeCombos.test.ts); this covers what a unit test cannot:
 // a chip is a real, separate tap target beside the row's button that opens the combo, Back returns to the list, and the Meals row names its parts.
@@ -16,38 +17,43 @@ const seed = async page => {
 const itemOf = (page, name) => page.locator('.rc-item').filter({ has: page.locator('.rc-title b', { hasText: new RegExp(`^${name}$`) }) });
 const rows = page => page.locator('.rc-item .rc-title b');
 
-test('a combo is a chip on each part, not a row, on All', async ({ page }) => {
+test('a combo is a chip on each part, not a row, outside Meals', async ({ page }) => {
   await seed(page);
-  await expect(rows(page)).toHaveText(['Cereal', 'Milk', 'Rice']);
+  await openSection(page, 'ready');
+  await expect(rows(page)).toHaveText(['Cereal', 'Rice']);
   await expect(itemOf(page, 'Cereal').getByRole('button', { name: 'Open Cereal with Milk' })).toHaveText('with Milk');
-  await expect(itemOf(page, 'Milk').getByRole('button', { name: 'Open Cereal with Milk' })).toHaveText('Cereal with Milk');
   await expect(itemOf(page, 'Rice').getByRole('button', { name: /Open/ })).toHaveCount(0);
-  await expect(page.locator('#recipes-tab-all')).toContainText('3');
+  await expect(page.locator('#recipes-sec-ready')).toContainText('2');
+  await openSection(page, 'drinks');
+  await expect(rows(page)).toHaveText(['Milk']);
+  await expect(itemOf(page, 'Milk').getByRole('button', { name: 'Open Cereal with Milk' })).toHaveText('Cereal with Milk');
 });
 
 test('the chip is its own tap target outside the row button, opens the combo, and Back returns to the list', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await seed(page);
+  await openSection(page, 'ready');
   const item = itemOf(page, 'Cereal');
   expect(await item.locator('.rc-row .rc-combochip').count()).toBe(0); // never nested in the row's button
   await item.getByRole('button', { name: 'Open Cereal with Milk' }).click();
   await expect(page.getByRole('heading', { name: /Cereal with Milk/ })).toBeVisible();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(rows(page)).toHaveText(['Cereal', 'Milk', 'Rice']);
+  await expect(rows(page)).toHaveText(['Cereal', 'Rice']);
 });
 
 test('on a desktop the chip opens the combo in the pane and the list keeps its rows', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await seed(page);
+  await openSection(page, 'drinks');
   await itemOf(page, 'Milk').getByRole('button', { name: 'Open Cereal with Milk' }).click();
   const pane = page.getByRole('complementary', { name: 'Recipe detail' });
   await expect(pane.getByRole('button', { name: 'Open Milk, food' })).toBeVisible(); // the combo's parts, which a food's own page does not list
-  await expect(rows(page)).toHaveText(['Cereal', 'Milk', 'Rice']);
+  await expect(rows(page)).toHaveText(['Milk']);
 });
 
 test('Meals lists the combo as its own row with its parts named', async ({ page }) => {
   await seed(page);
-  await page.locator('#recipes-tab-meals').click();
+  await openSection(page, 'meals');
   await expect(rows(page)).toHaveText(['Cereal with Milk']);
   await expect(itemOf(page, 'Cereal with Milk').locator('.rc-parts')).toHaveText('Cereal + Milk');
   await expect(page.locator('.rc-combochip')).toHaveCount(0);
@@ -66,8 +72,9 @@ const seedThree = async page => { // Cereal carries three combos, so its row has
 };
 const chipsOf = item => item.locator('.rc-combochip:not(.more)');
 
-test('"+N more" expands the rest of the chips in place and Show fewer folds them, touching no search, tab or filter; a tab change folds them', async ({ page }) => {
+test('"+N more" expands the rest of the chips in place and Show fewer folds them, touching no search, section or filter; a section change folds them', async ({ page }) => {
   await seedThree(page);
+  await openSection(page, 'ready');
   await page.getByLabel('Search recipes').fill('Cereal');
   const tag = page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'Quick' });
   await tag.click();
@@ -81,20 +88,20 @@ test('"+N more" expands the rest of the chips in place and Show fewer folds them
   await expect(fewer).toHaveText('Show fewer');
   await expect(page.getByLabel('Search recipes')).toHaveValue('Cereal');
   await expect(tag).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#recipes-tab-all')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#recipes-sec-ready')).toHaveAttribute('aria-pressed', 'true');
   await fewer.click();
   await expect(chipsOf(item)).toHaveCount(2);
   await more.click();
   await expect(chipsOf(item)).toHaveCount(3);
-  await page.locator('#recipes-tab-foods').click(); // the row is on Foods too: the tab change folds it
-  await expect(chipsOf(item)).toHaveCount(2);
-  await page.locator('#recipes-tab-all').click();
+  await openSection(page, 'ingredients'); // Cereal is not listed there; coming back to Ready: the section change folded the chips
+  await openSection(page, 'ready');
   await expect(chipsOf(item)).toHaveCount(2);
 });
 
 test('on a phone the expanded chips are still open after a combo is opened and Back', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await seedThree(page);
+  await openSection(page, 'ready');
   const item = itemOf(page, 'Cereal');
   await item.getByRole('button', { name: '+1 more with Cereal' }).click();
   await chipsOf(item).nth(2).click();

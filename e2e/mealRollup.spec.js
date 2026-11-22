@@ -56,7 +56,7 @@ test('a bowl built from two foods rolls up in the form, on save and on its page,
 test('a loop is refused in the picker with a message, and the form stays usable', async ({ page }) => {
   await seed(page, [oats, rc('a', 'Lunch box', 'other', { ing: [{ n: 'Sandwich', rid: 'b', q: 1 }] }), rc('b', 'Sandwich', 'other', { ing: [{ n: 'Oat cereal', rid: 'oats', q: 1 }, { n: 'Salt' }] })]);
   await openRecipes(page); // Sandwich has a typed line, so it is a row (a meal made only of linked foods is a chip, brief recipes-combo-chips)
-  await page.getByRole('button', { name: /Sandwich/ }).first().click();
+  await page.getByRole('button', { name: /^Sandwich/ }).first().click(); // by its title: the Lunch box row names Sandwich as a part
   await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await unfoldAll(page);

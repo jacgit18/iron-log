@@ -1,5 +1,6 @@
 import type { Recipe } from '../types.ts';
 import { inTab, type RecipeTab, RECIPE_TABS } from './recipeList.js';
+import { inSection, sectionsOf, type FoodSection } from './foodSections.js';
 import { sortByName } from './sort.js';
 
 /* ---------- Combos (brief recipes-combo-chips): a meal made only from your other items ("Cereal with Milk" from Cereal and Milk) shows as a chip on each part's row in Mine, not as a third row. Worked out from the data, never stored; every function here only reads. ---------- */
@@ -81,4 +82,20 @@ export function comboTabCounts(matched: readonly Recipe[], all: readonly Recipe[
   const n = {} as Record<RecipeTab, number>;
   for (const t of RECIPE_TABS) n[t.key] = mineRows(matched, all, t.key).rows.length;
   return n;
+}
+
+/** The rows a Foods section shows (brief foods-made-and-store-bought): exactly your matching items that belong in it, so a pill's count is its rows. In Meals the combos are rows;
+ *  in the other sections each combo (a meal with no steps made only from your items) is also a chip on the part rows shown there. A chip never hides a row. */
+export function sectionRows(matched: readonly Recipe[], all: readonly Recipe[], section: FoodSection): MineRows {
+  const rows = matched.filter(r => inSection(r, section));
+  const chips = new Map<string, ComboChip[]>();
+  if (section === 'meals' || section === 'library') return { rows, chips };
+  const combo = comboIds(all);
+  const shown = new Set(rows.map(r => r.id));
+  for (const c of sortByName(all.filter(r => combo.has(r.id) && sectionsOf(r).includes('meals')), r => r.n, r => r.id)) {
+    for (const p of comboParts(c, all, combo)) {
+      if (shown.has(p.id)) chips.set(p.id, [...(chips.get(p.id) ?? []), { id: c.id, label: chipLabel(p, c), name: c.n }]);
+    }
+  }
+  return { rows, chips };
 }

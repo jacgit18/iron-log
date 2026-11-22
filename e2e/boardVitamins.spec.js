@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
+import { openSection } from './recipesNav.js';
 import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
 // Brief recipe-auto-nutrition, PR 2 (display): the vitamins line on a planned card and an eaten row, the top five when opened, the Estimated mark, the folded bars on a recipe's own page and the estimated share in the day line and Totals.
@@ -104,9 +105,11 @@ test.describe('recipe page', () => {
     await page.locator('.rmi-toggle').click();
     await expect(page.locator('.rmi-panel .note')).toContainText('Estimated: worked out from 3 of 4 ingredients');
     await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await openSection(page, 'ready'); // a ready-made food is under Store-bought
     await page.getByRole('button', { name: /Protein bar/ }).first().click();
     await expect(page.locator('.rmi-toggle')).toHaveText('Vitamins and minerals: 6 listed');
     await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await openSection(page, 'recipes');
     await page.getByRole('button', { name: /Dry toast/ }).first().click();
     await expect(page.locator('.rmi')).toHaveCount(0);
   });

@@ -20,7 +20,7 @@ test('old saved meals appear in Recipes and Quick add once, with their saved num
   await expect(list.getByRole('button', { name: 'Post-workout · 1 food · 240 kcal' })).toBeVisible();
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.locator('#recipes-tab-meals').click();
+  await page.locator('#recipes-sec-meals').click();
   await expect(page.locator('.rc-row', { hasText: 'Usual breakfast' })).toHaveCount(1);
   await expect(page.locator('.rc-row', { hasText: 'Post-workout' })).toHaveCount(1);
 });
@@ -38,7 +38,7 @@ test('with 300 recipes a saved meal that cannot move stays listed with a note to
   await expect(sheet.getByText(/make room in Recipes/)).toBeVisible();
   await closeSheet(page);
   await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.locator('#recipes-tab-meals').click();
+  await page.locator('#recipes-sec-meals').click();
   await expect(page.locator('.rc-row', { hasText: 'Usual breakfast' })).toHaveCount(0);
 });
 

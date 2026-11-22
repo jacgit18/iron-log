@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openSection } from './recipesNav.js';
 
 // Recipes on a desktop, the list half (brief recipes-desktop-layouts, 2b): one list column beside the pane at 1280 px and two at 1920, after Save landing on the list with the recipe open,
 // the view kept while another Daily section is open, and the signed-out Library prompt. Column positions cannot be seen by a node test; the kept-state rules are in recipesViewState.test.ts.
@@ -48,16 +49,17 @@ test('after Save on a phone the recipe\'s page opens', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 2 })).toContainText('Beef stew deluxe');
 });
 
-test('the search, type tab and open recipe are kept while Groceries is open, and a reload clears them', async ({ page }) => {
+test('the search, section and open recipe are kept while Groceries is open, and a reload clears them', async ({ page }) => {
   await open(page, { width: 1280, height: 800 });
   await page.getByLabel('Search recipes').fill('bowl');
-  await page.click('#recipes-tab-meals');
-  await page.click('#recipes-tab-all');
+  await page.click('#recipes-sec-meals');
+  await page.click('#recipes-sec-recipes');
   await page.locator('.rc-row', { hasText: 'Rice bowl' }).click();
   await page.click('#daily-grocery');
   await expect(page.locator('#recipes-h')).toHaveCount(0);
   await page.click('#daily-recipes');
   await expect(page.getByLabel('Search recipes')).toHaveValue('bowl');
+  await expect(page.locator('#recipes-sec-recipes')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.rc-item')).toHaveCount(2);
   await expect(page.locator('.rc-item.current')).toContainText('Rice bowl');
   await expect(pane(page).getByRole('heading', { level: 2 })).toContainText('Rice bowl');
@@ -69,12 +71,12 @@ test('the search, type tab and open recipe are kept while Groceries is open, and
 
 test('the Library signed out shows one Sign in prompt in the library box, and your own search and filters stay', async ({ page }) => {
   await open(page, { width: 1280, height: 800 });
-  await page.click('#recipes-library');
+  await openSection(page, 'library');
   await expect(page.locator('#recipes-library-signin')).toContainText('Sign in to browse the recipe library.');
   await expect(page.locator('#recipes-library-signin').getByRole('button', { name: 'Sign in' })).toBeVisible();
   await expect(page.locator('#recipes-library-box #recipes-library-signin')).toBeVisible();
   await expect(page.getByLabel('Search recipes')).toBeVisible(); // one search for both lists, so it stays
-  await page.click('#recipes-mine');
+  await openSection(page, 'recipes');
   await expect(page.locator('#recipes-library-box')).toHaveCount(0);
   await expect(page.getByLabel('Search recipes')).toBeVisible();
 });

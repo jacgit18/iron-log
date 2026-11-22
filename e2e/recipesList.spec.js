@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { openSection } from './recipesNav.js';
 
 // The compact Recipes list (brief recipes-list-compact): where the first row starts, the Recent pill, the one right-hand slot and the two columns.
 // Positions and the slot cannot be seen by a node test; what the Recent pill lists and which rows are loggable are node tests (recipeRows.test.ts).
@@ -33,19 +34,20 @@ test('the Recent pill lists the favourites and recent recipes, and a row in it o
   await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'false');
   await page.click('#recipes-recent');
   await expect(page.locator('.rc-item')).toHaveCount(1); // Lentil soup is starred; nothing was logged or opened yet
-  await expect(page.locator('#recipes-tab-all')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#recipes-sec-recipes')).toHaveAttribute('aria-pressed', 'false'); // Recent takes over from the section pill
   await page.locator('.rc-row', { hasText: 'Lentil soup' }).click();
   await expect(page.getByRole('heading', { name: /Lentil soup/ })).toBeVisible();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.click('#recipes-recent');
-  await page.locator('#recipes-tab-meals').click();
-  await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'false'); // a type pill takes over from Recent
+  await page.locator('#recipes-sec-recipes').click();
+  await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'false'); // a section pill takes over from Recent
   expect(await page.locator('.rc-item').count()).toBeGreaterThan(1);
 });
 
 test('every row has its action at the same right edge: Log, or an arrow', async ({ page }) => {
   await open(page, { width: 375, height: 812 });
   const log = await page.locator('.rc-item', { hasText: 'Lentil soup' }).locator('.rc-log').boundingBox();
+  await openSection(page, 'ingredients'); // Eggs is an ingredient, listed there
   const go = await page.locator('.rc-item', { hasText: 'Eggs' }).locator('.rc-go').boundingBox();
   expect(log).not.toBeNull();
   expect(go).not.toBeNull();

@@ -9,9 +9,9 @@ describe('recipesViewState', () => {
   });
   it('keeps what was set, one field at a time, until reset', () => {
     setRecipesViewState('q', 'soup');
-    setRecipesViewState('tab', 'meals');
+    setRecipesViewState('recent', true);
     setRecipesViewState('tagSel', ['quick']);
-    expect(getRecipesViewState()).toMatchObject({ q: 'soup', tab: 'meals', tagSel: ['quick'], src: 'all' });
+    expect(getRecipesViewState()).toMatchObject({ q: 'soup', recent: true, tagSel: ['quick'], sec: null });
     resetRecipesViewState();
     expect(getRecipesViewState()).toEqual(INITIAL_VIEW_STATE);
   });
@@ -25,20 +25,13 @@ describe('recipesViewState', () => {
     setRecipesViewState('canMake', false);
     expect(fn).toHaveBeenCalledTimes(1);
   });
-  it('showSavedRecipe opens the recipe under All and clears whatever could hide it', () => {
+  it('showSavedRecipe opens the recipe and clears whatever could hide it', () => {
     setRecipesViewState('q', 'xyz');
-    setRecipesViewState('tab', 'drinks');
     setRecipesViewState('recent', true);
     setRecipesViewState('canMake', true);
     setRecipesViewState('nutSel', ['protein']);
-    setRecipesViewState('src', 'library');
     showSavedRecipe('r1');
     expect(getRecipesViewState()).toEqual({ ...INITIAL_VIEW_STATE, selId: 'r1' });
-  });
-  it('keeps the All / Mine / Library filter, starting at All', () => {
-    expect(getRecipesViewState().src).toBe('all');
-    setRecipesViewState('src', 'library');
-    expect(getRecipesViewState().src).toBe('library');
   });
   it('keeps the section last used this visit, starting with none', () => {
     expect(getRecipesViewState().sec).toBeNull();
