@@ -142,6 +142,24 @@ test('rename a tag (and merge into one that exists), then delete one after a con
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['meal prep']);
 });
 
+test('Remove tag has an Undo that puts the tag back on the same recipes', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight']);
+  await make(page, 'Tacos', 'Protein', ['weeknight']);
+  await page.getByRole('button', { name: 'Manage filters' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Manage filters' });
+  await sheet.getByRole('button', { name: 'Delete tag weeknight' }).click();
+  await sheet.getByRole('button', { name: 'Remove tag' }).click();
+  await expect(sheet.getByText('Removed weeknight from 2 recipes.')).toBeVisible();
+  await expect(sheet.getByText('weeknight · 2 recipes')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Undo' }).click();
+  await expect(sheet.getByText('Put weeknight back on 2 recipes.')).toBeVisible();
+  await expect(sheet.getByText('weeknight · 2 recipes')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toHaveCount(0); // one Undo per removal
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['weeknight']);
+});
+
 test('Manage filters has no accessibility violations and fits a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 700 });
   await openRecipes(page);

@@ -4,6 +4,7 @@ import { MAX_TAG, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.js';
 import Sheet from '../Sheet.jsx';
+import type { Recipe } from '../../types.ts';
 import './RecipeFilters.css';
 
 // Manage filters (brief recipe-filter-editing): hide and reorder the built-in category chips, and rename or delete your own tags.
@@ -16,6 +17,7 @@ export default function RecipeFilters() {
   const [asking, setAsking] = useState<string | null>(null); // the tag whose delete is waiting for a yes
   const [err, setErr] = useState('');
   const [note, setNote] = useState('');
+  const [undo, setUndo] = useState<{ tag: string; before: readonly Recipe[] } | null>(null); // the last removed tag, until another change or the sheet closes
   const st = useAppStore.getState();
   const toDone = () => setTimeout(() => document.getElementById('rcf-done')?.focus(), 0); // the row that held focus is replaced: focus moves to Done, not to the page
   const order = chipOrder(chips), hidden = chips?.hide ?? [], counts = tagCounts(recipes);
@@ -24,11 +26,16 @@ export default function RecipeFilters() {
     if (editing === null) return;
     const r = st.renameTag(editing, name);
     if (r.error) { setErr(r.error); return; }
-    setNote(`Renamed to ${r.name}.`); setEditing(null); setErr(''); toDone();
+    setNote(`Renamed to ${r.name}.`); setUndo(null); setEditing(null); setErr(''); toDone();
   };
   const remove = (tag: string) => {
-    const n = st.removeTag(tag);
-    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setAsking(null); toDone();
+    const before = st.recipes, n = st.removeTag(tag);
+    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setUndo(n ? { tag, before } : null); setAsking(null); toDone();
+  };
+  const undoRemove = () => {
+    if (!undo) return;
+    const n = st.restoreTag(undo.before, undo.tag);
+    setNote(n ? `Put ${undo.tag} back on ${n} recipe${n === 1 ? '' : 's'}.` : `${undo.tag} could not be put back.`); setUndo(null); toDone();
   };
 
   return (
@@ -71,7 +78,7 @@ export default function RecipeFilters() {
             ) : (
               <>
                 <span className="rcf-name">{tag}<span className="rcf-state"> · {n} recipe{n === 1 ? '' : 's'}</span></span>
-                <button type="button" className="btn sm" aria-label={`Rename ${tag}`} onClick={() => { setEditing(tag); setName(tag); setAsking(null); setErr(''); setNote(''); }}>Rename</button>
+                <button type="button" className="btn sm" aria-label={`Rename ${tag}`} onClick={() => { setEditing(tag); setName(tag); setAsking(null); setErr(''); setNote(''); setUndo(null); }}>Rename</button>
                 <button type="button" className="btn sm" aria-label={`Delete tag ${tag}`} onClick={() => { setAsking(tag); setEditing(null); setNote(''); }}>Delete tag</button>
               </>
             )}
@@ -79,7 +86,7 @@ export default function RecipeFilters() {
         ))}
       </ul>
       {err && <p className="note gerr" role="alert">{err}</p>}
-      <p className="note" role="status">{note}</p>
+      <p className="note" role="status">{note}{undo && <button type="button" className="btn sm rcf-undo" onClick={undoRemove}>Undo</button>}</p>
       <div className="actions">
         <button type="button" id="rcf-done" className="btn primary" onClick={st.closeModal}>Done</button>
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { chipOrder, cleanTag, hasTags, liveTags, moveChip, removeTag, renameTag, starterTags, tagCounts, tagLimitError, toggleChip, visibleChips } from './recipeTags.js';
+import { chipOrder, cleanTag, hasTags, liveTags, moveChip, removeTag, renameTag, restoreTag, starterTags, tagCounts, tagLimitError, toggleChip, visibleChips } from './recipeTags.js';
 import { RECIPE_CATEGORIES } from '../shared/recipes.js';
 
 const r = (id: string, tags?: string[]): Recipe => ({ id, n: id, cat: 'other', ing: [{ n: 'x' }], steps: [], ...(tags ? { tags } : {}) });
@@ -52,6 +52,29 @@ describe('renameTag and removeTag', () => {
     expect(out.list).toHaveLength(4);
     expect(out.list.map(x => x.tags)).toEqual([['meal prep'], undefined, ['dinner'], undefined]);
     expect('tags' in out.list[1]!).toBe(false);
+  });
+});
+
+describe('restoreTag: Undo of removeTag', () => {
+  const list = [r('a', ['Weeknight', 'meal prep']), r('b', ['weeknight']), r('c', ['dinner']), r('d')];
+  const gone = removeTag(list, 'WEEKNIGHT').list;
+  it('puts the tag back with the old tags in the old order, and counts the recipes', () => {
+    const out = restoreTag(gone, list, 'weeknight');
+    expect(out.changed).toBe(2);
+    expect(out.list.map(x => x.tags)).toEqual([['Weeknight', 'meal prep'], ['weeknight'], ['dinner'], undefined]);
+  });
+  it('a recipe edited since gets the tag added to its current tags; one with no room stays as it is', () => {
+    const edited = gone.map(x => (x.id === 'a' ? { ...x, tags: ['meal prep', 'lunch'] } : x));
+    expect(restoreTag(edited, list, 'weeknight').list[0]!.tags).toEqual(['meal prep', 'lunch', 'Weeknight']);
+    const full = gone.map(x => (x.id === 'a' ? { ...x, tags: Array.from({ length: 8 }, (_, i) => `t${i}`) } : x));
+    const out = restoreTag(full, list, 'weeknight');
+    expect(out.list[0]!.tags).toHaveLength(8);
+    expect(out.changed).toBe(1);
+  });
+  it('a recipe that is gone stays gone, one that already has the tag is left alone, and nothing to restore changes nothing', () => {
+    expect(restoreTag(gone.filter(x => x.id !== 'b'), list, 'weeknight').list).toHaveLength(3);
+    expect(restoreTag(list, list, 'weeknight').changed).toBe(0);
+    expect(restoreTag(gone, list, 'nothing').changed).toBe(0);
   });
 });
 

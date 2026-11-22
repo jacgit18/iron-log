@@ -1,4 +1,4 @@
-import { MAX_TAG, MAX_TAGS, RECIPE_CATEGORIES, normTags } from '../shared/recipes.js';
+import { MAX_TAG, MAX_TAGS, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, normTags } from '../shared/recipes.js';
 import type { Recipe, RecipeCategory, RecipeChips } from '../types.ts';
 import { byName } from './sort.js';
 
@@ -78,7 +78,25 @@ export function removeTag(list: readonly Recipe[], tag: string): { list: Recipe[
   return { list: out, changed };
 }
 
-/* ---------- The built-in chips: hide and reorder ---------- */
+/** Undo for `removeTag`: puts `tag` back on the recipes that had it in `before` (the list as it was just ahead of the removal). A recipe whose tags are still what the removal left gets its old tags back in the old order; one edited since gets the tag added to its current tags when there is room. A recipe that is gone stays gone, and one that already has the tag is left alone. */
+export function restoreTag(list: readonly Recipe[], before: readonly Recipe[], tag: string): { list: Recipe[]; changed: number } {
+  const had = new Map(before.filter(r => (r.tags ?? []).some(t => tagKey(t) === tagKey(tag))).map(r => [r.id, r.tags ?? []]));
+  let changed = 0;
+  const out = list.map(r => {
+    const old = had.get(r.id);
+    if (!old || (r.tags ?? []).some(t => tagKey(t) === tagKey(tag))) return r;
+    const left = old.filter(t => tagKey(t) !== tagKey(tag)), now = r.tags ?? [];
+    const untouched = left.length === now.length && left.every((t, i) => t === now[i]);
+    const back = old.find(t => tagKey(t) === tagKey(tag))!;
+    const tags = untouched ? [...old] : now.length < MAX_TAGS_PER_RECIPE ? [...now, back] : null;
+    if (!tags) return r;
+    changed++;
+    return { ...r, tags };
+  });
+  return { list: out, changed };
+}
+
+/* ---------- The built-in chips: hide and reorder ----------
 
 /** Every category in the order the chips show: the saved order first, then any left in the built-in order. */
 export function chipOrder(chips: RecipeChips | undefined): RecipeCategory[] {
