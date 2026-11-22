@@ -12,7 +12,7 @@ const make = async (page, name, cat, ingredient = 'salt') => {
   await page.getByLabel('Category').selectOption({ label: cat });
   await page.getByLabel('Ingredient 1', { exact: true }).fill(ingredient);
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
 };
 const noViolations = async page => {
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
@@ -77,7 +77,7 @@ test('with no sauces the picker says so; on a phone it fits the screen and has n
   await page.getByLabel('Name', { exact: true }).fill('Aioli');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('egg');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await startRecipe(page);
   await page.getByRole('button', { name: '+ Sauce or seasoning' }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -101,9 +101,9 @@ test('opening a linked sauce adds a Back step: Back returns to the recipe, then 
   await expect(page.getByRole('heading', { name: 'Fries' })).toBeVisible();
   await page.getByRole('button', { name: 'Open Aioli, sauce' }).click();
   await expect(page.getByRole('heading', { name: 'Aioli' })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click(); // the page's own Back goes up one screen too
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); // the page's own Back goes up one screen too
   await expect(page.getByRole('heading', { name: 'Fries' })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await newMenuVisible(page);
 });
 

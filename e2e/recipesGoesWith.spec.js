@@ -13,7 +13,7 @@ const seed = async page => {
 };
 const open = (page, name) => page.locator('.rc-row', { hasText: name }).first().click();
 const goes = page => page.getByRole('region', { name: 'Goes with' });
-const back = async page => { const b = page.getByRole('button', { name: 'Back to recipes' }); if (await b.isVisible()) await b.click(); };
+const back = async page => { const b = page.getByRole('button', { name: 'Back', exact: true }); if (await b.isVisible()) await b.click(); };
 
 test('pairing is saved on both recipes, shown from either, and Remove takes it off both', async ({ page }) => {
   await seed(page);

@@ -68,7 +68,7 @@ export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, 
       {portion && (
         <div className="pf-portion">
           <div className="pf-step" role="group" aria-label="Portions eaten">
-            <button type="button" className="btn" id={`${idp}-px-less`} aria-label="Fewer portions" disabled={x <= 0.5} onClick={() => setX(stepPortionCount(x, -1, max))}><Icon name="minus" /></button>
+            <button type="button" className="btn" id={`${idp}-px-less`} aria-label="Less portions" disabled={x <= 0.5} onClick={() => setX(stepPortionCount(x, -1, max))}><Icon name="minus" /></button>
             <output id={`${idp}-px`} className="pf-x" aria-live="polite">{fmtNum(x)}</output>
             <button type="button" className="btn" id={`${idp}-px-more`} aria-label="More portions" disabled={x >= max} onClick={() => setX(stepPortionCount(x, 1, max))}><Icon name="plus" /></button>
           </div>

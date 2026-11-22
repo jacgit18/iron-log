@@ -39,19 +39,19 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
     await row(page, 'Pancakes').locator('.rc-row').click();
     await expect(page.locator('.rc-strip')).toContainText('300 kcal');
     await expect(page.getByText('Estimated from the ingredients. 1 of 2 counted, so these are at least. About 4 servings, estimated.')).toBeVisible();
-    await page.getByRole('button', { name: 'Back to recipes' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await row(page, 'Porridge').locator('.rc-row').click();
     await expect(page.getByText('Estimated from the ingredients. All 2 counted.')).toBeVisible();
-    await page.getByRole('button', { name: 'Back to recipes' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await row(page, 'Plain toast').locator('.rc-row').click();
     await expect(page.getByText(/No nutrition yet/)).toBeVisible();
     await expect(page.getByText(/Estimated from the ingredients/)).toHaveCount(0);
   });
 }
 
-test('+ Add to mine carries the numbers and the mark; a servings change rescales; a typed number clears the mark', async ({ page }) => {
+test('Add to Mine carries the numbers and the mark; a servings change rescales; a typed number clears the mark', async ({ page }) => {
   await openBox(page);
-  await row(page, 'Pancakes').getByRole('button', { name: /Add to mine/ }).click();
+  await row(page, 'Pancakes').getByRole('button', { name: /Add to Mine/ }).click();
   await page.locator('#recipes-mine').click();
   const mine = page.locator('.rc-merged > .rc-list .rc-item', { hasText: 'Pancakes' });
   await expect(mine.locator('.rc-badge')).toContainText('300 kcal');

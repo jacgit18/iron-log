@@ -103,10 +103,10 @@ test.describe('recipe page', () => {
     await openRecipePage(page, 'Oat bowl');
     await page.locator('.rmi-toggle').click();
     await expect(page.locator('.rmi-panel .note')).toContainText('Estimated: worked out from 3 of 4 ingredients');
-    await page.getByRole('button', { name: 'Back to recipes' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await page.getByRole('button', { name: /Protein bar/ }).first().click();
     await expect(page.locator('.rmi-toggle')).toHaveText('Vitamins and minerals: 6 listed');
-    await page.getByRole('button', { name: 'Back to recipes' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await page.getByRole('button', { name: /Dry toast/ }).first().click();
     await expect(page.locator('.rmi')).toHaveCount(0);
   });

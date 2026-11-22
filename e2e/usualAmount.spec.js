@@ -20,7 +20,7 @@ const amountIn = loc => loc.getByRole('status').filter({ hasText: /^[0-9.]+ [a-z
 const amount = page => amountIn(page.getByRole('dialog')); // the portion sheet Plan… opens
 const plan = page => page.getByRole('button', { name: 'Plan…' }).click();
 
-test('The recipe page and the portion sheet use the usual amount in the unit name, and Add to today logs it in those words', async ({ page }) => {
+test('The recipe page and the portion sheet use the usual amount in the unit name, and the Log button logs it in those words', async ({ page }) => {
   await make(page, 'Egg (large)', { usual: '4', unit: 'egg' });
   await expect(page.locator('.rc-strip')).toContainText('Usual 4 eggs');
   await plan(page);
@@ -30,7 +30,7 @@ test('The recipe page and the portion sheet use the usual amount in the unit nam
   await expect(amount(page)).toHaveText('4.5 eggs');
   await page.getByRole('dialog').getByRole('button', { name: 'Less' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged Egg (large), 4 eggs, for today.')).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByText(/Logged .+, 4 eggs/)).toHaveCount(0);

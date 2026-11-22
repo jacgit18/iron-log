@@ -95,7 +95,7 @@ test('Cook for changes the amounts shown and saves nothing', async ({ page }) =>
   await page.getByRole('button', { name: 'Reset to 4' }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
   await page.getByRole('button', { name: 'More servings' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.locator('.rc-row', { hasText: /Pancakes/ }).click();
   await expect(page.getByText('2 cups flour')).toBeVisible();
   await page.getByRole('button', { name: 'More actions' }).click();

@@ -21,7 +21,7 @@ export default function FoodTypeReview({ onDone, onBack }: { onDone: (undo: () =
   };
   return (
     <section className="panel" aria-labelledby="ftr-h">
-      <button type="button" className="btn ghost" onClick={onBack}>Back to recipes</button>
+      <button type="button" className="btn ghost" onClick={onBack}>Back</button>
       <h2 id="ftr-h" tabIndex={-1}>Review types</h2>
       <p className="note">We picked what each food is used as from its name. Change any that are wrong, then press Looks right.</p>
       {!foods.length && <p className="note" role="status">Every food has a type.</p>}

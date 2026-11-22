@@ -5,7 +5,7 @@ import { amountText, usualStart } from './foodUnit.js';
 import { runInstantLog, type AddEntry } from './instantLog.js';
 import { macroLine, macroWords, type MacroParts } from './macroLine.js';
 
-/* ---------- The recipe page's summary strip and "Add to today" (brief recipe-page-after-log). Pure: the page passes in what it read and keeps only state and markup. ---------- */
+/* ---------- The recipe page's summary strip and "Log" (brief recipe-page-after-log). Pure: the page passes in what it read and keeps only state and markup. ---------- */
 
 type Basis = Pick<Recipe, 'id' | 'n' | 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f' | 'usual' | 'unit' | 'plural' | 'micro' | 'est'>;
 
@@ -41,7 +41,7 @@ function perCell(m: MacroParts): StripCell | null {
 }
 
 /** The boxes the page shows, left to right. Per serving (a meal built from parts uses its rolled-up numbers), or "No numbers yet" for a recipe of yours with none; "N of M at home" over "N missing" (left out with no ingredients or no inventory items);
- *  "Last eaten <day>" over "Usual <amount>", or "Not eaten yet" (with the usual when one is saved), for a recipe in Mine only. The usual shown is what Add to today logs. */
+ *  "Last eaten <day>" over "Usual <amount>", or "Not eaten yet" (with the usual when one is saved), for a recipe in Mine only. The usual shown is what Log logs. */
 export function summaryCells(o: { recipe: Basis; rolled: MacroParts | null; mine: boolean; have: number; total: number; inventoryItems: number; diet: readonly DietEntry[]; today: string }): StripCell[] {
   const cells: StripCell[] = [];
   const per = perCell(o.rolled ?? o.recipe);
@@ -58,7 +58,7 @@ export function summaryCells(o: { recipe: Basis; rolled: MacroParts | null; mine
   return cells;
 }
 
-/** What the first action reads: `add` (Add to today), `added` (until Undo or leaving the page), `needs-numbers` (Add them: no calories and protein to log), `to-mine` (a library recipe: Add to Mine). */
+/** What the first action reads: `add` (Log), `added` (until Undo or leaving the page), `needs-numbers` (Add them: no calories and protein to log), `to-mine` (a library recipe: Add to Mine). */
 export type AddState = 'add' | 'added' | 'needs-numbers' | 'to-mine';
 export function addState(o: { mine: boolean; recipe: Pick<Recipe, 'kcal' | 'p'>; added: boolean }): AddState {
   if (!o.mine) return 'to-mine';
@@ -73,7 +73,7 @@ export function wholePackFor(o: { mine: boolean; recipe: Pick<Recipe, 'cat' | 's
   return pack !== null && pack <= ateMax(o.recipe) ? pack : null;
 }
 
-/** Whether the entry "Add to today" made is still in the log: the page reads "Added" only while it is, so a delete elsewhere (the Nutrition board) brings "Add to today" back. */
+/** Whether the entry "Log" made is still in the log: the page reads "Added" only while it is, so a delete elsewhere (the Nutrition board) brings "Log" back. */
 export const stillAdded = (diet: readonly Pick<DietEntry, 'id'>[], id: string | null): string | null => (id !== null && diet.some(e => e.id === id) ? id : null);
 
 /** The day "Plan…" opens on. */

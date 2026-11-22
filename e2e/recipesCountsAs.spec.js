@@ -7,7 +7,7 @@ import { startFood, startRecipe, unfoldAll } from './recipesNav.js';
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const counts = page => page.getByRole('group', { name: 'Counts as' });
 const on = async (page, name, state = 'true') => expect(counts(page).getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', state);
-const back = async page => { const b = page.getByRole('button', { name: 'Back to recipes' }); if (await b.isVisible()) await b.click(); };
+const back = async page => { const b = page.getByRole('button', { name: 'Back', exact: true }); if (await b.isVisible()) await b.click(); };
 
 test('the chips start on the category, a pressed choice is saved, and Back to automatic returns', async ({ page }) => {
   await open(page);

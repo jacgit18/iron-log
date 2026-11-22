@@ -35,7 +35,7 @@ test('with nothing to pick the sheet says so and points at Manage in the header 
   await expect(sheet.getByRole('button', { name: 'Manage', exact: true })).toHaveCount(0);
 });
 
-test('unticking an "Also taken" supplement takes it off the day', async ({ page }) => {
+test('unticking an "Also took" supplement takes it off the day', async ({ page }) => {
   await seedSupps(page, [{ id: 'magnesium', n: 'Magnesium', slot: '', dose: '400 mg' }]);
   await openNutrition(page);
   await todayCol(page).getByRole('button', { name: /^Also took/ }).click();
