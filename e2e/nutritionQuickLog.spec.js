@@ -59,7 +59,7 @@ test('the sheet logs a past day and offers a future day as a plan (the plan itse
 test('Recipes rows have Log, and the food page has Log and no Ate this', async ({ page }) => {
   await make(page);
   await expect(page.getByRole('button', { name: 'Ate this' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(0); // the page has no Log form
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(1); // the page's one-tap Log, and no second Log that opens a form
   await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged Boiled egg, 3 eggs, for today.')).toBeVisible();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
