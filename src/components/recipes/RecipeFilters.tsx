@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { chipOrder, moveChip, tagCounts, toggleChip } from '../../lib/recipeTags.js';
 import { MAX_TAG, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import Icon from '../Icon.js';
 import Sheet from '../Sheet.jsx';
 import './RecipeFilters.css';
 
@@ -41,8 +42,8 @@ export default function RecipeFilters() {
           return (
             <li key={c} className={off ? 'off' : ''}>
               <span className="rcf-name">{label}{off && <span className="rcf-state"> (hidden)</span>}</span>
-              <button type="button" className="btn sm" aria-label={`Move up ${label}`} disabled={i === 0} onClick={() => st.setRecipeChips(moveChip(chips, c, -1))}>Move up</button>
-              <button type="button" className="btn sm" aria-label={`Move down ${label}`} disabled={i === order.length - 1} onClick={() => st.setRecipeChips(moveChip(chips, c, 1))}>Move down</button>
+              <button type="button" className="btn sm rcf-mv" aria-label={`Move up ${label}`} disabled={i === 0} onClick={() => st.setRecipeChips(moveChip(chips, c, -1))}><Icon name="chevron-up" /></button>
+              <button type="button" className="btn sm rcf-mv" aria-label={`Move down ${label}`} disabled={i === order.length - 1} onClick={() => st.setRecipeChips(moveChip(chips, c, 1))}><Icon name="chevron-down" /></button>
               <button type="button" className="btn sm" aria-label={`${off ? 'Show' : 'Hide'} ${label}`} aria-pressed={off} onClick={() => st.setRecipeChips(toggleChip(chips, c))}>{off ? 'Show' : 'Hide'}</button>
             </li>
           );

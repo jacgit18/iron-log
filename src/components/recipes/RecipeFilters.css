@@ -17,6 +17,10 @@
 .rcf-list li.off .rcf-name {
   opacity: 0.6;
 }
+.rcf-mv {
+  min-width: 44px;
+  padding-inline: 0;
+}
 .rcf-name {
   flex: 1 1 8rem;
   min-width: 0;
