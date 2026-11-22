@@ -71,10 +71,10 @@ test('the toolbar names its day, starts on today and follows the day you tap; an
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Recipes' })).toBeVisible();
   await closeSheet(page);
   await col(page, '2026-09-24').getByRole('button', { name: /^Thu 24/ }).click();
-  await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible(); // back on today: log shortcuts
+  await expect(bar.getByRole('button', { name: 'Scan and log', exact: true })).toBeVisible(); // back on today: the log shortcut
   await page.getByRole('button', { name: 'Previous week', exact: true }).click();
   await expect(page.locator('#nb-add')).toBeVisible(); // an earlier day logs eaten food on that date (brief nutrition-any-day-add)
-  await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Scan and log', exact: true })).toBeVisible();
   await expect(page.locator('.nb-toolbar')).not.toContainText('read-only');
 });
 
