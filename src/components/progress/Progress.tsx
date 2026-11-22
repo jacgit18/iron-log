@@ -5,15 +5,15 @@ import { useAppStore } from '../../store/useAppStore.js';
 import EmptyState from '../EmptyState.jsx';
 import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
-import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
+import { PHASES, exInfo } from '../../lib/data.js';
+import { fmtShort } from '../../shared/dates.js';
 import { newestFirst } from '../../lib/exerciseOrder.js';
 import { DEFAULT_LIFT_SORT, LIFT_SORTS, sortLiftIds } from '../../lib/liftSort.js';
 import { useSortChoice } from '../useSortChoice.js';
 import SortControl from '../SortControl.jsx';
 import { describe, stallOf, backoffOf } from '../../lib/logic.js';
-import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
-import { avgPerTrainingDay } from '../../lib/freqGoal.js';
+import { WEEK_GOAL_DAYS } from '../../lib/trends.js';
+import { historyRows } from '../../lib/historyRows.js';
 import FreqGoals from './FreqGoals.jsx';
 import GoalsPanel from './GoalsPanel.jsx';
 import Trends from './Trends.jsx';
@@ -32,35 +32,32 @@ import './Progress.css';
 
 function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => void }) {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
-  const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
+  const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading); const failed = useAppStore(s => s.historyFailed);
   const week = useAppStore(s => s.week); const wk = useAppStore(s => s.weekKey());
   const today = useToday(s => s.today);
   if (!weekHist && loading) return <section className="panel"><h2>Weekly history</h2><p>Loading…</p></section>;
 
-  const weeks = { ...(weekHist || {}), [wk]: week }; // live view of the shown week
-  const thisSun = ymd(weekStartOf(today));
-  const active = Object.keys(weeks).filter(k => WEEK_RE.test(k) && k <= thisSun && weekSummary(cfg, programs, k, weeks[k]).ex > 0).sort();
-  const keys = [];
-  if (active.length) { let d = parseDate(thisSun); const first = parseDate(active[0]); while (d >= first && keys.length < maxWeeks) { keys.push(ymd(d)); d = addDays(d, -7); } }
-  else keys.push(thisSun);
-  const rows = keys.map(k => weekSummary(cfg, programs, k, weeks[k] || { done: {}, moved: {} }));
-  const past = rows.filter(r => r.key !== thisSun);
-  const met = past.filter(r => r.full >= WEEK_GOAL_DAYS).length;
-  const perDay = avgPerTrainingDay(past);
-  const mean = past.length ? (past.reduce((a, r) => a + r.full, 0) / past.length).toFixed(1) : null;
+  const { rows, summary, note } = historyRows(cfg, programs, weekHist, week, wk, today, maxWeeks, failed);
 
   return (
     <section className="panel hist-panel">
       <div className="inline spread">
         <h2>Weekly history</h2>
-        {mean && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {met} of {past.length} past week{past.length > 1 ? 's' : ''} · average {mean} days{perDay != null && <> · {perDay.toFixed(1)} exercises per training day</>}</span>}
+        {summary && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {summary.met} of {summary.pastCount} past week{summary.pastCount > 1 ? 's' : ''} · average {summary.mean} days{summary.perDay != null && <> · {summary.perDay.toFixed(1)} exercises per training day</>}</span>}
       </div>
+      {note && <p className="note">{note}</p>}
       <div className="weeks">
-        {rows.map(r => (
+        {rows.map(r => r.unread ? (
+          <div className="wkrow unread" key={r.key}>
+            <span className="wkdate">{fmtShort(r.start)}{r.isNow && <> <small>this week</small></>}</span>
+            <span aria-hidden="true" />
+            <span className="wkread" role="img" aria-label={r.label}><span aria-hidden="true">–</span> not read</span>
+          </div>
+        ) : (
           <div className="wkrow" key={r.key}>
-            <span className="wkdate">{fmtShort(r.start)}{r.key === thisSun && <> <small>this week</small></>}</span>
+            <span className="wkdate">{fmtShort(r.start)}{r.isNow && <> <small>this week</small></>}</span>
             <span className="pill">{r.pk}</span>
-            <span className="cells" role="img" aria-label={`${r.full} of ${DAY_COUNT} days complete: ${r.days.map((x, i) => `day ${i + 1} ${x === 2 ? 'complete' : x === 1 ? 'partly done' : 'not started'}`).join(', ')}`}>
+            <span className="cells" role="img" aria-label={r.label}>
               {r.days.map((x, i) => <i key={i} className={`c${x}`} />)}
             </span>
             <span className="wknum"><b>{r.full}</b>/{WEEK_GOAL_DAYS} days{r.full >= WEEK_GOAL_DAYS ? ' · goal met' : ''} · {r.ex}/{r.total}</span>

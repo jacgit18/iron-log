@@ -76,6 +76,10 @@
 .wknum b {
   color: var(--ink);
 }
+.wkread {
+  grid-column: 3/-1;
+  color: var(--muted);
+}
 /* Progress */
 .plist {
   display: grid;
