@@ -53,7 +53,7 @@ test('the recipe form starts the chips from the category, keeps a pressed choice
   await page.getByLabel('Name', { exact: true }).fill('Plain pasta');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('pasta');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  const back = page.getByRole('button', { name: 'Back to recipes' });
+  const back = page.getByRole('button', { name: 'Back', exact: true });
   if (await back.isVisible()) await back.click();
   await page.click('#recipes-tab-ingredients');
   expect(await titles(page)).not.toContain('Plain pasta');

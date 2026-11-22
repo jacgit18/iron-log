@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 import { startRecipe } from './recipesNav.js';
 
 // Recipes as one list (brief recipes-mine-library-merge). The grouping, the counts and the box rules are node tests (src/lib/recipeMerged.test.ts);
-// this covers the wiring: the folded box and its request count, the box under your rows, + Add to mine with Undo, the filter, and the signed-out line.
+// this covers the wiring: the folded box and its request count, the box under your rows, Add to Mine with Undo, the filter, and the signed-out line.
 const openRecipes = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const item = (n, name) => ({ id: `c:wbc:r${n}`, name, data: { recipe: { cat: 'other', ing: ['salt'], steps: ['Cook.'] } } });
@@ -12,7 +12,7 @@ const make = async (page, name) => {
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
 };
 const mineRows = page => page.locator('.rc-merged > .rc-list .rc-row b');
 const boxRows = page => page.locator('#recipes-library-box .rc-row b');
@@ -58,7 +58,7 @@ test('the library is folded until Browse the library or search text; Mine never 
   await expect(boxRows(page)).toHaveCount(3);
 });
 
-test('typing asks the library, + Add to mine moves a row up with the notice, and Undo puts it back', async ({ page }) => {
+test('typing asks the library, Add to Mine moves a row up with the notice, and Undo puts it back', async ({ page }) => {
   const asked = await signedIn(page, [item(1, 'Apple pie'), item(2, 'Apple crumble')]);
   await page.goto('/');
   await openRecipes(page);
@@ -70,7 +70,7 @@ test('typing asks the library, + Add to mine moves a row up with the notice, and
   expect(asked).toHaveLength(1);
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze(); // the box, the dashed rows and the buttons
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
-  await page.getByRole('button', { name: '+ Add to mine Apple pie' }).click();
+  await page.getByRole('button', { name: 'Add to Mine Apple pie' }).click();
   await expect(page.getByText('Apple pie added to Mine.')).toBeVisible();
   await expect(mineRows(page)).toHaveText(['Apple dip', 'Apple pie']);
   await expect(boxRows(page)).toHaveText(['Apple crumble']); // a library recipe you have is listed once, under Your recipes
@@ -99,7 +99,7 @@ test('the Library filter shows the box even while Recent was on', async ({ page 
   await make(page, 'Soup');
   await page.locator('.rc-row', { hasText: 'Soup' }).first().click();
   await page.getByRole('button', { name: 'Star Soup' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.click('#recipes-recent');
   await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'true');
   await page.click('#recipes-library');

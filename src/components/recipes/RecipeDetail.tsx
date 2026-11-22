@@ -55,9 +55,9 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
   const maybes = mine ? suggestionPins(status).length : 0;
   const diet = useAppStore(s => s.diet);
   const today = ymd(useToday(s => s.today));
-  const [addedId, setAdded] = useState<string | null>(null); // the id of the entry "Add to today" made: the button reads "Added" until Undo, leaving the page or the entry's deletion elsewhere
-  const added = stillAdded(diet, addedId); // read from the store, so deleting the entry on the board brings "Add to today" back
-  const [addMsg, setAddMsg] = useState(''); // what the page said when Add to today logged: said again if Undo of a Fill leaves the add standing
+  const [addedId, setAdded] = useState<string | null>(null); // the id of the entry "Log" made: the button reads "Added" until Undo, leaving the page or the entry's deletion elsewhere
+  const added = stillAdded(diet, addedId); // read from the store, so deleting the entry on the board brings "Log" back
+  const [addMsg, setAddMsg] = useState(''); // what the page said when Log logged: said again if Undo of a Fill leaves the add standing
   const [fillUndo, setFillUndo] = useState<(() => boolean) | null>(null); // Undo of the Fill that just saved, for the status line
   const [usualSaved, setUsualSaved] = useState<UsualChange | null>(null); // the usual a whole pack saved, for Undo to take back
   const pack = wholePackFor({ mine, recipe });
@@ -174,13 +174,13 @@ const Summary = ({ recipe, mine, cells }: { recipe: Recipe; mine: boolean; cells
   </>
 );
 
-// The action row: Add to today (one tap, usual portion), Whole pack (N) beside it for a ready-made food with a pack size, Plan… (the portion sheet on tomorrow), and what else the page does (`children`: Add missing to Shopping). A library recipe's only action is Add to Mine; one with no calories and protein asks for them.
+// The action row: Log (one tap, usual portion), Whole pack (N) beside it for a ready-made food with a pack size, Plan… (the portion sheet on tomorrow), and what else the page does (`children`: Add missing to Shopping). A library recipe's only action is Add to Mine; one with no calories and protein asks for them.
 const ActionRow = ({ recipe, mine, state, msg, canUndo, fill, onFill, pack, onWholePack, onAddToday, onUndo, onPlan, onEdit, onAddMine, children }: { recipe: Recipe; mine: boolean; state: ReturnType<typeof addState>; msg: string; canUndo: boolean; fill: string | null; onFill: () => void; pack: number | null; onWholePack: () => void; onAddToday: () => void; onUndo: () => void; onPlan: () => void; onEdit: () => void; onAddMine: () => void; children?: React.ReactNode }) => (
   <div className="rc-actionrow">
     <div className="rc-actions">
       {state === 'to-mine' && <button type="button" className="btn primary" onClick={onAddMine}>Add to Mine</button>}
       {state === 'needs-numbers' && <button type="button" className="btn primary" onClick={onEdit}>Add them</button>}
-      {(state === 'add' || state === 'added') && <button type="button" className="btn primary" disabled={state === 'added'} onClick={onAddToday}>{state === 'added' ? 'Added' : 'Add to today'}</button>}
+      {(state === 'add' || state === 'added') && <button type="button" className="btn primary" disabled={state === 'added'} onClick={onAddToday}>{state === 'added' ? 'Added' : 'Log'}</button>}
       {state === 'add' && pack !== null && <button type="button" className="btn" onClick={onWholePack}>Whole pack ({pack})</button>}
       {(state === 'add' || state === 'added') && <button type="button" className="btn" onClick={onPlan}>Plan…</button>}
       {fill && <button type="button" className="btn" onClick={onFill}>{fill}</button>}
@@ -192,7 +192,7 @@ const ActionRow = ({ recipe, mine, state, msg, canUndo, fill, onFill, pack, onWh
 );
 
 // Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to More actions (Edit and Delete) reaches both.
-const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
+const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back</button></div>;
 const MoreActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);

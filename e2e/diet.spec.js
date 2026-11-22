@@ -129,7 +129,7 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.locator('.rc-strip').getByText('600 kcal', { exact: true })).toBeVisible();
   await expect(page.locator('.rc-strip').getByText('P 40 · C 51 · F 11 g per serving')).toBeVisible();
-  await page.getByRole('button', { name: 'Add to today' }).click(); // the usual portion (1) in one tap
+  await page.getByRole('button', { name: 'Log', exact: true }).click(); // the usual portion (1) in one tap
   await expect(page.getByText('Logged Chili, 1 portion, for today.')).toBeVisible();
   await nutrition(page);
   await expect(eaten(page)).toContainText('Chili');
@@ -148,7 +148,7 @@ test('The log control logs a recipe with macros as a snapshot, Undo takes it bac
   // Undo right after logging removes just that entry
   await page.click('#daily-recipes');
   await page.locator('.rc-row', { hasText: /Chili/ }).click();
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await nutrition(page);
   await expect(eaten(page)).toHaveCount(1);

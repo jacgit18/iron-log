@@ -22,7 +22,7 @@ test('the ready-made form needs a Used as, starting on Ready to eat, and saves t
   await page.getByLabel('Calories per serving').fill('150');
   await page.getByLabel('Protein per serving (g)').fill('8');
   await page.getByRole('button', { name: 'Save food' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByText(/needs? a type/)).toHaveCount(0); // it is typed, so no banner
   await page.locator('.rc-row', { hasText: /Goat kefir/ }).click();
   await page.getByRole('button', { name: 'More actions' }).click();

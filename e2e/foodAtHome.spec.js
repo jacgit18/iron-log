@@ -28,7 +28,7 @@ test('pin a food to another item or to Not tracked: the Foods, Add food and boar
   await expect(pick).toHaveValue('');
   await pick.selectOption({ label: 'Skyr' }); // the pinned item is at home
   await expect(page.getByRole('status').filter({ hasText: 'counts as' })).toContainText('Have');
-  await page.getByRole('button', { name: 'Back to recipes' }).first().click().catch(() => {}); // a phone shows the page full width; the desktop pane has no Back
+  await page.getByRole('button', { name: 'Back', exact: true }).first().click().catch(() => {}); // a phone shows the page full width; the desktop pane has no Back
   await expect(listPill(page)).toHaveText('Have');
   await openNutrition(page);
   await expect(boardPill(page)).toHaveText('Have');

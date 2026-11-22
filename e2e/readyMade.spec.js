@@ -41,7 +41,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /missing to Shopping/ })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Food' });
   await expect(page.locator('.rc-row', { hasText: /Frozen lasagna/ })).toBeVisible();
   await page.getByRole('button', { name: 'Can make' }).click(); // nothing is missing from a food with no ingredients, but it is not "can make"
@@ -54,7 +54,7 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
 
 test('The log control logs a ready-made food as a snapshot, to today or to a chosen day, and offers a future day as a plan', async ({ page }) => {
   await make(page);
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged Frozen lasagna, 1 portion, for today.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled(); // a second tap cannot log twice
   await page.getByRole('button', { name: 'Plan…' }).click(); // the portion sheet, for a chosen day

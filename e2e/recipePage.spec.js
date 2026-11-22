@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 import { deleteEaten, openNutrition, todayCol } from './nutritionBoardHelpers.js';
 
-// The recipe page after the log form left (brief recipe-page-after-log): a summary strip, one action row (Add to today, Plan…, Add N missing to Shopping), "Cook for N" always in the Ingredients heading, nothing fixed over the tab bar.
+// The recipe page after the log form left (brief recipe-page-after-log): a summary strip, one action row (Log, Plan…, Add N missing to Shopping), "Cook for N" always in the Ingredients heading, nothing fixed over the tab bar.
 // What the strip says and which button shows are node tests (recipeSummary.test.ts); this covers the wiring and the layout, which need a real page. The fixed clock in fixtures.js is Thursday 2026-09-24.
 const long = Array.from({ length: 24 }, (_, i) => ({ amt: '1 cup', n: `ingredient ${i + 1}` }));
 const stew = { id: 'stew', n: 'Long stew', cat: 'protein', servings: 4, kcal: 400, p: 30, ing: long, steps: ['Cook it.', 'Eat it.'] };
@@ -37,37 +37,37 @@ test('with inventory items the strip says how many ingredients are at home', asy
   await expect(strip(page).getByText('24 missing')).toBeVisible();
 });
 
-test('Add to today logs the usual portion in one tap, reads Added until Undo, and Undo removes only that entry', async ({ page }) => {
+test('the Log button logs the usual portion in one tap, reads Added until Undo, and Undo removes only that entry', async ({ page }) => {
   await seed(page, [{ ...stew, usual: 2 }]);
   await open(page);
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged Long stew, 2 portions, for today.')).toBeVisible();
   const added = page.getByRole('button', { name: 'Added', exact: true });
   await expect(added).toBeDisabled(); // a second tap cannot log twice
-  await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(0);
   await expect(strip(page)).toContainText('Last eaten today');
   await expect(strip(page)).toContainText('Usual 2 portions');
   await openNutrition(page);
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1);
   await expect(todayCol(page).locator('.nb-eat')).toContainText('800 kcal');
   await open(page); // leaving the page resets the button
-  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible();
   await openNutrition(page);
   await expect(todayCol(page).locator('.nb-eat')).toHaveCount(1); // the first entry stays; Undo took only the second
 });
 
-test('after the entry is deleted on the board, returning to the page shows Add to today again (the page remounts here; stillAdded in recipeSummary.test.ts proves the page follows the store while mounted)', async ({ page }) => {
+test('after the entry is deleted on the board, returning to the page shows Log again (the page remounts here; stillAdded in recipeSummary.test.ts proves the page follows the store while mounted)', async ({ page }) => {
   await seed(page, [stew]);
   await open(page);
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
   await openNutrition(page);
   await deleteEaten(page, 'Long stew');
   await open(page);
-  await expect(page.getByRole('button', { name: 'Add to today' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeEnabled();
   await expect(strip(page)).toContainText('Not eaten yet');
 });
 
@@ -98,11 +98,11 @@ test('Cook for is visible without a tap, changes the amounts shown and saves not
   await expect(page.locator('.rc-ing').first()).toContainText('1 cup');
 });
 
-test('a recipe with no calories and protein shows "Add them" in place of Add to today', async ({ page }) => {
+test('a recipe with no calories and protein shows "Add them" in place of Log', async ({ page }) => {
   await seed(page, [bare]);
   await open(page, 'No numbers stew');
   await expect(page.getByRole('button', { name: 'Add them' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add to today' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Plan…' })).toHaveCount(0);
 });
 
@@ -111,7 +111,7 @@ test('a ready-made food gets the strip and the action row, and no ingredients, s
   await open(page, 'Oat cereal');
   await expect(strip(page).getByText('150 kcal', { exact: true })).toBeVisible();
   await expect(strip(page).locator('li')).toHaveCount(2); // per serving and last eaten; no at-home box
-  await expect(page.getByRole('button', { name: 'Add to today' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Plan…' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Steps' })).toHaveCount(0);

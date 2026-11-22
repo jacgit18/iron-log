@@ -232,7 +232,7 @@ export default function Recipes() {
         {!o.logId && !o.addIt && <span className="rc-go" aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
       {o.logId && <button type="button" className="btn sm rc-log" aria-describedby={`rc-t-${o.key}`} onClick={() => useAppStore.getState().openModal({ type: 'portion', id: o.logId! })}>Log</button>}
-      {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`+ Add to mine ${o.title}`} onClick={o.addIt}>+ Add to mine</button>}
+      {o.addIt && <button type="button" className="btn sm rc-log rc-add" aria-label={`Add to Mine ${o.title}`} onClick={o.addIt}>Add to Mine</button>}
       {o.chips?.length ? <ComboChips food={o.title} chips={o.chips} expanded={openIds.includes(o.key)} onToggle={() => toggleChips(o.key)} onOpen={openCombo} /> : null}
     </li>
   );
@@ -244,7 +244,7 @@ export default function Recipes() {
   const libBox = boxOn ? (
     <section className="rc-libbox" id="recipes-library-box" aria-labelledby="rc-libbox-h">
       <h3 id="rc-libbox-h" className="rc-libhd">Library · not in your recipes yet{libReady ? ` (${countText('library', srcCounts)})` : ''}</h3>
-      <p className="note rc-libnote">Ready recipes from the Wikibooks Cookbook. + Add to mine copies one into your recipes.{filtersSkipLibrary(nutSel, activeTags) ? ' Your nutrition and tag filters do not apply here.' : ''}</p>
+      <p className="note rc-libnote">Ready recipes from the Wikibooks Cookbook. Add to Mine copies one into your recipes.{filtersSkipLibrary(nutSel, activeTags) ? ' Your nutrition and tag filters do not apply here.' : ''}</p>
       {!syncing && <LibrarySignIn />}
       {syncing && <div className="rc-sort"><SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} /><span className="rc-sortedby">{librarySortedBy(libSort, q)}</span></div>}
       {syncing && libNow.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
