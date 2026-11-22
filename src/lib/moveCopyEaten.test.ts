@@ -18,6 +18,13 @@ describe('copyEaten', () => {
     expect(r.list.find(e => e.id === 'a')).toEqual(rice);
     expect(r.list).toHaveLength(3);
   });
+  it('the meal s travels with a copy and a move', () => {
+    const placed = { ...rice, s: 'dinner' as const };
+    const r = copyEaten([placed, eggs], 'a', yday, today, 'n1', false);
+    expect(r.list.find(e => e.id === 'n1')).toMatchObject({ s: 'dinner' });
+    const m = copyEaten([placed, eggs], 'a', yday, today, 'n2', true);
+    expect(m.list.find(e => e.id === 'n2')).toMatchObject({ s: 'dinner' });
+  });
   it('the stored portion x travels with a copy and a move', () => {
     const eaten = { ...rice, x: 2.5 };
     expect(copyEaten([eaten], 'a', yday, today, 'n1', false).list.find(e => e.id === 'n1')?.x).toBe(2.5);

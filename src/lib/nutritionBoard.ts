@@ -184,7 +184,8 @@ export function placeEaten(day: string, today: string, eaten: readonly DietEntry
   for (const e of eaten) {
     if (checked.has(e.id)) continue;
     const usual = e.from ? usualMealOf(e.from, recipes) : undefined;
-    if (usual && day >= today) out.meals[usual].push(e); // a past day draws no meals, only "Not in a meal", so its rows stay there or they would show nowhere
+    if (e.s && day >= today) out.meals[e.s].push(e); // the meal it was logged into (button review N8) beats the food's usual meal and the hour; a past day still draws no meals, as below
+    else if (usual && day >= today) out.meals[usual].push(e); // a past day draws no meals, only "Not in a meal", so its rows stay there or they would show nowhere
     else if (day === today && typeof e.t === 'number') out.meals[mealForHour(e.t)].push(e); else out.none.push(e);
   }
   return out;
