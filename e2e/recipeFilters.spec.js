@@ -93,6 +93,27 @@ test('hiding the category that is the active filter clears the filter', async ({
   await expect(rows(page)).toHaveText(['Chili', 'Rice']);
 });
 
+test('the Filters button counts what is on, and Clear filters (in the bar or under "No recipe matches") turns it all off', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight']);
+  await make(page, 'Rice', 'Carbs');
+  const toggle = page.locator('#recipes-filters');
+  await expect(toggle).toHaveText('Filters'); // nothing on: no count, no Clear button
+  await expect(page.locator('#recipes-clear-filters')).toHaveCount(0);
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
+  await page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' }).click();
+  await expect(toggle).toHaveText('Filters (2)');
+  await page.locator('#recipes-clear-filters').click(); // the bar's button
+  await expect(toggle).toHaveText('Filters');
+  await expect(rows(page)).toHaveText(['Chili', 'Rice']);
+  await page.getByRole('button', { name: 'Can make' }).click(); // nothing in the fixture is makeable: the empty note, with its own Clear button
+  await expect(toggle).toHaveText('Filters (1)');
+  await expect(page.locator('#recipes-empty')).toBeVisible();
+  await page.locator('#recipes-clear-empty').click();
+  await expect(toggle).toHaveText('Filters');
+  await expect(rows(page)).toHaveText(['Chili', 'Rice']);
+});
+
 test('rename a tag (and merge into one that exists), then delete one after a confirm that says how many', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein', ['weeknight', 'meal prep']);
@@ -121,6 +142,66 @@ test('rename a tag (and merge into one that exists), then delete one after a con
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['meal prep']);
 });
 
+test('under "No recipe matches" the button also clears a typed search, and says so', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein');
+  await page.getByLabel('Search recipes').fill('zzzz');
+  const clear = page.locator('#recipes-clear-empty');
+  await expect(clear).toHaveText('Clear search'); // only a search is on
+  await clear.click();
+  await expect(rows(page)).toHaveText(['Chili']);
+  await page.getByLabel('Search recipes').fill('chili');
+  await page.getByRole('button', { name: 'Can make' }).click(); // nothing in the fixture is makeable
+  await expect(clear).toHaveText('Clear search and filters');
+  await clear.click();
+  await expect(rows(page)).toHaveText(['Chili']);
+  await expect(page.getByLabel('Search recipes')).toHaveValue('');
+  await expect(page.locator('#recipes-filters')).toHaveText('Filters');
+});
+
+test('Remove tag has an Undo that puts the tag back on the same recipes', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight']);
+  await make(page, 'Tacos', 'Protein', ['weeknight']);
+  await page.getByRole('button', { name: 'Manage filters' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Manage filters' });
+  await sheet.getByRole('button', { name: 'Delete tag weeknight' }).click();
+  await sheet.getByRole('button', { name: 'Remove tag' }).click();
+  await expect(sheet.getByText('Removed weeknight from 2 recipes.')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toBeFocused(); // focus goes to Undo, not past it to Done
+  await expect(sheet.getByText('weeknight · 2 recipes')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Undo' }).click();
+  await expect(sheet.getByText('Put weeknight back on 2 recipes.')).toBeVisible();
+  await expect(sheet.getByText('weeknight · 2 recipes')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toHaveCount(0); // one Undo per removal
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['weeknight']);
+});
+
+test('Delete tag on another tag drops the Undo of the earlier removal', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight', 'spicy']);
+  await page.getByRole('button', { name: 'Manage filters' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Manage filters' });
+  await sheet.getByRole('button', { name: 'Delete tag weeknight' }).click();
+  await sheet.getByRole('button', { name: 'Remove tag' }).click();
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Delete tag spicy' }).click(); // asking about another tag: no stray Undo for the first one
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toHaveCount(0);
+});
+
+test('Clear filters in the Library source clears the category only, and the tags set on Mine stay', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight']);
+  await page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
+  await page.locator('#recipes-library').click();
+  await expect(page.locator('#recipes-filters')).toHaveText('Filters (1)'); // only the category counts here
+  await page.locator('#recipes-clear-filters').click();
+  await page.locator('#recipes-mine').click();
+  await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('Manage filters has no accessibility violations and fits a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 700 });
   await openRecipes(page);
@@ -132,4 +213,9 @@ test('Manage filters has no accessibility violations and fits a phone', async ({
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const b of await sheet.getByRole('button').all()) { const box = await b.boundingBox(); if (box) expect(box.height).toBeGreaterThanOrEqual(43.5); }
+  for (const w of [375, 320]) { // a category row is one line (name, two chevrons, Hide), not two
+    await page.setViewportSize({ width: w, height: 700 });
+    const row = sheet.locator('.rcf-list').first().locator('li').first();
+    expect((await row.boundingBox()).height).toBeLessThanOrEqual(48);
+  }
 });

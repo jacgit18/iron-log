@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, haveBadge, librarySortedBy, recipeMeta, sameName, sortRecipes, stepsFromText } from './recipeList.js';
+import { DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, activeFilterCount, filterRecipes, haveBadge, librarySortedBy, recipeMeta, sameName, sortRecipes, stepsFromText } from './recipeList.js';
 
 const r = (id: string, n: string, cat: Recipe['cat'], ing: string[]): Recipe => ({ id, n, cat, ing: ing.map(x => ({ n: x })), steps: ['Cook.'] });
 const list = [r('b', 'Taco seasoning', 'seasonings', ['chili powder', 'cumin']), r('a', 'Garlic chicken', 'protein', ['chicken thighs', 'garlic']), r('c', 'Chimichurri', 'sauces', ['parsley', 'garlic'])];
@@ -82,5 +82,17 @@ describe('haveBadge', () => {
   });
   it('shows nothing for a recipe with no counted ingredient', () => {
     expect(haveBadge({ have: 0, total: 0 })).toBeNull();
+  });
+});
+
+describe('activeFilterCount', () => {
+  it('is zero with nothing on, and the search, sort and tab are not counted', () => expect(activeFilterCount({ cat: null, canMake: false, tags: [], nutrition: [] }, true)).toBe(0));
+  it('counts the category, Can make, each tag and each nutrition filter', () => {
+    expect(activeFilterCount({ cat: 'sauces', canMake: true, tags: ['a', 'b'], nutrition: ['highProtein'] }, true)).toBe(5);
+    expect(activeFilterCount({ cat: null, canMake: true }, true)).toBe(1);
+  });
+  it('counts only the category in the Library source, where the other filters are hidden and skipped', () => {
+    expect(activeFilterCount({ cat: 'sauces', canMake: true, tags: ['a'], nutrition: ['highProtein'] }, false)).toBe(1);
+    expect(activeFilterCount({ cat: null, canMake: true, tags: ['a'] }, false)).toBe(0);
   });
 });
