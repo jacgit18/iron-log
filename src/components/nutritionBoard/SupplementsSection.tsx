@@ -50,7 +50,7 @@ export default function SupplementsSection({ day, folded = false }: { day: strin
       </div>
       {v.extra.length > 0 && (
         <div className="nb-suppslot">
-          <span className="nb-slotlab">Also taken</span>
+          <span className="nb-slotlab">Also took</span>
           {v.extra.map(i => (
             <label key={i.id} className="nb-tick taken">
               <input type="checkbox" className="chk" id={`nb-supp-${day}-${i.id}`} checked onChange={e => useAppStore.getState().setSupplementTaken(day, i.id, e.target.checked)} />

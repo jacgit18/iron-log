@@ -44,7 +44,7 @@ test('after Save on a phone the recipe\'s page opens', async ({ page }) => {
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Beef stew deluxe');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByRole('button', { name: 'Back to recipes' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2 })).toContainText('Beef stew deluxe');
 });
 

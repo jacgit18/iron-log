@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { Recipe } from '../../types.ts';
 import RecipeDetail from './RecipeDetail.js';
 
-// The right-hand side of the Recipes list from 1280 px (brief recipes-find-type-tabs): the selected recipe's own detail, in place. Its "Back to recipes" bar is hidden
+// The right-hand side of the Recipes list from 1280 px (brief recipes-find-type-tabs): the selected recipe's own detail, in place. Its "Back" bar is hidden
 // by CSS (.rc-pane) since the list is already beside it; Delete selects the next item through `onGone`.
 const WIDE = '(min-width:1280px)';
 const subscribe = (notify: () => void) => { const m = window.matchMedia(WIDE); m.addEventListener('change', notify); return () => m.removeEventListener('change', notify); };

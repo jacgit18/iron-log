@@ -96,7 +96,7 @@ describe('summaryCells', () => {
 });
 
 describe('addState', () => {
-  it('is Add to today for a recipe of yours with numbers, then Added until undone', () => {
+  it('is Log for a recipe of yours with numbers, then Added until undone', () => {
     expect(addState({ mine: true, recipe: stew, added: false })).toBe('add');
     expect(addState({ mine: true, recipe: stew, added: true })).toBe('added');
   });

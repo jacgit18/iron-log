@@ -81,7 +81,7 @@ async function starInDetail(page, name, verb = 'Star') {
   expect(box.height).toBeGreaterThanOrEqual(43.5);
   await star.click();
   await expect(page.getByRole('button', { name: `${verb === 'Star' ? 'Unstar' : 'Star'} ${name}` })).toHaveAttribute('aria-pressed', verb === 'Star' ? 'true' : 'false');
-  const back = page.getByRole('button', { name: 'Back to recipes' });
+  const back = page.getByRole('button', { name: 'Back', exact: true });
   if (await back.isVisible()) await back.click(); // from 1280 px the detail sits beside the list and has no Back
 }
 const favMark = (page, name) => page.locator('.rc-row', { hasText: name }).locator('.rc-favmark');
@@ -122,7 +122,7 @@ for (const [w, h] of [[1920, 1080], [1280, 800]]) {
     const box = async el => el.boundingBox();
     const list = await box(page.locator('.rc-cards')), side = await box(pane);
     expect(side.x).toBeGreaterThan(list.x + list.width - 1); // beside, not below
-    await expect(pane.getByRole('button', { name: 'Back to recipes' })).toBeHidden();
+    await expect(pane.getByRole('button', { name: 'Back', exact: true })).toBeHidden();
     await pane.getByRole('button', { name: 'More actions' }).click();
     await pane.getByRole('button', { name: /Delete the food Oat milk/ }).click();
     await pane.getByRole('button', { name: /Delete the food Oat milk|Tap again to delete/ }).click();

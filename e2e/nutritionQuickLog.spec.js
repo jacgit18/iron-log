@@ -29,7 +29,7 @@ test('the strip hides with nothing logged; after logging a food the chip logs it
   await expect((await chips(page)).getByText('Recent and favorites')).toHaveCount(0);
   await closeSheet(page);
   await make(page);
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged Boiled egg, 3 eggs, for today.')).toBeVisible();
   await openDiet(page);
   const strip = await chips(page);
@@ -44,7 +44,7 @@ test('the strip hides with nothing logged; after logging a food the chip logs it
 
 test('the sheet logs a past day and offers a future day as a plan (the plan itself is in logOrPlan.spec.js)', async ({ page }) => {
   await make(page);
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Log', exact: true }).click(); // the row's Log opens the portion sheet
   const tomorrow = await page.evaluate(() => new Date(Date.now() + 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }));
   const yesterday = await page.evaluate(() => new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }));
@@ -56,13 +56,13 @@ test('the sheet logs a past day and offers a future day as a plan (the plan itse
   await expect(sheet(page).getByText(new RegExp(`Logged .+: 3 eggs to ${yesterday}\\.`))).toBeVisible();
 });
 
-test('Recipes rows have Log, and the food page has Add to today and no Ate this', async ({ page }) => {
+test('Recipes rows have Log, and the food page has Log and no Ate this', async ({ page }) => {
   await make(page);
   await expect(page.getByRole('button', { name: 'Ate this' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Log', exact: true })).toHaveCount(0); // the page has no Log form
-  await page.getByRole('button', { name: 'Add to today' }).click();
+  await page.getByRole('button', { name: 'Log', exact: true }).click();
   await expect(page.getByText('Logged Boiled egg, 3 eggs, for today.')).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeVisible(); // the row's Log
 });
 

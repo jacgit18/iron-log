@@ -34,7 +34,7 @@ export function parseAmount(text: string): { parts: AmountParts; exact: boolean 
   return { parts, exact: (unit !== '' || rest === '') && composeAmount(parts) === text };
 }
 
-/** The whole number after a Fewer or More tap, kept from 0 to 99. */
+/** The whole number after a Less or More tap, kept from 0 to 99. */
 export const stepWhole = (whole: number, by: 1 | -1): number => Math.min(MAX_WHOLE, Math.max(0, whole + by));
 
 /** The amounts used last, newest first, one of each, at most `max`. */

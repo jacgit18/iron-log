@@ -92,11 +92,11 @@ test.describe('Fill nutrition', () => {
     await expect(s.getByText('3 fills left today.')).toBeVisible();
   });
 
-  test('Add to today stays Added after a Fill, and each Undo undoes its own action (review finding 1)', async ({ page }) => {
+  test('Log stays Added after a Fill, and each Undo undoes its own action (review finding 1)', async ({ page }) => {
     await stub(page);
     await seed(page, [mk('r1', 'Rice bowl', { servings: 2, kcal: 400, p: 20 })]);
     await open(page, 'Rice bowl');
-    await page.getByRole('button', { name: 'Add to today' }).click();
+    await page.getByRole('button', { name: 'Log', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled();
     await page.getByRole('button', { name: 'Fill nutrition' }).click();
     await sheet(page).getByRole('button', { name: 'Fill only the blanks' }).click();
@@ -105,7 +105,7 @@ test.describe('Fill nutrition', () => {
     expect((await saved(page)).est).toBeUndefined();
     await expect(page.getByRole('button', { name: 'Added' })).toBeDisabled();
     await page.getByRole('button', { name: 'Undo' }).click(); // the add's
-    await expect(page.getByRole('button', { name: 'Add to today' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Log', exact: true })).toBeEnabled();
   });
 
   test('the cap, an unavailable service and Cancel save nothing', async ({ page }) => {

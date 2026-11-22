@@ -32,6 +32,18 @@ describe('Food naming (Recipes)', () => {
   });
 });
 
+describe('Words settled in one pass (the wording review)', () => {
+  const files = (dir: string): string[] => readdirSync(dir).flatMap(f => { const p = join(dir, f); return statSync(p).isDirectory() ? files(p) : /\.tsx?$/.test(f) && !/\.test\./.test(f) && f !== 'wording.ts' ? [p] : []; });
+  const code = (p: string) => readFileSync(p, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  it('no component or lib source still says the old words in code', () => {
+    const banned = ['Add to today', 'Back to recipes', 'Fewer', 'Also taken', '+ Add to mine'];
+    for (const p of files(join(__dirname, '..'))) { const t = code(p); for (const b of banned) expect(t.includes(b), `${p}: ${b}`).toBe(false); }
+  });
+  it('the table has a row for each, banning the old words', () => {
+    for (const [say, old] of [['Log', 'Add to today'], ['Back', 'Back to recipes'], ['Less / More', 'Fewer'], ['Also took', 'Also taken']]) expect(WORDING.find(r => r.say === say)?.notThis, say).toContain(old);
+  });
+});
+
 describe('Scan wording', () => {
   it('has a row that bans the old "Scan barcode" and "Scan a food" for a scan that fills a form', () => {
     const row = WORDING.find(r => r.say.startsWith('Scan to fill'));
@@ -65,7 +77,6 @@ const KNOWN: Readonly<Record<string, number>> = {
   'src/components/board/Experiments.tsx': 1, 'src/components/stretches/Stretches.tsx': 1, // the Board and Stretches: hands off
   'src/components/program/Editor.tsx': 1, 'src/components/sheets/NewProgramSheet.tsx': 1, // Program, next to the hands-off day rows
   'src/components/diet/FoodAmountRows.tsx': 1, // PR 903 (two-tap deletes)
-  'src/components/recipes/Recipes.tsx': 1, // PR 902 and the Recipes desktop briefs
   'src/components/supplements/SupplementLibrary.tsx': 1, // opens the add sheet; its spec names it "+ Add" (e2e/supplementAdd.spec.js): moves with a supplements change
 };
 

@@ -13,7 +13,7 @@ const make = async (page, name, cat, tags = []) => {
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   for (const t of tags) { await page.getByLabel('New tag').fill(t); await page.getByLabel('New tag').press('Enter'); }
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
 };
 const rows = page => page.locator('.rc-list .rc-row b');
 const chipRow = page => page.getByLabel('Category', { exact: true }).locator('option'); // the Category dropdown's options
@@ -46,7 +46,7 @@ test('the form offers tags in use and a typed tag is kept without pressing Add',
   await page.getByRole('button', { name: 'Use weeknight' }).click();
   await page.getByLabel('New tag').fill('Freezer');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['Freezer', 'weeknight']);
 });
 
