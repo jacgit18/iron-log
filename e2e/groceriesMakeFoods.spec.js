@@ -43,7 +43,23 @@ test('the sweep lists list items with no Food and writes nothing until it is tap
   await page.locator('#nfg-pill').click();
   await expect(page.locator('.nfg-preview li')).toHaveCount(2);
   await expect(page.locator('#daily-recipes .nfg-dot')).toHaveCount(0); // nothing is made yet
+  await page.getByLabel(/Lasagna/).uncheck(); // not a food: it stays out
+  await expect(page.locator('#nfg-sweep')).toHaveText('Make 1 Food');
   await page.click('#nfg-sweep');
-  await expect(page.getByText('Made 2 Foods.')).toBeVisible();
-  await expect(page.locator('#nfg-pill')).toContainText('2 new from groceries');
+  await expect(page.getByText('Made 1 Food.')).toBeVisible();
+  await expect(page.locator('#nfg-pill')).toContainText('1 new from groceries');
+});
+
+test('Not now hides the sweep pill on this device, and it stays hidden after a reload', async ({ page }) => {
+  await page.addInitScript(() => { if (localStorage.getItem('ironlog:grocery/main') === null) localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: [''], items: [{ id: 'old-1', n: 'Dish soap', store: '', qty: 1, cents: null, every: true, out: false }] })); });
+  await page.reload();
+  await page.click('#tab-daily'); await foods(page);
+  await page.click('#recipes-group-store');
+  await page.locator('#nfg-pill').click();
+  await page.click('#nfg-notnow');
+  await expect(page.locator('#nfg-pill')).toHaveCount(0);
+  await page.reload();
+  await page.click('#tab-daily'); await foods(page);
+  await page.click('#recipes-group-store');
+  await expect(page.locator('#nfg-pill')).toHaveCount(0);
 });

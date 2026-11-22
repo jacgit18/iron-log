@@ -55,6 +55,16 @@
   color: var(--muted);
   font-size: var(--fs-sm);
 }
+.nfg-preview {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.nfg-tick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
 .nfg-h {
   margin: 0;
   font-size: var(--fs-lg);

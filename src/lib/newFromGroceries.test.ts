@@ -53,6 +53,13 @@ describe('sweepFoods', () => {
     expect(s.make.every(r => r.fromGroc)).toBe(true);
     expect(s.waiting).toBe(0);
   });
+  it('makes Foods only for the ticked items; the unticked stay candidates', () => {
+    const items = [item('Whole milk'), item('Dish soap'), item('Lasagna')];
+    const s = sweepFoods(items, [], new Set([items[0]!.id, items[2]!.id]));
+    expect(s.make.map(r => r.n)).toEqual(['Whole milk', 'Lasagna']);
+    expect(s.candidates).toHaveLength(3);
+    expect(sweepFoods(items, s.make).candidates.map(c => c.item.n)).toEqual(['Dish soap']);
+  });
   it('is repeatable: a second sweep after writing finds nothing', () => {
     const items = [item('Whole milk'), item('Lasagna')];
     const s = sweepFoods(items, []);

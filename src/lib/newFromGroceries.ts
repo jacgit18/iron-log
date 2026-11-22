@@ -27,7 +27,7 @@ export function confirmed(recipes: readonly Recipe[], ids?: readonly string[]): 
 }
 
 /** Equal whatever the key order (a synced copy can come back with its keys in another order). */
-const canon = (v: unknown): unknown => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, canon(x)])) : v);
+const canon = (v: unknown): unknown => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, x]) => [k, canon(x)])) : v);
 const sameShape = (a: Recipe, b: Recipe): boolean => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 
 /** Whether Undo of the add may take the Food back: still flagged, exactly as it was made (no type change, edit, number or star), and nothing refers to it (`referenced`: planned, logged, repeated, snacked, in a meal or paired). */
@@ -38,8 +38,8 @@ export function untouchedFood(food: Recipe, item: Pick<GroceryItem, 'id' | 'n'>,
 export interface Candidate { item: GroceryItem; type: FoodType }
 export interface Sweep { make: Recipe[]; candidates: Candidate[]; waiting: number }
 
-/** What "Make Foods from my existing items" would write: a Food for every list item (not one-time) that matches no Food, up to the room left under the cap; `waiting` items had no room. `candidates` is every such item with its guessed type, for the preview. */
-export function sweepFoods(items: readonly GroceryItem[], recipes: readonly Recipe[]): Sweep {
+/** What "Make Foods from my existing items" would write: a Food for every list item (not one-time) that matches no Food, up to the room left under the cap (and only the items in `only`, when given: the ones ticked in the preview); `waiting` items had no room. `candidates` is every such item with its guessed type, for the preview. */
+export function sweepFoods(items: readonly GroceryItem[], recipes: readonly Recipe[], only?: ReadonlySet<string>): Sweep {
   const all: Candidate[] = [];
   const make: Recipe[] = [];
   const ids = recipes.map(r => r.id);
@@ -47,11 +47,12 @@ export function sweepFoods(items: readonly GroceryItem[], recipes: readonly Reci
     const p = planFoodForItem(item, [...recipes, ...make]); // an earlier item's new Food counts: the same name in two stores is one Food
     if (p.kind !== 'make' && !(p.kind === 'skip' && p.reason === 'full')) continue;
     all.push({ item, type: suggestFoodType(item.n) });
+    if (only && !only.has(item.id)) continue; // not ticked in the preview: stays a candidate, makes no Food
     if (recipes.length + make.length >= MAX_RECIPES) continue;
     const food = madeFood(item, foodIdFor(item.id, ids));
     ids.push(food.id); make.push(food);
   }
-  return { make, candidates: all, waiting: all.length - make.length };
+  return { make, candidates: all, waiting: all.filter(c => (only ? only.has(c.item.id) : true)).length - make.length };
 }
 
 /** What can point at a Food: the log, the plan, repeats, snacks, saved meals, and other recipes (a meal line or a pairing). */

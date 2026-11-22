@@ -149,9 +149,9 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     return n;
   },
 
-  makeFoodsFromItems() {
+  makeFoodsFromItems(only) {
     if (!get().recipesLoaded) return { made: 0, waiting: 0 };
-    const s = sweepFoods(get().grocery.items, get().recipes);
+    const s = sweepFoods(get().grocery.items, get().recipes, only ? new Set(only) : undefined);
     const make = s.make.map(normRecipe).filter((r): r is Recipe => !!r);
     if (make.length) { set({ recipes: [...get().recipes, ...make] }); get().saveRecipes(); }
     return { made: make.length, waiting: s.waiting };
