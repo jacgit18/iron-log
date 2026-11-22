@@ -2,11 +2,12 @@ import { existsSync } from 'node:fs';
 import { adminsFrom } from './admin.ts';
 import { createApp } from './app.ts';
 import { appLabelFrom } from './appLabel.ts';
+import { devAuthAllowed } from './auth.ts';
 import { authConfigFrom, createAuth } from './auth/betterAuth.ts';
 import { piiBootCheck } from './auth/piiBootCheck.ts';
 import { createPiiCrypto, parsePiiKey } from './auth/piiCrypto.ts';
 import { billingConfigFrom, stripeApi } from './billing.ts';
-import { minVersionFrom } from './clientVersion.ts';
+import { minVersionFrom, minVersionProblem } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
 import { remoteDatabaseProblem } from './db/localOnly.ts';
 import { checkDbRole } from './db/role.ts';
@@ -49,6 +50,12 @@ const staticDir = process.env.STATIC_DIR ?? 'dist';
 
 // The oldest app build that may sync. Unset means no gate. A value that is not a number stops the server from starting.
 const minClientVersion = minVersionFrom(process.env.MIN_CLIENT_VERSION);
+// A value newer than this build refuses the app this server serves, so it stops here instead of locking every user out.
+const minProblem = minVersionProblem(minClientVersion, process.env.APP_VERSION, devAuthAllowed(process.env.NODE_ENV));
+if (minProblem) {
+  console.error(JSON.stringify({ msg: `Refusing to start: ${minProblem}` }));
+  process.exit(1);
+}
 
 // Sign-in (ADR 004). Off, with the reasons logged, unless everything it needs is set; the API then answers 401 to everyone
 // except where the development sign-in is allowed.
