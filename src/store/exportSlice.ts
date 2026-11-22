@@ -1,6 +1,7 @@
 // The builders load on first export, not at startup.
 const loadExport = () => import('../lib/export.js');
 import { ymd } from '../shared/dates.js';
+import { HistoryIncompleteError } from './historyIncomplete.js';
 import type { ExportSlice, Flag, StoreGet, StoreSet } from './types.ts';
 
 // The downloads: CSV, Excel and the full data file, all saved through the host's (or the blob-link) `dl` handle.
@@ -12,6 +13,7 @@ export const exportSlice = (set: StoreSet, get: StoreGet, flag: Flag): ExportSli
     set({ exporting: kind });
     try { await fn(dl); flag('Exported'); }
     catch (err) {
+      if (err instanceof HistoryIncompleteError) { flag('Couldn’t read all your saved weeks, so nothing was exported. Try again.'); return; } // no file: a partial backup is worse than none
       const e = err as { code?: string; message?: string } | null;
       const c = e && e.code;
       if (c === 'declined') { /* user closed the save prompt */ }
