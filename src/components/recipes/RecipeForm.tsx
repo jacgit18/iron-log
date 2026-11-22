@@ -19,7 +19,6 @@ import { LeavePrompt, useFormLeave } from './useFormLeave.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { defaultUsesFor, usesOf } from '../../lib/recipeUses.js';
-import { setBeverage } from '../../lib/usualMeal.js';
 import type { PlanSlot, Recipe, RecipeCategory, RecipeIngredient, RecipeUse } from '../../types.ts';
 import CountsAsChips from './CountsAsChips.js';
 import UsedAsChips from './UsedAsChips.js';
@@ -64,7 +63,6 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
   const [usesPicked, setUsesPicked] = useState(!!recipe?.uses);
   const pickUses = (next: RecipeUse[]) => { setUsesNow(next); setUsesPicked(true); };
   const pickCat = (c: RecipeCategory) => { setCat(c); if (!usesPicked) setUsesNow(defaultUsesFor(c)); };
-  const [beforeBev, setBeforeBev] = useState<RecipeUse[]>(); // the labels the food had when Beverage was turned on, put back when it is turned off
   const [meal, setMeal] = useState<PlanSlot | undefined>(recipe?.meal); // brief nutrition-meal-labels-year-repeat: the food's usual meal
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
@@ -326,7 +324,7 @@ export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe;
         </label>
         {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
         <UsedAsChips value={uses} options={['meal', 'ingredient', 'drink']} onChange={pickUses} />
-        <UsualMealPicker meal={meal} beverage={uses.includes('drink')} onMeal={setMeal} onBeverage={on => { if (on) setBeforeBev(uses); pickUses(setBeverage(uses, cat, on, beforeBev)); }} />
+        <UsualMealPicker meal={meal} onMeal={setMeal} />
         <div className="rc-meta">
           <label>Category
             <select value={cat} onChange={e => pickCat(e.target.value as RecipeCategory)}>
