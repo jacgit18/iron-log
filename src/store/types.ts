@@ -364,6 +364,7 @@ export interface RecipesSlice {
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
   renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
   removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
+  restoreTag(before: readonly Recipe[], tag: string): { restored: number; skipped: number }; // Undo of removeTag: `before` is the recipes list just ahead of it; how many recipes got the tag back, and how many could not (edited since, already at the most tags)
   setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
   fillRecipeNumbers(id: string, fields: FillFields): string | { undo: () => boolean }; // write a Fill's numbers, servings and estimate mark in one save (brief recipe-auto-nutrition); no edited mark; `undo` puts the old fields back, false when the recipe changed since; an error text when the recipe is gone or can't hold them
   setFoodTypes(choices: Record<string, FoodType>, uses?: Record<string, RecipeUse[]>): { changed: number; undo: () => boolean }; // give ready-made foods a Type in one save (the review screen's Looks right); `undo` puts back the untyped state for the whole batch, false when something changed since

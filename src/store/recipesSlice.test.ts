@@ -269,6 +269,15 @@ describe('recipe tags', () => {
     expect(st().recipes).toHaveLength(4);
     expect(st().removeTag('weeknight')).toBe(0);
   });
+  it('restores a deleted tag from the list as it was, and saves it', async () => {
+    const get = await tagged();
+    const before = st().recipes;
+    expect(st().removeTag('weeknight')).toBe(2);
+    expect(st().restoreTag(before, 'weeknight')).toEqual({ restored: 2, skipped: 0 });
+    expect(get('Chili').tags).toEqual(['weeknight', 'Meal prep']); // each recipe's own spelling and order
+    expect(get('Tacos').tags).toEqual(['Weeknight']);
+    expect(st().restoreTag(before, 'weeknight')).toEqual({ restored: 0, skipped: 0 }); // already back
+  });
 });
 
 describe('setRecipeChips', () => {
