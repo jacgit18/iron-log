@@ -23,6 +23,9 @@ RUN npm run build && npm run build:server
 # --- Run: Node and two build outputs, nothing else ----------------------------------------------------------------
 FROM node:26-slim
 ENV NODE_ENV=production
+# The server reads its own build version at start (server/clientVersion.ts): a MIN_CLIENT_VERSION newer than it would refuse the app it serves, so it refuses to start.
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server

@@ -25,6 +25,13 @@ export function minVersionFrom(env: string | undefined): number | null {
   return n;
 }
 
+/** Why the gate cannot be used with this build, or null. A MIN_CLIENT_VERSION newer than the build this server itself serves would refuse that very build (and so every app a user can get from it): a wrong commit or a typo. The server then refuses to start, so a deploy with a bad value never takes traffic and the revision before it keeps serving. `build` is the server's own APP_VERSION (the commit time the Docker build passes in); with no number there (a local run, a test) nothing is checked. */
+export function minVersionProblem(min: number | null, build: string | undefined): string | null {
+  const have = parseVersion(build?.trim());
+  if (min === null || have === null || min <= have) return null;
+  return `MIN_CLIENT_VERSION (${min}) is newer than the build this server serves (${have}), so every app, including the one it serves, would be refused. Deploy a build from the commit you mean first, or lower MIN_CLIENT_VERSION.`;
+}
+
 export interface GateOptions {
   /** The oldest version allowed, or null for no gate. */
   min: number | null;
