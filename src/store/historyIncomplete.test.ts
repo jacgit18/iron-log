@@ -99,7 +99,7 @@ describe('daily backup under a history failure', () => {
 
 describe('import under a history failure', () => {
   for (const mode of ['merge', 'replace'] as const) {
-    it(`${mode}: nothing changes and it says Import failed`, async () => {
+    it(`${mode}: nothing changes and it says why`, async () => {
       const wk = st().weekKey();
       useAppStore.setState({ logs: { hack: [{ d: wk, ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk }] }, week: week({ 'A-d3s1': true }) });
       const text = JSON.stringify(buildDataFile(st().snapshot(), {}));
@@ -111,7 +111,7 @@ describe('import under a history failure', () => {
       await st().applyImport(mode);
       expect({ logs: st().logs, week: st().week, body: st().body, cfg: st().cfg, library: st().library }).toEqual(empty);
       expect(before.logs).not.toEqual(empty.logs);
-      expect(st().saveFlag).toBe('Import failed');
+      expect(st().saveFlag).toBe(SAVED + 'imported. Try again.');
       expect(Object.keys(mem).filter(k => /logs\/|weeks\//.test(k))).toEqual([]);
     });
   }
@@ -135,5 +135,26 @@ describe('erase under a history failure', () => {
     afterFirstFailure('ok');
     expect(await st().eraseData({ weeks: true })).toBe(true);
     expect(mem['ironlog:weeks/' + OLD]).toBeUndefined(); expect(mem['ironlog:weeks/' + OLDER]).toBeUndefined();
+  });
+});
+
+describe('a reload already in flight', () => {
+  // The real loadHistory, with a read that fails: two calls at once never see the partial list.
+  const failRead = () => vi.spyOn(localStorage, 'key').mockImplementation(() => { throw new Error('storage read failed'); });
+  it('two concurrent allWeeks() calls both throw', async () => {
+    mem['ironlog:weeks/' + OLD] = JSON.stringify(week()); // so the loop over the stored keys runs and hits the failing read
+    useAppStore.setState({ ...kept, weekHist: { [OLD]: week() }, historyFailed: true });
+    const spy = failRead();
+    try {
+      const r = await Promise.allSettled([st().allWeeks(), st().allWeeks()]);
+      expect(r.map(x => x.status)).toEqual(['rejected', 'rejected']);
+      r.forEach(x => expect((x as PromiseRejectedResult).reason).toBeInstanceOf(HistoryIncompleteError));
+    } finally { spy.mockRestore(); }
+  });
+  it('two concurrent calls both return the full list when the retry succeeds', async () => {
+    mem['ironlog:weeks/' + OLD] = JSON.stringify(week()); mem['ironlog:weeks/' + OLDER] = JSON.stringify(week());
+    useAppStore.setState({ ...kept, weekHist: { [OLD]: week() }, historyFailed: true });
+    const r = await Promise.all([st().allWeeks(), st().allWeeks()]);
+    r.forEach(all => expect(Object.keys(all)).toEqual(expect.arrayContaining([OLD, OLDER])));
   });
 });

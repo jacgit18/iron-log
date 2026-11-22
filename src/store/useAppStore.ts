@@ -283,7 +283,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // All saved weeks, with the week on screen taken live from state. After a failed load it reads once more; if some weeks still
   // cannot be read it throws HistoryIncompleteError rather than return a partial list (exports, backups, imports and erase would miss weeks).
   async allWeeks() {
-    if (!get().weekHist || get().historyFailed) await get().loadHistory();
+    if (!get().weekHist || get().historyFailed || get().historyLoading) await get().loadHistory(); // a load in flight is joined, never skipped: it clears historyFailed while weekHist is still partial
     if (!get().weekHist || get().historyFailed) throw new HistoryIncompleteError();
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
