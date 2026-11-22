@@ -32,12 +32,12 @@ import './Progress.css';
 
 function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => void }) {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
-  const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
+  const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading); const failed = useAppStore(s => s.historyFailed);
   const week = useAppStore(s => s.week); const wk = useAppStore(s => s.weekKey());
   const today = useToday(s => s.today);
   if (!weekHist && loading) return <section className="panel"><h2>Weekly history</h2><p>Loading…</p></section>;
 
-  const { rows, summary } = historyRows(cfg, programs, weekHist, week, wk, today, maxWeeks);
+  const { rows, summary, note } = historyRows(cfg, programs, weekHist, week, wk, today, maxWeeks, failed);
 
   return (
     <section className="panel hist-panel">
@@ -45,8 +45,15 @@ function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => 
         <h2>Weekly history</h2>
         {summary && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {summary.met} of {summary.pastCount} past week{summary.pastCount > 1 ? 's' : ''} · average {summary.mean} days{summary.perDay != null && <> · {summary.perDay.toFixed(1)} exercises per training day</>}</span>}
       </div>
+      {note && <p className="note" role="status">{note}</p>}
       <div className="weeks">
-        {rows.map(r => (
+        {rows.map(r => r.unread ? (
+          <div className="wkrow unread" key={r.key}>
+            <span className="wkdate">{fmtShort(r.start)}</span>
+            <span aria-hidden="true" />
+            <span className="wkread" role="img" aria-label={r.label}><span aria-hidden="true">–</span> not read</span>
+          </div>
+        ) : (
           <div className="wkrow" key={r.key}>
             <span className="wkdate">{fmtShort(r.start)}{r.isNow && <> <small>this week</small></>}</span>
             <span className="pill">{r.pk}</span>

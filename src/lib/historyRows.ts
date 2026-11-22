@@ -4,7 +4,7 @@ import { avgPerTrainingDay } from './freqGoal.js';
 import { WEEK_GOAL_DAYS, WEEK_RE, weekSummary } from './trends.js';
 import { addDays, parseDate, weekStartOf, ymd } from '../shared/dates.js';
 
-export type HistoryRow = ReturnType<typeof weekSummary> & { isNow: boolean; label: string };
+export type HistoryRow = ReturnType<typeof weekSummary> & { isNow: boolean; unread: boolean; label: string };
 export type HistorySummary = { met: number; pastCount: number; mean: string; perDay: number | null };
 
 // Screen-reader text for a week's day cells.
@@ -12,9 +12,14 @@ export function weekRowLabel(full: number, days: number[]): string {
   return `${full} of ${DAY_COUNT} days complete: ${days.map((x, i) => `day ${i + 1} ${x === 2 ? 'complete' : x === 1 ? 'partly done' : 'not started'}`).join(', ')}`;
 }
 
+export const HISTORY_FAILED_NOTE = 'Some saved weeks couldn\u2019t be read, so this list may be incomplete.';
+export const UNREAD_LABEL = 'Week not read: its saved record could not be loaded';
+
 // What the Weekly history panel shows: one row per week from the earliest week with any exercise done up to this week (at most `maxWeeks`),
-// and the goal/average summary over the past weeks. A week with no saved record counts as an empty one.
-export function historyRows(cfg: Cfg, programs: Record<string, Program>, weekHist: Record<string, Week> | null, week: Week, shownKey: string, today: Date, maxWeeks: number): { rows: HistoryRow[]; summary: HistorySummary | null } {
+// and the goal/average summary over the past weeks. A week with no saved record counts as an empty one
+// when history loaded fine (a real empty week). After a failed load (`failed`) it is unread instead, since the record may be the one that was
+// lost, and the goal/average summary is left out (it would be built from guesses). The shown week is always live, never unread.
+export function historyRows(cfg: Cfg, programs: Record<string, Program>, weekHist: Record<string, Week> | null, week: Week, shownKey: string, today: Date, maxWeeks: number, failed = false): { rows: HistoryRow[]; summary: HistorySummary | null; note: string | null } {
   const weeks: Record<string, Week> = { ...(weekHist || {}), [shownKey]: week }; // live view of the shown week
   const thisSun = ymd(weekStartOf(today));
   const active = Object.keys(weeks).filter(k => WEEK_RE.test(k) && k <= thisSun && weekSummary(cfg, programs, k, weeks[k]).ex > 0).sort();
@@ -23,14 +28,15 @@ export function historyRows(cfg: Cfg, programs: Record<string, Program>, weekHis
   else keys.push(thisSun);
   const rows: HistoryRow[] = keys.map(k => {
     const s = weekSummary(cfg, programs, k, weeks[k] || { done: {}, moved: {} });
-    return { ...s, isNow: k === thisSun, label: weekRowLabel(s.full, s.days) };
+    const unread = failed && !weeks[k];
+    return { ...s, isNow: k === thisSun, unread, label: unread ? UNREAD_LABEL : weekRowLabel(s.full, s.days) };
   });
   const past = rows.filter(r => !r.isNow);
-  const summary = past.length ? {
+  const summary = past.length && !failed ? {
     met: past.filter(r => r.full >= WEEK_GOAL_DAYS).length,
     pastCount: past.length,
     mean: (past.reduce((a, r) => a + r.full, 0) / past.length).toFixed(1),
     perDay: avgPerTrainingDay(past),
   } : null;
-  return { rows, summary };
+  return { rows, summary, note: failed ? HISTORY_FAILED_NOTE : null };
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG } from './logic.js';
-import { historyRows, weekRowLabel } from './historyRows.js';
+import { HISTORY_FAILED_NOTE, UNREAD_LABEL, historyRows, weekRowLabel } from './historyRows.js';
 import { parseDate } from '../shared/dates.js';
 import type { Cfg, Program, Week } from '../types.ts';
 
@@ -75,5 +75,56 @@ describe('historyRows: what the Weekly history panel shows', () => {
 describe('weekRowLabel', () => {
   it('names each day and the total', () => {
     expect(weekRowLabel(1, [2, 1, 0, 0, 0, 0, 0])).toBe('1 of 7 days complete: day 1 complete, day 2 partly done, day 3 not started, day 4 not started, day 5 not started, day 6 not started, day 7 not started');
+  });
+});
+
+describe('historyRows after a failed history load', () => {
+  const hist = { '2026-09-13': one(), '2026-09-20': empty() }; // 2026-09-27 is the week that did not load
+  const failed = () => historyRows(cfg, programs, hist, empty(), NOW, today, 12, true);
+
+  it('marks a week inside the range with no saved record as unread, with a label that says so', () => {
+    const { rows } = failed();
+    const gap = rows.find(r => r.key === '2026-09-27');
+    expect(gap?.unread).toBe(true);
+    expect(gap?.label).toBe(UNREAD_LABEL);
+    expect(gap?.label).not.toMatch(/0 of 7/);
+  });
+
+  it('leaves loaded weeks (even with no exercises) and the live week as they are', () => {
+    const { rows } = failed();
+    const ok = historyRows(cfg, programs, hist, empty(), NOW, today, 12, false).rows;
+    for (const key of [NOW, '2026-09-20', '2026-09-13']) {
+      const r = rows.find(x => x.key === key);
+      expect(r?.unread).toBe(false);
+      expect(r).toEqual(ok.find(x => x.key === key));
+    }
+  });
+
+  it('hides the summary and carries the notice', () => {
+    const { summary, note } = failed();
+    expect(summary).toBeNull();
+    expect(note).toBe(HISTORY_FAILED_NOTE);
+  });
+
+  it('shows the live week alone, with the notice, when every saved week failed', () => {
+    for (const none of [{}, null]) {
+      const { rows, summary, note } = historyRows(cfg, programs, none, one(), NOW, today, 12, true);
+      expect(rows.map(r => [r.key, r.unread])).toEqual([[NOW, false]]);
+      expect(summary).toBeNull();
+      expect(note).toBe(HISTORY_FAILED_NOTE);
+    }
+  });
+
+  it('never marks the shown week unread, even when the saved copy is missing', () => {
+    const { rows } = historyRows(cfg, programs, { '2026-09-27': one() }, empty(), NOW, today, 12, true);
+    expect(rows[0]).toMatchObject({ key: NOW, isNow: true, unread: false });
+  });
+
+  it('goes back to not started, the summary and no notice once the failure clears', () => {
+    const { rows, summary, note } = historyRows(cfg, programs, hist, empty(), NOW, today, 12, false);
+    expect(rows.every(r => !r.unread)).toBe(true);
+    expect(rows.find(r => r.key === '2026-09-27')).toMatchObject({ full: 0, ex: 0 });
+    expect(summary).not.toBeNull();
+    expect(note).toBeNull();
   });
 });
