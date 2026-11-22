@@ -234,37 +234,19 @@ describe('usual meal and drinks on the board (brief nutrition-meal-labels-year-r
   });
 });
 
-describe('boardDay: ready-made foods that are Need wait (brief ready-made-have-gate)', () => {
+describe('boardDay: a ready-made food that is Need is drawn and counted like any other (brief nutrition-planned-available-tray)', () => {
   const food = (id: string, n: string, kcal: number, p: number): Recipe => ({ id, n, cat: 'ready', ing: [], steps: [], kcal, p, f: 2 }) as Recipe;
-  const yog = food('yog', 'Greek yogurt', 100, 10), oats = food('oats', 'Oats', 300, 10), dragon = food('dr', 'Dragon fruit', 60, 1);
-  const rs = [chili, yog, oats, dragon];
-  const g: Grocery = { stores: ['Anywhere'], items: [{ id: 'y', n: 'Greek yogurt', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }, { id: 'o', n: 'Oats', store: 'Anywhere', qty: 1, cents: null, every: false, out: false }] };
-  const gate = (have: Record<string, { have: true }> = { o: { have: true } }) => ({ today: TODAY, g, months: { '2099-01': { lines: have, pulled: [] } }, diet: [] });
-  const plan = { [D2]: [pi('yog', 'snack'), pi('oats', 'snack'), pi('dr', 'snack'), pp('chili', 'dinner')] };
-  it('leaves a Need ready-made food out of the meals, the count and the totals, and lists it as waiting', () => {
-    const d = boardDay(plan, D2, rs, [], null, {}, {}, gate());
-    expect(d.waiting.map(w => [w.r.name, w.index, w.slot])).toEqual([['Greek yogurt', 0, 'snack']]);
-    expect(d.slots.find(s => s.slot === 'snack')!.items.map(x => x.r.name)).toEqual(['Dragon fruit', 'Oats']);
+  const yog = food('yog', 'Greek yogurt', 100, 10), oats = food('oats', 'Oats', 300, 10);
+  const rs = [chili, yog, oats];
+  const plan = { [D2]: [pp('yog', 'snack'), pi('oats', 'snack'), pp('chili', 'dinner')] };
+  it('keeps every item in its meal, with its place in the plan, and counts it', () => {
+    const d = boardDay(plan, D2, rs, [], null);
+    expect(d.slots.find(s => s.slot === 'snack')!.items.map(x => [x.r.name, x.index])).toEqual([['Greek yogurt', 0], ['Oats', 1]]);
     expect(d.count).toBe(3);
+    expect(d).not.toHaveProperty('waiting');
   });
-  it('the figures equal those of a plan that never held the waiting food', () => {
-    const withGate = boardDay(plan, D2, rs, [], null, {}, {}, gate());
-    const without = boardDay({ [D2]: plan[D2]!.filter(x => x.id !== 'yog') }, D2, rs, [], null);
-    const pick = (b: typeof withGate) => ({ count: b.count, kcal: b.kcal, protein: b.protein, fat: b.fat, fatState: b.fatState, fatFoods: b.fatFoods, slots: b.slots.map(s => [s.slot, s.items.length, s.kcal, s.need, s.have]) });
-    expect(pick(withGate)).toEqual(pick(without));
-  });
-  it('ticking Have returns it, with its plan position intact', () => {
-    const d = boardDay(plan, D2, rs, [], null, {}, {}, gate({ o: { have: true }, y: { have: true } }));
-    expect(d.waiting).toEqual([]);
-    expect(d.slots.find(s => s.slot === 'snack')!.items.map(x => [x.r.name, x.index])).toEqual([['Dragon fruit', 2], ['Greek yogurt', 0], ['Oats', 1]]);
-  });
-  it('is off without a gate and on a past day', () => {
-    expect(boardDay(plan, D2, rs, [], null).waiting).toEqual([]);
-    expect(boardDay({ [D]: plan[D2]! }, D, rs, [], null, {}, {}, { ...gate(), today: D2 }).waiting).toEqual([]);
-  });
-  it('never hides a recipe with ingredients', () => {
-    const d = boardDay({ [D2]: [pi('chili', 'dinner')] }, D2, rs, [], null, {}, {}, gate());
-    expect(d.waiting).toEqual([]);
-    expect(d.count).toBe(1);
+  it('the plate check still reads planned food only', () => {
+    const d = boardDay({ [D2]: [pi('yog', 'snack')] }, D2, rs, [], null);
+    expect(d.slots.find(s => s.slot === 'snack')!.have).toEqual([]);
   });
 });

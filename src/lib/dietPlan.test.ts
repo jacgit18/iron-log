@@ -3,7 +3,7 @@ import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
 import { MAX_DAY_ITEMS, MAX_DAY_STORED, MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
 import { alreadyThereText, normPlan, plannedCount } from '../shared/diet.js';
 import { moveItem } from './weekBoard.js';
-import { PLANNED_FULL, addItem, canBePlanned, markPlanned, dayTotals, daysFrom, findMatches, inWindow, isEaten, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
+import { PLANNED_FULL, addItem, canBePlanned, markPlanned, dayTotals, daysFrom, findMatches, inWindow, isEaten, planFullReason, planLog, prunePlan, removeItem, resolve, setEaten, setPortion, totalsText } from './dietPlan.js';
 
 const today = '2026-10-30';
 const recipes: Recipe[] = [
@@ -76,12 +76,12 @@ describe('addItem, setPortion, removeItem', () => {
   it('only an item marked planned counts toward the 8; the ninth planned item is refused', () => {
     const eight: PlanItem[] = Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => pl(`x${i}`));
     expect(addItem({ [today]: eight }, today, r('y'), today).error).toBeNull(); // available: allowed
-    expect(addItem({ [today]: eight }, today, pl('y'), today).error).toBe('A day can hold 8 planned things. Unmark one to mark another.');
+    expect(addItem({ [today]: eight }, today, pl('y'), today).error).toBe('A day can hold 8 planned things. Unplan one to plan another.');
   });
   it('markPlanned marks and unmarks, refuses a ninth planned item, and never changes what the day holds', () => {
     const day: PlanItem[] = [...Array.from({ length: MAX_PLAN_ITEMS }, (_, i) => pl(`x${i}`)), r('a'), r('b')];
     const p = { [today]: day };
-    expect(markPlanned(p, today, 8, true).error).toBe('A day can hold 8 planned things. Unmark one to mark another.');
+    expect(markPlanned(p, today, 8, true).error).toBe('A day can hold 8 planned things. Unplan one to plan another.');
     const freed = markPlanned(p, today, 0, false).plan!;
     expect(freed[today]![0]).toEqual(r('x0'));
     const again = markPlanned(freed, today, 8, true);
@@ -207,25 +207,25 @@ describe('planLog keeps the estimate mark (brief recipe-auto-nutrition)', () => 
   });
 });
 
-describe('waiting foods and the planned cap (brief ready-made-have-gate)', () => {
-  const waiting = new Set(['hid']);
+describe('a planned Need food counts toward the cap (brief nutrition-planned-available-tray)', () => {
   const day = '2099-02-01', today = '2099-01-01';
   const planned = (id: string): PlanItem => ({ k: 'r', id, p: true });
-  const full = { [day]: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'hid'].map(planned) }; // 8 planned, one of them waiting
-  it('a waiting food does not use up the cap: markPlanned and addItem take the 8th', () => {
-    expect(plannedCount(full[day]!, undefined, undefined, waiting)).toBe(7);
-    expect(addItem(full, day, planned('h'), today, undefined, undefined, waiting).error).toBeNull();
-    const unmarked = { [day]: [...full[day]!.slice(0, 7), { k: 'r', id: 'z' } as PlanItem, { k: 'r', id: 'hid', p: true } as PlanItem] };
-    expect(markPlanned(unmarked, day, 7, true, undefined, undefined, waiting).error).toBeNull();
-    expect(markPlanned(unmarked, day, 7, true).error).toBe(PLANNED_FULL); // without the waiting set the 8 count and refuse
+  const eight = { [day]: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'hid'].map(planned) }; // 8 planned, one of them a food that is Need today
+  it('all 8 count, whatever the food is: the 9th is refused', () => {
+    expect(plannedCount(eight[day]!, undefined, undefined)).toBe(8);
+    expect(addItem(eight, day, planned('h'), today).error).toBe(PLANNED_FULL);
+    const unmarked = { [day]: [...eight[day]!.slice(0, 7), { k: 'r', id: 'z' } as PlanItem] };
+    expect(markPlanned(unmarked, day, 7, true).error).toBeNull();
+    expect(markPlanned({ [day]: [...eight[day]!, { k: 'r', id: 'z' } as PlanItem] }, day, 8, true).error).toBe(PLANNED_FULL);
   });
-  it('the cap still holds for foods that are shown', () => {
-    const eight = { [day]: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(planned) };
-    expect(addItem(eight, day, planned('i'), today, undefined, undefined, waiting).error).toBe(PLANNED_FULL);
+  it('the refusal says Unplan, and an unplanned item is never refused for the 8', () => {
+    expect(PLANNED_FULL).toBe('A day can hold 8 planned things. Unplan one to plan another.');
+    expect(addItem(eight, day, { k: 'r', id: 'plain' }, today).error).toBeNull();
+    expect(planFullReason(eight[day]!)).toBe(PLANNED_FULL);
+    expect(planFullReason(eight[day]!.slice(1))).toBeNull();
   });
-  it('adding a waiting food again says where it went', () => {
-    expect(addItem(full, day, { k: 'r', id: 'hid' }, today, undefined, undefined, waiting).error).toMatch(/waiting on inventory \(Need\)/);
-    expect(addItem(full, day, { k: 'r', id: 'a' }, today, undefined, undefined, waiting).error).toBe('That is already in that meal.');
-    expect(alreadyThereText({ k: 'r', id: 'hid' })).toBe('That is already in that meal.');
+  it('adding a food the day already holds has one answer', () => {
+    expect(addItem(eight, day, { k: 'r', id: 'hid' }, today).error).toBe('That is already in that meal.');
+    expect(alreadyThereText()).toBe('That is already in that meal.');
   });
 });

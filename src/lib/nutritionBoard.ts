@@ -4,7 +4,6 @@ import { shortDay, sundayOf } from './dayNames.js';
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';
 import { canBePlanned, isEaten, type Plan } from './dietPlan.js';
-import type { HaveGate } from './haveOnly.js';
 import { portionTag } from './supplementPortion.js';
 import { usualMealOf } from './usualMeal.js';
 import { SLOTS, scheduleOf, slotTally } from './supplements.js';
@@ -198,11 +197,11 @@ export function placeEaten(day: string, today: string, eaten: readonly DietEntry
   return out;
 }
 
-/** A meal's header line (wording A, owner 2026-11-19; brief nutrition-board-available-list). Food that is not ticked as eaten never counts toward calories, so the menu is told in words: "4 on the menu", and "· 2 planned" once something is marked planned. Once food is eaten the line leads with its calories: "245 kcal eaten". "Eaten" means a plan item is ticked or food nobody planned was logged there (`anyEaten`), not that its calories are above 0, so a ticked 0 kcal item reads "0 kcal eaten". `eatenKcal` is the ticked plan food plus the eaten food nobody planned; nothing else is ever added to it. A meal with no items and nothing eaten has no line. */
-export function mealKcalText(meal: { items: number; planned: number; anyEaten: boolean }, eatenKcal: number): string {
-  const planned = meal.planned > 0 ? ` · ${meal.planned} planned` : '';
-  if (meal.anyEaten) return `${eatenKcal.toLocaleString('en-US')} kcal eaten${planned}`;
-  return meal.items > 0 ? `${meal.items} on the menu${planned}` : '';
+/** A meal's header line (brief nutrition-planned-available-tray, amending wording A of nutrition-board-available-list): "2 planned · 5 available", the plate and the tray told in words. Food that is not ticked as eaten never counts toward calories. Once food is eaten the line leads with its calories: "245 kcal eaten · 2 planned · 5 available". "Eaten" means a plan item is ticked or food nobody planned was logged there (`anyEaten`), not that its calories are above 0, so a ticked 0 kcal item reads "0 kcal eaten". `eatenKcal` is the ticked plan food plus the eaten food nobody planned; nothing else is ever added to it. A meal with nothing planned, available or eaten has no line. `available` is the tray's size (`trayRows`). */
+export function mealKcalText(meal: { planned: number; available: number; anyEaten: boolean }, eatenKcal: number): string {
+  const counts = `${meal.planned} planned · ${meal.available} available`;
+  if (meal.anyEaten) return `${eatenKcal.toLocaleString('en-US')} kcal eaten · ${counts}`;
+  return meal.planned > 0 || meal.available > 0 ? counts : '';
 }
 
 /** The two figures a meal header needs: its planned count (items marked planned that can be planned: never a listed daily snack or a drink) its eaten calories (ticked plan food plus the eaten food nobody planned; unticked food adds nothing) and whether anything was eaten at all (a ticked item with no calories still counts). */
@@ -235,8 +234,8 @@ export function planLine(plan: BoardDay, ahead: boolean): string | null {
 }
 
 /** A day as the board draws it: four meters (calories, protein, fat from the diet log on every day, so food only counts once it is eaten or checked off; a day ahead reads 0 and shows its plan in `planLine`; water from the water log against that day's goal), the plan's meals, and the eaten food. */
-export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; moved?: Readonly<Record<string, string>>; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets; hintsOff?: readonly PlanSlot[]; hintSkips?: Readonly<Record<string, readonly PlanSlot[]>>; gate?: HaveGate }): DayView {
-  const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal, a.moved, { off: a.hintsOff, skips: a.hintSkips }, a.gate);
+export function dayView(day: string, today: string, a: { plan: Plan; recipes: Recipe[]; meals: SavedMeal[]; moved?: Readonly<Record<string, string>>; diet: DietEntry[]; supp: Supplements; body: { d: string; w: number }[]; targets: DayTargets; hintsOff?: readonly PlanSlot[]; hintSkips?: Readonly<Record<string, readonly PlanSlot[]>> }): DayView {
+  const plan = boardDay(a.plan, day, a.recipes, a.meals, a.targets.kcal, a.moved, { off: a.hintsOff, skips: a.hintSkips });
   const eaten = a.diet.filter(e => e.d === day);
   const tot = totalsFor(a.diet, day);
   const water = goalFor(a.supp, a.body, day);
