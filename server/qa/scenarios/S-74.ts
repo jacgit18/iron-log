@@ -4,7 +4,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
   steps: [
-    'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food by hand, then Scan to fill form and allow the camera.',
+    'On a phone, sign in with any account (barcode scan is open to everyone). On Recipes press + New, then Add a food, then Scan to fill form and allow the camera.',
     'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
     'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
     'Repeat on the diet day: open Nutrition, press Add food, Find food and Scan to fill form, and scan a second product.',

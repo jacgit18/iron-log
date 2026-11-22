@@ -5,7 +5,7 @@ const scenario: Scenario = {
   steps: [
     'Open + New, Recipe or meal, set the category to Protein and read Counts as on a plate. Press Veg.',
     'Save, open it again with Edit, then press Back to automatic.',
-    'On + New, Add a food by hand, type 30 g protein and read Counts as.',
+    'On + New, Add a food, type 30 g protein and read Counts as.',
     'Open Lentil soup (this account has it set by hand) and press Edit.',
   ],
   expected: [

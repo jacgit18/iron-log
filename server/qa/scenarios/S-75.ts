@@ -3,7 +3,7 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, and no camera (retired 2026-11-13: needs a real camera, which the QA pane cannot supply; the miss ladder is covered by e2e/barcodeMissLadder.spec.js)', persona: 'diet-fresh', brief: 'barcode-scan', retired: true, edge: true,
   steps: [
-    'Open + New, then Add a food by hand, press Scan to fill form and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+    'Open + New, then Add a food, press Scan to fill form and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
     'Close the sheet. In your browser settings block the camera for the site, press Scan to fill form again, and press Photo instead with a saved photo of a barcode (or of a table).',
   ],
   expected: [

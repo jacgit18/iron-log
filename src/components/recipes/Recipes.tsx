@@ -49,7 +49,7 @@ import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
 
 // Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
 // ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
-type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'types' } | { kind: 'form'; id?: string; ready?: boolean; scan?: boolean; start?: { title: string; url: string } | null };
+type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'types' } | { kind: 'form'; id?: string; ready?: boolean; start?: { title: string; url: string } | null };
 const PANE_CHOICES = [{ key: 'auto', label: 'Beside the list' }, { key: 'closed', label: 'Page only' }] as const; // kept for the e2e specs only (no control; nothing in the app sets it): e2e/fixtures.js stores 'closed' so older specs keep opening a recipe as a page
 const FILTER_CHOICES = [{ key: 'closed', label: 'Closed' }, { key: 'open', label: 'Open' }] as const;
 const EMPTY_CHIPS = new Map<string, ComboChip[]>();
@@ -192,7 +192,6 @@ export default function Recipes() {
   };
   const choose = (c: NewChoice) => {
     if (c === 'food') setView({ kind: 'form', ready: true });
-    else if (c === 'scan') setView({ kind: 'form', ready: true, scan: true });
     else setView({ kind: 'form' }); // Recipe or meal: one form until meals-from-foods
   };
   const [typesUndo, setTypesUndo] = useState<(() => boolean) | null>(null); // Undo for the last "Looks right"; it belongs to this visit of the list
@@ -204,7 +203,7 @@ export default function Recipes() {
       if (pane) { if (id) showSavedRecipe(id); else if (editing) setSelId(editing.id); back(); return; } // beside the list: back to the list with the recipe open in the pane
       if (id) setView({ kind: 'mine', id }); else if (editing) setView({ kind: 'mine', id: editing.id }); else back(); // a phone: the recipe's page; Cancel from Edit returns to the recipe, from New to the list
     };
-    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} {...(view.scan ? { scanFirst: true } : {})} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
+    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
   }
   if (view.kind === 'types') return <FoodTypeReview onDone={undo => { setTypesUndo(() => undo); back(); }} onBack={back} />;
   if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={view.from && recipes.some(r => r.id === view.from) ? backFromSauce : back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} onOpen={id => openLinked(id, mineRecipe.id)} />;

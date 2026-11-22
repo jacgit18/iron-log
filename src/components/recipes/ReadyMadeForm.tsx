@@ -10,7 +10,6 @@ import type { AmountRow } from '../../lib/foodAmountRows.js';
 import { DEFAULT_FOOD_TYPE, formFoodType } from '../../lib/foodType.js';
 import { marksOf } from '../../lib/plate.js';
 import { usesOf } from '../../lib/recipeUses.js';
-import { setBeverage } from '../../lib/usualMeal.js';
 import { readyMadeValues } from '../../lib/readyMade.js';
 import { planFill } from '../../lib/labelFill.js';
 import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
@@ -31,7 +30,7 @@ const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 // A ready-made food (brief recipe-first-diet-log): something bought or frozen that you only heat up. It is a recipe in the Ready-made category with
 // no ingredients or steps, so it is listed, searched, logged with the log control and planned like any recipe. Numbers are per serving, typed from the
 // label or filled from the food lookup (still editable).
-export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: Recipe; onDone: (savedId: string | null) => void; scanFirst?: boolean }) {
+export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onDone: (savedId: string | null) => void }) {
   const [n, setN] = useState(recipe?.n ?? '');
   const [kcal, setKcal] = useState(str(recipe?.kcal));
   // Vitamins and minerals per serving (brief recipes-vitamins-minerals): never typed; they come with a lookup or a label scan and are kept only while calories are still the number they came with.
@@ -42,7 +41,6 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
   const [uses, setUses] = useState<RecipeUse[]>(() => (recipe ? usesOf(recipe) : [DEFAULT_FOOD_TYPE])); // brief recipes-used-as-ingredients-tab: one or more of Ingredient, Ready to eat, Drink; starts on Ready to eat // brief food-type-and-migration: required, starts on Ready to eat (a food saved before types existed saves with its first Type too)
-  const [beforeBev, setBeforeBev] = useState<RecipeUse[]>(); // the labels the food had when Beverage was turned on
   const [meal, setMeal] = useState<PlanSlot | undefined>(recipe?.meal); // brief nutrition-meal-labels-year-repeat: the food's usual meal
   const countsAs = useCountsAs(recipe?.counts); // brief week-board: what it covers on a plate; automatic until pressed
   const [note, setNote] = useState(recipe?.note ?? '');
@@ -95,7 +93,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
     <form className="rc-form rcf" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New food'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit food' : 'New food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
-        <FoodSearch onUse={fillFrom} {...(scanFirst ? { scanFirst } : {})} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
+        <FoodSearch onUse={fillFrom} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
       </div>
       {canScan && (
         <div className="rc-scan">
@@ -116,7 +114,7 @@ export default function ReadyMadeForm({ recipe, onDone, scanFirst }: { recipe?: 
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
       <UsedAsChips value={uses} options={FOOD_USES} onChange={setUses} />
-      <UsualMealPicker meal={meal} beverage={uses.includes('drink')} onMeal={setMeal} onBeverage={on => { if (on) setBeforeBev(uses); setUses(setBeverage(uses, 'ready', on, beforeBev)); }} />
+      <UsualMealPicker meal={meal} onMeal={setMeal} />
       <CountsAsChips value={countsAs.shown(autoMarks)} picked={countsAs.picked} onChange={countsAs.pick} onAuto={countsAs.reset} />
       <div className="rc-nutfields">
         <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => { setKcal(e.target.value); setErr(''); }} /></label>

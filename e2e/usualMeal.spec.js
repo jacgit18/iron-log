@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 import { closeSheet, openAdd, openNutrition } from './nutritionBoardHelpers.js';
-import { startRecipe } from './recipesNav.js';
+import { startFood, startRecipe } from './recipesNav.js';
 
 // A food's usual meal and the Drinks section (brief nutrition-meal-labels-year-repeat, PR 2). The rules (which meal an item sits in, what a drink is, the cap and the drinks limit) are node tests
 // (usualMeal.test.ts, weekBoard.test.ts, plate.test.ts); this covers the wiring: the pickers on the recipe form, the add sheet's pre-pick, the board following a change, and the Drinks list.
@@ -17,7 +17,7 @@ const planOn = async (page, day, short, pick, flowName = /^Recipes/) => {
   return sheet;
 };
 
-test('the recipe form saves a usual meal and Beverage, and the card shows the meal', async ({ page }) => {
+test('the recipe form saves a usual meal, has Drink only in Used as, and the card shows the meal', async ({ page }) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await startRecipe(page);
   await page.getByLabel('Name', { exact: true }).fill('Oatmeal');
@@ -26,15 +26,28 @@ test('the recipe form saves a usual meal and Beverage, and the card shows the me
   for (const m of ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'None']) await expect(usual.getByRole('button', { name: m, exact: true })).toBeVisible();
   await usual.getByRole('button', { name: 'Breakfast', exact: true }).click();
   await expect(usual.getByRole('button', { name: 'Breakfast', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  const bev = page.getByRole('group', { name: 'Beverage' }).getByRole('button');
-  await expect(bev).toHaveAttribute('aria-pressed', 'false');
-  await bev.click();
-  await expect(page.getByRole('group', { name: 'Used as' }).getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true'); // the same Drink label
-  await bev.click();
-  await expect(page.getByRole('group', { name: 'Used as' }).getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('group', { name: 'Beverage' })).toHaveCount(0); // one place for drinks: the Drink chip in Used as
+  const used = page.getByRole('group', { name: 'Used as' });
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'false');
+  await used.getByRole('button', { name: 'Drink' }).click();
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true');
+  await used.getByRole('button', { name: 'Meal' }).click(); // back to a meal: the Drink label goes off
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'false');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:recipes/main') || '{}').items);
   expect(saved.map(r => [r.n, r.meal])).toEqual([['Oatmeal', 'breakfast']]);
+});
+
+test('the food form has Drink only in Used as, beside the usual meal', async ({ page }) => {
+  await page.click('#tab-daily'); await page.click('#daily-recipes');
+  await startFood(page);
+  await expect(page.getByRole('group', { name: 'Usual meal' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Beverage' })).toHaveCount(0);
+  const used = page.getByRole('group', { name: 'Used as' });
+  await used.getByRole('button', { name: 'Drink' }).click();
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'true');
+  await used.getByRole('button', { name: 'Ready to eat' }).click(); // another label turns Drink off
+  await expect(used.getByRole('button', { name: 'Drink' })).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('the add sheet pre-picks the usual meal, a pressed meal wins, and a hand-placed copy is stored with its own meal', async ({ page }) => {
