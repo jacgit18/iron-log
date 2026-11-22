@@ -210,7 +210,7 @@ test('supplements tick on today, last week and a day ahead, each with its own co
   await expect(col(page, TODAY)).toContainText('1 of 2 taken');
 });
 
-test('a meal on a day ahead (not today) has an Add control that opens the add sheet on that day with that meal picked; last week has none', async ({ page }) => {
+test('a meal on a day ahead has an Add control that opens the add sheet on that day with that meal picked; today has one per meal too (nutritionMealAdd.spec.js); last week has none', async ({ page }) => {
   await openNutrition(page);
   await col(page, '2026-09-25').getByRole('button', { name: 'Add to Lunch' }).click();
   const sheet = page.getByRole('dialog');
@@ -220,12 +220,12 @@ test('a meal on a day ahead (not today) has an Add control that opens the add sh
   await col(page, '2026-09-25').getByRole('button', { name: 'Add to Dinner' }).click();
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true');
   await closeSheet(page);
-  await expect(todayCol(page).getByRole('button', { name: /^Add to / })).toHaveCount(0); // today logs eaten food, which has no meal
+  await expect(todayCol(page).getByRole('button', { name: /^Add to / })).toHaveCount(4); // today logs into the meal pressed (button review N8)
   await page.getByRole('button', { name: 'Previous week', exact: true }).click();
   await expect(page.getByRole('button', { name: /^Add to / })).toHaveCount(0); // the week cannot be changed
 });
 
-test('a meal that already has food on a day ahead keeps its Add control in the header, and today has none', async ({ page }) => {
+test('a meal that already has food on a day ahead keeps its Add control in the header, and today has one per meal', async ({ page }) => {
   await seedRecipes(page);
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}'); localStorage.setItem('ironlog:config/main', JSON.stringify({ ...c, diet: { plan: { '2026-09-25': [{ k: 'r', id: 'chili', s: 'lunch' }] } } })); });
   await page.reload();
@@ -236,7 +236,7 @@ test('a meal that already has food on a day ahead keeps its Add control in the h
   await fri.getByRole('button', { name: 'Add to Lunch' }).click();
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Lunch' })).toHaveAttribute('aria-pressed', 'true');
   await closeSheet(page);
-  await expect(todayCol(page).getByRole('button', { name: /^Add to / })).toHaveCount(0); // eaten food has no meal of its own, so today keeps the toolbar
+  await expect(todayCol(page).getByRole('button', { name: /^Add to / })).toHaveCount(4); // today logs into the meal pressed, as its entries now carry the meal
 });
 
 test('the Calories, Protein and Fat bars are filled in their legend colours, and a bar past its target turns the over colour', async ({ page }) => {

@@ -3,15 +3,17 @@ import { entryText, hasMacros } from '../../lib/dietLog.js';
 import { logFoodAtUsual, logFoodGrams, logRecipeAtUsual } from '../../lib/logAtUsual.js';
 import type { Say } from '../../lib/eatenStep.js';
 import { findFoods } from '../../lib/foodMacros.js';
+import { stampMeal } from '../../lib/stampMeal.js';
 import { foodTypeOf } from '../../lib/foodType.js';
 import { FOOD_TYPE_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import type { PlanSlot } from '../../types.ts';
 import FoodSearch, { type FoodFill, type ScanResume } from './FoodSearch.js';
 import './Diet.css';
 
 // "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one. A pick logs at once at the usual portion on today or an earlier day (brief nutrition-log-first-portion-row); a day ahead opens the portion sheet (brief log-or-plan-control), and a food with no recipe behind it is log only. Nothing is stored for this; it reads the log and the recipes.
 // The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
-export default function FindFood({ day, today, onFood, onMsg, reopen, resume }: { day: string; today: string; onFood: (fill: FoodFill) => void; onMsg: Say; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
+export default function FindFood({ day, today, slot, onFood, onMsg, reopen, resume }: { day: string; today: string; slot?: PlanSlot; onFood: (fill: FoodFill) => void; onMsg: Say; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [q, setQ] = useState('');
@@ -20,12 +22,12 @@ export default function FindFood({ day, today, onFood, onMsg, reopen, resume }: 
   // Today or an earlier day: one tap logs at the usual portion (brief nutrition-log-first-portion-row), the sheet stays open and the status line says what was logged with Undo. A day ahead opens the portion sheet, which plans.
   const pick = (f: (typeof found)[number], rec: (typeof recipes)[number] | undefined) => {
     if (day > today || (rec && !hasMacros(rec))) { st().openModal(rec ? { type: 'portion', id: rec.id, day } : { type: 'portion', food: f, day }); return; }
-    const m = rec ? logRecipeAtUsual(st(), rec, day, today) : logFoodAtUsual(st(), f, day, today);
+    const m = rec ? logRecipeAtUsual(stampMeal(st(), slot), rec, day, today) : logFoodAtUsual(stampMeal(st(), slot), f, day, today);
     if (m.ok) onMsg(m.text, m.undo); else onMsg(m.error);
   };
   // A database food (or a scanned product) at the grams chosen: Log it logs it on a day that can be logged; Use still opens the One-off form to edit it first.
   const logGrams = (f: FoodFill, grams: number): boolean => { // true when it was logged: the pick and the box clear only then, so a refusal keeps the grams to change
-    const m = logFoodGrams(st(), f, grams, day, today);
+    const m = logFoodGrams(stampMeal(st(), slot), f, grams, day, today);
     if (!m.ok) { onMsg(m.error); return false; }
     setQ(''); onMsg(m.text, m.undo);
     return true;
