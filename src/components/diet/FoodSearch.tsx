@@ -23,7 +23,7 @@ export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: 
 // With `text` given, the words come from another box (the "Search your past meals and recipes" box) and this shows only the results and the grams step.
 export interface ScanResume { hit?: FoodHit; label?: boolean }
 // `reopen` is for a caller whose own sheet the barcode sheet replaces (the nutrition board's add sheet): the scan hands its result back through it, and the caller shows this box again with `resume` set (a found product picked, or a Photo the label button ready).
-export default function FoodSearch({ onUse, onLog, text: given, onLabelPhoto, scanFirst, reopen, resume }: { onUse: (fill: FoodFill) => void; onLog?: (fill: FoodFill, grams: number) => void; text?: string; onLabelPhoto?: () => void; scanFirst?: boolean; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
+export default function FoodSearch({ onUse, onLog, text: given, onLabelPhoto, scanFirst, reopen, resume }: { onUse: (fill: FoodFill) => void; onLog?: (fill: FoodFill, grams: number) => boolean; text?: string; onLabelPhoto?: () => void; scanFirst?: boolean; reopen?: (r: ScanResume) => void; resume?: ScanResume }) {
   const [own, setText] = useState('');
   const text = given ?? own;
   const { hits, note } = useFoodHits(text);
@@ -52,8 +52,7 @@ export default function FoodSearch({ onUse, onLog, text: given, onLabelPhoto, sc
 
   const logIt = () => { // Find food on a day that can be logged: log the pick at these grams without the form (Use still fills the form to edit first)
     if (!pick || !scaled || g === null || !onLog) return;
-    onLog({ n: pick.name.slice(0, 80), ...scaled }, g);
-    setPick(null); setText('');
+    if (onLog({ n: pick.name.slice(0, 80), ...scaled }, g)) { setPick(null); setText(''); } // a refusal keeps the pick and the grams
   };
 
   const readPhoto = async (file: File | undefined) => {
