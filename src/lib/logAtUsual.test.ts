@@ -93,9 +93,14 @@ describe('logFoodGrams: a database food at the grams chosen', () => {
     expect(logFoodGrams(ports, milk, 240, '2026-11-16', TODAY).ok).toBe(false);
     expect(s.entries).toHaveLength(0);
   });
+  it('says so when the grams make it under 1 calorie, not that the numbers are out of range', () => {
+    const { s, ports } = fake();
+    expect(logFoodGrams(ports, { n: 'Coffee', kcal: 0.4, p: 0 }, 20, TODAY, TODAY)).toEqual({ ok: false, error: 'That is under 1 calorie at these grams, which can’t be logged.' });
+    expect(logFoodGrams(ports, { n: 'Coffee', kcal: 99999999, p: 0 }, 20, TODAY, TODAY)).toEqual({ ok: false, error: 'Those numbers are out of range.' });
+    expect(s.entries).toHaveLength(0);
+  });
   it('shows a store refusal in the store\'s words', () => {
     const ports = { addDietEntry: () => ({ id: null, error: 'That’s 20 things for the day.' }), removeDietEntry: () => {} };
     expect(logFoodGrams(ports as never, milk, 100, TODAY, TODAY)).toEqual({ ok: false, error: 'That’s 20 things for the day.' });
   });
 });
-

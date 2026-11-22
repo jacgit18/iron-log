@@ -33,7 +33,7 @@ export function logFoodAtUsual(ports: Logger, food: { n: string; kcal: number; p
 /** Log a food picked from the food database at the grams chosen (Find food, Log it): `fill` already holds the numbers for those grams (`scaleFood`), kept as one entry of one portion. The answer carries the sentence ("Logged Almond milk, 240 g.") and an Undo that removes exactly that entry. */
 export function logFoodGrams(ports: Logger, fill: { n: string; kcal: number; p: number; c?: number; f?: number; micro?: Recipe['micro'] }, grams: number, day: string, today: string): Made {
   const nums = servingNumbers(fill as Food, 1);
-  if (!nums) return { ok: false, error: 'Those numbers are out of range.' };
+  if (!nums) return { ok: false, error: fill.kcal >= 0 && fill.kcal < 0.5 ? 'That is under 1 calorie at these grams, which can’t be logged.' : 'Those numbers are out of range.' }; // an entry needs at least 1 kcal
   const bad = ateDayError(day, today);
   if (bad) return { ok: false, error: bad };
   return logEntry(ports, entryFromFood(day, { n: fill.n, ...nums, x: 1 }), loggedText(fill.n, `${fmtNum(grams)} g`));

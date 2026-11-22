@@ -50,6 +50,21 @@ test('a database pick can be logged straight from Find food with Log it, and Und
   await expect(todayCol(page).getByText('Oats, rolled')).toHaveCount(1);
 });
 
+test('a product found by the barcode scan inside Find food can be logged with Log it', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13', 'upc_a']; } async detect() { return [{ rawValue: '016000275287', format: 'upc_a' }]; } };
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
+  });
+  await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Cheerios Cereal', brand: 'General Mills', kcal: 380, p: 10, c: 70, f: 6, serving: 28 } }) }));
+  await page.reload();
+  await nutrition(page);
+  await page.locator('#dt-scan-barcode').click();
+  await page.getByLabel('Barcode photo').setInputFiles({ name: 'barcode.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+  await expect(diet(page).getByLabel('Grams')).toHaveValue('28'); // the scan came back to Find food with the product picked
+  await diet(page).getByRole('button', { name: 'Log it', exact: true }).click();
+  await expect(diet(page).getByRole('status').filter({ hasText: 'Logged Cheerios Cereal, 28 g.' })).toBeVisible();
+});
+
 test('when the database is down the box still says so and your own matches still work', async ({ page }) => {
   await stub(page, 503, { ok: false, error: 'food search is not available right now', why: 'upstream' });
   await nutrition(page);
