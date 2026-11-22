@@ -35,7 +35,8 @@ test('a past day offers the log ways, and Copy yesterday there says one sentence
   await openNutrition(page);
   await col(page, TUE).getByRole('button', { name: /^Tue 22/ }).click();
   const bar = page.locator('.nb-toolbar');
-  for (const f of ['Scan and log', 'Quick add', 'One-off food']) await expect(bar.getByRole('button', { name: f, exact: true })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Scan and log', exact: true })).toBeVisible();
+  for (const f of ['Quick add', 'One-off food']) await expect(bar.getByRole('button', { name: f, exact: true })).toHaveCount(0);
   await expect(bar.getByRole('button', { name: 'Recipes', exact: true })).toHaveCount(0);
   const sheet = await openAdd(page, 'Copy yesterday');
   await sheet.getByRole('button', { name: /^Copy / }).click();
