@@ -54,7 +54,8 @@ test('Weeks run Sunday to Saturday: This week holds today and the days before it
 test('the toolbar names its day, starts on today and follows the day you tap; an earlier day logs like today', async ({ page }) => {
   await openNutrition(page);
   await expect(page.locator('.nb-target')).toHaveText('Adding to Thu 24 · today');
-  for (const f of ['Scan and log', 'Quick add', 'One-off food']) await expect(page.locator('.nb-toolbar').getByRole('button', { name: f, exact: true })).toBeVisible(); // today logs eaten food
+  await expect(page.locator('.nb-toolbar').getByRole('button', { name: 'Scan and log', exact: true })).toBeVisible(); // today logs eaten food
+  for (const f of ['Quick add', 'One-off food']) await expect(page.locator('.nb-toolbar').getByRole('button', { name: f, exact: true })).toHaveCount(0); // they are in the Add food menu
   await expect(page.locator('.nb-toolbar').getByRole('button', { name: 'Recipes', exact: true })).toHaveCount(0);
   await col(page, '2026-09-26').getByRole('button', { name: /^Sat 26/ }).click();
   await expect(page.locator('.nb-target')).toHaveText('Adding to Sat 26');
@@ -70,10 +71,10 @@ test('the toolbar names its day, starts on today and follows the day you tap; an
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Recipes' })).toBeVisible();
   await closeSheet(page);
   await col(page, '2026-09-24').getByRole('button', { name: /^Thu 24/ }).click();
-  await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible(); // back on today: log shortcuts
+  await expect(bar.getByRole('button', { name: 'Scan and log', exact: true })).toBeVisible(); // back on today: the log shortcut
   await page.getByRole('button', { name: 'Previous week', exact: true }).click();
   await expect(page.locator('#nb-add')).toBeVisible(); // an earlier day logs eaten food on that date (brief nutrition-any-day-add)
-  await expect(bar.getByRole('button', { name: 'Quick add' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Scan and log', exact: true })).toBeVisible();
   await expect(page.locator('.nb-toolbar')).not.toContainText('read-only');
 });
 
@@ -381,7 +382,7 @@ test.describe('on a phone', () => {
   });
 
   for (const width of [375, 390]) {
-    test(`header B and add-food A at ${width} px: Manage is the small button at the right end of the week row (brief nutrition-mobile-manage), Add food last in a row of four equal buttons, centered day text`, async ({ page }) => {
+    test(`header B and add-food A at ${width} px: Manage is the small button at the right end of the week row (brief nutrition-mobile-manage), Add food last in a row of two equal buttons, centered day text`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openNutrition(page);
       const box = sel => page.locator(sel).first().evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
@@ -390,15 +391,15 @@ test.describe('on a phone', () => {
       expect(await page.locator('#nb-h').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(1); // the Nutrition heading stays for screen readers but is not drawn: the tab already says it
       expect(manage.h).toBeGreaterThanOrEqual(43.5);
       const add = await box('#nb-add');
-      const three = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
-      expect(three).toHaveLength(3);
-      expect(await page.locator('.nb-tbtns .btn').allInnerTexts()).toEqual(['Scan and log', 'Quick add', 'One-off food', 'Add food']); // Add food is last, so it is the rightmost
-      expect(three.every(t => Math.abs(t.y - add.y) < 1 && t.h >= 43.5 && Math.abs(t.w - add.w) < 1)).toBe(true); // one row, four equal buttons
-      expect(add.x).toBeGreaterThan(await page.locator('.nb-tbtns .btn').nth(2).evaluate(e => e.getBoundingClientRect().x));
+      const others = await page.locator('.nb-tbtns .btn:not(#nb-add)').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { y: r.y, w: r.width, h: r.height }; }));
+      expect(others).toHaveLength(1);
+      expect(await page.locator('.nb-tbtns .btn').allInnerTexts()).toEqual(['Scan and log', 'Add food']); // Add food is last, so it is the rightmost
+      expect(others.every(t => Math.abs(t.y - add.y) < 1 && t.h >= 43.5 && Math.abs(t.w - add.w) < 1)).toBe(true); // one row, two equal buttons
+      expect(add.x).toBeGreaterThan(await page.locator('.nb-tbtns .btn').nth(0).evaluate(e => e.getBoundingClientRect().x));
       await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; }); // enlarged text: still one row, Add food still rightmost, nothing scrolls sideways
       const big = await page.locator('.nb-tbtns .btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: Math.round(r.y) }; }));
       expect(new Set(big.map(b => b.y)).size).toBe(1);
-      expect(big[3].x).toBeGreaterThan(big[2].x);
+      expect(big[1].x).toBeGreaterThan(big[0].x);
       await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     });
@@ -410,7 +411,7 @@ test.describe('on a phone', () => {
     await expect(page.locator('#nb-add')).toBeVisible();
     await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Recipes', 'Saved meals', 'Add food']);
     await page.getByRole('button', { name: 'Previous week' }).click();
-    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan and log', 'Quick add', 'One-off food', 'Add food']);
+    await expect(page.locator('.nb-tbtns .btn')).toHaveText(['Scan and log', 'Add food']);
     await expect(page.getByText('Last week\'s food cannot be changed')).toHaveCount(0);
   });
 });

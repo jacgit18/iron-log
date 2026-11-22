@@ -3,8 +3,8 @@ import type { Scenario } from '../scenarios.ts';
 const scenario: Scenario = {
   id: 'S-201', feature: 'Nutrition board', title: 'Log with One-off food and Quick add', persona: 'recipe-collector', brief: 'nutrition-board',
   steps: [
-    'Press One-off food in the toolbar, add "Rice" 300 kcal and 20 g protein.',
-    'In Recipes press Ate this on one recipe (the chips list recipes you have logged or starred, and this account has none logged yet). Press Quick add in the toolbar. Read Suggested now and Recent and favorites. Tap a food under Recent and favorites, press Log it, then Undo.',
+    'Press Add food, then One-off food, add "Rice" 300 kcal and 20 g protein.',
+    'In Recipes press Ate this on one recipe (the chips list recipes you have logged or starred, and this account has none logged yet). Press Add food, then Quick add. Read Suggested now and Recent and favorites. Tap a food under Recent and favorites, press Log it, then Undo.',
     'Tap one suggestion under Suggested now.',
   ],
   expected: [

@@ -145,10 +145,10 @@ describe('the toolbar and what can be added', () => {
     expect(addFlows('2026-11-10', TODAY, 3)).toEqual(['meals', 'recipes']); // a day ahead never had the save row
     expect(addFlows(TODAY, TODAY, 1)).toEqual(expect.arrayContaining(['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes']));
   });
-  it('the toolbar shortcuts follow the day: today logs, a day ahead plans, last week has none, and each is a way the add sheet offers', () => {
-    expect(toolbarFlows(TODAY, TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
+  it('the toolbar shortcuts follow the day: today and an earlier day log (scan only: Quick add and One-off food are in the Add food menu), a day ahead plans, and each is a way the add sheet offers', () => {
+    expect(toolbarFlows(TODAY, TODAY)).toEqual(['barcode']);
     expect(toolbarFlows('2026-11-12', TODAY)).toEqual(['recipes', 'meals']);
-    expect(toolbarFlows('2026-11-07', TODAY)).toEqual(['barcode', 'quick', 'oneoff']);
+    expect(toolbarFlows('2026-11-07', TODAY)).toEqual(['barcode']);
     for (const d of ['2026-11-07', TODAY, '2026-11-12']) for (const f of toolbarFlows(d, TODAY)) expect(addFlows(d, TODAY, 0)).toContain(f);
   });
 });
