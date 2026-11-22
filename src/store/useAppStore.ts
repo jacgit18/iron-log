@@ -17,6 +17,7 @@ import { mergeGroceryMonth3, mergeStretchWeek3, mergeWeek3 } from '../sync/merge
 import { stable } from '../sync/canon.js';
 import type { ApiDb } from '../sync/apiDb.js';
 import { bodySlice } from './bodySlice.js';
+import { HistoryIncompleteError } from './historyIncomplete.js';
 import { editorSlice } from './editorSlice.js';
 import { exportSlice } from './exportSlice.js';
 import { boardSlice } from './boardSlice.js';
@@ -279,9 +280,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     Object.entries(upd).forEach(([k, w]) => queue.save('weeks/' + k, w));
     set(s => ({ weekHist: { ...s.weekHist, ...upd } }));
   },
-  // All saved weeks, with the week on screen taken live from state.
+  // All saved weeks, with the week on screen taken live from state. After a failed load it reads once more; if some weeks still
+  // cannot be read it throws HistoryIncompleteError rather than return a partial list (exports, backups, imports and erase would miss weeks).
   async allWeeks() {
-    if (!get().weekHist) await get().loadHistory();
+    if (!get().weekHist || get().historyFailed) await get().loadHistory();
+    if (!get().weekHist || get().historyFailed) throw new HistoryIncompleteError();
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
 
@@ -382,7 +385,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   async eraseData(parts) {
     if (get().blocked()) return false;
     if (parts.weeks) {
-      const all = await get().allWeeks();
+      let all: Record<string, Week>;
+      try { all = await get().allWeeks(); }
+      catch (err) {
+        if (!(err instanceof HistoryIncompleteError)) throw err;
+        flag('Couldn’t read all your saved weeks, so nothing was erased. Try again.'); // before anything is deleted, other parts included
+        return false;
+      }
       Object.keys(all).forEach(k => { if (WEEK_RE.test(k)) get().removeDoc('weeks/' + k); });
       set({ week: normWeek(null), weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, skipNote: null, mDay: null });
     }
