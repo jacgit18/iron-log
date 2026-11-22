@@ -214,7 +214,7 @@ test('History: Keep editing then Back asks again, Discard then Back leaves the R
   expect((await hist(page)).len).toBe(before.len); // the entry was put back, not stacked
   await page.getByRole('button', { name: 'Discard' }).click();
   await expect(page.locator('#recipes-new')).toBeVisible();
-  await expect(page).toHaveURL(/#\/daily\/recipes$/);
+  await expect(page).toHaveURL(/#\/daily\/recipes\/(meals|recipes|ready)$/); // the list, at the section it opened on
 });
 
 test('History: a second Back after a held Back keeps the form and asks again', async ({ page }) => {

@@ -87,7 +87,7 @@ test('the Daily tab reads Foods and keeps its address (brief ready-made-have-gat
   await page.click('#tab-daily');
   await expect(page.locator('#daily-recipes')).toHaveText('Foods');
   await page.click('#daily-recipes');
-  await expect.poll(() => hash(page)).toBe('#/daily/recipes');
+  await expect.poll(() => hash(page)).toBe('#/daily/recipes/meals'); // the bare address names the first section (nothing yet: Meals)
   await page.reload();
   await expect(page.locator('#daily-recipes')).toHaveAttribute('aria-pressed', 'true');
 });
@@ -99,11 +99,20 @@ test('a recipe form adds a Back step; a reload on it shows the list', async ({ p
   await expect.poll(() => hash(page)).toBe('#/daily/recipes/form');
   await page.goBack();
   await newMenuVisible(page);
-  expect(await hash(page)).toBe('#/daily/recipes');
+  expect(await hash(page)).toBe('#/daily/recipes/meals');
   await page.goForward();
   await page.reload(); // the recipe itself is not in the address, so there is nothing to show but the list
   await newMenuVisible(page);
-  await expect.poll(() => hash(page)).toBe('#/daily/recipes');
+  await expect.poll(() => hash(page)).toBe('#/daily/recipes/meals');
+});
+
+test('a reload on a Foods section address reopens that section, (brief foods-made-and-store-bought)', async ({ page }) => {
+  await page.click('#tab-daily');
+  await page.click('#daily-recipes');
+  await page.goto('/#/daily/recipes/drinks');
+  await page.reload();
+  await expect(page.locator('#recipes-sec-drinks')).toHaveAttribute('aria-pressed', 'true');
+  expect(await hash(page)).toBe('#/daily/recipes/drinks');
 });
 
 test('an unknown address opens Board, and an unknown page opens its tab', async ({ page }) => {

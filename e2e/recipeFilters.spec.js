@@ -62,14 +62,14 @@ test('Manage filters hides and reorders the chips on both tabs, keeps them after
   await expect(sheet.getByRole('button', { name: 'Show Carbs' })).toBeVisible();
   await page.goBack(); // one history entry: Back closes the sheet and stays on Recipes
   await expect(sheet).toHaveCount(0);
-  await expect(page.locator('#recipes-mine')).toBeVisible();
+  await expect(page.locator('#recipes-sec-meals')).toBeVisible();
   await expect(chipRow(page).first()).toHaveText('All categories');
   await expect(chipRow(page).nth(1)).toHaveText('Sides');
   await expect(chipRow(page).nth(2)).toHaveText('Protein');
   await expect(chipRow(page).filter({ hasText: 'Carbs' })).toHaveCount(0);
   await expect(rows(page)).toHaveText(['Chili']); // hiding a chip loses no recipe
-  await page.locator('#recipes-library').click();
-  await expect(chipRow(page).filter({ hasText: 'Carbs' })).toHaveCount(0); // the same setting on the Library tab
+  await page.locator('#recipes-sec-library').click();
+  await expect(chipRow(page).filter({ hasText: 'Carbs' })).toHaveCount(0); // the same setting in the Library section
   await expect(chipRow(page).filter({ hasText: 'Food' })).toHaveCount(0); // as before: the Library has no ready-made chip
   await page.reload();
   await openRecipes(page);
@@ -190,15 +190,15 @@ test('Delete tag on another tag drops the Undo of the earlier removal', async ({
   await expect(sheet.getByRole('button', { name: 'Undo' })).toHaveCount(0);
 });
 
-test('Clear filters in the Library source clears the category only, and the tags set on Mine stay', async ({ page }) => {
+test('Clear filters in the Library section clears the category only, and the tags set on Mine stay', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein', ['weeknight']);
   await page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' }).click();
   await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
-  await page.locator('#recipes-library').click();
+  await page.locator('#recipes-sec-library').click();
   await expect(page.locator('#recipes-filters')).toHaveText('Filters (1)'); // only the category counts here
   await page.locator('#recipes-clear-filters').click();
-  await page.locator('#recipes-mine').click();
+  await page.locator('#recipes-sec-meals').click();
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' })).toHaveAttribute('aria-pressed', 'true');
 });
 

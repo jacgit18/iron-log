@@ -68,7 +68,7 @@ test('Library: a name sort sends sort=name, starts again from the first page, sa
   });
   await page.goto('/');
   await openRecipes(page);
-  await page.click('#recipes-library');
+  await page.click('#recipes-sec-library');
   await expect(rows(page)).toHaveText(['Apple', 'Bread']); // the server's order, kept as it came
   await expect(page.getByText('Sorted by name, A to Z')).toBeVisible(); // nothing typed
   await page.getByRole('searchbox', { name: 'Search recipes' }).fill('bread');
@@ -83,11 +83,11 @@ test('Library: a name sort sends sort=name, starts again from the first page, sa
   expect(asked.filter(s => s.includes('sort=')).every(s => s.includes('sort=name'))).toBe(true); // relevance is never sent
   await page.reload();
   await openRecipes(page);
-  await page.click('#recipes-library');
+  await page.click('#recipes-sec-library');
   await expect(sortBox(page)).toHaveValue('name');
-  await page.click('#recipes-mine');
+  await page.click('#recipes-sec-meals');
   await expect(sortBox(page)).toHaveValue('name'); // Mine has its own choice (also name by default)
   await sortBox(page).selectOption('newest');
-  await page.click('#recipes-library');
+  await page.click('#recipes-sec-library');
   await expect(sortBox(page)).toHaveValue('name'); // not changed by Mine
 });

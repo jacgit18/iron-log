@@ -21,3 +21,10 @@ export const unfoldAll = async page => {
 export const rowAmount = (page, i) => page.locator('.rc-ingblock').nth(i).locator('.rc-amt, .rc-fold');
 export const amountText = text => new RegExp(`^(.* · )?${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( \\(or .*\\))?( · skipped)?$`);
 export const reopenRow = async (page, i) => { const fold = page.locator('.rc-ingblock').nth(i).locator('.rc-fold'); if (await fold.count()) await fold.click(); };
+
+// The Foods sections (brief foods-made-and-store-bought): open one by its key (meals, recipes, library, ingredients, ready, drinks); the group switch follows.
+export const openSection = async (page, key) => {
+  const group = ['ingredients', 'ready', 'drinks'].includes(key) ? 'store' : 'made';
+  if ((await page.locator(`#recipes-group-${group}`).getAttribute('aria-pressed')) !== 'true') await page.locator(`#recipes-group-${group}`).click();
+  await page.locator(`#recipes-sec-${key}`).click();
+};

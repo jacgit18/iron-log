@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FoodType, Recipe, RecipeCategory, RecipeUse } from '../types.ts';
 import { RECIPE_CATEGORIES } from '../shared/recipes.js';
-import { FOOD_GROUPS, FOOD_SECTIONS, alsoIn, firstSection, groupOf, inSection, inSectionList, openingSection, onFoodsList, searchCounts, sectionAfterSave, sectionEmptyNote, sectionForPath, sectionCountText, sectionCounts, sectionLabel, sectionsInGroup, sectionsOf } from './foodSections.js';
+import { FOOD_GROUPS, FOOD_SECTIONS, alsoIn, alsoTag, firstSection, groupOf, inSection, inSectionList, openingSection, onFoodsList, searchCounts, sectionAfterSave, sectionEmptyNote, sectionForPath, sectionCountText, sectionCounts, sectionLabel, sectionsInGroup, sectionsOf } from './foodSections.js';
 
 const mk = (id: string, cat: RecipeCategory, extra: Partial<Recipe> = {}): Recipe => ({ id, n: id, cat, ing: [], steps: [], ...extra });
 const withSteps = ['mix'];
@@ -178,5 +178,15 @@ describe('sectionForPath and onFoodsList', () => {
   it('is the list only for the bare address and a section address', () => {
     expect(['daily/recipes', 'daily/recipes/meals', 'daily/recipes/library'].every(onFoodsList)).toBe(true);
     expect(['daily/recipes/mine', 'daily/recipes/form', 'daily/recipes/library/item', 'daily/recipes/types'].some(onFoodsList)).toBe(false);
+  });
+});
+
+describe('alsoTag', () => {
+  it('names the other use of a two-use food, singular, and nothing for a food listed once', () => {
+    const eggs = mk('e', 'ready', { type: 'ready', uses: ['ingredient', 'ready'] });
+    expect(alsoTag(eggs, 'ingredients')).toBe('also Ready to eat');
+    expect(alsoTag(eggs, 'ready')).toBe('also Ingredient');
+    expect(alsoTag(mk('m', 'ready', { type: 'drink' }), 'drinks')).toBe('');
+    expect(alsoTag(mk('r', 'protein', { steps: withSteps }), 'recipes')).toBe('');
   });
 });

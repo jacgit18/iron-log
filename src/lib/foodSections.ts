@@ -46,6 +46,13 @@ export const inSectionList = (list: readonly Recipe[], s: FoodSection): Recipe[]
 /** The small "also Ready to eat" tag of a two-use food: the other sections it is listed in, as words (empty for a food listed once). */
 export const alsoIn = (r: Pick<Recipe, 'cat' | 'type' | 'uses' | 'steps'>, s: FoodSection): string[] => sectionsOf(r).filter(x => x !== s).map(sectionLabel);
 
+/** The small row tag of a food used two ways: "also Ready to eat" (the other uses, singular, as the Used as chips say them). Empty for a food listed once. */
+export const alsoTag = (r: Pick<Recipe, 'cat' | 'type' | 'uses' | 'steps'>, s: FoodSection): string => {
+  const other = sectionsOf(r).filter(x => x !== s).map(x => USE_WORD[x]);
+  return other.length ? `also ${other.join(', ')}` : '';
+};
+const USE_WORD: Readonly<Record<FoodSection, string>> = { meals: 'Meal', recipes: 'Recipe', library: 'Library', ingredients: 'Ingredient', ready: 'Ready to eat', drinks: 'Drink' };
+
 /** How many items each section holds. `library` is null until the library has loaded once, and `plus` is true while more library pages can be loaded (the count is "at least"). */
 export interface SectionCounts { meals: number; recipes: number; ingredients: number; ready: number; drinks: number; library: number | null; plus: boolean }
 

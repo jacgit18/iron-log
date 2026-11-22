@@ -1,8 +1,8 @@
-import { startFood, startRecipe } from './recipesNav.js';
+import { openSection, startFood, startRecipe } from './recipesNav.js';
 import { test, expect } from './fixtures.js';
 
-// Used as labels and the Ingredients tab (brief recipes-used-as-ingredients-tab). The label rules are node tests (recipeUses.test.ts); this covers what they cannot:
-// the real tabs, the chips on the two forms, and Log showing only where something can be eaten.
+// Used as labels and the Foods sections (briefs recipes-used-as-ingredients-tab, foods-made-and-store-bought). The label rules are node tests (recipeUses.test.ts, foodSections.test.ts); this covers what they cannot:
+// the real sections, the chips on the two forms, and Log showing only where something can be eaten.
 const rc = (id, n, cat, extra = {}) => ({ id, n, cat, ing: [{ n: 'Rice' }], steps: ['Cook.'], servings: 2, kcal: 300, p: 20, ...extra });
 const items = [
   rc('chili', 'Beef chili', 'other'), rc('aioli', 'Garlic aioli', 'sauces'), rc('taco', 'Taco seasoning', 'seasonings'),
@@ -15,29 +15,33 @@ const open = async page => {
 };
 const titles = page => page.locator('.rc-cards .rc-title b').allTextContents();
 
-test('sauces and seasonings are in Ingredients and not in Meals; rice and a two-label egg are in both places they belong', async ({ page }) => {
+test('sauces and seasonings are Recipes with their Used as tag, not Store-bought; a two-label egg is in both Ingredients and Ready to eat', async ({ page }) => {
   await open(page);
-  await expect(page.locator('#recipes-tab-meals')).toHaveText('Meals2');
-  await expect(page.locator('#recipes-tab-ingredients')).toHaveText('Ingredients4');
-  await expect(page.locator('#recipes-tab-foods')).toHaveText('Foods1');
-  await page.click('#recipes-tab-meals');
-  expect((await titles(page)).sort()).toEqual(['Beef chili', 'Brown rice']);
-  await page.click('#recipes-tab-ingredients');
-  expect((await titles(page)).sort()).toEqual(['Brown rice', 'Egg', 'Garlic aioli', 'Taco seasoning']);
-  await expect(page.locator('.rc-cards li', { hasText: 'Egg' }).locator('.rc-typetag')).toHaveText('Ingredient + Ready to eat');
-  await page.click('#recipes-tab-foods');
+  await expect(page.locator('#recipes-sec-meals')).toHaveText('Meals0');
+  await expect(page.locator('#recipes-sec-recipes')).toHaveText('Recipes4');
+  expect((await titles(page)).sort()).toEqual(['Beef chili', 'Brown rice', 'Garlic aioli', 'Taco seasoning']);
+  await expect(page.locator('.rc-cards li', { hasText: 'Garlic aioli' }).locator('.rc-typetag')).toHaveText('Ingredient');
+  await expect(page.locator('.rc-cards li', { hasText: 'Brown rice' }).locator('.rc-typetag')).toHaveText('Meal + Ingredient');
+  await openSection(page, 'ingredients');
+  await expect(page.locator('#recipes-sec-ingredients')).toHaveText('Ingredients1');
+  await expect(page.locator('#recipes-sec-ready')).toHaveText('Ready to eat1');
+  await expect(page.locator('#recipes-sec-drinks')).toHaveText('Drinks0');
   expect(await titles(page)).toEqual(['Egg']);
+  await expect(page.locator('.rc-cards li', { hasText: 'Egg' }).locator('.rc-typetag')).toHaveText('also Ready to eat');
+  await page.click('#recipes-sec-ready');
+  expect(await titles(page)).toEqual(['Egg']); // one record, listed in each section it is used as
+  await expect(page.locator('.rc-cards li', { hasText: 'Egg' }).locator('.rc-typetag')).toHaveText('also Ingredient');
 });
 
 test('Log shows on a meal, rice and the egg, and not on an Ingredient-only sauce', async ({ page }) => {
   await open(page);
-  await page.click('#recipes-tab-ingredients');
   await expect(page.locator('.rc-cards li', { hasText: 'Garlic aioli' }).getByRole('button', { name: 'Log' })).toHaveCount(0);
-  await expect(page.locator('.rc-cards li', { hasText: 'Egg' }).getByRole('button', { name: 'Log' })).toHaveCount(1);
   await expect(page.locator('.rc-cards li', { hasText: 'Brown rice' }).getByRole('button', { name: 'Log' })).toHaveCount(1);
+  await openSection(page, 'ingredients');
+  await expect(page.locator('.rc-cards li', { hasText: 'Egg' }).getByRole('button', { name: 'Log' })).toHaveCount(1);
 });
 
-test('the recipe form starts the chips from the category, keeps a pressed choice, and a saved label shows in the tab', async ({ page }) => {
+test('the recipe form starts the chips from the category, keeps a pressed choice, and a saved recipe with no steps is a meal', async ({ page }) => {
   await open(page);
   await startRecipe(page);
   const used = page.getByRole('group', { name: 'Used as' });
@@ -55,10 +59,11 @@ test('the recipe form starts the chips from the category, keeps a pressed choice
   await page.getByRole('button', { name: 'Save recipe' }).click();
   const back = page.getByRole('button', { name: 'Back', exact: true });
   if (await back.isVisible()) await back.click();
-  await page.click('#recipes-tab-ingredients');
-  expect(await titles(page)).not.toContain('Plain pasta');
-  await page.click('#recipes-tab-meals');
+  await openSection(page, 'recipes');
+  expect(await titles(page)).not.toContain('Plain pasta'); // no steps: it is a meal, and the saved Meal label shows in its tag
+  await openSection(page, 'meals');
   expect(await titles(page)).toContain('Plain pasta');
+  await expect(page.locator('.rc-cards li', { hasText: 'Plain pasta' }).locator('.rc-typetag')).toHaveText('Meal');
 });
 
 test('the ready-made form takes more than one label and never fewer than one', async ({ page }) => {

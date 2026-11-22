@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { startFood } from './recipesNav.js';
+import { openSection, startFood } from './recipesNav.js';
 import { closeSheet, openAdd, openNutrition, stubReader } from './nutritionBoardHelpers.js';
 
 // Logging from the Nutrition tab (brief nutrition-quick-log). The rules (the chips, the numbers, the day check) are node tests (dietRecent.test.ts, dietLog.test.ts);
@@ -115,6 +115,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await expect(page.getByText('Saved Almond milk (Silk) to Recipes as drink and logged it.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(1);
   await openRecipes(page);
+  await openSection(page, 'drinks'); // saved as a drink: a Store-bought section
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
   await openDiet(page); // the same product scanned again is logged under the saved food, not saved twice
   await page.getByRole('button', { name: 'Scan and log', exact: true }).click(); // the toolbar's button; it replaced the Quick add strip's Scan a food
@@ -123,6 +124,7 @@ test('a scanned food is created with the chosen type and logged once', async ({ 
   await expect(page.getByText('Logged Almond milk (Silk), a food you already had in Recipes.')).toBeVisible();
   await expect(eaten(page)).toHaveCount(2);
   await openRecipes(page);
+  await openSection(page, 'drinks'); // saved as a drink: a Store-bought section
   await expect(page.locator('.rc-row', { hasText: 'Almond milk (Silk)' })).toHaveCount(1);
 });
 

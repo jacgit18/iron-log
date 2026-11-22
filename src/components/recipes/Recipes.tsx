@@ -25,7 +25,7 @@ import { ymd } from '../../shared/dates.js';
 import { libraryHave } from '../../lib/libraryRows.js';
 import { filtersSkipLibrary, mergedGroups } from '../../lib/recipeMerged.js';
 import { comboIds, expandedRows, partsLine, sectionRows, type ComboChip } from '../../lib/recipeCombos.js';
-import { alsoIn, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
+import { alsoTag, searchCounts, sectionAfterSave, sectionCounts, sectionEmptyNote, sectionForPath, onFoodsList, type FoodSection } from '../../lib/foodSections.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, activeFilterCount, filterRecipes, librarySortedBy, recipeMeta, sortRecipes, typeTag } from '../../lib/recipeList.js';
 import { quickPicks } from '../../lib/recipeRecent.js';
@@ -72,12 +72,14 @@ export default function Recipes() {
   const path = useRoutePath(), page = recipesPage(path);
   const [sec, setSec] = useKept('sec'); // the section last used this visit; the address wins when it names one
   const { section, fix } = sectionForPath(path, sec, recipes);
+  const leaving = useRef(false); // Back to the list was asked and the address has not changed yet: the page address is not an address "with nothing to show"
   const pendingSec = useRef<FoodSection | null>(null); // a saved item's section: the address is rewritten to it when Back lands on the list
   const setView = (v: View) => {
     setViewNow(v);
-    if (v.kind === 'list') goUp(foodSectionPath(section)); else navigate(recipesPagePath(v.kind), page ? 'replace' : 'push');
+    if (v.kind === 'list') { leaving.current = true; goUp(foodSectionPath(section)); } else navigate(recipesPagePath(v.kind), page ? 'replace' : 'push');
   };
   useEffect(() => {
+    if (!page) leaving.current = false;
     if (onFoodsList(path) && pendingSec.current) { const to = pendingSec.current; pendingSec.current = null; setSec(to); navigate(foodSectionPath(to), 'replace'); return; } // Back after Save lands on the section the saved item belongs in
     if (fix) { navigate(fix, 'replace'); return; } // the bare address names the section shown
     const named = foodSectionOf(path);
@@ -85,7 +87,7 @@ export default function Recipes() {
     if (page === 'form' && view.kind === 'list') { const jump = takeRecipesJump(); if (jump && (jump.kind === 'new' || useAppStore.getState().recipes.some(r => r.id === jump.id))) { setViewNow(jump.kind === 'edit' ? { kind: 'form', id: jump.id } : { kind: 'form' }); return; } } // Nutrition's New recipe and Edit in Recipes buttons
     if (page === 'form' && view.kind === 'list') { const start = takeRecipeStart(); if (start) { setViewNow({ kind: 'form', start }); return; } } // New recipe with a shared link (the share sheet)
     if (!page && onFoodsList(path) && view.kind === 'form' && activeFormGuard()?.holds()) { navigate('daily/recipes/form', 'push'); activeFormGuard()?.ask(); return; } // Back with edits or the amount picker open: stay on the form (its entry is put back), close the picker or ask
-    if (page && view.kind === 'list') navigate(foodSectionPath(section), 'replace'); // an address for a page with nothing to show
+    if (page && view.kind === 'list' && !leaving.current) navigate(foodSectionPath(section), 'replace'); // an address for a page with nothing to show
     if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
     if (view.kind === 'mine' && view.from && page === 'mine') setViewNow({ kind: 'mine', id: view.from }); // Back from a linked sauce to the recipe it was opened from
     if (view.kind === 'mine' && !view.from && page === 'mine/sauce') navigate('daily/recipes/mine', 'replace'); // Forward to a sauce page with nothing it was opened from
@@ -190,7 +192,7 @@ export default function Recipes() {
     else { openedThisVisit.push(id); setView({ kind: 'mine', id }); }
   };
   /** Switch to a section: the kept section and the address follow (a swap, not a Back step); Recent is for one section, so it goes off. */
-  const switchSection = (to: FoodSection) => { setSec(to); setRecent(false); navigate(foodSectionPath(to), 'replace'); };
+  const switchSection = (to: FoodSection) => { setSec(to); setRecent(false); if (to === 'library' && cat === 'ready') setCat(null); navigate(foodSectionPath(to), 'replace'); }; // the library has no ready-made foods, so that category filter is dropped
   const showInSection = (id: string) => { // a pick the open section does not list (a linked item, a saved one) shows in the section it belongs in
     const r = recipes.find(x => x.id === id);
     if (r && !shown.some(x => x.id === id)) { const to = sectionAfterSave(r, section); if (to !== section) switchSection(to); else setRecent(false); }
@@ -287,7 +289,7 @@ export default function Recipes() {
         <RecipeNewMenu onChoose={choose} />
       </div>
       <div className="rc-top">
-        <input type="search" aria-label="Search foods and recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
+        <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
         <button type="button" className="rc-filtertoggle" id="recipes-filters" aria-expanded={filtersOpen} aria-controls="recipes-filterbar" onClick={() => setFiltersChoice(filtersOpen ? 'closed' : 'open')}><Icon name="filter" /> Filters{nFilters > 0 ? ` (${nFilters})` : ''}<Icon name={filtersOpen ? 'chevron-up' : 'chevron-down'} /></button>
       </div>
       <FoodSections section={section} counts={secCounts} search={searchNums} onSection={switchSection} recent={picks.length && yours ? { on: recentOn, onToggle: () => setRecent(!recentOn) } : undefined} />
@@ -348,8 +350,8 @@ export default function Recipes() {
           {yours && (
             <ul className="rc-list rc-cards">
               {shown.map((r: Recipe) => {
-                const also = r.cat === 'ready' ? alsoIn(r, section) : [];
-                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, stock: foodStock.get(r.id), tag: also.length ? `also ${also.join(', ')}` : typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
+                const also = r.cat === 'ready' ? alsoTag(r, section) : '';
+                return row({ key: r.id, title: r.n, meta: recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), badge: nutritionBadge(r), est: !!r.est, stock: foodStock.get(r.id), tag: also || typeTag(r), ...(combos.has(r.id) ? { parts: partsLine(r, recipes, combos) } : {}), ...(chipRows.has(r.id) ? { chips: chipRows.get(r.id)! } : {}), edited: !!r.edited, fav: !!r.fav, current: pane && selected?.id === r.id, ...(loggableRecipe(r) ? { logId: r.id } : {}), open: () => openRecipe(r.id) });
               })}
             </ul>
           )}

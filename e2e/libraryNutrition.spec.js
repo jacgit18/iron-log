@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { unfoldAll } from './recipesNav.js';
+import { openSection, unfoldAll } from './recipesNav.js';
 
 // Library recipes arrive with numbers (brief library-recipe-nutrition, ADR 134). The rules (what is counted, the show rule, the servings estimate, the rescale) are node tests
 // (src/shared/libraryNutrition.test.ts, src/lib/recipeDraft.test.ts); this covers the wiring against a mocked search answer: the row badge ending in "est.", the view's note line,
@@ -20,7 +20,7 @@ const signedIn = async page => {
   await page.route('**/api/commands/**', json(200, { rows: [], cursor: '1' }));
   await page.route('**/api/catalog/search?*', json(200, { ok: true, items, more: false }));
 };
-const openBox = async page => { await signedIn(page); await page.goto('/'); await openRecipes(page); await page.getByRole('button', { name: 'Browse the library' }).click(); };
+const openBox = async page => { await signedIn(page); await page.goto('/'); await openRecipes(page); await openSection(page, 'library'); };
 const row = (page, name) => page.locator('#recipes-library-box .rc-item', { hasText: name });
 
 for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
@@ -52,7 +52,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) 
 test('Add to Mine carries the numbers and the mark; a servings change rescales; a typed number clears the mark', async ({ page }) => {
   await openBox(page);
   await row(page, 'Pancakes').getByRole('button', { name: /Add to Mine/ }).click();
-  await page.locator('#recipes-mine').click();
+  await openSection(page, 'recipes');
   const mine = page.locator('.rc-merged > .rc-list .rc-item', { hasText: 'Pancakes' });
   await expect(mine.locator('.rc-badge')).toContainText('300 kcal');
   await expect(mine.locator('.rc-badge')).toContainText('est.');
