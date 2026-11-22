@@ -32,6 +32,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.rcf-name.rcf-tag {
+  flex-basis: 8rem;
+}
 .rcf-state {
   color: var(--muted);
   font-size: var(--fs-sm);

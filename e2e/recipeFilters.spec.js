@@ -178,6 +178,30 @@ test('Remove tag has an Undo that puts the tag back on the same recipes', async 
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['weeknight']);
 });
 
+test('Delete tag on another tag drops the Undo of the earlier removal', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight', 'spicy']);
+  await page.getByRole('button', { name: 'Manage filters' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Manage filters' });
+  await sheet.getByRole('button', { name: 'Delete tag weeknight' }).click();
+  await sheet.getByRole('button', { name: 'Remove tag' }).click();
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Delete tag spicy' }).click(); // asking about another tag: no stray Undo for the first one
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toHaveCount(0);
+});
+
+test('Clear filters in the Library source clears the category only, and the tags set on Mine stay', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein', ['weeknight']);
+  await page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' }).click();
+  await page.getByLabel('Category', { exact: true }).selectOption({ label: 'Protein' });
+  await page.locator('#recipes-library').click();
+  await expect(page.locator('#recipes-filters')).toHaveText('Filters (1)'); // only the category counts here
+  await page.locator('#recipes-clear-filters').click();
+  await page.locator('#recipes-mine').click();
+  await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button', { name: 'weeknight' })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('Manage filters has no accessibility violations and fits a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 700 });
   await openRecipes(page);

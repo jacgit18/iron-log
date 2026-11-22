@@ -79,9 +79,9 @@ export default function RecipeFilters() {
               </div>
             ) : (
               <>
-                <span className="rcf-name">{tag}<span className="rcf-state"> · {n} recipe{n === 1 ? '' : 's'}</span></span>
+                <span className="rcf-name rcf-tag">{tag}<span className="rcf-state"> · {n} recipe{n === 1 ? '' : 's'}</span></span>
                 <button type="button" className="btn sm" aria-label={`Rename ${tag}`} onClick={() => { setEditing(tag); setName(tag); setAsking(null); setErr(''); setNote(''); setUndo(null); }}>Rename</button>
-                <button type="button" className="btn sm" aria-label={`Delete tag ${tag}`} onClick={() => { setAsking(tag); setEditing(null); setNote(''); }}>Delete tag</button>
+                <button type="button" className="btn sm" aria-label={`Delete tag ${tag}`} onClick={() => { setAsking(tag); setEditing(null); setNote(''); setUndo(null); }}>Delete tag</button>
               </>
             )}
           </li>
