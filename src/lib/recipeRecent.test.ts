@@ -25,3 +25,31 @@ describe('quickPicks', () => {
     expect(quickPicks(many, [], [])).toHaveLength(MAX_QUICK);
   });
 });
+
+describe('quickPicks per section (brief foods-made-and-store-bought)', () => {
+  const meal = (id: string, fav?: true): Recipe => ({ ...r(id, fav), steps: [] });
+  const dish = (id: string, fav?: true): Recipe => ({ ...r(id, fav), steps: ['cook'] });
+  const food = (id: string, uses: Recipe['uses'], fav?: true): Recipe => ({ id, n: id.toUpperCase(), cat: 'ready', uses, ...(fav ? { fav } : {}), ing: [], steps: [] });
+  const all = [meal('m1', true), meal('m2'), dish('d1', true), dish('d2'), food('eggs', ['ready', 'ingredient'], true), food('oil', ['ingredient']), food('tea', ['drink'])];
+  const diet = [e('1', '2026-09-20', 'd2'), e('2', '2026-09-21', 'm2'), e('3', '2026-09-22', 'oil'), e('4', '2026-09-23', 'tea')];
+  const ids = (s?: Parameters<typeof quickPicks>[3]) => quickPicks(all, diet, [], s).map(p => p.recipe.id);
+  it('lists only the section\'s items: starred first, then recent', () => {
+    expect(ids('meals')).toEqual(['m1', 'm2']);
+    expect(ids('recipes')).toEqual(['d1', 'd2']);
+    expect(ids('drinks')).toEqual(['tea']);
+  });
+  it('shows a two-use food in each of its sections', () => {
+    expect(ids('ready')).toEqual(['eggs']);
+    expect(ids('ingredients')).toEqual(['eggs', 'oil']);
+  });
+  it('never mixes sections, has none for Library, and with no section behaves as before', () => {
+    expect(ids('library')).toEqual([]);
+    expect(ids()).toEqual(quickPicks(all, diet, []).map(p => p.recipe.id));
+    expect(ids()).toEqual(expect.arrayContaining(['m1', 'd1', 'eggs', 'm2', 'd2', 'oil', 'tea']));
+    expect(ids('meals')).not.toContain('d2');
+  });
+  it('stops at the cap inside a section', () => {
+    const many = Array.from({ length: 12 }, (_, i) => meal(`x${i}`, true));
+    expect(quickPicks(many, [], [], 'meals')).toHaveLength(MAX_QUICK);
+  });
+});
