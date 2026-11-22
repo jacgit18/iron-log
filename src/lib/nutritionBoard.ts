@@ -138,8 +138,8 @@ export const ADD_FLOWS: Record<AddFlow, { label: string; hint: string }> = {
 };
 const EAT_FLOWS: readonly AddFlow[] = ['quick', 'barcode', 'oneoff', 'find', 'meals', 'recipes', 'copy', 'savemeal'];
 const PLAN_FLOWS: readonly AddFlow[] = ['meals', 'recipes'];
-/** The shortcut buttons beside + Add food, so the toolbar keeps its shape on every day: today and an earlier day log (scan, quick add, one-off), a day ahead plans (recipes, saved meals). */
-export const toolbarFlows = (day: string, today: string): readonly AddFlow[] => (addMode(day, today) === 'plan' ? ['recipes', 'meals'] : ['barcode', 'quick', 'oneoff']);
+/** The shortcut buttons beside + Add food, so the toolbar keeps its shape on every day: today and an earlier day log (scan; Quick add and One-off food are in the Add food menu, button review N1), a day ahead plans (recipes, saved meals). */
+export const toolbarFlows = (day: string, today: string): readonly AddFlow[] => (addMode(day, today) === 'plan' ? ['recipes', 'meals'] : ['barcode']);
 /** The ways to add on a day. `eaten` is how many foods that day has eaten: with none, "Save as a meal" has nothing to save, so it is not offered (owner, 2026-11-12). */
 export const addFlows = (day: string, today: string, eaten: number): readonly AddFlow[] => (addMode(day, today) === 'plan' ? PLAN_FLOWS : eaten > 0 ? EAT_FLOWS : EAT_FLOWS.filter(f => f !== 'savemeal'));
 

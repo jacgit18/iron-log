@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 // What a unit test cannot catch: where things sit on a phone and how the Add sheet lines up (brief nutrition-header-sheet-wording).
 const open = async page => { await page.goto('/#/daily/nutrition'); await expect(page.locator('#nb-h')).toBeAttached(); await expect(page.locator('.nb-col').first()).toBeVisible(); };
 
-test('on a 375 x 812 phone the day card starts under 400px (486px on main, 522px with the links-only option C, 378px with option B), Manage shares the week row with the switcher, and the four add buttons are there', async ({ page }) => {
+test('on a 375 x 812 phone the day card starts under 400px (486px on main, 522px with the links-only option C, 378px with option B), Manage shares the week row with the switcher, and the two add buttons are there', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await open(page);
   const y = await page.locator('.nb-col').first().evaluate(c => c.getBoundingClientRect().y);
@@ -11,7 +11,7 @@ test('on a 375 x 812 phone the day card starts under 400px (486px on main, 522px
   const [week, targets] = await page.evaluate(() => ['.nb-weeksw', '#nb-manage'].map(q => { const r = document.querySelector(q).getBoundingClientRect(); return r.y + r.height / 2; }));
   expect(Math.abs(targets - week)).toBeLessThan(1); // Manage is centered on the week row (spec nutritionHeaderLinks)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-  for (const n of ['Add food', 'Scan and log', 'Quick add', 'One-off food']) await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
+  for (const n of ['Add food', 'Scan and log']) await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
 });
 
 test('the Add food sheet shows three labelled groups and every way starts at the same left edge, with its icon', async ({ page }) => {
