@@ -63,7 +63,7 @@ test('a typed search narrows every section, and the other group says how many ma
   await expect(page.locator('#recipes-sec-ingredients')).toHaveText('Ingredients1');
   await expect(page.locator('#recipes-sec-ready')).toHaveText('Ready to eat1');
   await expect(page.locator('#recipes-sec-drinks')).toHaveText('Drinks0');
-  await expect(page.locator('#recipes-group-made')).toContainText('0+ matches'); // "at least": the library has not loaded
+  await expect(page.locator('#recipes-group-made')).toContainText('0 matches'); // signed out the library adds nothing, so no "+"
   await search(page).fill('');
   await expect(page.locator('.fs-hit')).toHaveCount(0);
   await expect(page.locator('#recipes-sec-ready')).toHaveText('Ready to eat2');

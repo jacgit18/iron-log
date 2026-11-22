@@ -190,3 +190,12 @@ describe('alsoTag', () => {
     expect(alsoTag(mk('r', 'protein', { steps: withSteps }), 'recipes')).toBe('');
   });
 });
+
+describe('searchCounts: the Made number is exact only when the library cannot add to it', () => {
+  it('is "at least" while the library is unknown or has more pages, exact when it is known to add nothing more', () => {
+    const list = [mk('a', 'protein', { steps: withSteps })];
+    expect(searchCounts(list, null).madePlus).toBe(true);
+    expect(searchCounts(list, 3, true).madePlus).toBe(true);
+    expect(searchCounts(list, 0, false)).toMatchObject({ madePlus: false, groups: { made: 1, store: 0 } }); // signed out: Recipes.tsx passes 0
+  });
+});

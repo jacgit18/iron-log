@@ -145,7 +145,7 @@ export default function Recipes() {
   const libMore = libNow.status === 'ready' && libNow.more;
   const libCount = syncing && libNow.status === 'ready' ? libGroup.length : null; // blank until the library has loaded once for this search
   const secCounts = sectionCounts(narrowed, libCount, libMore);
-  const searchNums = q.trim() !== '' ? searchCounts(narrowed, libCount, libMore) : undefined; // the other group's "n matches" while a search is typed
+  const searchNums = q.trim() !== '' ? searchCounts(narrowed, syncing ? libCount : 0, libMore) : undefined; // signed out the library can never add a match, so Made's number is exact (no "+") // the other group's "n matches" while a search is typed
   const libHave = useMemo(() => new Map(libGroup.map(it => [it.id, libraryHave(it, recipes, grocery, months[month] ?? { lines: {}, pulled: [] })])), [libGroup, recipes, grocery, months, month]); // each row's "n of m at home", worked out once per change, not per render
   // The rows with "+N more" pressed. Held here, not in the chip line, so they stay open while a combo's page replaces the list on a phone;
   // folded when the section changes (owner rule, 2026-11-14) or the row has nothing more to show. No search text, section or filter is touched.
