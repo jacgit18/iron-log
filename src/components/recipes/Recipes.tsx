@@ -71,7 +71,7 @@ export default function Recipes() {
   const path = useRoutePath(), page = pageOf(path, 'daily/recipes');
   const setView = (v: View) => {
     setViewNow(v);
-    if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind}`, page ? 'replace' : 'push');
+    if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind === 'library' ? 'library/item' : v.kind}`, page ? 'replace' : 'push');
   };
   useEffect(() => {
     if (page === 'form' && view.kind === 'list') { const jump = takeRecipesJump(); if (jump && (jump.kind === 'new' || useAppStore.getState().recipes.some(r => r.id === jump.id))) { setViewNow(jump.kind === 'edit' ? { kind: 'form', id: jump.id } : { kind: 'form' }); return; } } // Nutrition's New recipe and Edit in Recipes buttons

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PATHS, boardFix, boardView, dailyFix, programKey, programPath, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
+import { FOOD_SECTION_KEYS, PATHS, boardFix, boardView, dailyFix, foodSectionOf, foodSectionPath, programKey, programPath, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
 
 // Screen addresses (brief navigation-urls): every address round-trips, an unknown one falls back to the screen above it, and none can carry personal data.
 describe('parseRoute', () => {
@@ -93,5 +93,37 @@ describe('Nutrition and Program addresses', () => {
     expect(programKey('program/exercises')).toBeNull();
     expect(programPath('A')).toBe('program/a');
     expect(programPath('L:123')).toBeNull();
+  });
+});
+
+// Foods sections (brief foods-made-and-store-bought): each section is its own address, and a library recipe's page moved under Library.
+describe('Foods section addresses', () => {
+  it('has an address for each of the six sections and for a library recipe page', () => {
+    for (const k of ['meals', 'recipes', 'library', 'ingredients', 'ready', 'drinks'] as const) expect(parseRoute(`#/daily/recipes/${k}`)).toEqual({ tab: 'daily', path: `daily/recipes/${k}` });
+    expect(parseRoute('#/daily/recipes/library/item')).toEqual({ tab: 'daily', path: 'daily/recipes/library/item' });
+    expect(FOOD_SECTION_KEYS).toHaveLength(6);
+    for (const k of FOOD_SECTION_KEYS) expect(PATHS).toContain(foodSectionPath(k));
+  });
+  it('keeps the unchanged addresses and the Daily section for every one of them', () => {
+    for (const p of ['daily/recipes', 'daily/recipes/mine', 'daily/recipes/mine/sauce', 'daily/recipes/form', 'daily/recipes/types']) expect(parseRoute(`#/${p}`)?.path).toBe(p);
+    for (const p of PATHS.filter(x => x.startsWith('daily/recipes'))) expect(dailySection(p, ['grocery', 'supplements', 'recipes'])).toBe('recipes');
+  });
+  it('reads the section from an address, or null for the bare address and the recipe pages', () => {
+    expect(foodSectionOf('daily/recipes/ready')).toBe('ready');
+    expect(foodSectionOf('daily/recipes/library')).toBe('library');
+    expect(foodSectionOf('daily/recipes/library/item')).toBe('library');
+    for (const p of ['daily/recipes', 'daily/recipes/mine', 'daily/recipes/mine/sauce', 'daily/recipes/form', 'daily/recipes/types', 'daily/grocery', 'progress']) expect(foodSectionOf(p)).toBeNull();
+    expect(foodSectionOf('daily/recipesx')).toBeNull();
+  });
+  it('treats an unknown ending under a section as that section, and an old recipe address as the screen above', () => {
+    expect(parseRoute('#/daily/recipes/ready/zzz')?.path).toBe('daily/recipes/ready');
+    expect(parseRoute('#/daily/recipes/1234/edit')?.path).toBe('daily/recipes');
+  });
+  it('leaves a section address as it is for the Daily section fix, and the bare address is fixed to the section shown', () => {
+    expect(dailyFix('daily/recipes/ready', 'recipes')).toBeNull();
+    expect(dailyFix('daily/recipes/library/item', 'recipes')).toBeNull();
+  });
+  it('keeps section addresses to screen names (no ids, emails or numbers)', () => {
+    for (const k of FOOD_SECTION_KEYS) expect(foodSectionPath(k)).toMatch(/^daily\/recipes\/[a-z]+$/);
   });
 });

@@ -3,11 +3,16 @@
 
 export const PROGRESS_PAGES = ['goals', 'hist', 'freq', 'lifts', 'trends'] as const;
 
+/** The Foods sections (brief foods-made-and-store-bought), in the order the pills show them. Each one is an address under `daily/recipes`; lib/foodSections.ts holds their rules. */
+export const FOOD_SECTION_KEYS = ['meals', 'recipes', 'library', 'ingredients', 'ready', 'drinks'] as const;
+export type FoodSectionKey = typeof FOOD_SECTION_KEYS[number];
+
 /** Every address the app knows, as a path with no `#/`. A tab is the first part. */
 export const PATHS: readonly string[] = [
   'board', 'board/stretches', 'board/workout',
   'daily', 'daily/grocery', 'daily/grocery/bought', 'daily/grocery/bought/history', 'daily/grocery/inventory', 'daily/grocery/receipts', 'daily/grocery/shopping', 'daily/medical', 'daily/recipes',
-  'daily/recipes/form', 'daily/recipes/library', 'daily/nutrition', 'daily/recipes/mine', 'daily/recipes/mine/sauce', 'daily/recipes/types',
+  'daily/recipes/form', 'daily/recipes/library', 'daily/recipes/library/item', 'daily/nutrition', 'daily/recipes/mine', 'daily/recipes/mine/sauce', 'daily/recipes/types',
+  ...FOOD_SECTION_KEYS.filter(k => k !== 'library').map(k => `daily/recipes/${k}`),
   'plans',
   'program', 'program/a', 'program/b', 'program/compare', 'program/exercises', 'program/saved', 'program/stretches',
   'progress', ...PROGRESS_PAGES.map(p => `progress/${p}`),
@@ -69,3 +74,9 @@ export const programKey = (path: string): 'A' | 'B' | null => (path === 'program
 
 /** The address of a program in the rotation (`A` is `program/a`); null for a library program (its id is not put in an address). */
 export const programPath = (key: string): string | null => (key === 'A' || key === 'B' ? `program/${key.toLowerCase()}` : null);
+
+/** The address of a Foods section (`ready` is `daily/recipes/ready`). */
+export const foodSectionPath = (s: FoodSectionKey): string => `daily/recipes/${s}`;
+
+/** The Foods section an address names: a section's own address or a page opened from it (`daily/recipes/library/item` is Library). Null for bare `daily/recipes` and for the Recipe pages and form (`mine`, `form`, `types`). */
+export const foodSectionOf = (path: string): FoodSectionKey | null => FOOD_SECTION_KEYS.find(k => path === foodSectionPath(k) || path.startsWith(`${foodSectionPath(k)}/`)) ?? null;
