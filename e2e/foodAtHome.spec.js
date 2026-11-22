@@ -12,7 +12,7 @@ const seed = async page => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: { skyr: { have: true } }, pulled: [] }));
     const c = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}');
     localStorage.setItem('ironlog:config/main', JSON.stringify({ ...c, diet: { plan: { '2026-09-24': plan } } }));
-  }, [[food('yog', 'Greek yogurt')], [item('yog', 'Greek yogurt'), item('skyr', 'Skyr')], [{ k: 'r', id: 'yog', s: 'snack' }]]);
+  }, [[food('yog', 'Greek yogurt')], [item('yog', 'Greek yogurt'), item('skyr', 'Skyr')], [{ k: 'r', id: 'yog', s: 'snack', p: true }]]);
   await page.reload();
 };
 const openFoods = async page => { await page.click('#tab-daily'); await page.click('#daily-recipes'); };

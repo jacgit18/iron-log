@@ -17,6 +17,7 @@ const board = page => page.locator('.nb');
 const today = page => todayCol(page);
 const col = (page, day) => page.locator(`.nb-col[data-day="${day}"]`);
 const dinner = (c) => c.locator('.wb-slot', { hasText: 'Dinner' });
+const named = (scope, name) => scope.locator('.wb-ct', { hasText: new RegExp(`^${name}`) }); // a planned card's name carries the Planned pill, so its text is not the bare name
 // A day's planned card moved to today (the add sheet no longer plans on today, so a test that needs a planned card on today plans a day ahead and moves it, which is also how a person does it).
 const moveToToday = async (page, name, from) => {
   await moveCard(page, col(page, from), name, { day: 'Thu 24 · today' });
@@ -46,12 +47,10 @@ test('a wide screen opens the board: seven days, meals each with its own Add, me
 test('planning Dinner shows the card, the plate check and a fix that goes with the food', async ({ page }) => {
   await seed(page);
   await plan(page, 'Chili');
-  await expect(dinner(today(page)).getByText('Chili', { exact: true })).toBeVisible();
+  await expect(named(dinner(today(page)), 'Chili')).toBeVisible();
   await expect(dinner(today(page)).getByText('400 kcal · P 30 g')).toBeVisible();
   const check = dinner(today(page)).getByRole('group', { name: 'Dinner plate check' });
-  await expect(check).toHaveCount(0); // available food is a menu: the plate check reads planned items only (brief nutrition-board-available-list)
-  const markPlanned = async name => { await dinner(today(page)).getByRole('button', { name: new RegExp(`^${name}`) }).first().click(); await dinner(today(page)).getByRole('button', { name: `Mark planned ${name}` }).click(); };
-  await markPlanned('Chili');
+  // Plan in the add sheet puts the food on the plate as planned, so the plate check reads it at once (brief nutrition-planned-available-tray; an Available food is not read)
   await expect(check).toContainText('✓ Protein');
   await expect(check).toContainText('Carb');
   await expect(check).not.toContainText('✓ Carb');
@@ -60,7 +59,7 @@ test('planning Dinner shows the card, the plate check and a fix that goes with t
   await expect(check).toContainText('✓ Carb');
   await expect(dinner(today(page)).locator('.wb-ct', { hasText: 'Rice' })).toBeVisible();
   // today's meters count what was eaten, so nothing planned moves them; the meal header tells the menu in words, never calories nobody ate (brief nutrition-board-available-list)
-  await expect(dinner(today(page)).locator('.wb-slothd')).toContainText('2 on the menu');
+  await expect(dinner(today(page)).locator('.wb-slothd')).toContainText('2 planned · 0 available');
   // a day ahead's bars wait for eaten food (ADR 126) and the plan is a muted line; both foods have a fat figure, so the line carries it whole
   await plan(page, 'Chili', { day: TOMORROW });
   await plan(page, 'Rice', { day: TOMORROW });
@@ -74,18 +73,18 @@ test('Move to changes the meal of a card, and a card can be moved to another day
   await plan(page, 'Chili');
   const t = today(page);
   await moveCard(page, t, 'Chili', { meal: 'Lunch' });
-  await expect(t.locator('.wb-slot', { hasText: 'Lunch' }).getByText('Chili', { exact: true })).toBeVisible();
-  await expect(dinner(t).getByText('Chili', { exact: true })).toHaveCount(0);
+  await expect(named(t.locator('.wb-slot', { hasText: 'Lunch' }), 'Chili')).toBeVisible();
+  await expect(named(dinner(t), 'Chili')).toHaveCount(0);
   await moveCard(page, t, 'Chili', { day: 'Fri 25' });
-  await expect(t.getByText('Chili', { exact: true })).toHaveCount(0);
-  await expect(col(page, TOMORROW).getByText('Chili', { exact: true })).toBeVisible();
+  await expect(named(t, 'Chili')).toHaveCount(0);
+  await expect(named(col(page, TOMORROW), 'Chili')).toBeVisible();
 });
 
 test('a planned card has a check box only on today; checking it marks it eaten and logs it, unchecking removes the log', async ({ page }) => {
   await seed(page);
   await plan(page, 'Chili');
   await plan(page, 'Chili', { day: TOMORROW });
-  await col(page, TOMORROW).getByText('Chili', { exact: true }).click();
+  await named(col(page, TOMORROW), 'Chili').click();
   await expect(col(page, TOMORROW).getByRole('button', { name: 'Remove Chili' })).toBeVisible();
   await expect(col(page, TOMORROW).getByRole('checkbox', { name: /as eaten/ })).toHaveCount(0);
   const box = today(page).getByRole('checkbox', { name: 'Check Chili as eaten' });

@@ -227,7 +227,7 @@ test('a meal on a day ahead has an Add control that opens the add sheet on that 
 
 test('a meal that already has food on a day ahead keeps its Add control in the header, and today has one per meal', async ({ page }) => {
   await seedRecipes(page);
-  await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}'); localStorage.setItem('ironlog:config/main', JSON.stringify({ ...c, diet: { plan: { '2026-09-25': [{ k: 'r', id: 'chili', s: 'lunch' }] } } })); });
+  await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}'); localStorage.setItem('ironlog:config/main', JSON.stringify({ ...c, diet: { plan: { '2026-09-25': [{ k: 'r', id: 'chili', s: 'lunch', p: true }] } } })); });
   await page.reload();
   await openNutrition(page);
   const fri = col(page, '2026-09-25');
@@ -306,7 +306,7 @@ test('a sheet adds one Back step and Back closes it; the page keeps its address'
   expect(await hash(page)).toBe('#/daily/nutrition');
 });
 
-// The available list and planned marker (brief nutrition-board-available-list). The rules are node tests (dietPlan.test.ts, nutritionBoard.test.ts); this covers the wiring: the header words, the Mark planned action and pill, the warning past the share, a reload.
+// The available list and planned marker (brief nutrition-board-available-list). The rules are node tests (dietPlan.test.ts, nutritionBoard.test.ts); this covers the wiring: the header words, the tray, Plan and the pill, the warning past the share, a reload.
 test.describe('available list and planned marker', () => {
   const seedMenu = async (page, kcal = {}) => {
     const rec = [mk('alm', 'Almonds', 'sides', 170, 6), mk('yog', 'Yogurt', 'sides', 150, 15), mk('bar', 'Protein bar', 'sides', 210, 20), mk('app', 'Apple', 'sides', 95, 0)];
@@ -317,28 +317,34 @@ test.describe('available list and planned marker', () => {
     await page.reload();
   };
   const snack = c => c.locator('.wb-slot', { has: c.page().locator('.wb-slothd b', { hasText: /^Snack$/ }) });
-  test('the header counts the menu in words, Mark planned adds the pill and the count, and it survives a reload', async ({ page }) => {
+  const openTray = async c => { const b = snack(c).getByRole('button', { name: /^Available · / }); if ((await b.getAttribute('aria-expanded')) !== 'true') await b.click(); };
+  test('the header counts planned and available in words, Plan puts a food on the plate with the pill and the count, and it survives a reload', async ({ page }) => {
     await seedMenu(page);
     await openNutrition(page);
     const head = snack(todayCol(page)).locator('.wb-slothd');
-    await expect(head).toContainText('4 on the menu');
+    await expect(head).toContainText('0 planned · 4 available');
     await expect(head).not.toContainText('kcal'); // 625 kcal of unticked food is never shown against a share
-    await snack(todayCol(page)).getByRole('button', { name: /Yogurt/ }).first().click();
-    await snack(todayCol(page)).getByRole('button', { name: 'Mark planned Yogurt' }).click();
-    await expect(head).toContainText('4 on the menu · 1 planned');
+    await expect(snack(todayCol(page)).getByRole('button', { name: 'Available · 4 for Snack' })).toHaveAttribute('aria-expanded', 'false'); // closed by default
+    await expect(snack(todayCol(page)).locator('.wb-card')).toHaveCount(0);
+    await openTray(todayCol(page));
+    await snack(todayCol(page)).getByRole('button', { name: 'Plan Yogurt' }).click(); // no future copy exists, so Plan asks nothing
+    await expect(head).toContainText('1 planned · 3 available');
     await expect(snack(todayCol(page)).locator('.wb-planned')).toHaveCount(1);
     await page.reload(); await openNutrition(page);
-    await expect(snack(todayCol(page)).locator('.wb-slothd')).toContainText('1 planned');
+    await expect(snack(todayCol(page)).locator('.wb-slothd')).toContainText('1 planned · 3 available');
+    await expect(snack(todayCol(page)).getByRole('button', { name: 'Available · 3 for Snack' })).toHaveAttribute('aria-expanded', 'true'); // each meal's tray state is remembered in this browser
   });
   test('ticking past the meal share warns, with no target nothing warns, and adding stays possible', async ({ page }) => {
     await seedMenu(page, { kcal: 2200 }); // Snack share 220
     await openNutrition(page);
     const head = snack(todayCol(page)).locator('.wb-slothd');
-    await expect(head).toContainText('4 on the menu');
+    await expect(head).toContainText('0 planned · 4 available');
     await expect(head).not.toContainText('over');
-    await snack(todayCol(page)).getByRole('checkbox', { name: 'Check Protein bar as eaten' }).click();
-    await snack(todayCol(page)).getByRole('checkbox', { name: 'Check Almonds as eaten' }).click();
+    await openTray(todayCol(page));
+    await snack(todayCol(page)).getByRole('button', { name: 'Ate Protein bar' }).click();
+    await snack(todayCol(page)).getByRole('button', { name: 'Ate Almonds' }).click();
     await expect(head).toContainText('380 kcal eaten');
+    await expect(head).toContainText('2 available');
     await expect(head).toContainText('160 over snack share');
     await expect(page.locator('#nb-add')).toBeEnabled();
   });

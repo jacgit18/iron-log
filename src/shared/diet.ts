@@ -122,7 +122,7 @@ export function cleanWeekdays(v: unknown): number[] | null {
   return kept.length ? kept : null;
 }
 
-/** The repeat list of a stored value, cleaned: a recipe or meal kind, an id, a name of its own (`rid`, unique), weekdays, a real start day; `h: true` (kept handy) only when exactly true; unusable and repeated ones dropped, at most MAX_REPEATS repeats and MAX_HANDY handy ones. */
+/** The repeat list of a stored value, cleaned: a recipe or meal kind, an id, a name of its own (`rid`, unique), weekdays, a real start day; `h: true` (kept handy) and `p: true` (planned, never together with `h`) only when exactly true; unusable and repeated ones dropped, at most MAX_REPEATS repeats and MAX_HANDY handy ones. */
 export function normRepeats(v: unknown): RepeatItem[] {
   const out: RepeatItem[] = [];
   let handy = 0;
@@ -130,11 +130,11 @@ export function normRepeats(v: unknown): RepeatItem[] {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const o = raw as Record<string, unknown>, rid = str(o.rid, MAX_DIET_ID), id = str(o.id, MAX_DIET_ID), days = cleanWeekdays(o.days);
     if (!rid || !id || (o.k !== 'r' && o.k !== 'm') || !days || !validDate(o.from) || out.some(r => r.rid === rid)) continue;
-    const h = o.h === true;
+    const h = o.h === true, planned = !h && o.p === true;
     if (h ? handy >= MAX_HANDY : out.length - handy >= MAX_REPEATS) continue;
     if (h) handy++;
     const x = o.k === 'r' ? portionOf(o.x) : null, s = PLAN_SLOTS.find(t => t === o.s);
-    out.push({ rid, k: o.k, id, ...(x !== null ? { x } : {}), ...(s ? { s } : {}), days, from: o.from, ...(h ? { h: true as const } : {}) });
+    out.push({ rid, k: o.k, id, ...(x !== null ? { x } : {}), ...(s ? { s } : {}), days, from: o.from, ...(h ? { h: true as const } : {}), ...(planned ? { p: true as const } : {}) });
   }
   return out;
 }
@@ -196,12 +196,10 @@ export const planItemKey = (i: PlanItem): string => JSON.stringify([i.k, i.id, i
 export const isDailySnackItem = (i: PlanItem, snacks: readonly { id: string }[] | undefined): boolean => i.k === 'r' && i.s === 'snack' && !!snacks?.some(s => s.id === i.id);
 /** Whether a stored item is a drink: a recipe whose id is in `drinks` (`drinkIdsOf` in `src/lib/recipeUses.ts` works the set out). A drink never counts toward MAX_PLAN_ITEMS or the plate check (brief nutrition-meal-labels-year-repeat). */
 export const isDrinkItem = (i: PlanItem, drinks: ReadonlySet<string> | undefined): boolean => i.k === 'r' && !!drinks?.has(i.id);
-/** How many of a day's stored items count toward MAX_PLAN_ITEMS: those marked planned (`p`), never a listed daily snack or, when `drinks` is given, a drink. An item stored before the marker existed is available, not planned. */
-export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): number => items.filter(i => i.p === true && !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks) && !isWaitingItem(i, waiting)).length;
-/** Whether a stored item is a ready-made food tucked away because it is Need (`waiting` is the set of such recipe ids, from `waitingIds` in `src/lib/haveOnly.ts`; brief ready-made-have-gate). It is not on the board, so it never counts toward MAX_PLAN_ITEMS. */
-export const isWaitingItem = (i: PlanItem, waiting: ReadonlySet<string> | undefined): boolean => i.k === 'r' && !!waiting?.has(i.id);
-/** The refusal for adding a food the day already holds; says where a tucked-away one went. */
-export const alreadyThereText = (existing: PlanItem | undefined, waiting?: ReadonlySet<string>): string => (existing && isWaitingItem(existing, waiting) ? 'That food is already in that meal, waiting on inventory (Need).' : 'That is already in that meal.');
+/** How many of a day's stored items count toward MAX_PLAN_ITEMS: those marked planned (`p`), never a listed daily snack or, when `drinks` is given, a drink. An item stored before the marker existed is available, not planned. A planned ready-made food that is Need counts like any other (brief nutrition-planned-available-tray; it was left out while the board tucked such foods away). */
+export const plannedCount = (items: readonly PlanItem[], snacks: readonly { id: string }[] | undefined, drinks?: ReadonlySet<string>): number => items.filter(i => i.p === true && !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length;
+/** The refusal for adding a food the day already holds. */
+export const alreadyThereText = (): string => 'That is already in that meal.';
 
 /** The plan of a stored value, cleaned: real dates only, at most MAX_DAY_STORED a day (the planned count needs the daily list, so `addItem`, `moveItem` and `markPlanned` hold it), a repeated item dropped, an empty day dropped. With `today` the window is applied too: days before today and more than MAX_PLAN_AHEAD days after it are dropped. */
 export function normPlan(v: unknown, today?: string): Record<string, PlanItem[]> {

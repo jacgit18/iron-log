@@ -392,17 +392,17 @@ describe('eaten food in meals (brief nutrition-items-row-sheet-and-more)', () =>
     expect(v.meters.find(m => m.key === 'kcal')!.value).toBe(500);
   });
   it('a meal line tells the menu in words and counts only eaten calories (wording A)', () => {
-    expect(mealKcalText({ items: 4, planned: 0, anyEaten: false }, 0)).toBe('4 on the menu'); // no target, nothing eaten: nothing is compared
-    expect(mealKcalText({ items: 4, planned: 2, anyEaten: false }, 0)).toBe('4 on the menu · 2 planned');
-    expect(mealKcalText({ items: 4, planned: 2, anyEaten: true }, 245)).toBe('245 kcal eaten · 2 planned');
-    expect(mealKcalText({ items: 0, planned: 0, anyEaten: true }, 150)).toBe('150 kcal eaten');
-    expect(mealKcalText({ items: 0, planned: 0, anyEaten: false }, 0)).toBe('');
-    expect(mealKcalText({ items: 3, planned: 0, anyEaten: true }, 1234)).toBe('1,234 kcal eaten');
+    expect(mealKcalText({ planned: 0, available: 4, anyEaten: false }, 0)).toBe('0 planned · 4 available'); // no target, nothing eaten: nothing is compared
+    expect(mealKcalText({ planned: 2, available: 4, anyEaten: false }, 0)).toBe('2 planned · 4 available');
+    expect(mealKcalText({ planned: 2, available: 4, anyEaten: true }, 245)).toBe('245 kcal eaten · 2 planned · 4 available');
+    expect(mealKcalText({ planned: 0, available: 0, anyEaten: true }, 150)).toBe('150 kcal eaten · 0 planned · 0 available');
+    expect(mealKcalText({ planned: 0, available: 0, anyEaten: false }, 0)).toBe('');
+    expect(mealKcalText({ planned: 0, available: 3, anyEaten: true }, 1234)).toBe('1,234 kcal eaten · 0 planned · 3 available');
   });
   it('a ticked item with no calories still reads "0 kcal eaten" (review follow-up to ADR 139)', () => {
-    expect(mealKcalText({ items: 2, planned: 0, anyEaten: true }, 0)).toBe('0 kcal eaten');
-    expect(mealKcalText({ items: 2, planned: 1, anyEaten: true }, 0)).toBe('0 kcal eaten · 1 planned');
-    expect(mealKcalText({ items: 2, planned: 1, anyEaten: false }, 0)).toBe('2 on the menu · 1 planned');
+    expect(mealKcalText({ planned: 0, available: 2, anyEaten: true }, 0)).toBe('0 kcal eaten · 0 planned · 2 available');
+    expect(mealKcalText({ planned: 1, available: 1, anyEaten: true }, 0)).toBe('0 kcal eaten · 1 planned · 1 available');
+    expect(mealKcalText({ planned: 1, available: 1, anyEaten: false }, 0)).toBe('1 planned · 1 available');
   });
   it('mealFigures says something was eaten for a ticked item with no kcal, and for unplanned eaten food with 0 kcal', () => {
     const it = (id: string, e?: string[], kcal?: number) => ({ r: { item: { k: 'r' as const, id, ...(e ? { e } : {}) }, ...(kcal === undefined ? {} : { kcal }) } }) as never;

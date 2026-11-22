@@ -23,29 +23,32 @@ export const inWindow = (day: string, today: string): boolean => day >= today &&
 export const prunePlan = (plan: Plan, today: string): Plan => Object.fromEntries(Object.entries(plan).filter(([d]) => d >= today));
 
 /** Why `list` (a day's stored items) can take no more of `item`, or null: the available list (not counting drinks and listed daily snacks) is held to MAX_DAY_ITEMS, the day to MAX_DAY_STORED, a drink to MAX_DAY_DRINKS, and an item marked planned (`p`) to MAX_PLAN_ITEMS planned things (a listed daily snack and a drink never count toward those; an item not marked planned is never held to them). */
-export function fullReason(list: readonly PlanItem[], item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): string | null {
+export function fullReason(list: readonly PlanItem[], item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): string | null {
   const full = `A day can hold ${MAX_DAY_ITEMS} things, not counting drinks and daily snacks. Remove one to add another.`;
   if (list.length >= MAX_DAY_STORED) return full;
   if (isDrinkItem(item, drinks)) return list.filter(i => isDrinkItem(i, drinks)).length >= MAX_DAY_DRINKS ? `A day can hold ${MAX_DAY_DRINKS} drinks. Remove one to add another.` : null;
   if (isDailySnackItem(item, snacks)) return null;
   if (list.filter(i => !isDailySnackItem(i, snacks) && !isDrinkItem(i, drinks)).length >= MAX_DAY_ITEMS) return full; // a ticked snack, a drink or a repeat of one is never refused for the list being full
-  return item.p === true && plannedCount(list, snacks, drinks, waiting) >= MAX_PLAN_ITEMS ? PLANNED_FULL : null;
+  return item.p === true && plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS ? PLANNED_FULL : null;
 }
 
 /** The refusal when a day already holds MAX_PLAN_ITEMS planned things (brief nutrition-board-available-list). */
-export const PLANNED_FULL = `A day can hold ${MAX_PLAN_ITEMS} planned things. Unmark one to mark another.`;
+export const PLANNED_FULL = `A day can hold ${MAX_PLAN_ITEMS} planned things. Unplan one to plan another.`;
+
+/** Whether an item can be marked planned at all: never a listed daily snack or a drink. */
+export const canBePlanned = (item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): boolean => !isDailySnackItem(item, snacks) && !isDrinkItem(item, drinks);
+
+/** The refusal for planning one more thing on a day, or null: the day already holds MAX_PLAN_ITEMS planned things. Asked before anything is stored, so a refused Plan leaves the tray as it was. */
+export const planFullReason = (list: readonly PlanItem[], snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): string | null => (plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS ? PLANNED_FULL : null);
 
 /** `plan` with the item at `index` of `day` marked planned (`on`) or unmarked. Marking never changes what the day holds, only the planned count: an error text when the day already holds MAX_PLAN_ITEMS planned things, or for a listed daily snack or a drink (they never count as planned). Unchanged when the item is gone or already in that state. */
-/** Whether an item can be marked planned at all: never a listed daily snack or a drink. */
-export const canBePlanned = (item: PlanItem, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): boolean => !isDailySnackItem(item, snacks) && !isDrinkItem(item, drinks);
-
-export function markPlanned(plan: Plan, day: string, index: number, on: boolean, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): Made {
+export function markPlanned(plan: Plan, day: string, index: number, on: boolean, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Made {
   const list = plan[day] ?? [], it = list[index];
   if (!it) return fail('That is gone.');
   if ((it.p === true) === on) return { plan, error: null };
   if (on) {
     if (!canBePlanned(it, snacks, drinks)) return fail('Daily snacks and drinks are not counted as planned things.');
-    if (plannedCount(list, snacks, drinks, waiting) >= MAX_PLAN_ITEMS) return fail(PLANNED_FULL);
+    if (plannedCount(list, snacks, drinks) >= MAX_PLAN_ITEMS) return fail(PLANNED_FULL);
   }
   const { p: _old, ...rest } = it;
   const next: PlanItem = on ? { ...rest, p: true } : rest;
@@ -53,11 +56,11 @@ export function markPlanned(plan: Plan, day: string, index: number, on: boolean,
 }
 
 /** `plan` with `item` added to `day`. An error text outside the window, on a full day, or for an item already there. The available list holds MAX_DAY_ITEMS; only an item marked planned counts toward MAX_PLAN_ITEMS (a listed daily snack, `snacks` is the list, never does). */
-export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>, waiting?: ReadonlySet<string>): Made {
+export function addItem(plan: Plan, day: string, item: PlanItem, today: string, snacks?: readonly DailySnack[], drinks?: ReadonlySet<string>): Made {
   if (!inWindow(day, today)) return fail('You can plan today and the next 52 weeks.');
   const list = plan[day] ?? [];
-  { const dup = list.find(i => samePlanItem(i, item)); if (dup) return fail(alreadyThereText(dup, waiting)); } // the same food may be in two different meals
-  const full = fullReason(list, item, snacks, drinks, waiting);
+  { const dup = list.find(i => samePlanItem(i, item)); if (dup) return fail(alreadyThereText()); } // the same food may be in two different meals
+  const full = fullReason(list, item, snacks, drinks);
   if (full) return fail(full);
   return { plan: { ...plan, [day]: [...list, item] }, error: null };
 }

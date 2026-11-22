@@ -67,12 +67,12 @@ test('the add sheet pre-picks the usual meal, a pressed meal wins, and a hand-pl
   await expect(fri.locator('.wb-slot', { hasText: 'Dinner' }).locator('.wb-card')).toContainText('Oatmeal');
   // The first copy was added with no meal pressed, so it is stored with no meal of its own and follows the recipe; the second was pressed into Dinner, so it keeps it.
   const plan = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:config/main') || '{}').diet?.plan?.['2026-09-25']);
-  expect(plan).toEqual([{ k: 'r', id: 'oats' }, { k: 'r', id: 'oats', s: 'dinner' }]);
+  expect(plan).toEqual([{ k: 'r', id: 'oats', p: true }, { k: 'r', id: 'oats', s: 'dinner', p: true }]); // Plan in the sheet puts each on the plate as planned
 });
 
 test('a change of usual meal moves the food on every day, including a copy placed by hand (PR 1040)', async ({ page }) => {
   await seed(page, [mk('oats', 'Oatmeal', { meal: 'breakfast' })]);
-  await page.evaluate(() => localStorage.setItem('ironlog:config/main', JSON.stringify({ diet: { plan: { '2026-09-24': [{ k: 'r', id: 'oats' }], '2026-09-25': [{ k: 'r', id: 'oats' }], '2026-09-26': [{ k: 'r', id: 'oats', s: 'dinner' }] } } })));
+  await page.evaluate(() => localStorage.setItem('ironlog:config/main', JSON.stringify({ diet: { plan: { '2026-09-24': [{ k: 'r', id: 'oats', p: true }], '2026-09-25': [{ k: 'r', id: 'oats', p: true }], '2026-09-26': [{ k: 'r', id: 'oats', s: 'dinner', p: true }] } } })));
   await page.reload();
   await openNutrition(page);
   const inSlot = (day, name) => col(page, day).locator('.wb-slot', { hasText: name }).locator('.wb-card');
@@ -97,7 +97,7 @@ test('a change of usual meal moves the food on every day, including a copy place
 
 test('a drink lands in the day\'s Drinks list, outside the meals, the plate check and the 8-item limit', async ({ page }) => {
   await seed(page, [mk('brew', 'Cold brew', { uses: ['drink'], kcal: 5, p: 0 }), ...Array.from({ length: 8 }, (_, i) => mk(`f${i}`, `Food ${i}`))]);
-  const plan = Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `f${i}`, s: 'lunch' }));
+  const plan = Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `f${i}`, s: 'lunch', p: true }));
   await page.evaluate(p => localStorage.setItem('ironlog:config/main', JSON.stringify({ diet: { plan: { '2026-09-25': p } } })), plan);
   await page.reload();
   await openNutrition(page);
