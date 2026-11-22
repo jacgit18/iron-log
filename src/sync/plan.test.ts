@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { entryId } from '../lib/export.js';
 import { normWeek } from '../shared/week.js';
-import { parsePath, type PathKind } from './documents.js';
+import { desiredRows, parsePath, type PathKind } from './documents.js';
 import { planCommands, planDelete } from './plan.js';
 import { asRow, mirrorOf, withRow } from './testing.js';
 import type { DesiredRow, Mirror, PlannedCommand } from './types.js';
@@ -310,5 +310,20 @@ describe('planCommands: the grocery list (ADR 039)', () => {
     expect(plan('grocery/2026-10', { lines: { kale: { got: true }, rice: { got: true } }, pulled: [] }, m)).toEqual([expect.objectContaining({ name: 'save-grocery-month', baseVersion: 2 })]);
     expect(plan('grocery/2026-10', { lines: {}, pulled: [] }, m)).toEqual([expect.objectContaining({ name: 'delete-grocery-month', baseVersion: 2, input: { month: '2026-10' } })]);
     expect(planDelete(kind('grocery/2026-10'), m)).toEqual([expect.objectContaining({ name: 'delete-grocery-month', baseVersion: 2 })]);
+  });
+});
+
+describe('planCommands: a diet entry that carries its meal (s)', () => {
+  const food = (over: object = {}) => ({ id: 'a', d: '2026-10-27', n: 'Rice', kcal: 200, p: 4, ...over });
+  const held = (items: object[]) => mirrorOf(desiredRows(kind('diet/main'), { items }, new Map()));
+  it('plans nothing when the server row and the document hold the same s, so two up-to-date devices do not rewrite each other', () => {
+    const items = [food({ s: 'lunch' }), food({ id: 'b', n: 'Egg', s: 'snack' })];
+    expect(plan('diet/main', { items }, held(items))).toEqual([]);
+  });
+  it('plans an edit only for the entry whose s changed, and not for its untouched neighbour that also has an s', () => {
+    const before = [food({ s: 'lunch' }), food({ id: 'b', n: 'Egg', s: 'snack' })];
+    const cmds = plan('diet/main', { items: [food({ s: 'dinner' }), before[1]] }, held(before));
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0]).toMatchObject({ rowKey: 'diet_entry/a' });
   });
 });
