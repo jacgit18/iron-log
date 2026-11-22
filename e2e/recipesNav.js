@@ -1,6 +1,7 @@
 import { expect } from './fixtures.js';
 
 // Starting a recipe or a ready-made food from Recipes + New (brief recipes-find-type-tabs), shared by the recipe specs.
+// Note for the specs that click the recipe page's exact "Log" or "Back": a list row also has a button named "Log", and the Find food sheet a "Back"; those selectors rely on e2e/fixtures.js keeping the desktop detail pane closed, so the list and a page are never both on screen.
 const choose = async (page, name) => {
   await page.locator('#recipes-new').click();
   await page.locator('#recipes-new-list').getByRole('button', { name }).click();

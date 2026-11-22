@@ -32,7 +32,7 @@ test('the chip is its own tap target outside the row button, opens the combo, an
   expect(await item.locator('.rc-row .rc-combochip').count()).toBe(0); // never nested in the row's button
   await item.getByRole('button', { name: 'Open Cereal with Milk' }).click();
   await expect(page.getByRole('heading', { name: /Cereal with Milk/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(rows(page)).toHaveText(['Cereal', 'Milk', 'Rice']);
 });
 
@@ -98,6 +98,6 @@ test('on a phone the expanded chips are still open after a combo is opened and B
   const item = itemOf(page, 'Cereal');
   await item.getByRole('button', { name: '+1 more with Cereal' }).click();
   await chipsOf(item).nth(2).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(chipsOf(item)).toHaveCount(3);
 });

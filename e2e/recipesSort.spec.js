@@ -11,7 +11,7 @@ const make = async (page, name, minutes) => {
   await page.getByLabel('Ingredient 1', { exact: true }).fill('salt');
   if (minutes) await page.getByLabel('Minutes').fill(String(minutes));
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
 };
 const rows = page => page.locator('.rc-list .rc-row b');
 const sortBox = page => page.getByLabel('Sort');

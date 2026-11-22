@@ -11,6 +11,10 @@ export const WORDING: readonly WordRule[] = [
   { say: 'Close', when: 'a sheet that only shows something', notThis: ['Done'] },
   { say: 'Food', when: 'a packaged food in Recipes: the tab is "Foods", one is a "Food" (its pill and category), the forms are "New food" and "Edit food"; the + New entry is "Add a food"', notThis: ['Ready-made', 'ready-made food'] },
   { say: 'Scan to fill <form>', when: 'a scan whose result lands in a form you still save: Find food and the Recipes food form say "Scan to fill form" (+ New has no scan entry of its own: "Add a food" opens that form). The supplement add sheet scan says it too. The camera sheet, the Scan label photo button and the Nutrition way "Scan barcode" (it scans, then saves the food and logs it, not a form) keep their names (owner, 2026-11-12)', notThis: ['Scan barcode', 'Scan a food'] },
+  { say: 'Log', when: 'put a food in today\'s log: the recipe page button and the list row both say Log (the page logs the usual portion at once, the row opens the sheet)', notThis: ['Add to today'] },
+  { say: 'Back', when: 'one step up from a recipe or food page', notThis: ['Back to recipes'] },
+  { say: 'Less / More', when: 'a stepper: the visible word and the name ("Less servings", "Less Chili")', notThis: ['Fewer'] },
+  { say: 'Also took', when: 'a supplement taken with no time of day: the Nutrition button, the sheet and the row label', notThis: ['Also taken'] },
   { say: 'Save and Cancel', when: 'a form', notThis: ['Done'] },
   { say: 'Scan and log', when: 'a scan that saves the food to Recipes and logs it on the day: the Nutrition toolbar button and the Add food row (owner, 2026-11-12)', notThis: ['Scan barcode'] },
 ];

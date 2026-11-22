@@ -24,7 +24,7 @@ export default function SupplementTimes({ times, serving, onChange }: Props) {
       {times.map(t => (
         <div key={t.slot} className="stimes-row" role="group" aria-label={`${slotLabel(t.slot)} amount`}>
           <span className="stimes-name">{slotLabel(t.slot)}</span>
-          <button type="button" className="btn pstep-btn" id={`stimes-less-${t.slot}`} aria-label={`Fewer ${word}, ${slotLabel(t.slot)}`} onClick={() => onChange(stepTime(times, t.slot, -1, units))}><Icon name="minus" /></button>
+          <button type="button" className="btn pstep-btn" id={`stimes-less-${t.slot}`} aria-label={`Less ${word}, ${slotLabel(t.slot)}`} onClick={() => onChange(stepTime(times, t.slot, -1, units))}><Icon name="minus" /></button>
           <output className="pstep-val" id={`stimes-val-${t.slot}`} aria-live="polite">{portionText(t.portion, serving)}</output>
           <button type="button" className="btn pstep-btn" id={`stimes-more-${t.slot}`} aria-label={`More ${word}, ${slotLabel(t.slot)}`} onClick={() => onChange(stepTime(times, t.slot, 1, units))}><Icon name="plus" /></button>
         </div>

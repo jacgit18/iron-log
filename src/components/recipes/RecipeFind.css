@@ -152,7 +152,7 @@
   padding-block: var(--sp-16);
 }
 /* Recipes as one list (brief recipes-mine-library-merge): the All / Mine / Library filter row, the "Your recipes" heading and the library's own box.
-   The box differs from your rows by its heading, its dashed outline and its "+ Add to mine" button, not by colour alone. */
+   The box differs from your rows by its heading, its dashed outline and its "Add to Mine" button, not by colour alone. */
 .rc-src {
   flex-wrap: wrap;
 }

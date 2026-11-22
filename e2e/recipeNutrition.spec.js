@@ -17,7 +17,7 @@ const make = async (page, name, cat, { kcal, p, tags = [] } = {}) => {
     if (p !== undefined) await page.getByLabel('Protein per serving (g)').fill(String(p));
   }
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
 };
 const rows = page => page.locator('.rc-list .rc-row b');
 const nutrition = page => page.getByRole('group', { name: 'Nutrition', exact: true });

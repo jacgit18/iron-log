@@ -56,7 +56,7 @@ test('empty Recipes shows two tiles that open the form and the Library (the food
   await page.getByLabel('Ingredient 1', { exact: true }).fill('bread');
   await page.getByLabel('Steps, one per line').fill('Toast it.');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await page.getByRole('button', { name: /Back to recipes/ }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.locator('.emptytiles')).toHaveCount(0);
 });
 

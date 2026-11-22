@@ -5,7 +5,7 @@ const scenario: Scenario = {
   id: 'S-173', feature: 'Recipe star', title: 'The star is in the recipe\'s own header, and a starred row shows a small mark', persona: 'recipe-collector', brief: 'recipe-star-placement',
   steps: [
     'Open Recipes and open any recipe. Look at the top of its page and press the Star button.',
-    'Press Back to recipes and find that recipe in the list. Reload the page, then open the recipe again and press Unstar.',
+    'Press Back and find that recipe in the list. Reload the page, then open the recipe again and press Unstar.',
     'Open Recipes, press Library and open a Library recipe.',
   ],
   expected: [

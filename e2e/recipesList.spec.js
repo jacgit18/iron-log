@@ -36,7 +36,7 @@ test('the Recent pill lists the favourites and recent recipes, and a row in it o
   await expect(page.locator('#recipes-tab-all')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('.rc-row', { hasText: 'Lentil soup' }).click();
   await expect(page.getByRole('heading', { name: /Lentil soup/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.click('#recipes-recent');
   await page.locator('#recipes-tab-meals').click();
   await expect(page.locator('#recipes-recent')).toHaveAttribute('aria-pressed', 'false'); // a type pill takes over from Recent

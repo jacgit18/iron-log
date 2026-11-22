@@ -32,7 +32,7 @@ test('a recipe you write is saved, marked Custom, found by an ingredient, and ke
   await write(page, 'Garlic dressing', ['garlic', 'olive oil']);
   await expect(page.getByRole('heading', { name: /Garlic dressing/ })).toBeVisible();
   await expect(page.getByText('Custom')).toBeVisible();
-  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByLabel('Search recipes').fill('olive');
   await expect(page.locator('.rc-row', { hasText: /Garlic dressing/ })).toBeVisible();
   await page.getByLabel('Search recipes').fill('zzz');

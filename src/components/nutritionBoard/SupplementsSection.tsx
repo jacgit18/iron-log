@@ -10,7 +10,7 @@ import './SupplementTotals.css';
 
 // A day's Supplements (brief nutrition-board): Morning, Noon and Night with a tick each and "x of n taken". Ticking works on any day, last week and days ahead too.
 // A past day (`folded`) keeps the header's "x of n taken" as the one line and unfolds the ticks on a tap (brief nutrition-header-sheet-wording).
-// Also took opens a picker of library supplements with no time of day: one tap ticks one for the day (brief nutrition-items-row-sheet-and-more); they list under "Also taken". Manage in the header keeps the library.
+// Also took opens a picker of library supplements with no time of day: one tap ticks one for the day (brief nutrition-items-row-sheet-and-more); they list under "Also took". Manage in the header keeps the library.
 // Totals opens the vitamin and mineral totals sheet (shown when something is scheduled or a food eaten that day lists vitamins or minerals, and the day's vitamin meter is not drawing its rows: that meter reaches the same sheet, `sectionTotalsVisible`); a line under the ticks appears only when a total of what was taken
 // and eaten passes its limit (briefs supplement-nutrient-totals, food-vitamins-minerals).
 export default function SupplementsSection({ day, folded = false }: { day: string; folded?: boolean }) {
@@ -50,7 +50,7 @@ export default function SupplementsSection({ day, folded = false }: { day: strin
       </div>
       {v.extra.length > 0 && (
         <div className="nb-suppslot">
-          <span className="nb-slotlab">Also taken</span>
+          <span className="nb-slotlab">Also took</span>
           {v.extra.map(i => (
             <label key={i.id} className="nb-tick taken">
               <input type="checkbox" className="chk" id={`nb-supp-${day}-${i.id}`} checked onChange={e => useAppStore.getState().setSupplementTaken(day, i.id, e.target.checked)} />

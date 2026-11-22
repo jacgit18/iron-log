@@ -23,7 +23,7 @@ export default function AmountPicker({ value, name, recents, onDone, onClose }: 
         <div>
           <span className="rc-picklab">Whole number</span>
           <div className="rc-step">
-            <button type="button" className="btn" aria-label="Fewer" disabled={parts.whole === 0} onClick={() => pick({ whole: stepWhole(parts.whole, -1) })}><Icon name="minus" /></button>
+            <button type="button" className="btn" aria-label="Less" disabled={parts.whole === 0} onClick={() => pick({ whole: stepWhole(parts.whole, -1) })}><Icon name="minus" /></button>
             <output aria-label="Whole number">{parts.whole}</output>
             <button type="button" className="btn" aria-label="More" onClick={() => pick({ whole: stepWhole(parts.whole, 1) })}><Icon name="plus" /></button>
           </div>

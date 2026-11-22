@@ -27,7 +27,7 @@ export default function PortionStepper({ portion, units, form, row, onPortion, o
       </div>
       <p className="note">{n ? `The label serving is ${portionText(1, serving)}.` : 'Add how many capsules make one serving to count capsules; until then this counts servings.'}</p>
       {!sizeOnly && <div className="pstep-row" role="group" aria-label={serving ? `${word}s I take each time` : 'Servings I take each time'}>
-        <button type="button" className="btn pstep-btn" id="supp-portion-less" aria-label={`Fewer ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, -1, n))}><Icon name="minus" /></button>
+        <button type="button" className="btn pstep-btn" id="supp-portion-less" aria-label={`Less ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, -1, n))}><Icon name="minus" /></button>
         <output id="supp-portion-value" className="pstep-val" aria-live="polite">{portionText(portion, serving)}</output>
         <button type="button" className="btn pstep-btn" id="supp-portion-more" aria-label={`More ${serving ? `${word}s` : 'servings'}`} onClick={() => onPortion(stepPortion(portion, 1, n))}><Icon name="plus" /></button>
       </div>}
