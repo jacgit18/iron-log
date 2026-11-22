@@ -78,10 +78,10 @@ export function removeTag(list: readonly Recipe[], tag: string): { list: Recipe[
   return { list: out, changed };
 }
 
-/** Undo for `removeTag`: puts `tag` back on the recipes that had it in `before` (the list as it was just ahead of the removal). A recipe whose tags are still what the removal left gets its old tags back in the old order; one edited since gets the tag added to its current tags when there is room. A recipe that is gone stays gone, and one that already has the tag is left alone. */
-export function restoreTag(list: readonly Recipe[], before: readonly Recipe[], tag: string): { list: Recipe[]; changed: number } {
+/** Undo for `removeTag`: puts `tag` back on the recipes that had it in `before` (the list as it was just ahead of the removal). A recipe whose tags are still what the removal left gets its old tags back in the old order; one edited since gets the tag added to its current tags when there is room (else it is counted in `skipped`). A recipe that is gone stays gone, and one that already has the tag is left alone. */
+export function restoreTag(list: readonly Recipe[], before: readonly Recipe[], tag: string): { list: Recipe[]; changed: number; skipped: number } {
   const had = new Map(before.filter(r => (r.tags ?? []).some(t => tagKey(t) === tagKey(tag))).map(r => [r.id, r.tags ?? []]));
-  let changed = 0;
+  let changed = 0, skipped = 0; // skipped: edited since and already at the most tags a recipe can have
   const out = list.map(r => {
     const old = had.get(r.id);
     if (!old || (r.tags ?? []).some(t => tagKey(t) === tagKey(tag))) return r;
@@ -89,14 +89,14 @@ export function restoreTag(list: readonly Recipe[], before: readonly Recipe[], t
     const untouched = left.length === now.length && left.every((t, i) => t === now[i]);
     const back = old.find(t => tagKey(t) === tagKey(tag))!;
     const tags = untouched ? [...old] : now.length < MAX_TAGS_PER_RECIPE ? [...now, back] : null;
-    if (!tags) return r;
+    if (!tags) { skipped++; return r; }
     changed++;
     return { ...r, tags };
   });
-  return { list: out, changed };
+  return { list: out, changed, skipped };
 }
 
-/* ---------- The built-in chips: hide and reorder ----------
+/* ---------- The built-in chips: hide and reorder ---------- */
 
 /** Every category in the order the chips show: the saved order first, then any left in the built-in order. */
 export function chipOrder(chips: RecipeChips | undefined): RecipeCategory[] {

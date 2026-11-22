@@ -135,7 +135,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   restoreTag(before, tag) {
     const r = restoreTag(get().recipes, before, tag);
     if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
-    return r.changed;
+    return { restored: r.changed, skipped: r.skipped };
   },
 
   setRecipeChips(chips) {

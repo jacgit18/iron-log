@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { chipOrder, moveChip, tagCounts, toggleChip } from '../../lib/recipeTags.js';
-import { MAX_TAG, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import type { Recipe } from '../../types.ts';
 import Icon from '../Icon.js';
 import Sheet from '../Sheet.jsx';
-import type { Recipe } from '../../types.ts';
 import './RecipeFilters.css';
 
 // Manage filters (brief recipe-filter-editing): hide and reorder the built-in category chips, and rename or delete your own tags.
@@ -35,8 +35,9 @@ export default function RecipeFilters() {
   };
   const undoRemove = () => {
     if (!undo) return;
-    const n = st.restoreTag(undo.before, undo.tag);
-    setNote(n ? `Put ${undo.tag} back on ${n} recipe${n === 1 ? '' : 's'}.` : `${undo.tag} could not be put back.`); setUndo(null); toDone();
+    const { restored: n, skipped } = st.restoreTag(undo.before, undo.tag);
+    const left = skipped ? ` ${skipped} not restored: already at ${MAX_TAGS_PER_RECIPE} tags.` : '';
+    setNote((n ? `Put ${undo.tag} back on ${n} recipe${n === 1 ? '' : 's'}.` : `${undo.tag} could not be put back.`) + left); setUndo(null); toDone();
   };
 
   return (
@@ -87,7 +88,7 @@ export default function RecipeFilters() {
         ))}
       </ul>
       {err && <p className="note gerr" role="alert">{err}</p>}
-      <p className="note" role="status">{note}{undo && <button type="button" className="btn sm rcf-undo" onClick={undoRemove}>Undo</button>}</p>
+      <div className="rcf-status"><p className="note" role="status">{note}</p>{undo && <button type="button" className="btn sm rcf-undo" onClick={undoRemove}>Undo</button>}</div>
       <div className="actions">
         <button type="button" id="rcf-done" className="btn primary" onClick={st.closeModal}>Done</button>
       </div>

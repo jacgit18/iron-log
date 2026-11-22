@@ -70,6 +70,7 @@ describe('restoreTag: Undo of removeTag', () => {
     const out = restoreTag(full, list, 'weeknight');
     expect(out.list[0]!.tags).toHaveLength(8);
     expect(out.changed).toBe(1);
+    expect(out.skipped).toBe(1); // counted, so the sheet can say so
   });
   it('a recipe that is gone stays gone, one that already has the tag is left alone, and nothing to restore changes nothing', () => {
     expect(restoreTag(gone.filter(x => x.id !== 'b'), list, 'weeknight').list).toHaveLength(3);

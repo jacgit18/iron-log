@@ -21,8 +21,11 @@
   min-width: 44px;
   padding-inline: 0;
 }
-.rcf-undo {
-  margin-left: var(--sp-8);
+.rcf-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
 }
 .rcf-name {
   flex: 1 1 5rem;

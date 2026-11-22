@@ -273,10 +273,10 @@ describe('recipe tags', () => {
     const get = await tagged();
     const before = st().recipes;
     expect(st().removeTag('weeknight')).toBe(2);
-    expect(st().restoreTag(before, 'weeknight')).toBe(2);
+    expect(st().restoreTag(before, 'weeknight')).toEqual({ restored: 2, skipped: 0 });
     expect(get('Chili').tags).toEqual(['weeknight', 'Meal prep']); // each recipe's own spelling and order
     expect(get('Tacos').tags).toEqual(['Weeknight']);
-    expect(st().restoreTag(before, 'weeknight')).toBe(0); // already back
+    expect(st().restoreTag(before, 'weeknight')).toEqual({ restored: 0, skipped: 0 }); // already back
   });
 });
 

@@ -142,6 +142,23 @@ test('rename a tag (and merge into one that exists), then delete one after a con
   await expect(page.getByRole('group', { name: 'Tags', exact: true }).getByRole('button')).toHaveText(['meal prep']);
 });
 
+test('under "No recipe matches" the button also clears a typed search, and says so', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Chili', 'Protein');
+  await page.getByLabel('Search recipes').fill('zzzz');
+  const clear = page.locator('#recipes-clear-empty');
+  await expect(clear).toHaveText('Clear search'); // only a search is on
+  await clear.click();
+  await expect(rows(page)).toHaveText(['Chili']);
+  await page.getByLabel('Search recipes').fill('chili');
+  await page.getByRole('button', { name: 'Can make' }).click(); // nothing in the fixture is makeable
+  await expect(clear).toHaveText('Clear search and filters');
+  await clear.click();
+  await expect(rows(page)).toHaveText(['Chili']);
+  await expect(page.getByLabel('Search recipes')).toHaveValue('');
+  await expect(page.locator('#recipes-filters')).toHaveText('Filters');
+});
+
 test('Remove tag has an Undo that puts the tag back on the same recipes', async ({ page }) => {
   await openRecipes(page);
   await make(page, 'Chili', 'Protein', ['weeknight']);

@@ -338,7 +338,7 @@ export default function Recipes() {
           { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setBrowse(true) },
         ]} />
       )}
-      {yours && recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{libReady && groups.library.length > 0 ? 'None of yours match.' : recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)} {nFilters > 0 && <button type="button" className="btn sm" id="recipes-clear-empty" onClick={clearFilters}>Clear filters</button>}</p>}
+      {yours && recipes.length > 0 && !shown.length && <p className="note" id="recipes-empty">{libReady && groups.library.length > 0 ? 'None of yours match.' : recentOn ? 'Nothing recent matches. Clear the search or the filters.' : emptyTabNote(tab, !!q || !!cat || canMake || activeTags.length > 0 || nutSel.length > 0)} {(nFilters > 0 || q) && <button type="button" className="btn sm" id="recipes-clear-empty" onClick={() => { clearFilters(); if (q) setQ(''); }}>{q ? (nFilters > 0 ? 'Clear search and filters' : 'Clear search') : 'Clear filters'}</button>}</p>}
       {!yours && !boxOn && <p className="note">The library has nothing for this tab or category.</p>}
       <div className={pane && yours ? 'rc-split' : undefined}>
         <div className="rc-merged">
