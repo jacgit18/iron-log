@@ -357,7 +357,7 @@ describe('the meal planner', () => {
     const m = meal();
     expect(st().addPlanItem(tomorrow, 'r', 'r1')).toBeNull();
     expect(st().addPlanItem(tomorrow, 'm', m)).toBeNull();
-    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'r1' }, { k: 'm', id: m }]);
+    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'r1', p: true }, { k: 'm', id: m, p: true }]);
   });
   it('refuses a recipe or meal that is gone, a repeat and a day outside the window', () => {
     expect(st().addPlanItem(today, 'r', 'zzz')).toMatch(/gone/);
@@ -369,7 +369,7 @@ describe('the meal planner', () => {
   it('sets a portion and removes an item; removing the last leaves no plan or diet key behind', () => {
     st().addPlanItem(today, 'r', 'r1');
     st().setPlanPortion(today, 0, 2);
-    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'r1', x: 2 }]);
+    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'r1', x: 2, p: true }]);
     st().removePlanItem(today, 0);
     expect(st().cfg.diet).toBeUndefined();
   });
@@ -629,7 +629,7 @@ describe('daily snacks (brief daily-snacks)', () => {
   it('a recipe on the list and planned by hand in another meal hides the listed copy; taking the hand-planned one out or away leaves the listed snack as it was', () => {
     st().saveDailySnacks([{ id: 'yog' }]);
     st().addPlanItem(tomorrow, 'r', 'yog', 'lunch');
-    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'lunch' }]);
+    expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'lunch', p: true }]);
     st().removePlanItem(tomorrow, 0);
     expect(st().cfg.diet!.snackSkips).toBeUndefined();
     expect(effectivePlan(st().cfg.diet, [tomorrow], today)[tomorrow]).toEqual([{ k: 'r', id: 'yog', s: 'snack', v: true }]);
@@ -726,7 +726,7 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
     const r = st().copyPlanItems(today, 0, [at(1), at(2), at(3), at(365)]);
     expect(r.done).toEqual([at(1), at(3)]);
     expect(r.skipped.map(s => s.reason)).toEqual(['already there', 'out of reach']);
-    expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner' }]);
+    expect(st().cfg.diet!.plan![at(1)]).toEqual([{ k: 'r', id: 'rc', s: 'dinner', p: true }]);
     expect(st().cfg.diet!.plan![today]).toHaveLength(1);
     const before = st().cfg.diet!.plan;
     expect(st().copyPlanItems(today, 0, [today]).error).toBeTruthy();
@@ -739,7 +739,7 @@ describe('copyDietEntries and copyPlanItems (brief nutrition-multi-day-picker)',
     expect(r.error).toBeNull();
     expect(r.done).toEqual([at(1), at(3)]);
     expect(r.skipped.map(x => x.reason)).toEqual(['already there', 'out of reach']);
-    expect(st().cfg.diet!.plan![at(3)]).toEqual([{ k: 'r', id: 'rc', s: 'lunch' }]);
+    expect(st().cfg.diet!.plan![at(3)]).toEqual([{ k: 'r', id: 'rc', s: 'lunch', p: true }]);
     const before = st().cfg.diet!.plan;
     expect(st().addPlanItemToDays('r', 'rc', [at(1)], 'lunch').error).toBeTruthy();
     expect(st().addPlanItemToDays('r', 'nope', [at(4)], 'lunch').error).toBe('That recipe is gone.');
@@ -996,5 +996,15 @@ describe('Plan, forward Plan and Unplan (brief nutrition-planned-available-tray)
     put({ [d1]: [{ k: 'r', id: 'a', s: 'snack' }, { k: 'r', id: 'b', s: 'lunch' }] });
     expect(plan()[d1]).toHaveLength(2);
     expect(plan()[d1]!.every(i => i.p === undefined)).toBe(true);
+  });
+  it('adding food to a day with Plan puts it on the plate, and on a day that holds 8 planned things it is stored unplanned and waits in the tray', () => {
+    put({ [d1]: Array.from({ length: 7 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })) });
+    expect(st().addPlanItem(d1, 'r', 'a', 'snack')).toBeNull();
+    expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'a', s: 'snack', p: true }); // the 8th planned
+    expect(st().addPlanItem(d1, 'r', 'b', 'snack')).toBeNull(); // never refused for the 8
+    expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'b', s: 'snack' });
+    expect(st().addPlanItemToDays('r', 'x8', [d1, d2], 'dinner').done).toEqual([d1, d2]);
+    expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'x8', s: 'dinner' });
+    expect(plan()[d2]!.at(-1)).toEqual({ k: 'r', id: 'x8', s: 'dinner', p: true });
   });
 });

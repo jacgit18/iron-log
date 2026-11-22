@@ -1,5 +1,5 @@
 import type { Boost, DietEntry, PlanSlot, Recipe, SavedMeal, Supplements } from '../types.ts';
-import { parseDate, weekStartOf, ymd } from '../shared/dates.js';
+import { parseDate } from '../shared/dates.js';
 import { shortDay, sundayOf } from './dayNames.js';
 import { MAX_PLAN_AHEAD } from '../shared/diet.js';
 import { shiftDay, totalsFor, missingCarbsFat, fmtNum, oldestDay } from './dietLog.js';

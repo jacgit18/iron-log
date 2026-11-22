@@ -18,7 +18,7 @@ export const MARK_LABEL: Record<PlateMark, string> = { protein: 'Protein', carb:
 export interface BoardItem { index: number; r: Resolved; fat: number | undefined; virtual?: true }
 /** One meal of a day. `slot` null is the group of items with no meal set. `fixes` are the one-tap additions for what the meal lacks. */
 export interface BoardSlot { slot: PlanSlot | null; items: BoardItem[]; kcal: number; share: number | null; need: readonly PlateMark[]; have: PlateMark[]; fixes: { mark: PlateMark; recipe: Recipe; why: string | null }[] }
-export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[]; /** The day's drinks (brief nutrition-meal-labels-year-repeat): outside every meal, the plate check and the planned cap; their calories still count in the day's totals. */ drinks: BoardItem[]; /** Ready-made foods tucked away because they are Need (brief ready-made-have-gate): not in `count`, the totals, the meals or the plate check; A to Z. */ waiting: WaitingItem[] }
+export interface BoardDay { day: string; count: number; kcal: number; protein: number; fat: number; fatState: 'full' | 'partial' | 'hidden'; fatFoods: { known: number; all: number }; slots: BoardSlot[]; /** The day's drinks (brief nutrition-meal-labels-year-repeat): outside every meal, the plate check and the planned cap; their calories still count in the day's totals. */ drinks: BoardItem[]; }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 

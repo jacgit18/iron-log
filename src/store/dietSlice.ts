@@ -2,7 +2,7 @@ import { skipSnack } from '../lib/dailySnacks.js';
 import { dropRepeatSkips, pruneHandy, repeatPlanItem, removeRepeat, retargetRepeats, removeRepeatsFor, saveRepeat, skipRepeat, skipsAfterLeaving as repeatSkipsAfterLeaving, skipsAfterRemovingHandy, unskipRepeat } from '../lib/repeats.js';
 import { withHintSwitch } from '../lib/plate.js';
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { addItem, inWindow, markPlanned, planFullReason, removeItem, resolve, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
+import { addItem, canBePlanned, inWindow, markPlanned, planFullReason, removeItem, resolve, setEaten, setPortion, type Plan } from '../lib/dietPlan.js';
 import { applyForward, forwardText, planForward } from '../lib/planForward.js';
 import { entryTotalsAt, portionBasis } from '../lib/portionBasis.js';
 import { monthKey } from '../lib/grocery.js';
@@ -36,11 +36,17 @@ const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
 const drinksOf = (get: StoreGet) => drinkIdsOf(get().recipes);
 const planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
 
+/** The item marked planned when the day has room (fewer than 8 planned things) and it can be planned (never a drink or a listed daily snack): adding food with a Plan button puts it on the plate (brief nutrition-planned-available-tray); on a day that holds 8 it is stored unplanned and waits in the tray. */
+const markedIfRoom = (get: StoreGet, day: string, item: PlanItem): PlanItem => {
+  const d = get().cfg.diet;
+  return canBePlanned(item, d?.snacks, drinksOf(get)) && !planFullReason(d?.plan?.[day] ?? [], d?.snacks, drinksOf(get)) ? { ...item, p: true } : item;
+};
+
 /** Puts a recipe or saved meal on a day and says where it landed: the stored index of the item just added (found by its own kind, id and meal in the saved plan, never "the last one"), or an error text. */
 function addPlanItemAt(get: StoreGet, day: string, kind: 'r' | 'm', id: string, slot?: PlanSlot): { error: string; index: -1 } | { error: null; index: number } {
   const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
   if (!there) return { error: kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.', index: -1 };
-  const item = { k: kind, id, ...(slot ? { s: slot } : {}) };
+  const item = markedIfRoom(get, day, { k: kind, id, ...(slot ? { s: slot } : {}) });
   const r = addItem(planOf(get), day, item, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
   if (r.plan === null) return { error: r.error, index: -1 };
   putPlan(get, r.plan);
@@ -245,7 +251,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const gone = kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
     if (!there) return { done: [], skipped: [], message: gone, error: gone };
     const item: PlanItem = { k: kind, id, ...(slot ? { s: slot } : {}) };
-    const r = addItemsToDays(planOf(get), [...new Set(days)].map(day => ({ day, item })), ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
+    const r = addItemsToDays(planOf(get), [...new Set(days)].map(day => ({ day, item: markedIfRoom(get, day, item) })), ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
     if (!r.added.length) { const m = plannedText('', '', [], r.skipped); return { done: [], skipped: r.skipped, message: m, error: m }; }
     putPlan(get, r.plan);
     return { done: r.added, skipped: r.skipped, message: '', error: null };

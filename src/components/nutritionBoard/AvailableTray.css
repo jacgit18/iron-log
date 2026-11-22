@@ -1,6 +1,6 @@
 @layer base, components;
 @layer components {
-/* A meal's Keep handy tray (HandyTray.tsx): one collapsed line under the meal, a list of rows when open. It never widens the day column. */
+/* A meal's Available tray (AvailableTray.tsx, PlanAsk.tsx, NeedFlag.tsx): one collapsed line under the meal, a list of rows when open. It never widens the day column. */
 .hy-tray {
   display: grid;
   min-width: 0;
@@ -46,6 +46,57 @@
   color: var(--muted);
 }
 .hy-row .btn {
+  min-height: 44px;
+}
+.hy-tag {
+  margin-left: var(--sp-6);
+  padding: 0 var(--sp-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pa-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6) var(--sp-8);
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.pa-q {
+  flex: 1 1 100%;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pa-ask .btn {
+  min-height: 44px;
+  text-align: left;
+}
+.nf-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6) var(--sp-8);
+}
+.nf-note {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.nf-line .btn {
+  min-height: 44px;
+}
+.nb-trayacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6) var(--sp-8);
+}
+.nb-trayacts .btn {
   min-height: 44px;
 }
 }
