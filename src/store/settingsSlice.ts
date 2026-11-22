@@ -8,6 +8,7 @@ import { normRecipes } from '../shared/recipes.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import type { AppState, Flag, SettingsSlice, StoreGet, StoreSet } from './types.ts';
 import type { Logs, Program } from '../types.ts';
+import { HistoryIncompleteError } from './historyIncomplete.js';
 import { importFileProblem, readFailure } from '../lib/importFile.js';
 // The spreadsheet reader is only needed once a file is chosen or applied, so it loads then and not with the first screen.
 const loadExcelImport = () => import('../lib/excelImport.js');
@@ -219,8 +220,9 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
       // Old data goes only once the file's data is written: a write refused (storage full) keeps it, so nothing is lost.
       if (get().refusals === refused) lateRemoves.forEach(path => get().removeDoc(path));
       if (get().saveFlag !== 'Storage full') flag(mode === 'replace' ? 'Data replaced' : 'Data added'); // some writes were refused: keep that warning
-    } catch {
-      set({ importBusy: false }); flag('Import failed');
+    } catch (err) {
+      set({ importBusy: false });
+      flag(err instanceof HistoryIncompleteError ? 'Couldn’t read all your saved weeks, so nothing was imported. Try again.' : 'Import failed');
     }
   },
 });
