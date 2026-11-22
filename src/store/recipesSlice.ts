@@ -2,7 +2,7 @@ import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../
 import { linkError, settleMeals } from '../lib/mealRollup.js';
 import { fieldsOf, sameFields, withFields } from '../lib/recipeFill.js';
 import { addPair, dropPairsTo, existingPairMeal, mealFromPair, mealPairError, pairError, removePair } from '../lib/recipePairs.js';
-import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
+import { removeTag, renameTag, restoreTag, tagLimitError } from '../lib/recipeTags.js';
 import { withUsual } from '../lib/usualPortion.js';
 import { cleanMicro } from '../shared/foodMicro.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
@@ -130,6 +130,12 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const r = removeTag(get().recipes, tag);
     if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
     return r.changed;
+  },
+
+  restoreTag(before, tag) {
+    const r = restoreTag(get().recipes, before, tag);
+    if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
+    return { restored: r.changed, skipped: r.skipped };
   },
 
   setRecipeChips(chips) {

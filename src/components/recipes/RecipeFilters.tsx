@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { chipOrder, moveChip, tagCounts, toggleChip } from '../../lib/recipeTags.js';
-import { MAX_TAG, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import type { Recipe } from '../../types.ts';
+import Icon from '../Icon.js';
 import Sheet from '../Sheet.jsx';
 import './RecipeFilters.css';
 
@@ -15,6 +17,7 @@ export default function RecipeFilters() {
   const [asking, setAsking] = useState<string | null>(null); // the tag whose delete is waiting for a yes
   const [err, setErr] = useState('');
   const [note, setNote] = useState('');
+  const [undo, setUndo] = useState<{ tag: string; before: readonly Recipe[] } | null>(null); // the last removed tag, until another change or the sheet closes
   const st = useAppStore.getState();
   const toDone = () => setTimeout(() => document.getElementById('rcf-done')?.focus(), 0); // the row that held focus is replaced: focus moves to Done, not to the page
   const order = chipOrder(chips), hidden = chips?.hide ?? [], counts = tagCounts(recipes);
@@ -23,11 +26,18 @@ export default function RecipeFilters() {
     if (editing === null) return;
     const r = st.renameTag(editing, name);
     if (r.error) { setErr(r.error); return; }
-    setNote(`Renamed to ${r.name}.`); setEditing(null); setErr(''); toDone();
+    setNote(`Renamed to ${r.name}.`); setUndo(null); setEditing(null); setErr(''); toDone();
   };
   const remove = (tag: string) => {
-    const n = st.removeTag(tag);
-    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setAsking(null); toDone();
+    const before = useAppStore.getState().recipes, n = st.removeTag(tag); // the list as it is at the click, for Undo
+    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setUndo(n ? { tag, before } : null); setAsking(null);
+    setTimeout(() => (document.querySelector<HTMLElement>('.rcf-undo') ?? document.getElementById('rcf-done'))?.focus(), 0); // Undo when there is one, else Done: the row that held focus is replaced
+  };
+  const undoRemove = () => {
+    if (!undo) return;
+    const { restored: n, skipped } = st.restoreTag(undo.before, undo.tag);
+    const left = skipped ? ` ${skipped} not restored: already at ${MAX_TAGS_PER_RECIPE} tags.` : '';
+    setNote((n ? `Put ${undo.tag} back on ${n} recipe${n === 1 ? '' : 's'}.` : `${undo.tag} could not be put back.`) + left); setUndo(null); toDone();
   };
 
   return (
@@ -41,8 +51,8 @@ export default function RecipeFilters() {
           return (
             <li key={c} className={off ? 'off' : ''}>
               <span className="rcf-name">{label}{off && <span className="rcf-state"> (hidden)</span>}</span>
-              <button type="button" className="btn sm" aria-label={`Move up ${label}`} disabled={i === 0} onClick={() => st.setRecipeChips(moveChip(chips, c, -1))}>Move up</button>
-              <button type="button" className="btn sm" aria-label={`Move down ${label}`} disabled={i === order.length - 1} onClick={() => st.setRecipeChips(moveChip(chips, c, 1))}>Move down</button>
+              <button type="button" className="btn sm rcf-mv" aria-label={`Move up ${label}`} disabled={i === 0} onClick={() => st.setRecipeChips(moveChip(chips, c, -1))}><Icon name="chevron-up" /></button>
+              <button type="button" className="btn sm rcf-mv" aria-label={`Move down ${label}`} disabled={i === order.length - 1} onClick={() => st.setRecipeChips(moveChip(chips, c, 1))}><Icon name="chevron-down" /></button>
               <button type="button" className="btn sm" aria-label={`${off ? 'Show' : 'Hide'} ${label}`} aria-pressed={off} onClick={() => st.setRecipeChips(toggleChip(chips, c))}>{off ? 'Show' : 'Hide'}</button>
             </li>
           );
@@ -69,16 +79,16 @@ export default function RecipeFilters() {
               </div>
             ) : (
               <>
-                <span className="rcf-name">{tag}<span className="rcf-state"> · {n} recipe{n === 1 ? '' : 's'}</span></span>
-                <button type="button" className="btn sm" aria-label={`Rename ${tag}`} onClick={() => { setEditing(tag); setName(tag); setAsking(null); setErr(''); setNote(''); }}>Rename</button>
-                <button type="button" className="btn sm" aria-label={`Delete tag ${tag}`} onClick={() => { setAsking(tag); setEditing(null); setNote(''); }}>Delete tag</button>
+                <span className="rcf-name rcf-tag">{tag}<span className="rcf-state"> · {n} recipe{n === 1 ? '' : 's'}</span></span>
+                <button type="button" className="btn sm" aria-label={`Rename ${tag}`} onClick={() => { setEditing(tag); setName(tag); setAsking(null); setErr(''); setNote(''); setUndo(null); }}>Rename</button>
+                <button type="button" className="btn sm" aria-label={`Delete tag ${tag}`} onClick={() => { setAsking(tag); setEditing(null); setNote(''); setUndo(null); }}>Delete tag</button>
               </>
             )}
           </li>
         ))}
       </ul>
       {err && <p className="note gerr" role="alert">{err}</p>}
-      <p className="note" role="status">{note}</p>
+      <div className="rcf-status"><p className="note" role="status">{note}</p>{undo && <button type="button" className="btn sm rcf-undo" onClick={undoRemove}>Undo</button>}</div>
       <div className="actions">
         <button type="button" id="rcf-done" className="btn primary" onClick={st.closeModal}>Done</button>
       </div>
