@@ -1007,4 +1007,17 @@ describe('Plan, forward Plan and Unplan (brief nutrition-planned-available-tray)
     expect(plan()[d1]!.at(-1)).toEqual({ k: 'r', id: 'x8', s: 'dinner' });
     expect(plan()[d2]!.at(-1)).toEqual({ k: 'r', id: 'x8', s: 'dinner', p: true });
   });
+  it('storing a planned repeat (a tick, Less, More or Move) keeps it planned; on a day at 8 it is stored unplanned; Unplan stores it without the marker', () => {
+    st().saveRepeat(today, { k: 'r', id: 'b', s: 'snack' }, every);
+    const rid = st().cfg.diet!.repeats![0]!.rid;
+    st().planRow(d1, { rid }, true); // marks the repeat planned
+    expect(st().realizeRepeat(d2, rid)).toBe(0);
+    expect(plan()[d2]).toEqual([{ k: 'r', id: 'b', s: 'snack', p: true }]);
+    expect(st().realizeRepeat(d3, rid, false)).toBe(0); // what Unplan does
+    expect(plan()[d3]).toEqual([{ k: 'r', id: 'b', s: 'snack' }]);
+    const d4 = shiftDay(today, 4);
+    put({ ...plan(), [d4]: Array.from({ length: 8 }, (_, i) => ({ k: 'r', id: `x${i}`, s: 'lunch', p: true })) });
+    expect(st().realizeRepeat(d4, rid)).toBe(8); // never refused for the 8: it is stored unplanned
+    expect(plan()[d4]![8]).toEqual({ k: 'r', id: 'b', s: 'snack' });
+  });
 });

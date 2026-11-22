@@ -332,7 +332,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     const it = rid ? (rep ? repeatPlanItem(rep) : undefined) : planOf(get)[day]?.[index]; // a shown repeat has no stored item yet
     if (!it) return 'That is gone.';
     const name = resolve(it, get().recipes, mealsOf(get), get().cfg.diet?.mealsMoved).name;
-    if (rid) { const r = get().realizeRepeat(day, rid); if (typeof r === 'string') return r; } else { const err = get().setPlanned(day, index, false); if (err) return err; }
+    if (rid) { const r = get().realizeRepeat(day, rid, false); if (typeof r === 'string') return r; } else { const err = get().setPlanned(day, index, false); if (err) return err; }
     const food: PlanItem = { k: it.k, id: it.id, ...(it.s ? { s: it.s } : {}) };
     get().noteRemoved('diet', name, () => {
       if (get().blocked()) return false;
@@ -457,11 +457,12 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   skipRepeatDay(day, rid) { putPlan(get, planOf(get), undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid)); },
 
   // A repeat that is only shown becomes a real item of that day (so it can be ticked, changed or moved) and the repeat is skipped that day, so moving or removing the item does not bring the repeat back; the index of the real item, or an error text (the day is full or outside the window).
-  realizeRepeat(day, rid) {
+  realizeRepeat(day, rid, planned = true) {
     const rep = get().cfg.diet?.repeats?.find(r => r.rid === rid);
     if (!rep) return 'That repeat is gone.';
     // The same cap rule as any add (`addItem`), which is also what the plan cleaner keeps: when the day cannot hold the item the repeat is refused here, before anything is skipped or stored, so it never vanishes.
-    const r = addItem(planOf(get), day, { k: rep.k, id: rep.id, ...(rep.x ? { x: rep.x } : {}), ...(rep.s ? { s: rep.s } : {}) }, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get));
+    const stored: PlanItem = { k: rep.k, id: rep.id, ...(rep.x ? { x: rep.x } : {}), ...(rep.s ? { s: rep.s } : {}) };
+    const r = addItem(planOf(get), day, planned && rep.p === true ? markedIfRoom(get, day, stored) : stored, ymd(new Date()), get().cfg.diet?.snacks, drinksOf(get)); // a planned repeat stays planned when it is stored by a tick, Less, More or Move (as long as the day has room); Unplan stores it without the marker
     if (r.plan === null) return rep.h ? r.error : `${r.error} Skip the repeat on this day to free the spot.`; // a handy item just stays in the tray
     putPlan(get, r.plan, undefined, skipRepeat(get().cfg.diet?.repeatSkips, day, rid));
     return r.plan[day]!.length - 1;
