@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.js';
-import { closeSheet, openAdd, openNutrition, todayCol } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition, stubReader, todayCol } from './nutritionBoardHelpers.js';
 
 // "Search your past meals and recipes" also asks the USDA food search (brief diet-food-lookup follow-up, 2026-10-31). The parsing and caps are node tests;
 // this covers the wiring with the route stubbed: one box shows your own matches and the database results, and a database pick fills the Quick add form.
@@ -51,10 +51,7 @@ test('a database pick can be logged straight from Find food with Log it, and Und
 });
 
 test('a product found by the barcode scan inside Find food can be logged with Log it', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13', 'upc_a']; } async detect() { return [{ rawValue: '016000275287', format: 'upc_a' }]; } };
-    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
-  });
+  await stubReader(page);
   await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hit: { id: 2, name: 'Cheerios Cereal', brand: 'General Mills', kcal: 380, p: 10, c: 70, f: 6, serving: 28 } }) }));
   await page.reload();
   await nutrition(page);

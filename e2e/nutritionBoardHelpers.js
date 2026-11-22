@@ -14,6 +14,11 @@ export const openAdd = async (page, flow) => {
   if (flow) await sheet.getByRole('button', { name: new RegExp(`^${flow}`) }).click();
   return sheet;
 };
+// The barcode reader and the camera stubbed, so a photo upload "scans" 016000275287; call it before page.reload() and the route stub for /api/foods/barcode/*.
+export const stubReader = page => page.addInitScript(() => {
+  window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13', 'upc_a']; } async detect() { return [{ rawValue: '016000275287', format: 'upc_a' }]; } };
+  navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
+});
 export const closeSheet = async page => { await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click(); await expect(page.getByRole('dialog')).toHaveCount(0); };
 // The drink sheet of a day column (a short name such as "Sun 20", or the day's `data-day` date such as 2026-09-24).
 export const openDrink = async (page, day) => {

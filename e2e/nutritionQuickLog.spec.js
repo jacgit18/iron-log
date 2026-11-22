@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 import { startFood } from './recipesNav.js';
-import { closeSheet, openAdd, openNutrition } from './nutritionBoardHelpers.js';
+import { closeSheet, openAdd, openNutrition, stubReader } from './nutritionBoardHelpers.js';
 
 // Logging from the Nutrition tab (brief nutrition-quick-log). The rules (the chips, the numbers, the day check) are node tests (dietRecent.test.ts, dietLog.test.ts);
 // this covers the wiring: the strip, the portion sheet with its Undo, the Log button in Recipes, and a scanned food created and logged once. The reader, the camera and the route
@@ -68,10 +68,7 @@ test('Recipes rows have Log, and the food page has Add to today and no Ate this'
 
 // A barcode that is not found: "Type the name" must lead to a search box. The reader, the camera and the route are stubbed, as in the scan test below.
 const missingBarcode = async page => {
-  await page.addInitScript(() => {
-    window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13', 'upc_a']; } async detect() { return [{ rawValue: '016000275287', format: 'upc_a' }]; } };
-    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError'));
-  });
+  await stubReader(page);
   await page.route('**/api/foods/barcode/*', route => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ why: 'not-found' }) }));
   await page.reload();
   await openNutrition(page);
