@@ -1,10 +1,10 @@
 import { eatenMax, type Say } from '../../lib/eatenStep.js';
 import { amountText } from '../../lib/foodUnit.js';
-import { undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
+import { nudgeSentence, saveUsualLabel, undoUsualOutcome, usualAfterStep, type UsualChange } from '../../lib/usualPortion.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { DietEntry, Recipe } from '../../types.ts';
 
-/** One tap of Less or More on an eaten row (brief nutrition-log-first-portion-row): the entry takes `to` portions through `setDietPortion`; a food logged today from a recipe also saves `to` as that recipe's usual, said on the status line with an Undo that puts the usual back. The decisions are pure in `src/lib` (`stepEntryCount`, `usualAfterStep`, `undoUsualOutcome`); this only makes the store writes and says the sentence. */
+/** One tap of Less or More on an eaten row (brief nutrition-log-first-portion-row): the entry takes `to` portions through `setDietPortion`; a food logged today from a recipe whose usual differs is offered a "Save N as my usual" button on the status line (button review N3: the nudge itself changes this entry only); the button saves `to` as that recipe's usual, said with an Undo that puts the usual back. The decisions are pure in `src/lib` (`stepEntryCount`, `usualAfterStep`, `undoUsualOutcome`); this only makes the store writes and says the sentence. */
 export function stepEatenRow(e: DietEntry, to: number, recipe: Recipe | undefined, today: string, say: Say): void {
   const st = useAppStore.getState();
   const err = st.setDietPortion(e.id, to, eatenMax(recipe));
@@ -12,7 +12,13 @@ export function stepEatenRow(e: DietEntry, to: number, recipe: Recipe | undefine
   const now = recipe ? useAppStore.getState().recipes.find(r => r.id === recipe.id) : undefined; // the recipe as it is now
   const change = usualAfterStep(e.d, today, now, to);
   if (!now || !change) return;
-  if (st.setRecipeUsual(now.id, change.next)) return; // refused: keep the old usual and say nothing, as the portion sheet does
+  say(nudgeSentence(now.n, amountText(to, now)), undefined, { label: saveUsualLabel(amountText(to, now)), run: () => saveUsual(now, to, change, say) });
+}
+
+/** The offered button: writes the usual, or says the store's words when it refuses (the person pressed it, so silence would read as nothing happening). */
+export function saveUsual(now: Recipe, to: number, change: UsualChange, say: Say): void {
+  const err = useAppStore.getState().setRecipeUsual(now.id, change.next);
+  if (err) { say(err); return; }
   say(`Usual portion saved: ${now.n}, ${amountText(to, now)}.`, () => undoStep(now.id, change, say));
 }
 

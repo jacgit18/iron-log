@@ -21,17 +21,21 @@ test('a food never changed logs at one portion with one tap and says nothing abo
   await expect(dlg(page).getByText(/Usual portion saved/)).toHaveCount(0);
 });
 
-test('More on a row logged today becomes the usual, Undo restores the old one and keeps the entry; the next one-tap log uses it', async ({ page }) => {
+test('More on a row logged today changes the entry only; Save as my usual makes it the usual, Undo restores the old one and keeps the entry; the next one-tap log uses it', async ({ page }) => {
   await seed(page);
   await openChiliSheet(page);
   await finish(page);
   const row = eaten(page).filter({ hasText: 'Chili' });
   await row.getByRole('button', { name: 'More Chili' }).click(); // 1.5 portions
+  await expect(page.locator('.nb-msg')).toContainText('Chili, 1.5 portions.');
+  await expect(page.locator('.nb-msg')).not.toContainText('Usual portion saved'); // the nudge itself saves no usual
+  await page.locator('.nb-msg').getByRole('button', { name: 'Save 1.5 portions as my usual' }).click();
   await expect(page.locator('.nb-msg')).toContainText('Usual portion saved: Chili, 1.5 portions.');
   await openChiliSheet(page); // opens... logs at the usual
   await expect(dlg(page).getByText('Logged Chili, 1.5 portions.')).toBeVisible();
   await finish(page);
   await eaten(page).filter({ hasText: 'Chili' }).first().getByRole('button', { name: 'More Chili' }).click(); // 2 portions
+  await page.locator('.nb-msg').getByRole('button', { name: 'Save 2 portions as my usual' }).click();
   await expect(page.locator('.nb-msg')).toContainText('Usual portion saved: Chili, 2 portions.');
   await page.locator('.nb-msg').getByRole('button', { name: 'Undo' }).click();
   await expect(eaten(page)).toHaveCount(2); // Undo of the usual removed no entry

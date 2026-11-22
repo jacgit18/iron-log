@@ -34,6 +34,10 @@ export function withUsual<T extends { usual?: number }>(recipe: T, usual: number
 export const usualAfterStep = (entryDay: string, today: string, recipe: Basis | undefined, count: number): UsualChange | null =>
   recipe && entryDay === today ? usualChange(recipe, count) : null;
 
+/** The sentence and button label after a Less or More on an eaten row: the nudge changed this entry only, and saving the count as the food's usual is the person's tap (button review N3). */
+export const nudgeSentence = (name: string, amount: string): string => `${name}, ${amount}.`;
+export const saveUsualLabel = (amount: string): string => `Save ${amount} as my usual`;
+
 /** What the Undo of a saved usual does now (brief nutrition-log-first-portion-row): the recipe is gone, its usual was changed since (leave it), or write `usual` back. Pure; the component makes the write and says the sentence. */
 export type UndoOutcome = { kind: 'gone' } | { kind: 'changed' } | { kind: 'write'; usual: number | undefined };
 export const undoUsualOutcome = (recipe: { usual?: number } | undefined, change: UsualChange): UndoOutcome => {
